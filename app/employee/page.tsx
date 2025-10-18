@@ -1,3 +1,10 @@
+export const metadata = {
+  title: 'SmartERP Employee Dashboard – Track Jobs & Attendance',
+  description: 'Employees can view assigned jobs, log attendance, and manage tasks securely on SmartERP.',
+  keywords: 'SmartERP, employee dashboard, jobs, attendance, tasks',
+};
+
+
 "use client"
 
 import { useState } from "react"

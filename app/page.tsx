@@ -1,3 +1,10 @@
+export const metadata = {
+  title: 'SmartERP – Crew Management & Employee Management System',
+  description: 'Manage jobs, employees, payroll, attendance, and notifications efficiently with SmartERP. Secure login for owners and employees.',
+  keywords: 'SmartERP, ERP, crew management, jobs, payroll, attendance, notifications',
+};
+
+
 "use client"
 
 import { useEffect } from "react"

@@ -1,3 +1,9 @@
+export const metadata = {
+  title: 'SmartERP Owner Dashboard – Manage Your Team',
+  description: 'Access job creation, employee management, payroll, and notifications securely as an owner on SmartERP.',
+  keywords: 'SmartERP, owner dashboard, employee management, payroll, jobs, notifications',
+};
+
 "use client"
 
 import { OwnerLayout } from "@/components/owner-layout"
