@@ -6,7 +6,8 @@ export default function Head() {
         name="google-site-verification"
         content="GGqZAzDXY-Lx_2WoogT65yEOPFtaR87ZCt0NT7MiV2g"
       />
-      {/* Default SEO metadata */}
+
+      {/* SEO Metadata */}
       <title>SmartERP – Crew Management System</title>
       <meta
         name="description"
