@@ -311,7 +311,7 @@ export function LandingPage() {
           <div className="flex flex-col sm:flex-row justify-center gap-6 text-foreground text-sm">
             <div className="flex items-center gap-2 hover:text-primary transition-colors">
               <span>📧</span>
-              <span>contact:thepreethu01@gmail.com</span>
+              <span>thepreethu01@gmail.com</span>
             </div>
             <div className="flex items-center gap-2 hover:text-primary transition-colors">
               <span>📞</span>
@@ -328,7 +328,7 @@ export function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border bg-card/50 py-8 animate-fade-in-up">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
-          <p>© 2025 SmartERP. Professional crew management made simple.Mr Preethu Gowda</p>
+          <p>© 2025 SmartERP. Professional crew management made simple. Mr Preethu Gowda</p>
         </div>
       </footer>
     </div>
