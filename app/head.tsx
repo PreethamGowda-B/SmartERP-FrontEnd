@@ -1,22 +1,15 @@
 export default function Head() {
   return (
     <>
-      {/* Google Search Console verification */}
-      <meta
-        name="google-site-verification"
-        content="GGqZAzDXY-Lx_2WoogT65yEOPFtaR87ZCt0NT7MiV2g"
-      />
-
-      {/* SEO Metadata */}
       <title>SmartERP – Crew Management System</title>
-      <meta
-        name="description"
-        content="Professional crew management and ERP system for construction and field services"
-      />
-      <meta
-        name="keywords"
-        content="SmartERP, ERP, crew management, jobs, payroll, attendance, notifications"
-      />
+      <meta name="description" content="SmartERP helps manage jobs, employees, payroll, and materials efficiently." />
+      <meta name="keywords" content="SmartERP, crew management, employee portal, payroll, construction management" />
+
+      {/* ✅ Google Site Verification */}
+      <meta name="google-site-verification" content="GGqZAzDXY-Lx_2WoogT65yEOPFtaR87ZCt0NT7MiV2g" />
+
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <link rel="icon" href="/placeholder-logo.svg" />
     </>
-  )
+  );
 }
