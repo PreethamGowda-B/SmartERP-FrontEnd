@@ -24,7 +24,6 @@ export function LandingPage() {
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
-  // Helper function to assign refs
   const setSectionRef = (key: string) => (el: HTMLDivElement | null) => {
     if (el) sectionRefs.current[key] = el
   }
@@ -70,46 +69,14 @@ export function LandingPage() {
   }, [])
 
   const features = [
-    {
-      icon: Users,
-      title: "Team Management",
-      description: "Manage your crew with role-based access, employee profiles, and team assignments.",
-    },
-    {
-      icon: Building2,
-      title: "Job Tracking",
-      description: "Track jobs from start to finish with real-time updates and progress monitoring.",
-    },
-    {
-      icon: Clock,
-      title: "Time Tracking",
-      description: "GPS-enabled time tracking with automatic overtime calculation and break management.",
-    },
-    {
-      icon: DollarSign,
-      title: "Payroll",
-      description: "Automated payroll processing with tax calculations and direct deposit integration.",
-    },
-    {
-      icon: MessageSquare,
-      title: "AI Assistant",
-      description: "Smart chatbot for instant answers about schedules, policies, and job information.",
-    },
-    {
-      icon: MapPin,
-      title: "GPS Tracking",
-      description: "Real-time location tracking for field teams with geofencing and route optimization.",
-    },
-    {
-      icon: Shield,
-      title: "Security",
-      description: "Enterprise-grade security with role-based permissions and data encryption.",
-    },
-    {
-      icon: Zap,
-      title: "Automation",
-      description: "Automate repetitive tasks like scheduling, notifications, and report generation.",
-    },
+    { icon: Users, title: "Team Management", description: "Manage your crew with role-based access, employee profiles, and team assignments." },
+    { icon: Building2, title: "Job Tracking", description: "Track jobs from start to finish with real-time updates and progress monitoring." },
+    { icon: Clock, title: "Time Tracking", description: "GPS-enabled time tracking with automatic overtime calculation and break management." },
+    { icon: DollarSign, title: "Payroll", description: "Automated payroll processing with tax calculations and direct deposit integration." },
+    { icon: MessageSquare, title: "AI Assistant", description: "Smart chatbot for instant answers about schedules, policies, and job information." },
+    { icon: MapPin, title: "GPS Tracking", description: "Real-time location tracking for field teams with geofencing and route optimization." },
+    { icon: Shield, title: "Security", description: "Enterprise-grade security with role-based permissions and data encryption." },
+    { icon: Zap, title: "Automation", description: "Automate repetitive tasks like scheduling, notifications, and report generation." },
   ]
 
   const benefits = [
@@ -147,21 +114,6 @@ export function LandingPage() {
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
 
-        {/* Animated floating shapes */}
-        <div
-          className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float"
-          style={{ transform: `translateY(${scrollY * 0.5}px)` }}
-        />
-        <div
-          className="absolute top-40 right-10 w-72 h-72 bg-accent/10 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float"
-          style={{ animationDelay: "2s", transform: `translateY(${scrollY * 0.3}px)` }}
-        />
-        <div
-          className="absolute -bottom-8 left-1/2 w-72 h-72 bg-primary/5 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-float"
-          style={{ animationDelay: "4s", transform: `translateY(${scrollY * 0.7}px)` }}
-        />
-
-        {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
           <div className="animate-fade-in-up">
             <h1 className="text-6xl sm:text-7xl font-bold text-foreground mb-6 text-balance leading-tight">
@@ -197,6 +149,7 @@ export function LandingPage() {
             </Button>
           </div>
 
+          {/* Counters */}
           <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto animate-fade-in-up stagger-3">
             <div className="p-6 rounded-lg bg-card/50 backdrop-blur border border-border/50 hover:border-primary/50 transition-all duration-300 hover-lift group animate-stat-card">
               <div className="text-3xl font-bold text-primary mb-2 group-hover:scale-110 transition-transform">
@@ -222,12 +175,6 @@ export function LandingPage() {
               </div>
               <div className="text-sm text-muted-foreground">Teams</div>
             </div>
-          </div>
-        </div>
-
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-primary rounded-full flex items-start justify-center p-2">
-            <div className="w-1 h-2 bg-primary rounded-full animate-pulse" />
           </div>
         </div>
       </section>
@@ -357,10 +304,31 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Contact Info Section */}
+      <section className="border-t border-border bg-card/50 py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+          <h3 className="text-xl font-bold text-foreground mb-4">Contact Us</h3>
+          <div className="flex flex-col sm:flex-row justify-center gap-6 text-foreground text-sm">
+            <div className="flex items-center gap-2 hover:text-primary transition-colors">
+              <span>📧</span>
+              <span>contact:thepreethu01@gmail.com</span>
+            </div>
+            <div className="flex items-center gap-2 hover:text-primary transition-colors">
+              <span>📞</span>
+              <span>+91 8310982308</span>
+            </div>
+            <div className="flex items-center gap-2 hover:text-primary transition-colors">
+              <span>📍</span>
+              <span>Bangalore</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-border bg-card/50 py-8 animate-fade-in-up">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
-          <p>© 2025 SmartERP. Professional crew management made simple.</p>
+          <p>© 2025 SmartERP. Professional crew management made simple.Mr Preethu Gowda</p>
         </div>
       </footer>
     </div>
