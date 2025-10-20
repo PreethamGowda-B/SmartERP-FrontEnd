@@ -85,8 +85,8 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     if (!isLoading) {
       // initial load
       loadJobs()
-      // start polling every 5 seconds so employee portal sees new jobs quickly
-      intervalId = setInterval(loadJobs, 5000)
+      // Reduced polling interval from 5000ms to 1500ms for faster real-time updates
+      intervalId = setInterval(loadJobs, 1500)
     }
 
     return () => {

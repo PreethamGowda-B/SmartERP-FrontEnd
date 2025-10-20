@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { MaterialRequestCard } from "@/components/material-request-card"
 import { MaterialRequestForm } from "@/components/material-request-form"
@@ -17,13 +17,69 @@ import {
 import { Search, Filter, Plus, Package, Clock, CheckCircle, Truck } from "lucide-react"
 
 export default function OwnerMaterialsPage() {
-  const [requests, setRequests] = useState<MaterialRequestWithDetails[]>(mockMaterialRequestsWithDetails)
+  const [requests, setRequests] = useState<MaterialRequestWithDetails[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [urgencyFilter, setUrgencyFilter] = useState("all")
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingRequest, setEditingRequest] = useState<MaterialRequestWithDetails | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  // Fetch material requests from backend with real-time polling
+  useEffect(() => {
+    let mounted = true
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    async function loadMaterialRequests() {
+      try {
+        const response = await fetch((process.env.NEXT_PUBLIC_API_BASE || '') + '/api/materials/requests', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        })
+        
+        if (response.ok && mounted) {
+          const serverRequests = await response.json()
+          
+          // Transform backend data to match frontend MaterialRequestWithDetails interface
+          const transformedRequests: MaterialRequestWithDetails[] = serverRequests.map((req: any) => ({
+            id: req.id?.toString() || Date.now().toString(),
+            requestNumber: req.request_number || `REQ-${req.id}`,
+            jobTitle: req.job_title || 'General Request',
+            requestedBy: req.requested_by_name || `User ${req.requested_by}`,
+            status: req.status || 'pending',
+            urgency: req.urgency || 'medium',
+            items: req.items || [],
+            totalCost: req.total_cost || 0,
+            createdAt: req.created_at || new Date().toISOString(),
+            notes: req.notes || '',
+          }))
+          
+          setRequests(transformedRequests)
+        } else if (!response.ok) {
+          console.warn('Failed to fetch material requests from backend, using fallback data')
+          if (mounted && requests.length === 0) {
+            setRequests(mockMaterialRequestsWithDetails)
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch material requests from server, using fallback data', err)
+        if (mounted && requests.length === 0) {
+          setRequests(mockMaterialRequestsWithDetails)
+        }
+      }
+    }
+
+    // Initial load
+    loadMaterialRequests()
+    // Poll every 2 seconds for real-time updates of material requests
+    intervalId = setInterval(loadMaterialRequests, 2000)
+
+    return () => {
+      mounted = false
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [])
 
   const filteredRequests = requests.filter((request) => {
     const matchesSearch =
@@ -64,6 +120,8 @@ export default function OwnerMaterialsPage() {
           body: JSON.stringify({ action: 'approve' }),
         })
         if (!res.ok) throw new Error('Failed to approve')
+        
+        // Update local state immediately for better UX
         setRequests((prev) => prev.map((r) => (r.id === request.id ? { ...r, status: 'approved' as const } : r)))
       } catch (err) {
         console.warn('Approve failed', err)
@@ -82,6 +140,8 @@ export default function OwnerMaterialsPage() {
           body: JSON.stringify({ action: 'reject' }),
         })
         if (!res.ok) throw new Error('Failed to reject')
+        
+        // Update local state immediately for better UX
         setRequests((prev) => prev.map((r) => (r.id === request.id ? { ...r, status: 'rejected' as const } : r)))
       } catch (err) {
         console.warn('Reject failed', err)
