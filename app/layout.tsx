@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   title: "SmartERP - Crew Management System",
   description: "Professional crew management and ERP system for construction and field services",
   generator: "v0.app",
+  verification: {
+    google: "y_towXY5lpvh-AQ56rXnZaWVauXdRGz-FAD7tHc6t5U",
+  },
 }
 
 export default function RootLayout({
