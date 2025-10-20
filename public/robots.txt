@@ -1,12 +1,3 @@
-import type { MetadataRoute } from "next"
-
-export default function robots(): MetadataRoute.Robots {
-  return {
-    rules: {
-      userAgent: "*",
-      allow: ["/", "/owner", "/employee"],
-      disallow: ["/backend-test", "/api"],
-    },
-    sitemap: "https://smart-erp-front-end.vercel.app/sitemap.xml",
-  }
-}
+User-agent: *
+Allow: /
+Sitemap: https://smart-erp-front-end-git-main-thepreethu01-9119s-projects.vercel.app/sitemap.xml
