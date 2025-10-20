@@ -4,8 +4,8 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
-      disallow: ["/owner", "/employee", "/backend-test"],
+      allow: ["/", "/owner", "/employee"],
+      disallow: ["/backend-test", "/api"],
     },
     sitemap: "https://smart-erp-front-end.vercel.app/sitemap.xml",
   }
