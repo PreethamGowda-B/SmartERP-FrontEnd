@@ -1,3 +1,7 @@
 User-agent: *
 Allow: /
-Sitemap: https://smart-erp-front-end-git-main-thepreethu01-9119s-projects.vercel.app/sitemap.xml
+Allow: /owner
+Allow: /employee
+Disallow: /backend-test
+Disallow: /api
+Sitemap: https://smart-erp-front-end.vercel.app/sitemap.xml
