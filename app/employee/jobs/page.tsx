@@ -14,30 +14,32 @@ export default function EmployeeJobsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch jobs from backend
-  const fetchJobs = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token"); // assumes JWT stored in localStorage
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+ const fetchJobs = async () => {
+  try {
+    setLoading(true);
 
-      if (!res.ok) {
-        throw new Error(`Failed to fetch jobs (${res.status})`);
-      }
+    // ✅ Use credentials so cookies/JWT are sent to backend
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs`, {
+      method: "GET",
+      credentials: "include", // ✅ Important for auth cookies
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-      const data = await res.json();
-      setJobs(data);
-    } catch (err: any) {
-      console.error("Error fetching jobs:", err);
-      setError(err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch jobs (${res.status})`);
     }
-  };
+
+    const data = await res.json();
+    setJobs(data);
+  } catch (err: any) {
+    console.error("Error fetching jobs:", err);
+    setError(err.message || "Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchJobs();
