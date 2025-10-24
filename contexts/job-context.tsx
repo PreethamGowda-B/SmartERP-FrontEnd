@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, useRef } from "react"
 import { mockJobs, type Job } from "@/lib/data"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/apiClient"
@@ -28,6 +28,8 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     return mockJobs
   })
 
+  const hasSyncedRef = useRef(false)
+
   // When authenticated, fetch jobs from the backend. If that fails, keep using
   // localStorage/mock data so the UI remains functional offline.
   useEffect(() => {
@@ -37,7 +39,9 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     async function loadJobs() {
       if (!user) return
       try {
-        const serverJobs = await apiClient('/api/jobs', { method: 'GET' })
+        console.log("[v0] Fetching jobs from backend...")
+        const serverJobs = await apiClient("/api/jobs", { method: "GET" })
+        console.log("[v0] Successfully fetched jobs:", serverJobs)
         if (mounted && Array.isArray(serverJobs)) {
           // Normalize server jobs so each job has a stable shape the UI expects.
           const normalized = serverJobs.map((s: any) => {
@@ -48,14 +52,14 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
             const assignedEmployees = Array.isArray(assignedArr)
               ? assignedArr.map((a: any) => String(a))
               : topAssigned != null
-              ? [String(topAssigned)]
-              : []
+                ? [String(topAssigned)]
+                : []
 
             return {
               // prefer server-provided fields but ensure id and assignedEmployees exist
-              id: s.id?.toString?.() ?? String(s._db_row?.id ?? s.id ?? ''),
-              title: s.title ?? s.name ?? s.jobTitle ?? '',
-              description: s.description ?? s.details ?? '',
+              id: s.id?.toString?.() ?? String(s._db_row?.id ?? s.id ?? ""),
+              title: s.title ?? s.name ?? s.jobTitle ?? "",
+              description: s.description ?? s.details ?? "",
               assignedEmployees,
               // keep any other server-provided fields
               ...s,
@@ -68,23 +72,27 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
             const incoming = JSON.stringify(normalized)
             if (current !== incoming) {
               setJobs(normalized)
-              localStorage.setItem('smarterp-jobs', incoming)
+              localStorage.setItem("smarterp-jobs", incoming)
             }
           } catch (err) {
             // fallback: set jobs if serialization fails
             setJobs(normalized)
-            localStorage.setItem('smarterp-jobs', JSON.stringify(normalized))
+            localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
           }
         }
       } catch (err) {
-        // ignore and keep local jobs
-        console.warn('Failed to fetch jobs from server, using local data', err)
+        console.log(
+          "[v0] Backend unavailable, using local jobs. Error:",
+          err instanceof Error ? err.message : String(err),
+        )
       }
     }
 
     if (!isLoading) {
-      // initial load
-      loadJobs()
+      if (!hasSyncedRef.current) {
+        loadJobs()
+        hasSyncedRef.current = true
+      }
       // Reduced polling interval from 5000ms to 1500ms for faster real-time updates
       intervalId = setInterval(loadJobs, 1500)
     }
@@ -93,13 +101,16 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       mounted = false
       if (intervalId) clearInterval(intervalId)
     }
-  }, [user, isLoading])
+  }, [user, isLoading]) // Removed 'jobs' from dependency array to prevent infinite loop
 
   const { addNotification } = useNotifications()
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("smarterp-jobs", JSON.stringify(jobs))
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem("smarterp-jobs", JSON.stringify(jobs))
+      }, 500)
+      return () => clearTimeout(timeoutId)
     }
   }, [jobs])
 
@@ -120,7 +131,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (err) {
           // ignore malformed data
-          console.warn('Failed to parse smarterp-jobs from storage event', err)
+          console.warn("Failed to parse smarterp-jobs from storage event", err)
         }
       }
     }
@@ -130,13 +141,13 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const addJob = (job: Job) => {
-    setJobs((prev) => [job, ...prev]);
+    setJobs((prev) => [job, ...prev])
     // persist to backend (best-effort)
-    (async () => {
+    ;(async () => {
       try {
-        await apiClient('/api/jobs', { method: 'POST', body: JSON.stringify(job) })
+        await apiClient("/api/jobs", { method: "POST", body: JSON.stringify(job) })
       } catch (err) {
-        console.warn('Failed to persist job to server, saved locally', err)
+        console.warn("Failed to persist job to server, saved locally", err)
       }
     })()
 
@@ -186,21 +197,20 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     // best-effort update to backend
     ;(async () => {
       try {
-        await apiClient(`/api/jobs/${id}`, { method: 'PUT', body: JSON.stringify(updates) })
+        await apiClient(`/api/jobs/${id}`, { method: "PUT", body: JSON.stringify(updates) })
       } catch (err) {
-        console.warn('Failed to update job on server, update applied locally', err)
+        console.warn("Failed to update job on server, update applied locally", err)
       }
     })()
   }
 
   const deleteJob = (id: string) => {
     setJobs((prev) => prev.filter((job) => job.id !== id))
-
     ;(async () => {
       try {
-        await apiClient(`/api/jobs/${id}`, { method: 'DELETE' })
+        await apiClient(`/api/jobs/${id}`, { method: "DELETE" })
       } catch (err) {
-        console.warn('Failed to delete job on server, deletion applied locally', err)
+        console.warn("Failed to delete job on server, deletion applied locally", err)
       }
     })()
   }
@@ -209,11 +219,15 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     return jobs.filter((job) => {
       try {
         // assignedEmployees normalized to array of strings
-        if (Array.isArray(job.assignedEmployees) && job.assignedEmployees.some((a: any) => String(a) === String(employeeId))) return true
+        if (
+          Array.isArray(job.assignedEmployees) &&
+          job.assignedEmployees.some((a: any) => String(a) === String(employeeId))
+        )
+          return true
 
         // fallbacks: check top-level assigned_to / assignedTo
-  if ((job as any).assigned_to && String((job as any).assigned_to) === String(employeeId)) return true
-  if ((job as any).assignedTo && String((job as any).assignedTo) === String(employeeId)) return true
+        if ((job as any).assigned_to && String((job as any).assigned_to) === String(employeeId)) return true
+        if ((job as any).assignedTo && String((job as any).assignedTo) === String(employeeId)) return true
       } catch (err) {
         // ignore malformed job shapes
       }
