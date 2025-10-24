@@ -19,7 +19,8 @@ export default function EmployeeJobsPage() {
     setLoading(true);
 
     // ✅ Use credentials so cookies/JWT are sent to backend
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs`, {
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs`, {
+
       method: "GET",
       credentials: "include", // ✅ Important for auth cookies
       headers: {
