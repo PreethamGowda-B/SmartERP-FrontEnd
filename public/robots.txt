@@ -1,7 +1,0 @@
-User-agent: *
-Allow: /
-Allow: /owner
-Allow: /employee
-Disallow: /backend-test
-Disallow: /api
-Sitemap: https://smart-erp-front-end.vercel.app/sitemap.xml
