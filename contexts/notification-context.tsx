@@ -2,8 +2,6 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
-import { useAuth } from "@/contexts/auth-context"
-import { dataSyncService } from "@/lib/data-sync-service"
 
 export interface Notification {
   id: string
@@ -13,8 +11,8 @@ export interface Notification {
   time: string
   read: boolean
   priority: "low" | "medium" | "high"
-  userId?: string
-  data?: any
+  userId?: string // For user-specific notifications
+  data?: any // Additional data for the notification
 }
 
 interface NotificationContextType {
@@ -24,13 +22,11 @@ interface NotificationContextType {
   markAllAsRead: () => void
   getUnreadCount: () => number
   getNotificationsForUser: (userId: string) => Notification[]
-  isLoading: boolean
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { user, isSyncing } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("smarterp-notifications")
@@ -38,18 +34,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
     return []
   })
-
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    if (user && !isSyncing) {
-      dataSyncService.syncNotifications({ userId: user.id }).then(() => {
-        setIsLoading(false)
-      })
-    } else if (!user) {
-      setIsLoading(false)
-    }
-  }, [user, isSyncing])
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -94,7 +78,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         markAllAsRead,
         getUnreadCount,
         getNotificationsForUser,
-        isLoading,
       }}
     >
       {children}

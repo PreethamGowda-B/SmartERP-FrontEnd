@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Bell, Check, Clock, AlertTriangle, Info, CheckCircle, Loader2 } from "lucide-react"
+import { Bell, Check, Clock, AlertTriangle, Info, CheckCircle } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { useNotifications } from "@/contexts/notification-context"
 import { useAuth } from "@/contexts/auth-context"
@@ -45,7 +45,7 @@ const formatNotificationTime = (timeString: string) => {
 }
 
 export default function NotificationsPage() {
-  const { notifications, markAsRead, markAllAsRead, isLoading } = useNotifications()
+  const { notifications, markAsRead, markAllAsRead } = useNotifications()
   const { user } = useAuth()
   const [filter, setFilter] = useState("all")
 
@@ -60,130 +60,117 @@ export default function NotificationsPage() {
   const unreadCount = ownerNotifications.filter((n) => !n.read).length
   const highPriorityCount = ownerNotifications.filter((n) => n.priority === "high" && !n.read).length
 
-  if (isLoading) {
-    return (
-      <OwnerLayout>
-        <div className="p-6 flex items-center justify-center min-h-screen">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-            <p className="text-muted-foreground">Syncing your workspace…</p>
-          </div>
-        </div>
-      </OwnerLayout>
-    )
-  }
-
   return (
     <OwnerLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">Notifications</h1>
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="rounded-full">
-                {unreadCount}
-              </Badge>
-            )}
-          </div>
-          <Button onClick={markAllAsRead} disabled={unreadCount === 0}>
-            <Check className="h-4 w-4 mr-2" />
-            Mark All Read
-          </Button>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold">Notifications</h1>
+          {unreadCount > 0 && (
+            <Badge variant="destructive" className="rounded-full">
+              {unreadCount}
+            </Badge>
+          )}
         </div>
+        <Button onClick={markAllAsRead} disabled={unreadCount === 0}>
+          <Check className="h-4 w-4 mr-2" />
+          Mark All Read
+        </Button>
+      </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Notifications</p>
-                  <p className="text-2xl font-bold">{ownerNotifications.length}</p>
-                </div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total Notifications</p>
+                <p className="text-2xl font-bold">{ownerNotifications.length}</p>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-                <div>
-                  <p className="text-sm text-muted-foreground">High Priority</p>
-                  <p className="text-2xl font-bold">{highPriorityCount}</p>
-                </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">High Priority</p>
+                <p className="text-2xl font-bold">{highPriorityCount}</p>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Unread</p>
-                  <p className="text-2xl font-bold">{unreadCount}</p>
-                </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Unread</p>
+                <p className="text-2xl font-bold">{unreadCount}</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Filter Buttons */}
-        <div className="flex gap-2">
-          <Button variant={filter === "all" ? "default" : "outline"} onClick={() => setFilter("all")}>
-            All
-          </Button>
-          <Button variant={filter === "unread" ? "default" : "outline"} onClick={() => setFilter("unread")}>
-            Unread ({unreadCount})
-          </Button>
-          <Button variant={filter === "high" ? "default" : "outline"} onClick={() => setFilter("high")}>
-            High Priority
-          </Button>
-        </div>
+      {/* Filter Buttons */}
+      <div className="flex gap-2">
+        <Button variant={filter === "all" ? "default" : "outline"} onClick={() => setFilter("all")}>
+          All
+        </Button>
+        <Button variant={filter === "unread" ? "default" : "outline"} onClick={() => setFilter("unread")}>
+          Unread ({unreadCount})
+        </Button>
+        <Button variant={filter === "high" ? "default" : "outline"} onClick={() => setFilter("high")}>
+          High Priority
+        </Button>
+      </div>
 
-        {/* Notifications List */}
-        <div className="space-y-4">
-          {filteredNotifications.map((notification) => (
-            <Card
-              key={notification.id}
-              className={`transition-colors ${!notification.read ? "border-primary bg-primary/5" : ""}`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="mt-1">{getNotificationIcon(notification.type)}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium">{notification.title}</h3>
-                      <Badge variant={getPriorityColor(notification.priority)} className="text-xs">
-                        {notification.priority}
-                      </Badge>
-                      {!notification.read && <div className="w-2 h-2 bg-primary rounded-full" />}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
-                    <p className="text-xs text-muted-foreground">{formatNotificationTime(notification.time)}</p>
+      {/* Notifications List */}
+      <div className="space-y-4">
+        {filteredNotifications.map((notification) => (
+          <Card
+            key={notification.id}
+            className={`transition-colors ${!notification.read ? "border-primary bg-primary/5" : ""}`}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-start gap-4">
+                <div className="mt-1">{getNotificationIcon(notification.type)}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-medium">{notification.title}</h3>
+                    <Badge variant={getPriorityColor(notification.priority)} className="text-xs">
+                      {notification.priority}
+                    </Badge>
+                    {!notification.read && <div className="w-2 h-2 bg-primary rounded-full" />}
                   </div>
-                  {!notification.read && (
-                    <Button variant="ghost" size="sm" onClick={() => markAsRead(notification.id)}>
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
+                  <p className="text-xs text-muted-foreground">{formatNotificationTime(notification.time)}</p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredNotifications.length === 0 && (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No notifications</h3>
-              <p className="text-muted-foreground">
-                {filter === "all" ? "You're all caught up!" : `No ${filter} notifications found.`}
-              </p>
+                {!notification.read && (
+                  <Button variant="ghost" size="sm" onClick={() => markAsRead(notification.id)}>
+                    <Check className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
-        )}
+        ))}
+      </div>
+
+      {filteredNotifications.length === 0 && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No notifications</h3>
+            <p className="text-muted-foreground">
+              {filter === "all" ? "You're all caught up!" : `No ${filter} notifications found.`}
+            </p>
+          </CardContent>
+        </Card>
+      )}
       </div>
     </OwnerLayout>
   )

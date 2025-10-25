@@ -5,17 +5,16 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { LandingPage } from "@/components/landing-page"
 import { Loader2 } from "lucide-react"
-import { SyncOverlay } from "@/components/sync-overlay"
 
 export default function HomePage() {
-  const { user, isLoading, isSyncing } = useAuth()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (user && !isLoading && !isSyncing) {
+    if (user && !isLoading) {
       router.push(user.role === "owner" ? "/owner" : "/employee")
     }
-  }, [user, isLoading, isSyncing, router])
+  }, [user, isLoading, router])
 
   if (isLoading) {
     return (
@@ -28,7 +27,6 @@ export default function HomePage() {
   if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <SyncOverlay />
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )

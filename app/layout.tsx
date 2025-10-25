@@ -6,12 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/contexts/auth-context"
 import { JobProvider } from "@/contexts/job-context"
 import { NotificationProvider } from "@/contexts/notification-context"
-import { EmployeeProvider } from "@/contexts/employee-context"
-import { ChatProvider } from "@/contexts/chat-context"
-import { InventoryProvider } from "@/contexts/inventory-context"
-import { AttendanceProvider } from "@/contexts/attendance-context"
 import { ThemeProvider } from "@/components/theme-provider"
-import { SyncStatusIndicator } from "@/components/sync-status-indicator"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -36,18 +31,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <AuthProvider>
               <NotificationProvider>
-                <JobProvider>
-                  <EmployeeProvider>
-                    <ChatProvider>
-                      <InventoryProvider>
-                        <AttendanceProvider>
-                          {children}
-                          <SyncStatusIndicator />
-                        </AttendanceProvider>
-                      </InventoryProvider>
-                    </ChatProvider>
-                  </EmployeeProvider>
-                </JobProvider>
+                <JobProvider>{children}</JobProvider>
               </NotificationProvider>
             </AuthProvider>
           </Suspense>
