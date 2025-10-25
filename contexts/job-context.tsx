@@ -13,12 +13,13 @@ interface JobContextType {
   updateJob: (id: string, updates: Partial<Job>) => void
   deleteJob: (id: string) => void
   getJobsByEmployee: (employeeId: string) => Job[]
+  isLoading: boolean
 }
 
 const JobContext = createContext<JobContextType | undefined>(undefined)
 
 export function JobProvider({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading: authLoading, isSyncing } = useAuth()
 
   const [jobs, setJobs] = useState<Job[]>(() => {
     if (typeof window !== "undefined") {
@@ -28,26 +29,24 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     return mockJobs
   })
 
+  const [isLoading, setIsLoading] = useState(true)
   const hasSyncedRef = useRef(false)
 
-  // When authenticated, fetch jobs from the backend. If that fails, keep using
-  // localStorage/mock data so the UI remains functional offline.
   useEffect(() => {
     let mounted = true
     let intervalId: ReturnType<typeof setInterval> | null = null
 
     async function loadJobs() {
       if (!user) return
+
       try {
         console.log("[v0] Fetching jobs from backend...")
         const serverJobs = await apiClient("/api/jobs", { method: "GET" })
         console.log("[v0] Successfully fetched jobs:", serverJobs)
+
         if (mounted && Array.isArray(serverJobs)) {
-          // Normalize server jobs so each job has a stable shape the UI expects.
           const normalized = serverJobs.map((s: any) => {
-            // prefer an explicit assignedEmployees array if present
             const assignedArr = Array.isArray(s.assignedEmployees) ? s.assignedEmployees : null
-            // fallback to top-level assigned_to or assignedTo (unknown shapes from server)
             const topAssigned = (s as any).assigned_to ?? (s as any).assignedTo ?? null
             const assignedEmployees = Array.isArray(assignedArr)
               ? assignedArr.map((a: any) => String(a))
@@ -56,17 +55,14 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
                 : []
 
             return {
-              // prefer server-provided fields but ensure id and assignedEmployees exist
               id: s.id?.toString?.() ?? String(s._db_row?.id ?? s.id ?? ""),
               title: s.title ?? s.name ?? s.jobTitle ?? "",
               description: s.description ?? s.details ?? "",
               assignedEmployees,
-              // keep any other server-provided fields
               ...s,
             }
           })
 
-          // Update only when the server data differs to avoid stomping local changes
           try {
             const current = JSON.stringify(jobs)
             const incoming = JSON.stringify(normalized)
@@ -75,7 +71,6 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
               localStorage.setItem("smarterp-jobs", incoming)
             }
           } catch (err) {
-            // fallback: set jobs if serialization fails
             setJobs(normalized)
             localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
           }
@@ -85,23 +80,26 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
           "[v0] Backend unavailable, using local jobs. Error:",
           err instanceof Error ? err.message : String(err),
         )
+      } finally {
+        if (mounted) {
+          setIsLoading(false)
+        }
       }
     }
 
-    if (!isLoading) {
+    if (!authLoading) {
       if (!hasSyncedRef.current) {
         loadJobs()
         hasSyncedRef.current = true
       }
-      // Reduced polling interval from 5000ms to 1500ms for faster real-time updates
-      intervalId = setInterval(loadJobs, 1500)
+      intervalId = setInterval(loadJobs, 5000)
     }
 
     return () => {
       mounted = false
       if (intervalId) clearInterval(intervalId)
     }
-  }, [user, isLoading]) // Removed 'jobs' from dependency array to prevent infinite loop
+  }, [user, authLoading])
 
   const { addNotification } = useNotifications()
 
@@ -114,9 +112,6 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     }
   }, [jobs])
 
-  // Keep jobs in sync across tabs in the same browser: when another tab writes
-  // to localStorage we should pick up the new jobs so users see updates
-  // immediately (best-effort, same-browser only).
   useEffect(() => {
     if (typeof window === "undefined") return
 
@@ -130,7 +125,6 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
             }
           }
         } catch (err) {
-          // ignore malformed data
           console.warn("Failed to parse smarterp-jobs from storage event", err)
         }
       }
@@ -142,7 +136,6 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
   const addJob = (job: Job) => {
     setJobs((prev) => [job, ...prev])
-    // persist to backend (best-effort)
     ;(async () => {
       try {
         await apiClient("/api/jobs", { method: "POST", body: JSON.stringify(job) })
@@ -193,8 +186,6 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       })
       return updatedJobs
     })
-
-    // best-effort update to backend
     ;(async () => {
       try {
         await apiClient(`/api/jobs/${id}`, { method: "PUT", body: JSON.stringify(updates) })
@@ -218,14 +209,12 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
   const getJobsByEmployee = (employeeId: string) => {
     return jobs.filter((job) => {
       try {
-        // assignedEmployees normalized to array of strings
         if (
           Array.isArray(job.assignedEmployees) &&
           job.assignedEmployees.some((a: any) => String(a) === String(employeeId))
         )
           return true
 
-        // fallbacks: check top-level assigned_to / assignedTo
         if ((job as any).assigned_to && String((job as any).assigned_to) === String(employeeId)) return true
         if ((job as any).assignedTo && String((job as any).assignedTo) === String(employeeId)) return true
       } catch (err) {
@@ -243,6 +232,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         updateJob,
         deleteJob,
         getJobsByEmployee,
+        isLoading: authLoading || isSyncing,
       }}
     >
       {children}

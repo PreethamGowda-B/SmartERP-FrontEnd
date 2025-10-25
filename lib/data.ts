@@ -1,9 +1,5 @@
 // Data structures for the SmartERP system
 export interface Job {
-  progress: number
-  created_at: any
-  createdAt: any
-  visible_to_all: boolean
   id: string
   title: string
   client: string
@@ -86,10 +82,6 @@ export const mockJobs: Job[] = [
     assignedEmployees: ["2", "3", "4"],
     description: "Construction of a 5-story office complex with modern amenities",
     priority: "high",
-    progress: 0,
-    created_at: undefined,
-    createdAt: undefined,
-    visible_to_all: false
   },
   {
     id: "2",
@@ -104,10 +96,6 @@ export const mockJobs: Job[] = [
     assignedEmployees: ["2", "5"],
     description: "Building 12 single-family homes in new development",
     priority: "medium",
-    progress: 0,
-    created_at: undefined,
-    createdAt: undefined,
-    visible_to_all: false
   },
   {
     id: "3",
@@ -122,10 +110,6 @@ export const mockJobs: Job[] = [
     assignedEmployees: ["3", "4"],
     description: "Complete renovation of historic city bridge",
     priority: "high",
-    progress: 0,
-    created_at: undefined,
-    createdAt: undefined,
-    visible_to_all: false
   },
 ]
 

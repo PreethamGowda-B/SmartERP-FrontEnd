@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 import { mockEmployees, type Job } from "@/lib/data"
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { format } from "date-fns"
@@ -36,6 +37,7 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
     startDate: job?.startDate ? new Date(job.startDate) : undefined,
     endDate: job?.endDate ? new Date(job.endDate) : undefined,
     assignedEmployees: job?.assignedEmployees || [],
+    visible_to_all: (job as any)?.visible_to_all || false,
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -232,6 +234,20 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-accent/5 rounded-lg border border-accent/20">
+            <div className="space-y-1">
+              <Label className="text-base font-semibold">Visible to All Employees</Label>
+              <p className="text-sm text-muted-foreground">
+                When enabled, this job will be visible to all employees in the portal
+              </p>
+            </div>
+            <Switch
+              checked={formData.visible_to_all}
+              onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, visible_to_all: checked }))}
+              aria-label="Make job visible to all employees"
+            />
           </div>
 
           <div className="flex gap-3 pt-4">

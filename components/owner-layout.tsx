@@ -7,11 +7,12 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { OwnerSidebar } from "@/components/owner-sidebar"
 import { AIChatBot } from "@/components/ai-chat-bot"
-import { NavLoadingProvider, useNavLoading } from '@/components/nav-loading-context'
-import PageTransition from './page-transition'
+import { NavLoadingProvider, useNavLoading } from "@/components/nav-loading-context"
+import PageTransition from "./page-transition"
 import { Button } from "@/components/ui/button"
 import { Bot } from "lucide-react"
-import DotsLoader from '@/components/dots-loader'
+import DotsLoader from "@/components/dots-loader"
+import { OwnerTopNav } from "@/components/owner-top-nav"
 
 interface OwnerLayoutProps {
   children: React.ReactNode
@@ -31,7 +32,10 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div style={{ width: 160, height: 100 }} className="flex items-center justify-center bg-white rounded-lg shadow-md">
+        <div
+          style={{ width: 160, height: 100 }}
+          className="flex items-center justify-center bg-white rounded-lg shadow-md"
+        >
           <DotsLoader />
         </div>
       </div>
@@ -50,11 +54,12 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
       <div className="min-h-screen bg-background">
         <OwnerSidebar />
         <div className="lg:pl-64">
+          <OwnerTopNav />
           <MainContent>{children}</MainContent>
         </div>
 
         <Button
-          className={`fixed bottom-4 right-4 z-40 rounded-full h-12 w-12 shadow-lg transition-all duration-300 ${
+          className={`fixed bottom-4 right-4 z-40 rounded-full h-12 w-12 shadow-lg bg-primary hover:bg-primary/90 transition-all duration-300 ${
             isChatBotOpen ? "scale-0 opacity-0 pointer-events-none" : "scale-100 opacity-100"
           }`}
           onClick={() => setIsChatBotOpen(true)}
@@ -74,7 +79,8 @@ function MainContent({ children }: { children: React.ReactNode }) {
   const { loadingId } = useNavLoading()
   return (
     <main
-      className={`p-4 lg:p-8 transition-all duration-400 ease-in-out ${loadingId ? 'opacity-30 translate-y-2' : 'opacity-100 translate-y-0'}`}>
+      className={`p-4 lg:p-8 transition-all duration-400 ease-in-out ${loadingId ? "opacity-30 translate-y-2" : "opacity-100 translate-y-0"}`}
+    >
       {children}
     </main>
   )
