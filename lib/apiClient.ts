@@ -6,6 +6,7 @@ export async function apiClient(path: string, options: RequestInit = {}) {
     ...(options.headers as Record<string, string>),
   }
 
+  // Send cookies by default (for httpOnly cookie auth)
   const res = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers,
@@ -32,13 +33,9 @@ export async function apiClient(path: string, options: RequestInit = {}) {
       }
       return retry.json()
     } catch (error) {
+      // If refresh fails, clear local user data
       if (typeof window !== "undefined") {
         localStorage.removeItem("smarterp_user")
-        localStorage.removeItem("smarterp_user_id")
-        localStorage.removeItem("smarterp-jobs")
-        localStorage.removeItem("smarterp-notifications")
-        localStorage.removeItem("smarterp-employees")
-        localStorage.removeItem("smarterp-chat-messages")
       }
       throw error
     }
