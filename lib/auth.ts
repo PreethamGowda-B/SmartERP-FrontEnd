@@ -70,6 +70,7 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
+      mode: "cors",
       body: JSON.stringify(userData),
     })
 
@@ -150,6 +151,7 @@ export const signIn = async (email: string, password: string): Promise<User | nu
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
+      mode: "cors",
       body: JSON.stringify({ email, password }),
     })
 
@@ -195,6 +197,7 @@ export const signOut = async (): Promise<void> => {
     await fetch(`${apiUrl}/api/auth/logout`, {
       method: "POST",
       credentials: "include",
+      mode: "cors",
     }).catch(() => {
       // Ignore errors during logout
     })
