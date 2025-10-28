@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { NavLink } from '@/components/nav-link'
+import { NavLink } from "@/components/nav-link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -63,18 +62,17 @@ export function OwnerSidebar() {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center gap-2 p-6 border-b border-border">
-            <div className="p-2 bg-primary rounded-lg">
-              <Building2 className="h-6 w-6 text-primary-foreground" />
+          <div className="flex flex-col gap-4 p-6 border-b border-border">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-primary rounded-lg">
+                <Building2 className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-bold">SmartERP</h1>
+                <p className="text-sm text-muted-foreground">Owner Portal</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold">SmartERP</h1>
-              <p className="text-sm text-muted-foreground">Owner Portal</p>
-            </div>
-            {/* Theme Toggle */}
-            <div className="flex-none">
-              <ThemeToggle />
-            </div>
+            <ThemeToggle />
           </div>
 
           {/* Navigation */}
