@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
-import { ThemeToggle } from "@/components/theme-toggle"
 import {
   Building2,
   LayoutDashboard,
@@ -21,7 +20,9 @@ import {
   LogOut,
   Menu,
   X,
+  Box,
 } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle" // Import ThemeToggle component
 
 const navigation = [
   { name: "Dashboard", href: "/owner", icon: LayoutDashboard },
@@ -29,6 +30,7 @@ const navigation = [
   { name: "Employees", href: "/owner/employees", icon: Users },
   { name: "Attendance", href: "/owner/attendance", icon: Clock },
   { name: "Materials", href: "/owner/materials", icon: Package },
+  { name: "Inventory", href: "/owner/inventory", icon: Box },
   { name: "Payroll", href: "/owner/payroll", icon: DollarSign },
   { name: "Reports", href: "/owner/reports", icon: BarChart3 },
   { name: "Notifications", href: "/owner/notifications", icon: Bell },
@@ -72,7 +74,7 @@ export function OwnerSidebar() {
                 <p className="text-sm text-muted-foreground">Owner Portal</p>
               </div>
             </div>
-            <ThemeToggle />
+            <ThemeToggle /> {/* ThemeToggle component is now declared */}
           </div>
 
           {/* Navigation */}

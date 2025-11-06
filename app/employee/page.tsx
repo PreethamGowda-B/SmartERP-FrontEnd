@@ -12,6 +12,7 @@ import { MaterialRequestForm } from "@/components/material-request-form"
 import { mockJobs, mockMaterialRequests, type MaterialRequest } from "@/lib/data"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
+import { DateTimeWeather } from "@/components/date-time-weather"
 import {
   Briefcase,
   DollarSign,
@@ -82,11 +83,14 @@ export default function EmployeeDashboard() {
     <EmployeeLayout>
       <div className="space-y-8 animate-fade-in-up">
         {/* Header */}
-        <div className="animate-fade-in-down stagger-1">
-          <h1 className="text-3xl font-bold text-balance bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-            Welcome back, {user?.name?.split(" ")[0]}!
-          </h1>
-          <p className="text-muted-foreground animate-fade-in-up stagger-2">Here's your work overview for today.</p>
+        <div className="animate-fade-in-down stagger-1 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-balance bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
+              Welcome back, {user?.name?.split(" ")[0]}!
+            </h1>
+            <p className="text-muted-foreground animate-fade-in-up stagger-2">Here's your work overview for today.</p>
+          </div>
+          <DateTimeWeather />
         </div>
 
         {/* Quick Stats */}
@@ -125,13 +129,51 @@ export default function EmployeeDashboard() {
           </Card>
 
           <Card className="animate-fade-in-right stagger-4 hover-lift hover-scale group">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Month</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground group-hover:text-green-500 transition-colors duration-300 animate-float" />
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-accent animate-pulse-soft" />
+                My Active Jobs
+              </CardTitle>
+              <CardDescription>Projects you're currently working on</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600 animate-scale-in stagger-6">$4,820</div>
-              <p className="text-xs text-muted-foreground">Estimated earnings</p>
+            <CardContent className="space-y-4">
+              {activeJobs.length > 0 ? (
+                activeJobs.map((job, index) => (
+                  <div
+                    key={job.id}
+                    className={`space-y-2 p-3 rounded-lg border border-border/50 hover:border-accent/30 hover:bg-accent/5 transition-all duration-300 animate-slide-up hover-lift`}
+                    style={{ animationDelay: `${0.7 + index * 0.1}s` }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium hover:text-accent transition-colors duration-200">{job.title}</h4>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin className="h-3 w-3 animate-pulse-soft" />
+                          {job.location}
+                        </div>
+                      </div>
+                      <Badge
+                        variant={job.priority === "high" ? "destructive" : "secondary"}
+                        className="animate-scale-in hover-scale transition-transform duration-200"
+                      >
+                        {job.priority}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>Progress</span>
+                        <span className="font-medium">{Math.round((job.spent / job.budget) * 100)}%</span>
+                      </div>
+                      <Progress
+                        value={(job.spent / job.budget) * 100}
+                        className="h-2 transition-all duration-500 hover:h-3"
+                      />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground animate-fade-in-up">No active jobs assigned</p>
+              )}
             </CardContent>
           </Card>
         </div>
