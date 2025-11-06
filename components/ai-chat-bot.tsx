@@ -12,7 +12,7 @@ import { Bot, Send, X, Minimize2, Maximize2, Mic, MicOff } from "lucide-react"
 type SpeechRecognition = any
 import { apiClient } from "@/lib/apiClient"
 
-interface Message {
+interface Message 
   id: number
   text: string
   sender: "user" | "bot"
