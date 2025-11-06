@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { mockJobs, type MaterialRequest } from "@/lib/data"
 import { materialsCatalog } from "@/lib/materials-data"
 import { useAuth } from "@/contexts/auth-context"
-import { Plus, Trash2, Loader2, Search } from "lucide-react"
+import { Plus, Trash2, Loader2, Search, Upload, X } from "lucide-react"
 
 interface MaterialRequestFormProps {
   request?: MaterialRequest
@@ -35,11 +34,16 @@ export function MaterialRequestForm({ request, onSubmit, onCancel, isLoading }: 
     jobId: request?.jobId || "",
     urgency: request?.urgency || "medium",
     notes: request?.notes || "",
+    materialName: request?.materialName || "",
+    description: request?.description || "",
+    quantity: request?.quantity || "",
   })
   const [items, setItems] = useState<RequestItem[]>(
     request?.items || [{ name: "", quantity: 1, unit: "", estimatedCost: 0 }],
   )
   const [searchTerm, setSearchTerm] = useState("")
+  const [image, setImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>(request?.imageUrl || "")
 
   // Get user's assigned jobs for employees, all jobs for owners
   const availableJobs =
@@ -88,6 +92,23 @@ export function MaterialRequestForm({ request, onSubmit, onCancel, isLoading }: 
   }
 
   const totalEstimatedCost = items.reduce((sum, item) => sum + item.quantity * item.estimatedCost, 0)
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setImage(file)
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        setImagePreview(event.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setImage(null)
+    setImagePreview("")
+  }
 
   return (
     <Card className="w-full max-w-4xl">
@@ -253,6 +274,86 @@ export function MaterialRequestForm({ request, onSubmit, onCancel, isLoading }: 
             </div>
           </div>
 
+          {/* Material Name */}
+          <div className="space-y-2">
+            <Label htmlFor="materialName">Material Name</Label>
+            <Input
+              id="materialName"
+              placeholder="e.g., Cement Bags, Steel Pipes"
+              value={formData.materialName}
+              onChange={(e) => setFormData((prev) => ({ ...prev, materialName: e.target.value }))}
+              required
+            />
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              placeholder="Provide details about the material, specifications, or any special requirements..."
+              value={formData.description}
+              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+              rows={3}
+            />
+          </div>
+
+          {/* Quantity */}
+          <div className="space-y-2">
+            <Label htmlFor="quantity">Quantity</Label>
+            <Input
+              id="quantity"
+              type="number"
+              placeholder="e.g., 10"
+              value={formData.quantity}
+              onChange={(e) => setFormData((prev) => ({ ...prev, quantity: e.target.value }))}
+              min="1"
+            />
+          </div>
+
+          {/* Image Upload Section */}
+          <div className="space-y-2">
+            <Label htmlFor="image">Upload Image (Optional)</Label>
+            <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-accent/5 transition">
+              {imagePreview ? (
+                <div className="space-y-3">
+                  <img
+                    src={imagePreview || "/placeholder.svg"}
+                    alt="Preview"
+                    className="h-32 w-32 object-cover rounded-lg mx-auto"
+                  />
+                  <div className="flex gap-2 justify-center">
+                    <Input id="image" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById("image")?.click()}
+                    >
+                      Change Image
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={handleRemoveImage}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Input id="image" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("image")?.click()}
+                    className="flex flex-col items-center gap-2 cursor-pointer w-full"
+                  >
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                    <span className="text-sm font-medium">Click to upload an image</span>
+                    <span className="text-xs text-muted-foreground">or drag and drop</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea
@@ -265,7 +366,13 @@ export function MaterialRequestForm({ request, onSubmit, onCancel, isLoading }: 
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={isLoading || !formData.jobId || items.every((item) => !item.name)}>
+            <Button
+              type="submit"
+              disabled={
+                isLoading || !formData.jobId || items.every((item) => !item.name) || !formData.materialName.trim()
+              }
+              className="bg-accent hover:bg-accent/90 text-accent-foreground"
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
