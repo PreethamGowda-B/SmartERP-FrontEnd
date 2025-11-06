@@ -37,14 +37,23 @@ export function LoginForm() {
     setSuccess("")
 
     try {
-      if (mode === "login") {
-        const user = await signIn(email, password)
-        if (user) {
-          setUser(user)
-          router.push(user.role === "owner" ? "/owner" : "/employee")
-        } else {
-          setError("Invalid email or password. Please check your credentials or create an account.")
-        }
+  if (mode === "login") {
+  const user: any = await signIn(email, password) // 👈 Add `: any`
+
+  if (user) {
+    if (user.accessToken) {
+      localStorage.setItem("accessToken", user.accessToken)
+    }
+    if (user.refreshToken) {
+      localStorage.setItem("refreshToken", user.refreshToken)
+    }
+
+    localStorage.setItem("user", JSON.stringify(user))
+    setUser(user)
+    router.push(user.role === "owner" ? "/owner" : "/employee")
+  } else {
+    setError("Invalid email or password. Please check your credentials or create an account.")
+  }
       } else {
         if (!name.trim()) {
           setError("Full name is required")
