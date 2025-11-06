@@ -8,7 +8,10 @@ export interface User {
   phone?: string
   position?: string
   department?: string
+  accessToken?: string
+  refreshToken?: string
 }
+
 
 export interface SignUpData {
   email: string
