@@ -2,6 +2,7 @@
 
 import { useJobs } from "@/contexts/job-context"
 import { Badge } from "@/components/ui/badge"
+import { EmployeeLayout } from "@/components/employee-layout"
 import { Progress } from "@/components/ui/progress"
 import { Calendar, Users } from "lucide-react"
 
@@ -31,25 +32,31 @@ function formatDate(dateString?: string) {
 export default function EmployeeJobsPage() {
   const { jobs } = useJobs()
 
-  if (jobs.length === 0) {
-    return (
+if (jobs.length === 0) {
+  return (
+    <EmployeeLayout>
       <div className="p-6 max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Available Jobs</h1>
         <p className="text-gray-500 text-center py-12">No jobs available yet.</p>
       </div>
-    )
-  }
+    </EmployeeLayout>
+  )
+}
 
-  return (
+return (
+  <EmployeeLayout>
     <div className="p-6 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Available Jobs</h1>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {jobs.map((job) => {
           const status = job.status || "Pending"
-          const progress = job.progress ?? 0
-          const createdDate = job.created_at || job.createdAt
-          const isVisibleToAll = job.visible_to_all || false
+
+          // ⛔ TEMP FIX — backend does not provide these yet
+          const progress = 0
+          const createdDate = undefined
+          const isVisibleToAll = false
+
           const assignedEmployees = job.assignedEmployees || []
 
           return (
@@ -104,5 +111,6 @@ export default function EmployeeJobsPage() {
         })}
       </div>
     </div>
+    </EmployeeLayout>
   )
 }
