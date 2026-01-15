@@ -12,6 +12,16 @@ export interface Job {
   assignedEmployees: string[]
   description: string
   priority: "low" | "medium" | "high"
+  // New employee tracking fields
+  employee_status?: "pending" | "accepted" | "declined"
+  progress?: number
+  accepted_at?: string
+  declined_at?: string
+  completed_at?: string
+  created_at?: string
+  createdAt?: string
+  visible_to_all?: boolean
+  employee_email?: string
 }
 
 export interface Employee {
