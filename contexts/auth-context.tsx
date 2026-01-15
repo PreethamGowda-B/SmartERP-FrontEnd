@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { createContext, useContext, useEffect, useState } from "react"
 import { type User, type AuthState, getCurrentUser, signOut } from "@/lib/auth"
 
@@ -22,25 +23,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const handleSignOut = async () => {
-    // ✅ CLEAR OLD TOKENS (this fixes 2nd login bug)
-    localStorage.removeItem("accessToken")
-    localStorage.removeItem("refreshToken")
-
     await signOut()
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        signOut: handleSignOut,
-        setUser,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={{ user, isLoading, signOut: handleSignOut, setUser }}>{children}</AuthContext.Provider>
   )
 }
 
