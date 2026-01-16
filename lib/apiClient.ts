@@ -1,66 +1,84 @@
-export async function apiClient(path: string, options: RequestInit = {}) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+/**
+ * Centralized API client for SmartERP
+ * - Attaches JWT token automatically
+ * - Handles 401 correctly (NO refresh loop)
+ * - Prevents fallback fake data issues
+ * - Keeps structure intact
+ */
 
-  // Get access token from localStorage (for Bearer auth)
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+export async function apiClient(
+  path: string,
+  options: RequestInit = {}
+) {
+  // ✅ Base URL (from env or local fallback)
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
+  // ✅ Read token safely (client-side only)
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("token")
+      : null
+
+  // ✅ Merge headers safely
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}), // ✅ attach token if available
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers as Record<string, string>),
   }
 
-  let res = await fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers,
-    credentials: "include", // ✅ allows cookie-based sessions too
-  })
+  let response: Response
 
-  // 🧩 If token expired or invalid → try refresh
-  if (res.status === 401) {
-    console.warn("[v0] Unauthorized — attempting refresh")
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      ...options,
+      headers,
+      credentials: "include",
+    })
+  } catch (networkError) {
+    // 🔴 Network / CORS / server down
+    console.error("[apiClient] Network error:", networkError)
+    throw new Error("NETWORK_ERROR")
+  }
 
-    try {
-      const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null
-      if (refreshToken) {
-        const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ refreshToken }),
-        })
+  // 🔐 AUTH ERROR — handle explicitly (NO refresh loop)
+  if (response.status === 401) {
+    console.error("[apiClient] Unauthorized – invalid or expired token")
 
-        if (refreshRes.ok) {
-          const newTokens = await refreshRes.json()
-          if (newTokens.accessToken) localStorage.setItem("token", newTokens.accessToken)
-          if (newTokens.refreshToken) localStorage.setItem("refreshToken", newTokens.refreshToken)
-
-          // Retry original request with new token
-          res = await fetch(`${baseUrl}${path}`, {
-            ...options,
-            headers: {
-              ...headers,
-              Authorization: `Bearer ${newTokens.accessToken}`,
-            },
-            credentials: "include",
-          })
-        }
-      }
-    } catch (error) {
-      console.error("[v0] Token refresh failed:", error)
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("smarterp_user")
-        localStorage.removeItem("token")
-        localStorage.removeItem("refreshToken")
-      }
-      throw error
+    if (typeof window !== "undefined") {
+      // Clear auth + cached jobs to avoid fake data
+      localStorage.removeItem("token")
+      localStorage.removeItem("refreshToken")
+      localStorage.removeItem("smarterp_user")
+      localStorage.removeItem("smarterp-jobs")
     }
+
+    throw new Error("UNAUTHORIZED")
   }
 
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: res.statusText }))
-    throw error
+  // ❌ Other API errors
+  if (!response.ok) {
+    let errorPayload: any = null
+    try {
+      errorPayload = await response.json()
+    } catch {
+      errorPayload = { message: response.statusText }
+    }
+
+    console.error("[apiClient] API error:", errorPayload)
+    throw errorPayload
   }
 
-  return res.json()
+  // ✅ Handle empty responses (204 No Content)
+  if (response.status === 204) {
+    return null
+  }
+
+  // ✅ Parse JSON safely
+  try {
+    return await response.json()
+  } catch (parseError) {
+    console.warn("[apiClient] Response is not JSON")
+    return null
+  }
 }
