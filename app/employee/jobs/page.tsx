@@ -52,8 +52,7 @@ export default function EmployeeJobsPage() {
     setUpdatingJobId(jobId)
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${API_URL}/api/jobs/${jobId}/accept`, {
-
+      const response = await fetch(`${API_URL}/jobs/${jobId}/accept`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -81,8 +80,7 @@ export default function EmployeeJobsPage() {
     setUpdatingJobId(jobId)
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${API_URL}/api/jobs/${jobId}/decline`, {
-
+      const response = await fetch(`${API_URL}/jobs/${jobId}/decline`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
