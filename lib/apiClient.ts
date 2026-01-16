@@ -12,7 +12,7 @@ export async function apiClient(
 ) {
   // ✅ Base URL (from env or local fallback)
   const baseUrl =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+    process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
   // ✅ Read token safely (client-side only)
   const token =
