@@ -2,7 +2,7 @@ export async function apiClient(path: string, options: RequestInit = {}) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
   // Get access token from localStorage (for Bearer auth)
-  const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -32,7 +32,7 @@ export async function apiClient(path: string, options: RequestInit = {}) {
 
         if (refreshRes.ok) {
           const newTokens = await refreshRes.json()
-          if (newTokens.accessToken) localStorage.setItem("accessToken", newTokens.accessToken)
+          if (newTokens.accessToken) localStorage.setItem("token", newTokens.accessToken)
           if (newTokens.refreshToken) localStorage.setItem("refreshToken", newTokens.refreshToken)
 
           // Retry original request with new token
@@ -50,7 +50,7 @@ export async function apiClient(path: string, options: RequestInit = {}) {
       console.error("[v0] Token refresh failed:", error)
       if (typeof window !== "undefined") {
         localStorage.removeItem("smarterp_user")
-        localStorage.removeItem("accessToken")
+        localStorage.removeItem("token")
         localStorage.removeItem("refreshToken")
       }
       throw error
