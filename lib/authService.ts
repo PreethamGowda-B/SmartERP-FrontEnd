@@ -1,4 +1,4 @@
-// ✅ SmartERP authentication system (fixed for Render backend)
+// ✅ SmartERP authentication system (FIXED for localStorage token storage)
 export interface User {
   id: string
   email: string
@@ -28,11 +28,11 @@ export interface AuthState {
 export const signUp = async (userData: SignUpData): Promise<User | null> => {
   try {
     const baseUrl =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000/api"
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000"
 
-    console.log("[SmartERP] Attempting signup at:", `${baseUrl}/auth/register`)
+    console.log("[SmartERP] Attempting signup at:", `${baseUrl}/api/auth/signup`)
 
-    const response = await fetch(`${baseUrl}/auth/register`, {
+    const response = await fetch(`${baseUrl}/api/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -54,11 +54,11 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
 export const signIn = async (email: string, password: string): Promise<User | null> => {
   try {
     const baseUrl =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000/api"
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000"
 
-    console.log("[SmartERP] Attempting login at:", `${baseUrl}/auth/login`)
+    console.log("[SmartERP] Attempting login at:", `${baseUrl}/api/auth/login`)
 
-    const response = await fetch(`${baseUrl}/auth/login`, {
+    const response = await fetch(`${baseUrl}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -68,7 +68,19 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     const data = await response.json()
     if (!response.ok) throw new Error(data.message || "Login failed")
 
+    // Store user data
     localStorage.setItem("smarterp_user", JSON.stringify(data.user || data))
+    
+    // ✅ FIXED: Store tokens in localStorage so they can be used in API requests
+    if (data.accessToken) {
+      localStorage.setItem("accessToken", data.accessToken)
+      console.log("[SmartERP] Access token stored")
+    }
+    if (data.refreshToken) {
+      localStorage.setItem("refreshToken", data.refreshToken)
+      console.log("[SmartERP] Refresh token stored")
+    }
+    
     console.log("[SmartERP] Login success:", data.user?.email || data.email)
     return data.user || data
   } catch (error) {
@@ -80,12 +92,16 @@ export const signIn = async (email: string, password: string): Promise<User | nu
 export const signOut = async (): Promise<void> => {
   try {
     const baseUrl =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000/api"
-    await fetch(`${baseUrl}/auth/logout`, { method: "POST", credentials: "include" })
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000"
+    await fetch(`${baseUrl}/api/auth/logout`, { method: "POST", credentials: "include" })
   } catch (err) {
     console.warn("[SmartERP] Logout failed:", err)
   }
+  
+  // Clear all auth data from localStorage
   localStorage.removeItem("smarterp_user")
+  localStorage.removeItem("accessToken")
+  localStorage.removeItem("refreshToken")
 }
 
 export const getCurrentUser = (): User | null => {
