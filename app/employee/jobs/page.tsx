@@ -1,30 +1,26 @@
 "use client"
 
 import { useState } from "react"
-import { OwnerLayout } from "@/components/owner-layout"
-import { JobForm } from "@/components/job-form"
+import { EmployeeLayout } from "@/components/employee-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import type { Job } from "@/lib/data"
 import { useJobs } from "@/contexts/job-context"
-import { Plus, Search, Filter, Calendar, Users, CheckCircle2, Clock, XCircle, AlertCircle, TrendingUp, Edit, Trash2 } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { Search, Filter, Calendar, MapPin, CheckCircle2, Clock, XCircle, AlertCircle, Briefcase } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 function formatDate(dateString?: string) {
   if (!dateString) return "Not set"
   try {
     const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { 
-      month: "short", 
-      day: "numeric", 
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
     })
   } catch {
     return "Invalid date"
@@ -33,7 +29,7 @@ function formatDate(dateString?: string) {
 
 function getEmployeeStatusBadge(employeeStatus?: string) {
   const status = employeeStatus?.toLowerCase() || "pending"
-  
+
   switch (status) {
     case "accepted":
       return (
@@ -54,148 +50,93 @@ function getEmployeeStatusBadge(employeeStatus?: string) {
       return (
         <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
           <Clock className="w-3 h-3 mr-1" />
-          Pending
+          Action Required
         </Badge>
       )
   }
 }
 
-export default function OwnerJobsPage() {
-  const { jobs, addJob, updateJob, deleteJob } = useJobs()
+export default function EmployeeJobsPage() {
+  const { user } = useAuth()
+  const { jobs, updateJob } = useJobs()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [priorityFilter, setPriorityFilter] = useState("all")
-  const [employeeStatusFilter, setEmployeeStatusFilter] = useState("all")
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingJob, setEditingJob] = useState<Job | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const filteredJobs = jobs.filter((job) => {
+  // Filter jobs assigned to the current employee
+  const myJobs = jobs.filter(job =>
+    job.assignedEmployees?.includes(user?.id || "") ||
+    // Fallback for demo/mock data: check if job is visible to all or specific logic
+    (user?.role === 'employee' && job.status === 'active')
+  )
+
+  const filteredJobs = myJobs.filter((job) => {
     const matchesSearch =
       job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       false
     const matchesStatus = statusFilter === "all" || job.status === statusFilter
-    const matchesPriority = priorityFilter === "all" || job.priority === priorityFilter
-    const matchesEmployeeStatus = employeeStatusFilter === "all" || job.employee_status === employeeStatusFilter
-    return matchesSearch && matchesStatus && matchesPriority && matchesEmployeeStatus
+    return matchesSearch && matchesStatus
   })
 
-  const handleCreateJob = () => {
-    setEditingJob(null)
-    setIsFormOpen(true)
-  }
-
-  const handleEditJob = (job: Job) => {
-    setEditingJob(job)
-    setIsFormOpen(true)
-  }
-
-  const handleDeleteJob = (job: Job) => {
-    if (confirm("Are you sure you want to delete this job?")) {
-      deleteJob(job.id)
-    }
-  }
-
-  const handleSubmitJob = async (jobData: Partial<Job>) => {
-    setIsLoading(true)
-
+  const handleAcceptJob = async (jobId: string) => {
     try {
-      if (editingJob) {
-        await updateJob(editingJob.id, jobData)
-      } else {
-        // Let backend generate the ID - don't create it here
-        const jobToCreate = {
-          spent: 0,
-          ...jobData,
-        } as Job
-        await addJob(jobToCreate)
-      }
-      setIsFormOpen(false)
-      setEditingJob(null)
+      await updateJob(jobId, {
+        employee_status: 'accepted',
+        accepted_at: new Date().toISOString()
+      })
     } catch (error) {
-      console.error('Failed to submit job:', error)
-      alert('Failed to create job. Please try again.')
-    } finally {
-      setIsLoading(false)
+      console.error('Failed to accept job:', error)
     }
   }
 
-  const handleCancelForm = () => {
-    setIsFormOpen(false)
-    setEditingJob(null)
+  const handleDeclineJob = async (jobId: string) => {
+    if (confirm("Are you sure you want to decline this job assignment?")) {
+      try {
+        await updateJob(jobId, {
+          employee_status: 'declined',
+          declined_at: new Date().toISOString()
+        })
+      } catch (error) {
+        console.error('Failed to decline job:', error)
+      }
+    }
   }
 
-  const acceptedJobs = jobs.filter(j => j.employee_status === 'accepted').length
-  const pendingJobs = jobs.filter(j => j.employee_status === 'pending').length
-  const declinedJobs = jobs.filter(j => j.employee_status === 'declined').length
-  const completedJobs = jobs.filter(j => j.status === 'completed').length
+  const activeJobsCount = myJobs.filter(j => j.status === 'active').length
+  const pendingResponseCount = myJobs.filter(j => !j.employee_status || j.employee_status === 'pending').length
 
   return (
-    <OwnerLayout>
+    <EmployeeLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Job Management
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-accent to-accent/70 bg-clip-text text-transparent">
+              My Jobs
             </h1>
-            <p className="text-muted-foreground mt-1">Manage projects and track employee responses</p>
+            <p className="text-muted-foreground mt-1">View and manage your assigned projects</p>
           </div>
-          <Button onClick={handleCreateJob} size="lg">
-            <Plus className="h-4 w-4 mr-2" />
-            New Job
-          </Button>
         </div>
 
-        {/* Enhanced Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-green-200 bg-green-50/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-green-700">{acceptedJobs}</div>
-                  <div className="text-xs text-green-600 font-medium">Accepted by Employees</div>
-                </div>
-                <CheckCircle2 className="h-8 w-8 text-green-500" />
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="border-accent/20 bg-accent/5">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-accent">{activeJobsCount}</div>
+                <div className="text-xs text-muted-foreground font-medium">Active Projects</div>
               </div>
+              <Briefcase className="h-8 w-8 text-accent/50" />
             </CardContent>
           </Card>
-
           <Card className="border-yellow-200 bg-yellow-50/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-yellow-700">{pendingJobs}</div>
-                  <div className="text-xs text-yellow-600 font-medium">Awaiting Response</div>
-                </div>
-                <Clock className="h-8 w-8 text-yellow-500" />
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-yellow-700">{pendingResponseCount}</div>
+                <div className="text-xs text-yellow-600 font-medium">Pending Response</div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-blue-200 bg-blue-50/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-blue-700">{completedJobs}</div>
-                  <div className="text-xs text-blue-600 font-medium">Completed Jobs</div>
-                </div>
-                <TrendingUp className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-red-200 bg-red-50/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-red-700">{declinedJobs}</div>
-                  <div className="text-xs text-red-600 font-medium">Declined by Employees</div>
-                </div>
-                <XCircle className="h-8 w-8 text-red-500" />
-              </div>
+              <Clock className="h-8 w-8 text-yellow-500" />
             </CardContent>
           </Card>
         </div>
@@ -219,139 +160,87 @@ export default function OwnerJobsPage() {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={employeeStatusFilter} onValueChange={setEmployeeStatusFilter}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Employee Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Responses</SelectItem>
-              <SelectItem value="accepted">Accepted</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="declined">Declined</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Jobs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredJobs.map((job) => {
             const employeeStatus = job.employee_status || "pending"
             const progress = job.progress || 0
-            const isCompleted = job.status?.toLowerCase() === 'completed'
 
             return (
               <Card
                 key={job.id}
                 className={cn(
-                  "group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-2",
+                  "flex flex-col transition-all duration-300 hover:shadow-lg border-2",
                   employeeStatus === 'accepted' && "border-green-100",
-                  employeeStatus === 'declined' && "border-red-100 opacity-75",
-                  employeeStatus === 'pending' && "border-yellow-100"
+                  employeeStatus === 'pending' && "border-yellow-100",
+                  employeeStatus === 'declined' && "border-red-100 opacity-75"
                 )}
               >
-                {/* Status indicator bar */}
-                <div
-                  className={cn(
-                    "h-2 w-full",
-                    isCompleted && "bg-green-500",
-                    !isCompleted && employeeStatus === 'accepted' && "bg-blue-500",
-                    employeeStatus === 'pending' && "bg-yellow-500",
-                    employeeStatus === 'declined' && "bg-red-500"
-                  )}
-                />
-
-                <CardHeader className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg line-clamp-2 flex-1">
-                      {job.title}
-                    </CardTitle>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditJob(job)}
-                        className="h-8 w-8"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteJob(job)}
-                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 flex-wrap">
-                    <Badge variant={job.status === 'completed' ? 'default' : 'outline'}>
-                      {job.status || 'pending'}
-                    </Badge>
+                <CardHeader className="space-y-3 pb-3">
+                  <div className="flex justify-between items-start gap-2">
+                    <Badge variant="outline" className="mb-1">{job.client}</Badge>
                     {getEmployeeStatusBadge(employeeStatus)}
                   </div>
-
-                  <CardDescription className="line-clamp-2">
-                    {job.description || "No description"}
-                  </CardDescription>
+                  <CardTitle className="text-lg leading-tight">{job.title}</CardTitle>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    {job.location}
+                  </div>
                 </CardHeader>
 
-                <CardContent className="space-y-4">
+                <CardContent className="flex-1 space-y-4 pt-0">
+                  <CardDescription className="line-clamp-3 text-xs mt-2">
+                    {job.description}
+                  </CardDescription>
+
+                  <div className="space-y-2 text-xs pt-2 border-t mt-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Start Date:</span>
+                      <span className="font-medium">{formatDate(job.startDate)}</span>
+                    </div>
+                    {job.endDate && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Due Date:</span>
+                        <span className="font-medium">{formatDate(job.endDate)}</span>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Progress - only for accepted jobs */}
                   {employeeStatus === 'accepted' && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">Progress</span>
+                    <div className="space-y-2 pt-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="font-medium text-muted-foreground">Completion</span>
                         <span className="font-bold">{progress}%</span>
                       </div>
-                      <Progress value={progress} className="h-2.5" />
-                      {isCompleted && (
-                        <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 p-2 rounded">
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>Completed on {formatDate(job.completed_at)}</span>
-                        </div>
-                      )}
+                      <Progress value={progress} className="h-2" />
                     </div>
                   )}
 
-                  {/* Employee response timestamps */}
-                  <div className="space-y-2 text-xs text-muted-foreground">
-                    {job.employee_email && (
-                      <div className="flex items-center gap-2">
-                        <Users className="w-3 h-3" />
-                        <span>Assigned to: {job.employee_email}</span>
-                      </div>
-                    )}
-                    {job.accepted_at && (
-                      <div className="flex items-center gap-2 text-green-700">
-                        <CheckCircle2 className="w-3 h-3" />
-                        <span>Accepted: {formatDate(job.accepted_at)}</span>
-                      </div>
-                    )}
-                    {job.declined_at && (
-                      <div className="flex items-center gap-2 text-red-700">
-                        <XCircle className="w-3 h-3" />
-                        <span>Declined: {formatDate(job.declined_at)}</span>
-                      </div>
-                    )}
-                    {!job.accepted_at && !job.declined_at && employeeStatus === 'pending' && (
-                      <div className="flex items-center gap-2 text-yellow-700">
-                        <AlertCircle className="w-3 h-3" />
-                        <span>Waiting for employee response</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Created date */}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
-                    <Calendar className="w-3 h-3" />
-                    <span>Created: {formatDate(job.created_at)}</span>
-                  </div>
+                  {/* Action Buttons for Pending Jobs */}
+                  {employeeStatus === 'pending' && (
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
+                        onClick={() => handleAcceptJob(job.id)}
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-red-600 border-red-200 hover:bg-red-50 h-8 text-xs"
+                        onClick={() => handleDeclineJob(job.id)}
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )
@@ -361,30 +250,15 @@ export default function OwnerJobsPage() {
         {filteredJobs.length === 0 && (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <AlertCircle className="w-16 h-16 text-muted-foreground/40 mb-4" />
+              <Briefcase className="w-16 h-16 text-muted-foreground/40 mb-4" />
               <p className="text-lg font-medium text-muted-foreground">No jobs found</p>
               <p className="text-sm text-muted-foreground/70 mt-2">
-                Try adjusting your filters or create a new job
+                You haven&apos;t been assigned to any jobs matching your filters.
               </p>
             </CardContent>
           </Card>
         )}
-
-        {/* Job Form Dialog */}
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingJob ? "Edit Job" : "Create New Job"}</DialogTitle>
-            </DialogHeader>
-            <JobForm
-              job={editingJob || undefined}
-              onSubmit={handleSubmitJob}
-              onCancel={handleCancelForm}
-              isLoading={isLoading}
-            />
-          </DialogContent>
-        </Dialog>
       </div>
-    </OwnerLayout>
+    </EmployeeLayout>
   )
 }
