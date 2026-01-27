@@ -44,7 +44,7 @@ export function MonthlyAttendanceChart({ data }: MonthlyAttendanceChartProps) {
           <Calendar className="h-5 w-5 text-accent" />
           Monthly Attendance Summary
         </CardTitle>
-        <CardDescription>Overview of this month's attendance</CardDescription>
+        <CardDescription>Overview of this month&apos;s attendance</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Quick Stats */}

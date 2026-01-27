@@ -47,7 +47,7 @@ export default function OwnerDashboard() {
                 Dashboard Overview
               </h1>
               <p className="text-muted-foreground animate-in fade-in duration-500 delay-200">
-                Welcome back! Here's what's happening with your business today.
+                Welcome back! Here&apos;s what&apos;s happening with your business today.
               </p>
             </div>
             <DateTimeWeather />
@@ -84,7 +84,7 @@ export default function OwnerDashboard() {
 
           <Card className="animate-in slide-in-from-right duration-500 delay-300 hover:scale-105 hover:shadow-xl transition-all duration-300 group">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Attendance</CardTitle>
+              <CardTitle className="text-sm font-medium">Today&apos;s Attendance</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground group-hover:text-green-500 group-hover:scale-110 transition-all duration-300" />
             </CardHeader>
             <CardContent>

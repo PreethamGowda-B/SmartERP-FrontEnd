@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -31,6 +31,26 @@ export function SmartClockInOut() {
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState("")
 
+
+  const handleAutoClockOut = useCallback(async () => {
+    const clockOutTime = new Date()
+    clockOutTime.setHours(19, 0, 0)
+
+    if (!session.clockInTime) return
+
+    const totalHours = (clockOutTime.getTime() - session.clockInTime.getTime()) / (1000 * 60 * 60)
+
+    setSession((prev) => ({
+      ...prev,
+      clockOutTime,
+      totalHours: Math.round(totalHours * 100) / 100,
+      status: "clocked-out",
+    }))
+
+    setNotificationMessage("You have been automatically clocked out at 7:00 PM")
+    setShowNotification(true)
+  }, [session.clockInTime])
+
   // Update current time every second
   useEffect(() => {
     const timer = setInterval(() => {
@@ -52,7 +72,7 @@ export function SmartClockInOut() {
 
       return () => clearInterval(checkAutoClockOut)
     }
-  }, [session.status, session.clockInTime])
+  }, [session.status, session.clockInTime, handleAutoClockOut])
 
   // Check for missing clock-in notification at 10:00 AM
   useEffect(() => {
@@ -70,8 +90,9 @@ export function SmartClockInOut() {
   // Calculate elapsed time
   useEffect(() => {
     if (session.status === "clocked-in" && session.clockInTime) {
+      const startTime = session.clockInTime
       const timer = setInterval(() => {
-        const elapsed = Date.now() - session.clockInTime.getTime()
+        const elapsed = Date.now() - startTime.getTime()
         setElapsedTime(elapsed)
       }, 1000)
       return () => clearInterval(timer)
@@ -121,7 +142,10 @@ export function SmartClockInOut() {
     setIsLoading(true)
     try {
       const clockOutTime = new Date()
-      const totalHours = (clockOutTime.getTime() - session.clockInTime!.getTime()) / (1000 * 60 * 60)
+
+      if (!session.clockInTime) return
+
+      const totalHours = (clockOutTime.getTime() - session.clockInTime.getTime()) / (1000 * 60 * 60)
 
       setSession({
         ...session,
@@ -139,21 +163,7 @@ export function SmartClockInOut() {
     }
   }
 
-  const handleAutoClockOut = async () => {
-    const clockOutTime = new Date()
-    clockOutTime.setHours(19, 0, 0)
-    const totalHours = (clockOutTime.getTime() - session.clockInTime!.getTime()) / (1000 * 60 * 60)
 
-    setSession({
-      ...session,
-      clockOutTime,
-      totalHours: Math.round(totalHours * 100) / 100,
-      status: "clocked-out",
-    })
-
-    setNotificationMessage("You have been automatically clocked out at 7:00 PM")
-    setShowNotification(true)
-  }
 
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000)
