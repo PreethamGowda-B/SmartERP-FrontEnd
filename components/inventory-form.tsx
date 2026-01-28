@@ -2,7 +2,6 @@
 
 import { useState, useRef } from "react"
 import type React from "react"
-import Image from "next/image"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -145,11 +144,10 @@ export default function InventoryForm({
               <div className="flex items-center gap-2">
                 {imagePreview && (
                   <div className="h-10 w-10 rounded border overflow-hidden">
-                    <Image
+                    <img
                       src={imagePreview || "/placeholder.svg"}
                       alt="Preview"
-                      fill
-                      className="object-cover"
+                      className="h-full w-full object-cover"
                     />
                   </div>
                 )}

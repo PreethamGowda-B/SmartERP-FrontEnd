@@ -2,7 +2,6 @@
 
 import type React from "react"
 import { useState } from "react"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -318,12 +317,10 @@ export function MaterialRequestForm({ request, onSubmit, onCancel, isLoading }: 
             <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-accent/5 transition">
               {imagePreview ? (
                 <div className="space-y-3">
-                  <Image
+                  <img
                     src={imagePreview || "/placeholder.svg"}
                     alt="Preview"
-                    width={128}
-                    height={128}
-                    className="object-cover rounded-lg mx-auto"
+                    className="h-32 w-32 object-cover rounded-lg mx-auto"
                   />
                   <div className="flex gap-2 justify-center">
                     <Input id="image" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />

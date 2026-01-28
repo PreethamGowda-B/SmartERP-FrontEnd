@@ -20,7 +20,7 @@ export function useAuthGuard() {
     }
     check();
     return () => { mounted = false; };
-  }, [router]);
+  }, []);
 
   return { user, loading };
 }

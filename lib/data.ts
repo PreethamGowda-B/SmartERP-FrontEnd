@@ -63,11 +63,6 @@ export interface MaterialRequest {
   requestDate: string
   urgency: "low" | "medium" | "high"
   notes?: string
-  // Legacy/Simple form fields
-  materialName?: string
-  description?: string
-  quantity?: string | number
-  imageUrl?: string
 }
 
 export interface PayrollRecord {

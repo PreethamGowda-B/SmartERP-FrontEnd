@@ -88,7 +88,7 @@ export default function EmployeeDashboard() {
             <h1 className="text-3xl font-bold text-balance bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
               Welcome back, {user?.name?.split(" ")[0]}!
             </h1>
-            <p className="text-muted-foreground animate-fade-in-up stagger-2">Here&apos;s your work overview for today.</p>
+            <p className="text-muted-foreground animate-fade-in-up stagger-2">Here's your work overview for today.</p>
           </div>
           <DateTimeWeather />
         </div>
@@ -134,7 +134,7 @@ export default function EmployeeDashboard() {
                 <Briefcase className="h-5 w-5 text-accent animate-pulse-soft" />
                 My Active Jobs
               </CardTitle>
-              <CardDescription>Projects you&apos;re currently working on</CardDescription>
+              <CardDescription>Projects you're currently working on</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {activeJobs.length > 0 ? (
@@ -190,7 +190,7 @@ export default function EmployeeDashboard() {
                 <Briefcase className="h-5 w-5 text-accent animate-pulse-soft" />
                 My Active Jobs
               </CardTitle>
-              <CardDescription>Projects you&apos;re currently working on</CardDescription>
+              <CardDescription>Projects you're currently working on</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {activeJobs.length > 0 ? (

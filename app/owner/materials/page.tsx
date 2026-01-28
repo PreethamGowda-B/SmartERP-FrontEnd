@@ -37,10 +37,10 @@ export default function OwnerMaterialsPage() {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
         })
-
+        
         if (response.ok && mounted) {
           const serverRequests = await response.json()
-
+          
           // Transform backend data to match frontend MaterialRequestWithDetails interface
           const transformedRequests: MaterialRequestWithDetails[] = serverRequests.map((req: any) => ({
             id: req.id?.toString() || Date.now().toString(),
@@ -54,7 +54,7 @@ export default function OwnerMaterialsPage() {
             createdAt: req.created_at || new Date().toISOString(),
             notes: req.notes || '',
           }))
-
+          
           setRequests(transformedRequests)
         } else if (!response.ok) {
           console.warn('Failed to fetch material requests from backend, using fallback data')
@@ -79,7 +79,7 @@ export default function OwnerMaterialsPage() {
       mounted = false
       if (intervalId) clearInterval(intervalId)
     }
-  }, [requests.length])
+  }, [])
 
   const filteredRequests = requests.filter((request) => {
     const matchesSearch =
@@ -111,7 +111,7 @@ export default function OwnerMaterialsPage() {
 
   const handleApproveRequest = (request: MaterialRequestWithDetails) => {
     // Call backend to approve
-    ; (async () => {
+    ;(async () => {
       try {
         const res = await fetch((process.env.NEXT_PUBLIC_API_BASE || '') + `/api/materials/requests/${request.id}`, {
           method: 'PUT',
@@ -120,7 +120,7 @@ export default function OwnerMaterialsPage() {
           body: JSON.stringify({ action: 'approve' }),
         })
         if (!res.ok) throw new Error('Failed to approve')
-
+        
         // Update local state immediately for better UX
         setRequests((prev) => prev.map((r) => (r.id === request.id ? { ...r, status: 'approved' as const } : r)))
       } catch (err) {
@@ -131,7 +131,7 @@ export default function OwnerMaterialsPage() {
   }
 
   const handleRejectRequest = (request: MaterialRequestWithDetails) => {
-    ; (async () => {
+    ;(async () => {
       try {
         const res = await fetch((process.env.NEXT_PUBLIC_API_BASE || '') + `/api/materials/requests/${request.id}`, {
           method: 'PUT',
@@ -140,7 +140,7 @@ export default function OwnerMaterialsPage() {
           body: JSON.stringify({ action: 'reject' }),
         })
         if (!res.ok) throw new Error('Failed to reject')
-
+        
         // Update local state immediately for better UX
         setRequests((prev) => prev.map((r) => (r.id === request.id ? { ...r, status: 'rejected' as const } : r)))
       } catch (err) {
@@ -159,13 +159,13 @@ export default function OwnerMaterialsPage() {
         prev.map((request) =>
           request.id === editingRequest.id
             ? {
-              ...request,
-              ...requestData,
-              totalCost: requestData.items.reduce(
-                (sum: number, item: any) => sum + item.quantity * item.estimatedCost,
-                0,
-              ),
-            }
+                ...request,
+                ...requestData,
+                totalCost: requestData.items.reduce(
+                  (sum: number, item: any) => sum + item.quantity * item.estimatedCost,
+                  0,
+                ),
+              }
             : request,
         ),
       )
