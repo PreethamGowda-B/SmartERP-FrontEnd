@@ -58,16 +58,23 @@ function getEmployeeStatusBadge(employeeStatus?: string) {
 
 export default function EmployeeJobsPage() {
   const { user } = useAuth()
-  const { jobs, updateJob } = useJobs()
+  const { jobs, updateJob, refreshJobs } = useJobs()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Filter jobs assigned to the current employee
   const myJobs = jobs.filter(job =>
     job.assignedEmployees?.includes(user?.id || "") ||
-    // Fallback for demo/mock data: check if job is visible to all or specific logic
+    // Fallback for demo: show all active jobs if employee hasn't been strictly assigned
     (user?.role === 'employee' && job.status === 'active')
   )
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await refreshJobs()
+    setIsRefreshing(false)
+  }
 
   const filteredJobs = myJobs.filter((job) => {
     const matchesSearch =
@@ -112,11 +119,15 @@ export default function EmployeeJobsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-accent to-accent/70 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold bg-linear-to-r from-accent to-accent/70 bg-clip-text text-transparent">
               My Jobs
             </h1>
             <p className="text-muted-foreground mt-1">View and manage your assigned projects</p>
           </div>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+            <Clock className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
+            {isRefreshing ? "Refreshing..." : "Refresh Jobs"}
+          </Button>
         </div>
 
         {/* Stats */}
