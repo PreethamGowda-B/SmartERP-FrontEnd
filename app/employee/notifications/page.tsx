@@ -52,58 +52,58 @@ export default function NotificationsPage() {
   return (
     <EmployeeLayout>
       <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold">Notifications</h1>
-          {unreadCount > 0 && (
-            <Badge variant="destructive" className="rounded-full">
-              {unreadCount}
-            </Badge>
-          )}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">Notifications</h1>
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="rounded-full">
+                {unreadCount}
+              </Badge>
+            )}
+          </div>
+          <Button onClick={markAllAsReadHandler} disabled={unreadCount === 0}>
+            <Check className="h-4 w-4 mr-2" />
+            Mark All Read
+          </Button>
         </div>
-        <Button onClick={markAllAsReadHandler} disabled={unreadCount === 0}>
-          <Check className="h-4 w-4 mr-2" />
-          Mark All Read
-        </Button>
-      </div>
 
-      <div className="space-y-4">
-        {employeeNotifications.map((notification) => (
-          <Card
-            key={notification.id}
-            className={`transition-colors ${!notification.read ? "border-primary bg-primary/5" : ""}`}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start gap-4">
-                <div className="mt-1">{getNotificationIcon(notification.type)}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-medium">{notification.title}</h3>
-                    {!notification.read && <div className="w-2 h-2 bg-primary rounded-full" />}
+        <div className="space-y-4">
+          {employeeNotifications.map((notification) => (
+            <Card
+              key={notification.id}
+              className={`transition-colors ${!notification.read ? "border-primary bg-primary/5" : ""}`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  <div className="mt-1">{getNotificationIcon(notification.type)}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-medium">{notification.title}</h3>
+                      {!notification.read && <div className="w-2 h-2 bg-primary rounded-full" />}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
+                    <p className="text-xs text-muted-foreground">{formatNotificationTime(notification.time)}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
-                  <p className="text-xs text-muted-foreground">{formatNotificationTime(notification.time)}</p>
+                  {!notification.read && (
+                    <Button variant="ghost" size="sm" onClick={() => markAsReadHandler(notification.id)}>
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-                {!notification.read && (
-                  <Button variant="ghost" size="sm" onClick={() => markAsReadHandler(notification.id)}>
-                    <Check className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {employeeNotifications.length === 0 && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No notifications</h3>
+              <p className="text-muted-foreground">You&apos;re all caught up!</p>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {employeeNotifications.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No notifications</h3>
-            <p className="text-muted-foreground">You're all caught up!</p>
-          </CardContent>
-        </Card>
-      )}
+        )}
       </div>
     </EmployeeLayout>
   )
