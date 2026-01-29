@@ -1,9 +1,6 @@
 "use client"
 
 import { EmployeeLayout } from "@/components/employee-layout"
-import { SmartClockInOut } from "@/components/smart-clock-in-out"
-import { DailySummaryCard } from "@/components/daily-summary-card"
-import { MonthlyAttendanceChart } from "@/components/monthly-attendance-chart"
 import { TimeTracker } from "@/components/time-tracker"
 import { AttendanceCalendar } from "@/components/attendance-calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,10 +19,6 @@ export default function EmployeeTimePage() {
 
   const weekStats = calculateAttendanceStats(thisWeekRecords)
   const monthStats = calculateAttendanceStats(thisMonthRecords)
-
-  // Get today's record for daily summary
-  const today = new Date().toISOString().split("T")[0]
-  const todayRecord = employeeRecords.find((r) => r.date === today)
 
   return (
     <EmployeeLayout>
@@ -86,34 +79,6 @@ export default function EmployeeTimePage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Smart Clock In/Out and Daily Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <SmartClockInOut />
-          </div>
-          <div>
-            <DailySummaryCard
-              clockInTime={todayRecord?.clockIn}
-              clockOutTime={todayRecord?.clockOut}
-              totalHours={todayRecord?.hoursWorked}
-              location={todayRecord?.location}
-              status={todayRecord?.status as any}
-              date={today}
-            />
-          </div>
-        </div>
-
-        {/* Monthly Attendance Summary Chart */}
-        <MonthlyAttendanceChart
-          data={{
-            totalPresents: monthStats.daysPresent,
-            totalLates: monthStats.daysLate, // Adjust based on your data
-            totalAbsents: monthStats.daysAbsent,
-            totalHolidays: 4, // Mock value
-            workingDays: 22,
-          }}
-        />
 
         {/* Time Tracker and Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

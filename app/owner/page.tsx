@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { mockJobs, mockEmployees, mockAttendance, mockMaterialRequests } from "@/lib/data"
 import { Building2, Users, Clock, DollarSign, TrendingUp, AlertTriangle, CheckCircle, Calendar } from "lucide-react"
-import { DateTimeWeather } from "@/components/date-time-weather"
 
 export default function OwnerDashboard() {
   // Calculate dashboard metrics
@@ -41,17 +40,12 @@ export default function OwnerDashboard() {
       <div className="space-y-8 animate-in fade-in duration-1000">
         {/* Header */}
         <div className="animate-in slide-in-from-top duration-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-balance bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Dashboard Overview
-              </h1>
-              <p className="text-muted-foreground animate-in fade-in duration-500 delay-200">
-                Welcome back! Here's what's happening with your business today.
-              </p>
-            </div>
-            <DateTimeWeather />
-          </div>
+          <h1 className="text-3xl font-bold text-balance bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Dashboard Overview
+          </h1>
+          <p className="text-muted-foreground animate-in fade-in duration-500 delay-200">
+            Welcome back! Here's what's happening with your business today.
+          </p>
         </div>
 
         {/* Key Metrics */}

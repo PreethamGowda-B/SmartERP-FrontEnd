@@ -13,7 +13,6 @@ interface JobContextType {
   updateJob: (id: string, updates: Partial<Job>) => void
   deleteJob: (id: string) => void
   getJobsByEmployee: (employeeId: string) => Job[]
-  refreshJobs: () => Promise<void>
 }
 
 const JobContext = createContext<JobContextType | undefined>(undefined)
@@ -236,38 +235,6 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
-  const refreshJobs = async () => {
-    if (!user) return
-    try {
-      console.log("[v0] Manually refreshing jobs...")
-      const serverJobs = await apiClient("/api/jobs", { method: "GET" })
-      if (Array.isArray(serverJobs)) {
-        const normalized = serverJobs.map((s: any) => {
-          const assignedArr = Array.isArray(s.assignedEmployees) ? s.assignedEmployees : null
-          const topAssigned = (s as any).assigned_to ?? (s as any).assignedTo ?? null
-          const assignedEmployees = Array.isArray(assignedArr)
-            ? assignedArr.map((a: any) => String(a))
-            : topAssigned != null
-              ? [String(topAssigned)]
-              : []
-
-          return {
-            id: s.id?.toString?.() ?? String(s._db_row?.id ?? s.id ?? ""),
-            title: s.title ?? s.name ?? s.jobTitle ?? "",
-            description: s.description ?? s.details ?? "",
-            assignedEmployees,
-            ...s,
-          }
-        })
-
-        setJobs(normalized)
-        localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
-      }
-    } catch (err) {
-      console.error("[v0] Failed to refresh jobs:", err)
-    }
-  }
-
   return (
     <JobContext.Provider
       value={{
@@ -276,7 +243,6 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         updateJob,
         deleteJob,
         getJobsByEmployee,
-        refreshJobs,
       }}
     >
       {children}
