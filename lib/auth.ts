@@ -8,7 +8,10 @@ export interface User {
   phone?: string
   position?: string
   department?: string
+  accessToken?: string
+  refreshToken?: string
 }
+
 
 export interface SignUpData {
   email: string
@@ -161,20 +164,29 @@ export const signIn = async (email: string, password: string): Promise<User | nu
       return null
     }
 
-    const { user } = await response.json()
-    console.log("[v0] Backend login successful:", user.email)
+    const data = await response.json()
+    console.log("[v0] Backend login successful:", data.user?.email)
 
-    // Store user locally for quick access
-    localStorage.setItem("smarterp_user", JSON.stringify(user))
+    // ✅ Merge tokens with user data
+    const userWithTokens = {
+      ...data.user,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+    }
 
-    return user
+    // ✅ Store everything for later use
+    localStorage.setItem("smarterp_user", JSON.stringify(userWithTokens))
+    if (data.accessToken) localStorage.setItem("accessToken", data.accessToken)
+    if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken)
+
+    return userWithTokens
   } catch (error) {
     console.log(
       "[v0] Backend unavailable, falling back to mock auth:",
       error instanceof Error ? error.message : String(error),
     )
 
-    // Fallback to mock auth if backend is unavailable
+    // 🧩 Fallback: Local mock auth
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     const allUsersWithPasswords = getUsersWithPasswords()
@@ -186,10 +198,12 @@ export const signIn = async (email: string, password: string): Promise<User | nu
       console.log("[v0] Mock auth: Login successful")
       return user
     }
+
     console.log("[v0] Mock auth: Invalid credentials")
     return null
   }
 }
+
 
 export const signOut = async (): Promise<void> => {
   try {
