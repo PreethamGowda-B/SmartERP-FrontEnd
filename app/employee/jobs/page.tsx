@@ -1,7 +1,6 @@
 "use client"
 
 import { useJobs } from "@/contexts/job-context"
- import { apiClient } from "@/lib/apiClient"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,8 +9,7 @@ import { Slider } from "@/components/ui/slider"
 import { Calendar, Users, Briefcase, Clock, CheckCircle2, AlertCircle, XCircle, ThumbsUp, ThumbsDown } from "lucide-react"
 import { useState } from "react"
 import { EmployeeLayout } from "@/components/employee-layout"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+import { apiClient } from "@/lib/apiClient"
 
 function getStatusIcon(status?: string) {
   const normalizedStatus = status?.toLowerCase() || "pending"
@@ -52,23 +50,12 @@ export default function EmployeeJobsPage() {
   const handleAcceptJob = async (jobId: string) => {
     setUpdatingJobId(jobId)
     try {
-      const token = localStorage.getItem('accessToken')
-      const response = await fetch(`${API_URL}/jobs/${jobId}/accept`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      await apiClient(`/api/jobs/${jobId}/accept`, {
+        method: 'POST'
       })
-
-      if (response.ok) {
-        showNotification('success', 'Job accepted successfully!')
-        if (refreshJobs) await refreshJobs()
-      } else {
-        const errorText = await response.text()
-        console.error('Accept failed:', errorText)
-        throw new Error('Failed to accept job')
-      }
+      
+      showNotification('success', 'Job accepted successfully!')
+      if (refreshJobs) await refreshJobs()
     } catch (error) {
       console.error('Accept error:', error)
       showNotification('error', 'Failed to accept job. Please try again.')
@@ -80,22 +67,14 @@ export default function EmployeeJobsPage() {
   const handleDeclineJob = async (jobId: string) => {
     setUpdatingJobId(jobId)
     try {
-      const token = localStorage.getItem('accessToken')
-      const response = await fetch(`${API_URL}/jobs/${jobId}/decline`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      await apiClient(`/api/jobs/${jobId}/decline`, {
+        method: 'POST'
       })
-
-      if (response.ok) {
-        showNotification('success', 'Job declined.')
-        if (refreshJobs) await refreshJobs()
-      } else {
-        throw new Error('Failed to decline job')
-      }
+      
+      showNotification('success', 'Job declined.')
+      if (refreshJobs) await refreshJobs()
     } catch (error) {
+      console.error('Decline error:', error)
       showNotification('error', 'Failed to decline job. Please try again.')
     } finally {
       setUpdatingJobId(null)
@@ -105,23 +84,15 @@ export default function EmployeeJobsPage() {
   const handleProgressUpdate = async (jobId: string, progress: number) => {
     setUpdatingJobId(jobId)
     try {
-      const token = localStorage.getItem('accessToken')
-      const response = await fetch(`${API_URL}/jobs/${jobId}/progress`, {
+      await apiClient(`/api/jobs/${jobId}/progress`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ progress })
       })
-
-      if (response.ok) {
-        showNotification('success', `Progress updated to ${progress}%`)
-        if (refreshJobs) await refreshJobs()
-      } else {
-        throw new Error('Failed to update progress')
-      }
+      
+      showNotification('success', `Progress updated to ${progress}%`)
+      if (refreshJobs) await refreshJobs()
     } catch (error) {
+      console.error('Progress update error:', error)
       showNotification('error', 'Failed to update progress. Please try again.')
     } finally {
       setUpdatingJobId(null)
