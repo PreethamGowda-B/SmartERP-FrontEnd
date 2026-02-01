@@ -1,174 +1,193 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Clock, MapPin, Play, Square, AlertCircle } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
+import { Clock, MapPin, Play, Square, AlertCircle, Loader2 } from "lucide-react"
 
-interface ClockSession {
-  clockInTime: Date | null
-  clockOutTime: Date | null
-  totalHours: number
-  location: string
-  status: "clocked-in" | "clocked-out"
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+
+interface ActiveRecord {
+  id: number
+  clockIn: string       // "HH:MM"
+  date: string          // "YYYY-MM-DD"
+  location: string | null
+  status: string
 }
 
 export function SmartClockInOut() {
-  const { user } = useAuth()
-  const [session, setSession] = useState<ClockSession>({
-    clockInTime: null,
-    clockOutTime: null,
-    totalHours: 0,
-    location: "",
-    status: "clocked-out",
-  })
+  const [activeRecord, setActiveRecord] = useState<ActiveRecord | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [elapsedTime, setElapsedTime] = useState(0)
-  const [isLoading, setIsLoading] = useState(false)
-  const [showNotification, setShowNotification] = useState(false)
-  const [notificationMessage, setNotificationMessage] = useState("")
+  const [elapsedMs, setElapsedMs] = useState(0)
+  const [loading, setLoading] = useState(true)   // initial fetch
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [notification, setNotification] = useState<string | null>(null)
 
-  // Update current time every second
+  // ─── Tick every second ──────────────────────────────────────────────────
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-    return () => clearInterval(timer)
+    const t = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(t)
   }, [])
 
-  // Auto clock-out at 7:00 PM
+  // ─── Recalculate elapsed when activeRecord or currentTime changes ──────
   useEffect(() => {
-    if (session.status === "clocked-in" && session.clockInTime) {
-      const checkAutoClockOut = setInterval(() => {
-        const now = new Date()
-        if (now.getHours() >= 19 && now.getMinutes() >= 0) {
-          handleAutoClockOut()
-          clearInterval(checkAutoClockOut)
-        }
-      }, 60000) // Check every minute
-
-      return () => clearInterval(checkAutoClockOut)
+    if (activeRecord) {
+      // Parse the HH:MM clock-in time and combine with the record's date
+      const [h, m] = activeRecord.clockIn.split(":").map(Number)
+      const clockInDate = new Date(activeRecord.date + "T" + activeRecord.clockIn + ":00")
+      setElapsedMs(currentTime.getTime() - clockInDate.getTime())
+    } else {
+      setElapsedMs(0)
     }
-  }, [session.status, session.clockInTime])
+  }, [activeRecord, currentTime])
 
-  // Check for missing clock-in notification at 10:00 AM
-  useEffect(() => {
-    const checkMissingClockIn = setInterval(() => {
-      const now = new Date()
-      if (now.getHours() === 10 && now.getMinutes() === 0 && session.status === "clocked-out") {
-        setNotificationMessage("You haven't clocked in yet. Please clock in to start your workday.")
-        setShowNotification(true)
+  // ─── On mount: ask the backend if we have an open record today ─────────
+  const fetchOpenRecord = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`${API}/api/attendance/me`, { credentials: "include" })
+      if (!res.ok) throw new Error("Failed to check attendance")
+      const data = await res.json()
+      if (data.openRecord) {
+        setActiveRecord(data.openRecord)
+      } else {
+        setActiveRecord(null)
       }
-    }, 60000)
-
-    return () => clearInterval(checkMissingClockIn)
-  }, [session.status])
-
-  // Calculate elapsed time
-  useEffect(() => {
-    if (session.status === "clocked-in" && session.clockInTime) {
-      const timer = setInterval(() => {
-        const elapsed = Date.now() - session.clockInTime.getTime()
-        setElapsedTime(elapsed)
-      }, 1000)
-      return () => clearInterval(timer)
+    } catch (err: any) {
+      setError(err.message || "Could not load attendance status")
+    } finally {
+      setLoading(false)
     }
-  }, [session.status, session.clockInTime])
+  }, [])
 
-  const getCurrentLocation = (): Promise<string> => {
-    return new Promise((resolve) => {
-      if (navigator.geolocation) {
+  useEffect(() => {
+    fetchOpenRecord()
+  }, [fetchOpenRecord])
+
+  // ─── Auto clock-out at 7 PM ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!activeRecord) return
+    if (currentTime.getHours() >= 19) {
+      // Trigger clock-out automatically
+      setNotification("You have been automatically clocked out at 7:00 PM")
+      handleClockOut()
+    }
+  }, [currentTime, activeRecord])
+
+  // ─── Get GPS location ───────────────────────────────────────────────────
+  const getLocation = (): Promise<string> =>
+    new Promise((resolve) => {
+      if (navigator?.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords
-            resolve(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
-          },
+          (pos) => resolve(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`),
           () => resolve("Location unavailable"),
+          { timeout: 5000 }
         )
       } else {
         resolve("GPS not supported")
       }
     })
-  }
 
+  // ─── Clock In ───────────────────────────────────────────────────────────
   const handleClockIn = async () => {
-    setIsLoading(true)
+    setSubmitting(true)
+    setError(null)
+    setNotification(null)
     try {
-      const location = await getCurrentLocation()
-      const clockInTime = new Date()
-
-      setSession({
-        clockInTime,
-        clockOutTime: null,
-        totalHours: 0,
-        location,
-        status: "clocked-in",
+      const location = await getLocation()
+      const res = await fetch(`${API}/api/attendance/clock-in`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ location }),
       })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.message || `Clock-in failed (${res.status})`)
+      }
+      const record = await res.json()
+      setActiveRecord(record)
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-    } catch (error) {
-      alert("Failed to clock in. Please try again.")
+      // Tell the employee whether they are on-time or late
+      const now = new Date()
+      if (now.getHours() >= 9) {
+        setNotification("You clocked in after 9:00 AM — this will be marked as Late.")
+      } else {
+        setNotification("Clocked in successfully. Have a great day!")
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to clock in")
     } finally {
-      setIsLoading(false)
+      setSubmitting(false)
     }
   }
 
+  // ─── Clock Out ──────────────────────────────────────────────────────────
   const handleClockOut = async () => {
-    setIsLoading(true)
+    setSubmitting(true)
+    setError(null)
     try {
-      const clockOutTime = new Date()
-      const totalHours = (clockOutTime.getTime() - session.clockInTime!.getTime()) / (1000 * 60 * 60)
-
-      setSession({
-        ...session,
-        clockOutTime,
-        totalHours: Math.round(totalHours * 100) / 100,
-        status: "clocked-out",
+      const res = await fetch(`${API}/api/attendance/clock-out`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({}), // backend auto-finds today's open record
       })
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-    } catch (error) {
-      alert("Failed to clock out. Please try again.")
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.message || `Clock-out failed (${res.status})`)
+      }
+      setActiveRecord(null)
+      setElapsedMs(0)
+      if (!notification) setNotification("Clocked out successfully.")
+    } catch (err: any) {
+      setError(err.message || "Failed to clock out")
     } finally {
-      setIsLoading(false)
+      setSubmitting(false)
     }
   }
 
-  const handleAutoClockOut = async () => {
-    const clockOutTime = new Date()
-    clockOutTime.setHours(19, 0, 0)
-    const totalHours = (clockOutTime.getTime() - session.clockInTime!.getTime()) / (1000 * 60 * 60)
-
-    setSession({
-      ...session,
-      clockOutTime,
-      totalHours: Math.round(totalHours * 100) / 100,
-      status: "clocked-out",
-    })
-
-    setNotificationMessage("You have been automatically clocked out at 7:00 PM")
-    setShowNotification(true)
+  // ─── Formatting ─────────────────────────────────────────────────────────
+  const formatElapsed = (ms: number) => {
+    const totalSec = Math.max(Math.floor(ms / 1000), 0)
+    const h = Math.floor(totalSec / 3600)
+    const m = Math.floor((totalSec % 3600) / 60)
+    const s = totalSec % 60
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
   }
 
-  const formatTime = (ms: number) => {
-    const seconds = Math.floor(ms / 1000)
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = seconds % 60
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+  const timeStr = currentTime.toLocaleTimeString("en-US", {
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true
+  })
+
+  // ─── Render ─────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
     <div className="space-y-4">
-      {showNotification && (
+      {/* Notifications / Errors */}
+      {error && (
+        <Alert className="border-red-200 bg-red-50">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="text-red-800">{error}</AlertDescription>
+        </Alert>
+      )}
+      {notification && (
         <Alert className="border-orange-200 bg-orange-50">
           <AlertCircle className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800">{notificationMessage}</AlertDescription>
+          <AlertDescription className="text-orange-800">{notification}</AlertDescription>
         </Alert>
       )}
 
@@ -178,54 +197,50 @@ export function SmartClockInOut() {
             <Clock className="h-5 w-5 text-accent" />
             Smart Clock In/Out
           </CardTitle>
-          <CardDescription>Automatic clock-out at 7:00 PM with live tracking</CardDescription>
+          <CardDescription>
+            Clock in before 9:00 AM to mark as Present. Auto clock-out at 7:00 PM.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Status and Time Display */}
+          {/* Status bar */}
           <div className="flex items-center justify-between p-4 bg-gradient-to-r from-accent/10 to-primary/10 rounded-lg border border-accent/20">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Status</p>
-              <Badge variant={session.status === "clocked-in" ? "default" : "secondary"} className="text-base py-1">
-                {session.status === "clocked-in" ? "Clocked In" : "Clocked Out"}
+              <Badge variant={activeRecord ? "default" : "secondary"} className="text-base py-1">
+                {activeRecord ? "Clocked In" : "Clocked Out"}
               </Badge>
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground mb-1">Current Time</p>
-              <p className="text-2xl font-bold font-mono">
-                {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-              </p>
+              <p className="text-2xl font-bold font-mono">{timeStr}</p>
             </div>
           </div>
 
-          {/* Clock In Details */}
-          {session.status === "clocked-in" ? (
+          {/* Clocked-in state */}
+          {activeRecord ? (
             <div className="space-y-4">
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Clock In Time</p>
-                    <p className="text-lg font-semibold">
-                      {session.clockInTime?.toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      })}
-                    </p>
+                    <p className="text-lg font-semibold">{activeRecord.clockIn}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Time Elapsed</p>
-                    <p className="text-lg font-semibold font-mono text-blue-600">{formatTime(elapsedTime)}</p>
+                    <p className="text-lg font-semibold font-mono text-blue-600">{formatElapsed(elapsedMs)}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 flex items-start gap-2 bg-muted rounded-lg">
-                <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <div className="text-sm">
-                  <p className="text-muted-foreground">Location</p>
-                  <p className="font-medium">{session.location || "Fetching..."}</p>
+              {activeRecord.location && (
+                <div className="p-3 flex items-start gap-2 bg-muted rounded-lg">
+                  <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                  <div className="text-sm">
+                    <p className="text-muted-foreground">Location</p>
+                    <p className="font-medium">{activeRecord.location}</p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
                 <p className="text-sm text-orange-800">
@@ -233,32 +248,21 @@ export function SmartClockInOut() {
                 </p>
               </div>
 
-              <Button onClick={handleClockOut} disabled={isLoading} size="lg" className="w-full" variant="destructive">
-                {isLoading ? (
-                  "Processing..."
-                ) : (
-                  <>
-                    <Square className="h-4 w-4 mr-2" />
-                    Clock Out
-                  </>
-                )}
+              <Button onClick={handleClockOut} disabled={submitting} size="lg" className="w-full" variant="destructive">
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Square className="h-4 w-4 mr-2" />}
+                {submitting ? "Clocking out..." : "Clock Out"}
               </Button>
             </div>
           ) : (
+            /* Clocked-out state */
             <Button
               onClick={handleClockIn}
-              disabled={isLoading}
+              disabled={submitting}
               size="lg"
               className="w-full bg-gradient-to-r from-accent to-primary"
             >
-              {isLoading ? (
-                "Processing..."
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-2" />
-                  Clock In
-                </>
-              )}
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+              {submitting ? "Clocking in..." : "Clock In"}
             </Button>
           )}
         </CardContent>
