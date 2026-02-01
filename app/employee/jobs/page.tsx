@@ -1,6 +1,7 @@
 "use client"
 
 import { useJobs } from "@/contexts/job-context"
+ import { apiClient } from "@/lib/apiClient"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -51,7 +52,7 @@ export default function EmployeeJobsPage() {
   const handleAcceptJob = async (jobId: string) => {
     setUpdatingJobId(jobId)
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('accessToken')
       const response = await fetch(`${API_URL}/jobs/${jobId}/accept`, {
         method: 'POST',
         headers: {
@@ -79,7 +80,7 @@ export default function EmployeeJobsPage() {
   const handleDeclineJob = async (jobId: string) => {
     setUpdatingJobId(jobId)
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('accessToken')
       const response = await fetch(`${API_URL}/jobs/${jobId}/decline`, {
         method: 'POST',
         headers: {
@@ -104,7 +105,7 @@ export default function EmployeeJobsPage() {
   const handleProgressUpdate = async (jobId: string, progress: number) => {
     setUpdatingJobId(jobId)
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('accessToken')
       const response = await fetch(`${API_URL}/jobs/${jobId}/progress`, {
         method: 'POST',
         headers: {
