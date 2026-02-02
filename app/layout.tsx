@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   description: "Professional crew management and ERP system for construction and field services",
   generator: "v0.app",
   verification: {
-    google: "y_towXY5lpvh-AQ56rXnZaWVauXdRGz-FAD7tHc6t5U",
+    google: "8LA9xpb2ecPHIqpRwYsDtlZevGlvnniH4mD3X-qbwsE",
   },
 }
 

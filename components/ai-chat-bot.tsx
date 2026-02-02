@@ -26,7 +26,7 @@ const API_URL =
 async function askBackendAI(message: string) {
   const token = localStorage.getItem("token")
 
- const res = await fetch(`${API_URL}/api/ai/chat`, {
+  const res = await fetch(`${API_URL}/api/ai/chat`, {
 
     method: "POST",
     headers: {
@@ -157,11 +157,10 @@ export function AIChatBot() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2 }}
-                      className={`mb-3 flex ${
-                        m.sender === "user"
+                      className={`mb-3 flex ${m.sender === "user"
                           ? "justify-end"
                           : "justify-start"
-                      }`}
+                        }`}
                     >
                       {m.sender === "bot" && (
                         <Avatar className="h-7 w-7 mr-2">
@@ -172,11 +171,10 @@ export function AIChatBot() {
                       )}
 
                       <div
-                        className={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${
-                          m.sender === "user"
+                        className={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${m.sender === "user"
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted"
-                        }`}
+                          }`}
                       >
                         {m.text}
                       </div>
