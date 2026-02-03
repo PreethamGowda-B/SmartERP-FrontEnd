@@ -37,7 +37,7 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
     startDate: job?.startDate ? new Date(job.startDate) : undefined,
     endDate: job?.endDate ? new Date(job.endDate) : undefined,
     assignedEmployees: job?.assignedEmployees || [],
-    visible_to_all: (job as any)?.visible_to_all || false,
+    visible_to_all: (job as any)?.visible_to_all ?? true,  // Default to true so employees can see jobs
   })
 
   const handleSubmit = (e: React.FormEvent) => {
