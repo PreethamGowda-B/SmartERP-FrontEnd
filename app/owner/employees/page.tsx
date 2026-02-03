@@ -7,10 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Search, Plus, MapPin, Clock, Phone, Mail, Trash2, Loader2 } from "lucide-react"
+import { Users, Search, Plus, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
-
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+import { apiClient } from "@/lib/apiClient"
 
 interface Employee {
   id: number
@@ -32,13 +31,13 @@ export default function EmployeesPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [showAddModal, setShowAddModal] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<Employee | null>(null)
+  const [viewDetails, setViewDetails] = useState<Employee | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     position: "",
     email: "",
     phone: "",
-    password: "",
   })
 
   // ─── Fetch employees ──────────────────────────────────────────────────────
@@ -46,12 +45,7 @@ export default function EmployeesPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API}/api/employees`, { credentials: "include" })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.message || `HTTP ${res.status}`)
-      }
-      const data = await res.json()
+      const data = await apiClient("/api/employees")
       setEmployees(Array.isArray(data) ? data : [])
     } catch (err: any) {
       setError(err.message || "Failed to load employees")
@@ -66,32 +60,25 @@ export default function EmployeesPage() {
 
   // ─── Create employee ──────────────────────────────────────────────────────
   const handleCreate = async () => {
-    if (!newEmployee.name || !newEmployee.position || !newEmployee.email || !newEmployee.phone || !newEmployee.password) {
+    if (!newEmployee.name || !newEmployee.position || !newEmployee.email || !newEmployee.phone) {
       setError("Please fill in all fields")
       return
     }
     setSubmitting(true)
     setError(null)
     try {
-      const res = await fetch(`${API}/api/employees`, {
+      await apiClient("/api/employees", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           name: newEmployee.name,
           email: newEmployee.email,
-          password: newEmployee.password,
           position: newEmployee.position,
           phone: newEmployee.phone,
         }),
       })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.message || `HTTP ${res.status}`)
-      }
       // Success — close modal and refresh the list from the server
       setShowAddModal(false)
-      setNewEmployee({ name: "", position: "", email: "", phone: "", password: "" })
+      setNewEmployee({ name: "", position: "", email: "", phone: "" })
       await fetchEmployees()
     } catch (err: any) {
       setError(err.message || "Failed to create employee")
@@ -106,14 +93,9 @@ export default function EmployeesPage() {
     setSubmitting(true)
     setError(null)
     try {
-      const res = await fetch(`${API}/api/employees/${deleteConfirm.id}`, {
+      await apiClient(`/api/employees/${deleteConfirm.id}`, {
         method: "DELETE",
-        credentials: "include",
       })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.message || `HTTP ${res.status}`)
-      }
       setDeleteConfirm(null)
       await fetchEmployees()
     } catch (err: any) {
@@ -298,7 +280,8 @@ export default function EmployeesPage() {
                   </div>
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => setViewDetails(employee)}>
+                      <Eye className="h-4 w-4 mr-2" />
                       View Details
                     </Button>
                     <Button
@@ -372,19 +355,13 @@ export default function EmployeesPage() {
                     placeholder="+1 (555) 234-5678"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Password</label>
-                  <Input
-                    type="password"
-                    value={newEmployee.password}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
-                    placeholder="Temporary password for the employee"
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground bg-blue-50 border border-blue-200 rounded p-2">
+                  A default password (Employee@123) will be assigned. The employee can change it after first login.
+                </p>
                 <div className="flex gap-2 pt-2">
                   <Button onClick={handleCreate} className="flex-1" disabled={submitting}>
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    {submitting ? "Creating..." : "Add Employee"}
+                    {submitting ? "Creating..." : "Create Employee"}
                   </Button>
                   <Button variant="outline" onClick={() => { setShowAddModal(false); setError(null) }} className="flex-1" disabled={submitting}>
                     Cancel
@@ -421,6 +398,85 @@ export default function EmployeesPage() {
                   </Button>
                   <Button variant="outline" onClick={() => { setDeleteConfirm(null); setError(null) }} className="flex-1" disabled={submitting}>
                     Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ─── VIEW DETAILS MODAL ─────────────────────────────────────────── */}
+        {viewDetails && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <Card className="w-full max-w-lg mx-4">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Employee Details</CardTitle>
+                  <Badge variant={viewDetails.status === "active" ? "default" : "secondary"}>
+                    {viewDetails.status}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4 pb-4 border-b">
+                  <Avatar className="h-16 w-16">
+                    <AvatarFallback className="text-2xl">{viewDetails.name.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-xl font-semibold">{viewDetails.name}</h3>
+                    <p className="text-sm text-muted-foreground">{viewDetails.position}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Email</p>
+                      <p className="text-sm font-medium">{viewDetails.email}</p>
+                    </div>
+                  </div>
+
+                  {viewDetails.phone && (
+                    <div className="flex items-start gap-3">
+                      <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Phone</p>
+                        <p className="text-sm font-medium">{viewDetails.phone}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Location</p>
+                      <p className="text-sm font-medium">{viewDetails.location}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Hours This Week</p>
+                      <p className="text-sm font-medium">{viewDetails.hoursThisWeek} hours</p>
+                    </div>
+                  </div>
+
+                  {viewDetails.currentJob && (
+                    <div className="flex items-start gap-3">
+                      <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Current Job</p>
+                        <p className="text-sm font-medium">{viewDetails.currentJob}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setViewDetails(null)} className="flex-1">
+                    Close
                   </Button>
                 </div>
               </CardContent>
