@@ -1,7 +1,7 @@
 "use client"
 
 import { useJobs } from "@/contexts/job-context"
- import { apiClient } from "@/lib/apiClient"
+import { apiClient } from "@/lib/apiClient"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -42,7 +42,7 @@ export default function EmployeeJobsPage() {
   const { jobs, refreshJobs } = useJobs()
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null)
   const [progressValues, setProgressValues] = useState<Record<string, number>>({})
-  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message })
@@ -53,7 +53,7 @@ export default function EmployeeJobsPage() {
     setUpdatingJobId(jobId)
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch(`${API_URL}/jobs/${jobId}/accept`, {
+      const response = await fetch(`${API_URL}/api/jobs/${jobId}/accept`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -81,7 +81,7 @@ export default function EmployeeJobsPage() {
     setUpdatingJobId(jobId)
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch(`${API_URL}/jobs/${jobId}/decline`, {
+      const response = await fetch(`${API_URL}/api/jobs/${jobId}/decline`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -106,7 +106,7 @@ export default function EmployeeJobsPage() {
     setUpdatingJobId(jobId)
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch(`${API_URL}/jobs/${jobId}/progress`, {
+      const response = await fetch(`${API_URL}/api/jobs/${jobId}/progress`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -144,7 +144,7 @@ export default function EmployeeJobsPage() {
               <p className="text-lg font-medium text-muted-foreground">No jobs available yet</p>
               <p className="text-sm text-muted-foreground/70 mt-2">New projects will appear here when assigned</p>
             </CardContent>
-          </Card>    
+          </Card>
         </div>
       </EmployeeLayout>
     )
@@ -155,9 +155,8 @@ export default function EmployeeJobsPage() {
       <div className="p-8 max-w-7xl mx-auto">
         {/* Notification Banner */}
         {notification && (
-          <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
-            notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-          }`}>
+          <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`}>
             {notification.message}
           </div>
         )}
@@ -188,19 +187,15 @@ export default function EmployeeJobsPage() {
             return (
               <Card
                 key={job.id}
-                className={`group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden border-2 ${
-                  isAccepted ? 'border-blue-100' : ''
-                } ${isDeclined ? 'opacity-60 border-red-100' : ''} ${
-                  isPending ? 'hover:border-primary/20' : ''
-                }`}
+                className={`group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden border-2 ${isAccepted ? 'border-blue-100' : ''
+                  } ${isDeclined ? 'opacity-60 border-red-100' : ''} ${isPending ? 'hover:border-primary/20' : ''
+                  }`}
               >
                 {/* Colored top border indicator */}
                 <div
-                  className={`h-1.5 w-full ${
-                    isCompleted ? 'bg-green-500' : ''
-                  } ${isAccepted && !isCompleted ? 'bg-blue-500' : ''} ${
-                    isPending ? 'bg-yellow-500' : ''
-                  } ${isDeclined ? 'bg-red-500' : ''}`}
+                  className={`h-1.5 w-full ${isCompleted ? 'bg-green-500' : ''
+                    } ${isAccepted && !isCompleted ? 'bg-blue-500' : ''} ${isPending ? 'bg-yellow-500' : ''
+                    } ${isDeclined ? 'bg-red-500' : ''}`}
                 />
 
                 <CardHeader className="space-y-3 pb-4">
@@ -244,7 +239,7 @@ export default function EmployeeJobsPage() {
                         <span className="font-bold text-foreground">{progress}%</span>
                       </div>
                       <Progress value={progress} className="h-2.5 bg-secondary" />
-                      
+
                       {!isCompleted && (
                         <div className="space-y-2 pt-2">
                           <label className="text-xs font-medium text-muted-foreground">
