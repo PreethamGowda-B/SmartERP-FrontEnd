@@ -1,252 +1,276 @@
 "use client"
 
-import { useState } from "react"
-import { EmployeeLayout } from "@/components/employee-layout"
-import { MaterialRequestCard } from "@/components/material-request-card"
-import { MaterialRequestForm } from "@/components/material-request-form"
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { mockMaterialRequestsWithDetails, type MaterialRequestWithDetails } from "@/lib/materials-data"
-import { useAuth } from "@/contexts/auth-context"
-import { Search, Plus, Package, Clock, CheckCircle } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Package, Clock, Loader2 } from "lucide-react"
+import { EmployeeLayout } from "@/components/employee-layout"
+import { apiClient } from "@/lib/apiClient"
+
+interface MaterialRequest {
+  id: number
+  item_name: string
+  quantity: number
+  urgency: string
+  description: string
+  status: string
+  requested_by_name: string
+  created_at: string
+}
 
 export default function EmployeeMaterialsPage() {
-  const { user } = useAuth()
-  const [requests, setRequests] = useState<MaterialRequestWithDetails[]>(mockMaterialRequestsWithDetails)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingRequest, setEditingRequest] = useState<MaterialRequestWithDetails | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [requests, setRequests] = useState<MaterialRequest[]>([])
+  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Filter requests to show only those created by the current user
-  const userRequests = requests.filter((request) => request.requestedBy === user?.name)
-
-  const filteredRequests = userRequests.filter((request) => {
-    const matchesSearch =
-      request.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.items.some((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesStatus = statusFilter === "all" || request.status === statusFilter
-    return matchesSearch && matchesStatus
+  const [formData, setFormData] = useState({
+    item_name: "",
+    quantity: "",
+    urgency: "Medium",
+    description: "",
   })
 
-  const pendingRequests = userRequests.filter((r) => r.status === "pending").length
-  const approvedRequests = userRequests.filter((r) => r.status === "approved").length
-  const deliveredRequests = userRequests.filter((r) => r.status === "delivered").length
-
-  const handleCreateRequest = () => {
-    setEditingRequest(null)
-    setIsFormOpen(true)
-  }
-
-  const handleEditRequest = (request: MaterialRequestWithDetails) => {
-    setEditingRequest(request)
-    setIsFormOpen(true)
-  }
-
-  const handleDeleteRequest = (request: MaterialRequestWithDetails) => {
-    if (confirm("Are you sure you want to delete this material request?")) {
-      setRequests((prev) => prev.filter((r) => r.id !== request.id))
-    }
-  }
-
-  const handleSubmitRequest = async (requestData: any) => {
-    setIsLoading(true)
+  // Fetch user's material requests
+  const fetchRequests = async () => {
+    setLoading(true)
     try {
-      if (editingRequest) {
-        // update locally for now; backend update endpoint not implemented for edits
-        setRequests((prev) =>
-          prev.map((request) =>
-            request.id === editingRequest.id
-              ? {
-                  ...request,
-                  ...requestData,
-                  totalCost: requestData.items.reduce(
-                    (sum: number, item: any) => sum + item.quantity * item.estimatedCost,
-                    0,
-                  ),
-                }
-              : request,
-          ),
-        )
-      } else {
-        // Create via backend
-        const body = {
-          requestNumber: requestData.requestNumber,
-          items: requestData.items,
-        }
-        const res = await fetch((process.env.NEXT_PUBLIC_API_BASE || '') + '/api/materials/requests', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(body),
-        })
-        if (res.ok) {
-          const { id } = await res.json()
-          const newRequest: MaterialRequestWithDetails = {
-            id: id.toString(),
-            ...requestData,
-            status: 'pending',
-            totalCost: requestData.items.reduce((sum: number, item: any) => sum + item.quantity * item.estimatedCost, 0),
-            requestedBy: user?.name || 'You',
-          }
-          setRequests((prev) => [newRequest, ...prev])
-        } else {
-          throw new Error('Failed to create request on server')
-        }
-      }
-    } catch (err) {
-      console.warn('Failed to create request on server, saved locally', err)
-      if (!editingRequest) {
-        const newRequest: MaterialRequestWithDetails = {
-          id: Date.now().toString(),
-          ...requestData,
-          status: 'pending',
-          totalCost: requestData.items.reduce((sum: number, item: any) => sum + item.quantity * item.estimatedCost, 0),
-          requestedBy: user?.name || 'You',
-        }
-        setRequests((prev) => [newRequest, ...prev])
-      }
+      const data = await apiClient("/api/material-requests")
+      setRequests(Array.isArray(data) ? data : [])
+    } catch (err: any) {
+      console.error("Error fetching requests:", err)
+    } finally {
+      setLoading(false)
     }
-
-    setIsLoading(false)
-    setIsFormOpen(false)
-    setEditingRequest(null)
   }
 
-  const handleCancelForm = () => {
-    setIsFormOpen(false)
-    setEditingRequest(null)
+  useEffect(() => {
+    fetchRequests()
+  }, [])
+
+  // Submit new material request
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!formData.item_name.trim()) {
+      setError("Item name is required")
+      return
+    }
+
+    if (!formData.quantity || parseInt(formData.quantity) <= 0) {
+      setError("Valid quantity is required")
+      return
+    }
+
+    setSubmitting(true)
+    setError(null)
+
+    try {
+      await apiClient("/api/material-requests", {
+        method: "POST",
+        body: JSON.stringify({
+          item_name: formData.item_name,
+          quantity: parseInt(formData.quantity),
+          urgency: formData.urgency,
+          description: formData.description,
+        }),
+      })
+
+      // Reset form
+      setFormData({
+        item_name: "",
+        quantity: "",
+        urgency: "Medium",
+        description: "",
+      })
+
+      // Refresh requests list
+      await fetchRequests()
+
+      alert("Material request submitted successfully!")
+    } catch (err: any) {
+      setError(err.message || "Failed to submit request")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "accepted":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+      case "declined":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+      default:
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+    }
+  }
+
+  const getUrgencyColor = (urgency: string) => {
+    switch (urgency) {
+      case "Urgent":
+        return "text-red-600"
+      case "High":
+        return "text-orange-600"
+      case "Medium":
+        return "text-yellow-600"
+      default:
+        return "text-gray-600"
+    }
   }
 
   return (
     <EmployeeLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-balance">My Material Requests</h1>
-            <p className="text-muted-foreground">Request materials needed for your assigned projects</p>
-          </div>
-          <Button onClick={handleCreateRequest}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Request
-          </Button>
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Material Requests</h1>
+          <p className="text-muted-foreground mt-1">Request materials needed for your work</p>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-accent">{pendingRequests}</div>
-              <p className="text-xs text-muted-foreground">Awaiting approval</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Approved</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{approvedRequests}</div>
-              <p className="text-xs text-muted-foreground">Being processed</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Delivered</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{deliveredRequests}</div>
-              <p className="text-xs text-muted-foreground">Ready to use</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search your requests..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3 text-sm flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 ml-4">&times;</button>
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="ordered">Ordered</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Requests Grid */}
-        {filteredRequests.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredRequests.map((request) => (
-              <MaterialRequestCard
-                key={request.id}
-                request={request}
-                onEdit={handleEditRequest}
-                onDelete={handleDeleteRequest}
-                showActions={true}
-                showApprovalActions={false}
-              />
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="text-center py-12">
-              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No material requests found</h3>
-              <p className="text-muted-foreground mb-4">
-                {userRequests.length === 0
-                  ? "You haven't submitted any material requests yet."
-                  : "No requests match your search criteria."}
-              </p>
-              {userRequests.length === 0 && (
-                <Button onClick={handleCreateRequest}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Your First Request
-                </Button>
-              )}
-            </CardContent>
-          </Card>
         )}
 
-        {/* Material Request Form Dialog */}
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingRequest ? "Edit Material Request" : "New Material Request"}</DialogTitle>
-            </DialogHeader>
-            <MaterialRequestForm
-              request={editingRequest || undefined}
-              onSubmit={handleSubmitRequest}
-              onCancel={handleCancelForm}
-              isLoading={isLoading}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Request Form */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>New Material Request</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="item_name">Item Name *</Label>
+                    <Input
+                      id="item_name"
+                      placeholder="e.g., Cement Bags, Steel Rods"
+                      value={formData.item_name}
+                      onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="quantity">Quantity *</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min="1"
+                      placeholder="e.g., 10"
+                      value={formData.quantity}
+                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="urgency">Urgency</Label>
+                    <Select
+                      value={formData.urgency}
+                      onValueChange={(value) => setFormData({ ...formData, urgency: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Low">Low</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="High">High</SelectItem>
+                        <SelectItem value="Urgent">Urgent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Provide details about the material, specifications, or any special requirements..."
+                      rows={4}
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={submitting}>
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Request"
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Requests List */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>My Requests</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : requests.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                    <p>No material requests yet</p>
+                    <p className="text-sm">Submit your first request using the form</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {requests.map((request) => (
+                      <div key={request.id} className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg">{request.item_name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Quantity: <span className="font-medium text-foreground">{request.quantity}</span>
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge className={getStatusColor(request.status)}>
+                              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                            </Badge>
+                            <span className={`text-xs font-medium ${getUrgencyColor(request.urgency)}`}>
+                              {request.urgency}
+                            </span>
+                          </div>
+                        </div>
+
+                        {request.description && (
+                          <p className="text-sm text-muted-foreground mb-2">{request.description}</p>
+                        )}
+
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {new Date(request.created_at).toLocaleDateString()} at{" "}
+                          {new Date(request.created_at).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </EmployeeLayout>
   )
