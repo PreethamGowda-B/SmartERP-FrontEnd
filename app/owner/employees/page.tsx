@@ -45,7 +45,7 @@ export default function EmployeesPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient("/api/employees")
+      const data = await apiClient("/api/employees-simple")
       setEmployees(Array.isArray(data) ? data : [])
     } catch (err: any) {
       setError(err.message || "Failed to load employees")
@@ -67,7 +67,7 @@ export default function EmployeesPage() {
     setSubmitting(true)
     setError(null)
     try {
-      await apiClient("/api/employees", {
+      await apiClient("/api/employees-simple", {
         method: "POST",
         body: JSON.stringify({
           name: newEmployee.name,
@@ -93,7 +93,7 @@ export default function EmployeesPage() {
     setSubmitting(true)
     setError(null)
     try {
-      await apiClient(`/api/employees/${deleteConfirm.id}`, {
+      await apiClient(`/api/employees-simple/${deleteConfirm.id}`, {
         method: "DELETE",
       })
       setDeleteConfirm(null)
