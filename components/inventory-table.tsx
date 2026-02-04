@@ -32,7 +32,17 @@ export default function InventoryTable({
     const fetchItems = async () => {
       try {
         setLoading(true)
-        const response = await fetch(api + "/api/inventory")
+        // Get token from localStorage
+        const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
+
+        const response = await fetch(api + "/api/inventory", {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: "include",
+        })
+
         if (!response.ok) throw new Error("Failed to fetch")
         const data = await response.json()
         setItems(Array.isArray(data) ? data : [])

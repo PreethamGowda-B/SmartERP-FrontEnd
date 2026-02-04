@@ -45,6 +45,9 @@ export default function InventoryForm({
 
     setLoading(true)
     try {
+      // Get token from localStorage
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
+
       const formData = new FormData()
       formData.append("name", name)
       formData.append("description", description)
@@ -55,12 +58,16 @@ export default function InventoryForm({
 
       const res = await fetch(api + "/api/inventory", {
         method: "POST",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
         body: formData,
       })
 
       if (!res.ok) throw new Error("Failed to submit")
 
-      alert(role === "owner" ? "Item added successfully" : "Request sent successfully")
+      alert(role === "owner" ? "Item added successfully" : "Item added successfully")
       setName("")
       setDescription("")
       setQuantity(0)
