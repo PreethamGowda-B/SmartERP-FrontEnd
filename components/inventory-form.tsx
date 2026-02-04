@@ -18,11 +18,20 @@ export default function InventoryForm({
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [quantity, setQuantity] = useState<number | string>(0)
+  const [category, setCategory] = useState("Uncategorized")
+  const [unit, setUnit] = useState("pieces")
+  const [minQuantity, setMinQuantity] = useState<number | string>(0)
+  const [supplierName, setSupplierName] = useState("")
+  const [supplierContact, setSupplierContact] = useState("")
+  const [supplierEmail, setSupplierEmail] = useState("")
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const api = process.env.NEXT_PUBLIC_API_URL || ""
+
+  const categories = ['Raw Materials', 'Finished Goods', 'Tools', 'Supplies', 'Uncategorized']
+  const units = ['bags', 'kg', 'pieces', 'liters', 'boxes', 'meters', 'units']
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -52,6 +61,12 @@ export default function InventoryForm({
       formData.append("name", name)
       formData.append("description", description)
       formData.append("quantity", String(quantity))
+      formData.append("category", category)
+      formData.append("unit", unit)
+      formData.append("min_quantity", String(minQuantity))
+      formData.append("supplier_name", supplierName)
+      formData.append("supplier_contact", supplierContact)
+      formData.append("supplier_email", supplierEmail)
       if (imageFile) {
         formData.append("image", imageFile)
       }
@@ -71,6 +86,12 @@ export default function InventoryForm({
       setName("")
       setDescription("")
       setQuantity(0)
+      setCategory("Uncategorized")
+      setUnit("pieces")
+      setMinQuantity(0)
+      setSupplierName("")
+      setSupplierContact("")
+      setSupplierEmail("")
       setImagePreview(null)
       setImageFile(null)
       if (fileInputRef.current) {
@@ -166,6 +187,107 @@ export default function InventoryForm({
                   {imageFile ? `Choose File ${imageFile.name}` : "Choose File"}
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Category and Unit Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="category" className="text-sm font-medium">
+                Category
+              </Label>
+              <select
+                id="category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="unit" className="text-sm font-medium">
+                Unit
+              </Label>
+              <select
+                id="unit"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {units.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Minimum Quantity */}
+          <div className="space-y-2">
+            <Label htmlFor="min-quantity" className="text-sm font-medium">
+              Minimum Quantity (Low Stock Alert)
+            </Label>
+            <Input
+              id="min-quantity"
+              type="number"
+              placeholder="0"
+              min="0"
+              value={minQuantity}
+              onChange={(e) => setMinQuantity(e.target.value === "" ? 0 : Number(e.target.value))}
+            />
+            <p className="text-xs text-muted-foreground">
+              You'll be alerted when stock falls below this level
+            </p>
+          </div>
+
+          {/* Supplier Information (Optional) */}
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="text-sm font-medium">Supplier Information (Optional)</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="supplier-name" className="text-sm font-medium">
+                  Supplier Name
+                </Label>
+                <Input
+                  id="supplier-name"
+                  placeholder="e.g., ABC Suppliers"
+                  value={supplierName}
+                  onChange={(e) => setSupplierName(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="supplier-contact" className="text-sm font-medium">
+                  Contact Number
+                </Label>
+                <Input
+                  id="supplier-contact"
+                  placeholder="e.g., +91 98765 43210"
+                  value={supplierContact}
+                  onChange={(e) => setSupplierContact(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="supplier-email" className="text-sm font-medium">
+                Supplier Email
+              </Label>
+              <Input
+                id="supplier-email"
+                type="email"
+                placeholder="e.g., supplier@example.com"
+                value={supplierEmail}
+                onChange={(e) => setSupplierEmail(e.target.value)}
+              />
             </div>
           </div>
 
