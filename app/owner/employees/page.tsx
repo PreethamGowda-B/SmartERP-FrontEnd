@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Search, Plus, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Users, Search, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye, Save, X } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
 
@@ -15,13 +16,18 @@ interface Employee {
   id: number
   name: string
   position: string
+  department?: string
   email: string
   phone: string
   status: string
+  is_active?: boolean
   currentJob: string | null
   hoursThisWeek: number
   location: string
 }
+
+const DEPARTMENTS = ["Engineering", "Sales", "Operations", "HR", "Finance", "Other", "Unassigned"]
+const POSITIONS = ["Foreman", "Construction Worker", "Equipment Operator", "Safety Inspector", "Project Manager", "Employee"]
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -29,15 +35,14 @@ export default function EmployeesPage() {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [showAddModal, setShowAddModal] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<Employee | null>(null)
   const [viewDetails, setViewDetails] = useState<Employee | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [newEmployee, setNewEmployee] = useState({
-    name: "",
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editForm, setEditForm] = useState<{ department: string; position: string; is_active: boolean }>({
+    department: "",
     position: "",
-    email: "",
-    phone: "",
+    is_active: true,
   })
 
   // ─── Fetch employees ──────────────────────────────────────────────────────
@@ -45,7 +50,7 @@ export default function EmployeesPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiClient("/api/employees-simple")
+      const data = await apiClient("/api/employees")
       setEmployees(Array.isArray(data) ? data : [])
     } catch (err: any) {
       setError(err.message || "Failed to load employees")
@@ -58,30 +63,52 @@ export default function EmployeesPage() {
     fetchEmployees()
   }, [fetchEmployees])
 
-  // ─── Create employee ──────────────────────────────────────────────────────
-  const handleCreate = async () => {
-    if (!newEmployee.name || !newEmployee.position || !newEmployee.email || !newEmployee.phone) {
-      setError("Please fill in all fields")
-      return
-    }
+  // ─── Start editing ────────────────────────────────────────────────────────
+  const startEditing = (employee: Employee) => {
+    setEditingId(employee.id)
+    setEditForm({
+      department: employee.department || "Unassigned",
+      position: employee.position || "Employee",
+      is_active: employee.is_active !== false,
+    })
+  }
+
+  // ─── Cancel editing ───────────────────────────────────────────────────────
+  const cancelEditing = () => {
+    setEditingId(null)
+    setEditForm({ department: "", position: "", is_active: true })
+  }
+
+  // ─── Save employee updates ────────────────────────────────────────────────
+  const saveEmployee = async (employeeId: number) => {
     setSubmitting(true)
     setError(null)
     try {
-      await apiClient("/api/employees-simple", {
-        method: "POST",
-        body: JSON.stringify({
-          name: newEmployee.name,
-          email: newEmployee.email,
-          position: newEmployee.position,
-          phone: newEmployee.phone,
-        }),
+      await apiClient(`/api/employees/${employeeId}`, {
+        method: "PATCH",
+        body: JSON.stringify(editForm),
       })
-      // Success — close modal and refresh the list from the server
-      setShowAddModal(false)
-      setNewEmployee({ name: "", position: "", email: "", phone: "" })
+      setEditingId(null)
       await fetchEmployees()
     } catch (err: any) {
-      setError(err.message || "Failed to create employee")
+      setError(err.message || "Failed to update employee")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // ─── Toggle account status ────────────────────────────────────────────────
+  const toggleAccountStatus = async (employee: Employee) => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      await apiClient(`/api/employees/${employee.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_active: !employee.is_active }),
+      })
+      await fetchEmployees()
+    } catch (err: any) {
+      setError(err.message || "Failed to update account status")
     } finally {
       setSubmitting(false)
     }
@@ -93,7 +120,7 @@ export default function EmployeesPage() {
     setSubmitting(true)
     setError(null)
     try {
-      await apiClient(`/api/employees-simple/${deleteConfirm.id}`, {
+      await apiClient(`/api/employees/${deleteConfirm.id}`, {
         method: "DELETE",
       })
       setDeleteConfirm(null)
@@ -130,11 +157,12 @@ export default function EmployeesPage() {
 
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Employee Management</h1>
-          <Button onClick={() => { setShowAddModal(true); setError(null) }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Employee
-          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Employee Management</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage employees who have registered via the Employee Portal
+            </p>
+          </div>
         </div>
 
         {/* Global error banner */}
@@ -229,7 +257,7 @@ export default function EmployeesPage() {
             <Users className="h-12 w-12 mx-auto mb-3 opacity-40" />
             <p className="text-lg font-medium">No employees found</p>
             <p className="text-sm">
-              {employees.length === 0 ? "Click \"Add Employee\" to create your first employee." : "Try adjusting your search or filter."}
+              {employees.length === 0 ? "No employees have registered yet." : "Try adjusting your search or filter."}
             </p>
           </div>
         )}
@@ -237,138 +265,124 @@ export default function EmployeesPage() {
         {/* Employee Cards */}
         {!loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((employee) => (
-              <Card key={employee.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback>{employee.name.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg truncate">{employee.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{employee.position}</p>
-                    </div>
-                    <Badge variant={employee.status === "active" ? "default" : "secondary"}>
-                      {employee.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="truncate">{employee.email}</span>
-                  </div>
-                  {employee.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span>{employee.phone}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span>{employee.location}</span>
-                  </div>
-                  {employee.currentJob && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Current Job: </span>
-                      <span className="font-medium">{employee.currentJob}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span>{employee.hoursThisWeek} hours this week</span>
-                  </div>
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => setViewDetails(employee)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
-                      onClick={() => setDeleteConfirm(employee)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+            {filtered.map((employee) => {
+              const isEditing = editingId === employee.id
 
-        {/* ─── ADD EMPLOYEE MODAL ─────────────────────────────────────────── */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <Card className="w-full max-w-md mx-4">
-              <CardHeader>
-                <CardTitle>Add New Employee</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 rounded-md px-3 py-2 text-sm">
-                    {error}
-                  </div>
-                )}
-                <div>
-                  <label className="text-sm font-medium">Name</label>
-                  <Input
-                    value={newEmployee.name}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                    placeholder="e.g. Mike Johnson"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Position</label>
-                  <Select
-                    value={newEmployee.position}
-                    onValueChange={(value) => setNewEmployee({ ...newEmployee, position: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select position" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Foreman">Foreman</SelectItem>
-                      <SelectItem value="Construction Worker">Construction Worker</SelectItem>
-                      <SelectItem value="Equipment Operator">Equipment Operator</SelectItem>
-                      <SelectItem value="Safety Inspector">Safety Inspector</SelectItem>
-                      <SelectItem value="Project Manager">Project Manager</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Email</label>
-                  <Input
-                    type="email"
-                    value={newEmployee.email}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
-                    placeholder="mike.johnson@company.com"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Phone</label>
-                  <Input
-                    value={newEmployee.phone}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
-                    placeholder="+1 (555) 234-5678"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground bg-blue-50 border border-blue-200 rounded p-2">
-                  A default password (Employee@123) will be assigned. The employee can change it after first login.
-                </p>
-                <div className="flex gap-2 pt-2">
-                  <Button onClick={handleCreate} className="flex-1" disabled={submitting}>
-                    {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    {submitting ? "Creating..." : "Create Employee"}
-                  </Button>
-                  <Button variant="outline" onClick={() => { setShowAddModal(false); setError(null) }} className="flex-1" disabled={submitting}>
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              return (
+                <Card key={employee.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback>{employee.name.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg truncate">{employee.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground">{employee.email}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant={employee.status === "active" ? "default" : "secondary"}>
+                          {employee.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {isEditing ? (
+                      <>
+                        {/* Edit Mode */}
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs text-muted-foreground">Department</label>
+                            <Select
+                              value={editForm.department}
+                              onValueChange={(value) => setEditForm({ ...editForm, department: value })}
+                            >
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {DEPARTMENTS.map((dept) => (
+                                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground">Position</label>
+                            <Select
+                              value={editForm.position}
+                              onValueChange={(value) => setEditForm({ ...editForm, position: value })}
+                            >
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {POSITIONS.map((pos) => (
+                                  <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs text-muted-foreground">Account Active</label>
+                            <Switch
+                              checked={editForm.is_active}
+                              onCheckedChange={(checked) => setEditForm({ ...editForm, is_active: checked })}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <Button size="sm" className="flex-1" onClick={() => saveEmployee(employee.id)} disabled={submitting}>
+                            <Save className="h-3 w-3 mr-1" />
+                            Save
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={cancelEditing} disabled={submitting}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* View Mode */}
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Department:</span>
+                            <span className="font-medium">{employee.department || "Unassigned"}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Position:</span>
+                            <span className="font-medium">{employee.position}</span>
+                          </div>
+                          {employee.phone && (
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="truncate">{employee.phone}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <Button variant="outline" size="sm" className="flex-1" onClick={() => startEditing(employee)}>
+                            Edit
+                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1" onClick={() => setViewDetails(employee)}>
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
+                            onClick={() => setDeleteConfirm(employee)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
 
@@ -389,7 +403,7 @@ export default function EmployeesPage() {
                   Are you sure you want to delete <span className="font-semibold text-foreground">{deleteConfirm.name}</span> ({deleteConfirm.email})?
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  This will permanently remove their account, employee profile, and all associated data. This action cannot be undone.
+                  This will permanently remove their account and all associated data. This action cannot be undone.
                 </p>
                 <div className="flex gap-2 pt-2">
                   <Button variant="destructive" onClick={handleDelete} className="flex-1" disabled={submitting}>
@@ -446,6 +460,14 @@ export default function EmployeesPage() {
                       </div>
                     </div>
                   )}
+
+                  <div className="flex items-start gap-3">
+                    <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Department</p>
+                      <p className="text-sm font-medium">{viewDetails.department || "Unassigned"}</p>
+                    </div>
+                  </div>
 
                   <div className="flex items-start gap-3">
                     <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
