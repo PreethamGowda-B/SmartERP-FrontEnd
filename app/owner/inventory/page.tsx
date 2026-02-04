@@ -6,11 +6,25 @@ import InventoryForm from "@/components/inventory-form"
 import InventoryTable from "@/components/inventory-table"
 import InventoryInsights from "@/components/inventory-insights"
 
+type InventoryItem = {
+  id: number
+  name: string
+  quantity: number
+  min_quantity?: number
+  category?: string
+  unit?: string
+}
+
 export default function OwnerInventoryPage() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
 
   const handleItemAdded = () => {
     setRefreshTrigger((prev) => prev + 1)
+  }
+
+  const handleItemsChange = (items: any[]) => {
+    setInventoryItems(items)
   }
 
   return (
@@ -25,13 +39,13 @@ export default function OwnerInventoryPage() {
 
           <InventoryForm role="owner" onItemAdded={handleItemAdded} />
 
-          <InventoryTable role="owner" refreshTrigger={refreshTrigger} />
+          <InventoryTable role="owner" refreshTrigger={refreshTrigger} onItemsChange={handleItemsChange} />
         </div>
 
         {/* Right column: Insights */}
         <div className="lg:col-span-1">
           <div className="sticky top-6">
-            <InventoryInsights />
+            <InventoryInsights items={inventoryItems} />
           </div>
         </div>
       </div>

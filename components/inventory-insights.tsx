@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, CheckCircle2, Package, Boxes } from "lucide-react"
@@ -9,46 +8,14 @@ type InventoryItem = {
   id: number
   name: string
   quantity: number
+  min_quantity?: number
 }
 
-export default function InventoryInsights() {
-  const [items, setItems] = useState<InventoryItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const api = process.env.NEXT_PUBLIC_API_URL || ""
-
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch(api + "/api/inventory")
-        if (!response.ok) throw new Error("Failed to fetch")
-        const data = await response.json()
-        setItems(Array.isArray(data) ? data : [])
-      } catch (err) {
-        console.error(err)
-        setItems([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchItems()
-  }, [api])
-
+export default function InventoryInsights({ items = [] }: { items?: InventoryItem[] }) {
   const totalItems = items.length
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
-  const lowStockItems = items.filter((item) => item.quantity <= 1)
+  const lowStockItems = items.filter((item) => item.min_quantity && item.quantity < item.min_quantity)
   const hasLowStock = lowStockItems.length > 0
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-center text-muted-foreground">Loading...</p>
-        </CardContent>
-      </Card>
-    )
-  }
 
   return (
     <Card>
