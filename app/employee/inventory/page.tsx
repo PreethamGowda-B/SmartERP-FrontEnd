@@ -16,16 +16,23 @@ type InventoryItem = {
   min_quantity?: number
   category?: string
   unit?: string
+  description?: string
+  supplier_name?: string
+  supplier_contact?: string
+  supplier_email?: string
+  image_url?: string
 }
 
 export default function EmployeeInventoryPage() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<InventoryItem | undefined>(undefined)
 
   const handleItemAdded = () => {
     setRefreshTrigger((prev) => prev + 1)
-    setIsFormOpen(false) // Close dialog after adding item
+    setIsFormOpen(false)
+    setEditingItem(undefined)
   }
 
   const handleItemsChange = (items: any[]) => {
@@ -33,7 +40,18 @@ export default function EmployeeInventoryPage() {
   }
 
   const handleOpenForm = () => {
+    setEditingItem(undefined)
     setIsFormOpen(true)
+  }
+
+  const handleEdit = (item: InventoryItem) => {
+    setEditingItem(item)
+    setIsFormOpen(true)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingItem(undefined)
+    setIsFormOpen(false)
   }
 
   return (
@@ -57,7 +75,7 @@ export default function EmployeeInventoryPage() {
             </Button>
           </div>
 
-          <InventoryTable role="employee" refreshTrigger={refreshTrigger} onItemsChange={handleItemsChange} />
+          <InventoryTable role="employee" refreshTrigger={refreshTrigger} onItemsChange={handleItemsChange} onEdit={handleEdit} />
         </div>
 
         {/* Right column: Insights */}
@@ -72,9 +90,9 @@ export default function EmployeeInventoryPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Stock</DialogTitle>
+            <DialogTitle>{editingItem ? "Edit Stock" : "Add New Stock"}</DialogTitle>
           </DialogHeader>
-          <InventoryForm role="employee" onItemAdded={handleItemAdded} />
+          <InventoryForm role="employee" onItemAdded={handleItemAdded} item={editingItem} onCancel={handleCancelEdit} />
         </DialogContent>
       </Dialog>
     </EmployeeLayout>

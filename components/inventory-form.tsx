@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import type React from "react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,12 +8,30 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+type InventoryItem = {
+  id: number
+  name: string
+  description?: string
+  quantity: number
+  category?: string
+  unit?: string
+  min_quantity?: number
+  supplier_name?: string
+  supplier_contact?: string
+  supplier_email?: string
+  image_url?: string
+}
+
 export default function InventoryForm({
   role,
   onItemAdded,
+  item,
+  onCancel,
 }: {
   role: "owner" | "employee"
   onItemAdded?: () => void
+  item?: InventoryItem
+  onCancel?: () => void
 }) {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -33,6 +51,22 @@ export default function InventoryForm({
   const categories = ['Raw Materials', 'Finished Goods', 'Tools', 'Supplies', 'Uncategorized']
   const units = ['bags', 'kg', 'pieces', 'liters', 'boxes', 'meters', 'units']
 
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (item) {
+      setName(item.name || "")
+      setDescription(item.description || "")
+      setQuantity(item.quantity || 0)
+      setCategory(item.category || "Uncategorized")
+      setUnit(item.unit || "pieces")
+      setMinQuantity(item.min_quantity || 0)
+      setSupplierName(item.supplier_name || "")
+      setSupplierContact(item.supplier_contact || "")
+      setSupplierEmail(item.supplier_email || "")
+      setImagePreview(item.image_url || null)
+    }
+  }, [item])
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -45,6 +79,23 @@ export default function InventoryForm({
     }
   }
 
+  const resetForm = () => {
+    setName("")
+    setDescription("")
+    setQuantity(0)
+    setCategory("Uncategorized")
+    setUnit("pieces")
+    setMinQuantity(0)
+    setSupplierName("")
+    setSupplierContact("")
+    setSupplierEmail("")
+    setImagePreview(null)
+    setImageFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) {
@@ -54,7 +105,6 @@ export default function InventoryForm({
 
     setLoading(true)
     try {
-      // Get token from localStorage
       const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
 
       const formData = new FormData()
@@ -71,8 +121,11 @@ export default function InventoryForm({
         formData.append("image", imageFile)
       }
 
-      const res = await fetch(api + "/api/inventory", {
-        method: "POST",
+      const url = item ? `${api}/api/inventory/${item.id}` : `${api}/api/inventory`
+      const method = item ? "PUT" : "POST"
+
+      const res = await fetch(url, {
+        method,
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -82,21 +135,8 @@ export default function InventoryForm({
 
       if (!res.ok) throw new Error("Failed to submit")
 
-      alert(role === "owner" ? "Item added successfully" : "Item added successfully")
-      setName("")
-      setDescription("")
-      setQuantity(0)
-      setCategory("Uncategorized")
-      setUnit("pieces")
-      setMinQuantity(0)
-      setSupplierName("")
-      setSupplierContact("")
-      setSupplierEmail("")
-      setImagePreview(null)
-      setImageFile(null)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
+      alert(item ? "Item updated successfully" : "Item added successfully")
+      resetForm()
       onItemAdded?.()
     } catch (err) {
       console.error(err)
@@ -109,7 +149,7 @@ export default function InventoryForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Add New Stock</CardTitle>
+        <CardTitle>{item ? "Edit Stock" : "Add New Stock"}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-6">
@@ -291,9 +331,16 @@ export default function InventoryForm({
             </div>
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Adding..." : "Add Item"}
-          </Button>
+          <div className="flex gap-2">
+            <Button type="submit" disabled={loading} className="flex-1">
+              {loading ? (item ? "Updating..." : "Adding...") : (item ? "Update Item" : "Add Item")}
+            </Button>
+            {item && onCancel && (
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>

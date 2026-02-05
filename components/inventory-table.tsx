@@ -28,10 +28,12 @@ export default function InventoryTable({
   role,
   refreshTrigger = 0,
   onItemsChange,
+  onEdit,
 }: {
   role: "owner" | "employee"
   refreshTrigger?: number
   onItemsChange?: (items: InventoryItem[]) => void
+  onEdit?: (item: InventoryItem) => void
 }) {
   const [items, setItems] = useState<InventoryItem[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -46,36 +48,99 @@ export default function InventoryTable({
     "Uncategorized": "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
   }
 
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        setLoading(true)
-        // Get token from localStorage
-        const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
+  const fetchItems = async () => {
+    try {
+      setLoading(true)
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
 
-        const response = await fetch(api + "/api/inventory", {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          credentials: "include",
-        })
+      const response = await fetch(api + "/api/inventory", {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+      })
 
-        if (!response.ok) throw new Error("Failed to fetch")
-        const data = await response.json()
-        const itemsData = Array.isArray(data) ? data : []
-        setItems(itemsData)
-        onItemsChange?.(itemsData)
-      } catch (err) {
-        console.error(err)
-        setItems([])
-      } finally {
-        setLoading(false)
-      }
+      if (!response.ok) throw new Error("Failed to fetch")
+      const data = await response.json()
+      const itemsData = Array.isArray(data) ? data : []
+      setItems(itemsData)
+      onItemsChange?.(itemsData)
+    } catch (err) {
+      console.error(err)
+      setItems([])
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchItems()
   }, [api, refreshTrigger])
+
+  const handleEdit = (item: InventoryItem) => {
+    onEdit?.(item)
+  }
+
+  const handleArchive = async (item: InventoryItem) => {
+    if (!confirm(`Are you sure you want to archive "${item.name}"?`)) {
+      return
+    }
+
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
+
+      const response = await fetch(`${api}/api/inventory/${item.id}/archive`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || "Failed to archive")
+      }
+
+      alert("Item archived successfully")
+      fetchItems() // Refresh the list
+    } catch (err) {
+      console.error(err)
+      alert(err instanceof Error ? err.message : "Error archiving item")
+    }
+  }
+
+  const handleDelete = async (item: InventoryItem) => {
+    if (!confirm(`Are you sure you want to permanently delete "${item.name}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
+
+      const response = await fetch(`${api}/api/inventory/${item.id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || "Failed to delete")
+      }
+
+      alert("Item deleted successfully")
+      fetchItems() // Refresh the list
+    } catch (err) {
+      console.error(err)
+      alert(err instanceof Error ? err.message : "Error deleting item")
+    }
+  }
 
   const filteredItems = useMemo(() => {
     if (!searchTerm.trim()) return items
@@ -156,12 +221,22 @@ export default function InventoryTable({
                         </div>
 
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="h-8">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8"
+                            onClick={() => handleEdit(item)}
+                          >
                             <Edit className="h-3 w-3 mr-1" />
                             Edit
                           </Button>
                           {role === "owner" && (
-                            <Button size="sm" variant="outline" className="h-8 text-destructive hover:text-destructive">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                              onClick={() => handleArchive(item)}
+                            >
                               <Archive className="h-3 w-3 mr-1" />
                               Archive
                             </Button>
