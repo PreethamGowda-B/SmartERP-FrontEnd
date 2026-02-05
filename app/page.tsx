@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/auth-context"
 import { LandingPage } from "@/components/landing-page"
 import { Loader2 } from "lucide-react"
 
+// Metadata is set in layout.tsx with canonical URL
+
 export default function HomePage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()

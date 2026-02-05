@@ -11,11 +11,20 @@ import { Suspense } from "react"
 import "./globals.css"
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.prozync.in"),
   title: "SmartERP - Crew Management System",
   description: "Professional crew management and ERP system for construction and field services",
   generator: "v0.app",
   verification: {
     google: "8LA9xpb2ecPHIqpRwYsDtlZevGlvnniH4mD3X-qbwsE",
+  },
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    url: "https://www.prozync.in",
+    siteName: "SmartERP",
+    type: "website",
   },
 }
 
