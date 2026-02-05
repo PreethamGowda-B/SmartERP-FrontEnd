@@ -24,6 +24,7 @@ interface Employee {
   currentJob: string | null
   hoursThisWeek: number
   location: string
+  created_at?: string
 }
 
 const DEPARTMENTS = ["Engineering", "Sales", "Operations", "HR", "Finance", "Other", "Unassigned"]
@@ -276,13 +277,13 @@ export default function EmployeesPage() {
                         <AvatarFallback>{employee.name.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg truncate">{employee.name}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-lg truncate">{employee.name}</CardTitle>
+                          <Badge variant={employee.status === "active" ? "default" : "secondary"} className="shrink-0">
+                            {employee.status}
+                          </Badge>
+                        </div>
                         <p className="text-sm text-muted-foreground">{employee.email}</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge variant={employee.status === "active" ? "default" : "secondary"}>
-                          {employee.status}
-                        </Badge>
                       </div>
                     </div>
                   </CardHeader>
@@ -357,6 +358,20 @@ export default function EmployeesPage() {
                             <div className="flex items-center gap-2">
                               <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
                               <span className="truncate">{employee.phone}</span>
+                            </div>
+                          )}
+                          {employee.created_at && (
+                            <div className="flex items-center justify-between pt-1 border-t">
+                              <span className="text-muted-foreground">Account Created:</span>
+                              <span className="font-medium text-xs">
+                                {new Date(employee.created_at).toLocaleString('en-IN', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -491,6 +506,24 @@ export default function EmployeesPage() {
                       <div>
                         <p className="text-xs text-muted-foreground">Current Job</p>
                         <p className="text-sm font-medium">{viewDetails.currentJob}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {viewDetails.created_at && (
+                    <div className="flex items-start gap-3 pt-2 border-t">
+                      <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Account Created</p>
+                        <p className="text-sm font-medium">
+                          {new Date(viewDetails.created_at).toLocaleString('en-IN', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
                       </div>
                     </div>
                   )}
