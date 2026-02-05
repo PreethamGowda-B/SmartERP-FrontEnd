@@ -53,7 +53,7 @@ const MONTHS = [
 
 export default function OwnerPayrollPage() {
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([])
-  const [employees, setEmployees] = useState<Employee[]>([])
+  // Removed: employees state (now using direct email input)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -86,15 +86,7 @@ export default function OwnerPayrollPage() {
     return base + extra + increment - deduction
   }
 
-  // Fetch employees
-  const fetchEmployees = async () => {
-    try {
-      const data = await apiClient("/api/payroll/employees")
-      setEmployees(Array.isArray(data) ? data : [])
-    } catch (err: any) {
-      console.error("Error fetching employees:", err)
-    }
-  }
+  // Removed: fetchEmployees function (now using direct email input)
 
   // Fetch payroll records
   const fetchPayrolls = async () => {
@@ -110,7 +102,6 @@ export default function OwnerPayrollPage() {
   }
 
   useEffect(() => {
-    fetchEmployees()
     fetchPayrolls()
   }, [])
 
@@ -198,25 +189,20 @@ export default function OwnerPayrollPage() {
               </DialogHeader>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Employee Selection */}
+                {/* Employee Email Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="employee_email">Employee *</Label>
-                  <Select
+                  <Label htmlFor="employee_email">Employee Email *</Label>
+                  <Input
+                    id="employee_email"
+                    type="email"
                     value={formData.employee_email}
-                    onValueChange={(value) => setFormData({ ...formData, employee_email: value })}
+                    onChange={(e) => setFormData({ ...formData, employee_email: e.target.value })}
+                    placeholder="Enter employee email (e.g., employee@example.com)"
                     required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select employee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {employees.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.email}>
-                          {emp.name} ({emp.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the registered email address of the employee
+                  </p>
                 </div>
 
                 {/* Month & Year */}
