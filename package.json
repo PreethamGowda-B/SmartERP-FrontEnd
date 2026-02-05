@@ -46,6 +46,7 @@
     "framer-motion": "^12.26.1",
     "geist": "latest",
     "input-otp": "latest",
+    "jspdf": "^2.5.2",
     "lucide-react": "^0.454.0",
     "next": "^14.2.16",
     "next-themes": "latest",

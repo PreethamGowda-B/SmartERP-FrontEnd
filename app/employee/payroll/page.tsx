@@ -1,221 +1,314 @@
 "use client"
 
-import { EmployeeLayout } from "@/components/employee-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { calculatePayrollForEmployee, mockPayrollPeriods } from "@/lib/payroll-data"
-import { useAuth } from "@/contexts/auth-context"
-import { DollarSign, TrendingDown, TrendingUp, Download, Calendar } from "lucide-react"
-import { format } from "date-fns"
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { DollarSign, Download, Loader2, Calendar, FileText } from "lucide-react"
+import { EmployeeLayout } from "@/components/employee-layout"
+import { apiClient } from "@/lib/apiClient"
+import jsPDF from "jspdf"
+
+interface PayrollRecord {
+  id: number
+  employee_email: string
+  employee_name: string
+  payroll_month: number
+  payroll_year: number
+  base_salary: number
+  extra_amount: number
+  salary_increment: number
+  deduction: number
+  total_salary: number
+  remarks: string | null
+  created_at: string
+}
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+]
 
 export default function EmployeePayrollPage() {
-  const { user } = useAuth()
+  const [payrolls, setPayrolls] = useState<PayrollRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [monthFilter, setMonthFilter] = useState("all")
+  const [yearFilter, setYearFilter] = useState("all")
 
-  // Get payroll records for the current employee
-  const employeePayrollRecords = mockPayrollPeriods
-    .map((period) => {
-      const record = calculatePayrollForEmployee(user?.id || "", period.startDate, period.endDate)
-      return record ? { ...record, period } : null
-    })
-    .filter((record) => record !== null)
-
-  const currentRecord = employeePayrollRecords[0]
-  const lastRecord = employeePayrollRecords[1]
-
-  // Calculate year-to-date totals
-  const ytdGrossPay = employeePayrollRecords.slice(0, 12).reduce((sum, record) => sum + (record?.grossPay || 0), 0)
-  const ytdDeductions = employeePayrollRecords.slice(0, 12).reduce((sum, record) => sum + (record?.deductions || 0), 0)
-  const ytdNetPay = employeePayrollRecords.slice(0, 12).reduce((sum, record) => sum + (record?.netPay || 0), 0)
-
-  const handleDownloadPaystub = (recordId: string) => {
-    alert(`Pay stub for ${recordId} would be downloaded`)
+  // Fetch employee's payroll records
+  const fetchPayrolls = async () => {
+    setLoading(true)
+    try {
+      const data = await apiClient("/api/payroll")
+      setPayrolls(Array.isArray(data) ? data : [])
+    } catch (err: any) {
+      console.error("Error fetching payrolls:", err)
+    } finally {
+      setLoading(false)
+    }
   }
+
+  useEffect(() => {
+    fetchPayrolls()
+  }, [])
+
+  // Generate PDF salary report
+  const generatePDF = (payroll: PayrollRecord) => {
+    const doc = new jsPDF()
+
+    // Company Header
+    doc.setFontSize(20)
+    doc.setFont("helvetica", "bold")
+    doc.text("SmartERP", 105, 20, { align: "center" })
+
+    doc.setFontSize(16)
+    doc.text("Salary Report", 105, 30, { align: "center" })
+
+    // Payroll Period
+    doc.setFontSize(12)
+    doc.setFont("helvetica", "normal")
+    doc.text(`${MONTHS[payroll.payroll_month - 1]} ${payroll.payroll_year}`, 105, 40, { align: "center" })
+
+    // Horizontal line
+    doc.setLineWidth(0.5)
+    doc.line(20, 45, 190, 45)
+
+    // Employee Details
+    doc.setFontSize(11)
+    doc.setFont("helvetica", "bold")
+    doc.text("Employee Details:", 20, 55)
+
+    doc.setFont("helvetica", "normal")
+    doc.text(`Name: ${payroll.employee_name}`, 20, 65)
+    doc.text(`Email: ${payroll.employee_email}`, 20, 72)
+
+    // Salary Breakdown
+    doc.setFont("helvetica", "bold")
+    doc.text("Salary Breakdown:", 20, 85)
+
+    let yPos = 95
+    doc.setFont("helvetica", "normal")
+
+    // Base Salary
+    doc.text("Base Salary:", 30, yPos)
+    doc.text(`₹ ${payroll.base_salary.toFixed(2)}`, 150, yPos, { align: "right" })
+    yPos += 10
+
+    // Extra Amount (if > 0)
+    if (payroll.extra_amount > 0) {
+      doc.text("Extra Amount:", 30, yPos)
+      doc.text(`₹ ${payroll.extra_amount.toFixed(2)}`, 150, yPos, { align: "right" })
+      yPos += 10
+    }
+
+    // Salary Increment (if > 0)
+    if (payroll.salary_increment > 0) {
+      doc.text("Salary Increment:", 30, yPos)
+      doc.text(`₹ ${payroll.salary_increment.toFixed(2)}`, 150, yPos, { align: "right" })
+      yPos += 10
+    }
+
+    // Deduction (if > 0)
+    if (payroll.deduction > 0) {
+      doc.text("Deduction:", 30, yPos)
+      doc.text(`- ₹ ${payroll.deduction.toFixed(2)}`, 150, yPos, { align: "right" })
+      yPos += 10
+    }
+
+    // Horizontal line before total
+    doc.setLineWidth(0.3)
+    doc.line(30, yPos + 2, 150, yPos + 2)
+    yPos += 10
+
+    // Total Salary
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(13)
+    doc.text("TOTAL SALARY:", 30, yPos)
+    doc.text(`₹ ${payroll.total_salary.toFixed(2)}`, 150, yPos, { align: "right" })
+
+    // Remarks (if any)
+    if (payroll.remarks) {
+      yPos += 15
+      doc.setFontSize(11)
+      doc.text("Remarks:", 20, yPos)
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(10)
+
+      // Split remarks into multiple lines if needed
+      const splitRemarks = doc.splitTextToSize(payroll.remarks, 170)
+      doc.text(splitRemarks, 20, yPos + 7)
+    }
+
+    // Footer
+    doc.setFontSize(9)
+    doc.setFont("helvetica", "italic")
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 280, { align: "center" })
+
+    // Save PDF
+    const fileName = `Salary_${payroll.employee_name.replace(/\s+/g, '_')}_${MONTHS[payroll.payroll_month - 1]}_${payroll.payroll_year}.pdf`
+    doc.save(fileName)
+  }
+
+  // Filter payrolls
+  const filteredPayrolls = payrolls.filter(payroll => {
+    const matchesMonth = monthFilter === "all" || payroll.payroll_month === parseInt(monthFilter)
+    const matchesYear = yearFilter === "all" || payroll.payroll_year === parseInt(yearFilter)
+    return matchesMonth && matchesYear
+  })
+
+  // Get unique years from payrolls
+  const uniqueYears = Array.from(new Set(payrolls.map(p => p.payroll_year))).sort((a, b) => b - a)
 
   return (
     <EmployeeLayout>
-      <div className="space-y-6">
-        {/* Header */}
+      <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-balance">My Payroll</h1>
-          <p className="text-muted-foreground">View your pay history, deductions, and year-to-date earnings</p>
+          <h1 className="text-3xl font-bold">My Payroll</h1>
+          <p className="text-muted-foreground mt-1">View your salary records and download reports</p>
         </div>
 
-        {/* Year-to-Date Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">YTD Gross Pay</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${ytdGrossPay.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Before deductions</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">YTD Deductions</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">${ytdDeductions.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Taxes & benefits</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">YTD Net Pay</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">${ytdNetPay.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Take-home pay</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Current Pay Period */}
-        {currentRecord && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Current Pay Period</CardTitle>
-                  <CardDescription>
-                    {format(new Date(currentRecord.period.startDate), "MMM dd")} -{" "}
-                    {format(new Date(currentRecord.period.endDate), "MMM dd, yyyy")}
-                  </CardDescription>
-                </div>
-                <Badge variant={currentRecord.status === "paid" ? "default" : "outline"}>{currentRecord.status}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Hours & Earnings */}
-                <div className="space-y-3">
-                  <h4 className="font-medium">Hours & Earnings</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Regular Hours</span>
-                      <span>{currentRecord.regularHours}h</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Overtime Hours</span>
-                      <span>{currentRecord.overtimeHours}h</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Hourly Rate</span>
-                      <span>${currentRecord.hourlyRate}/hr</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between font-medium">
-                      <span>Gross Pay</span>
-                      <span>${currentRecord.grossPay.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Deductions */}
-                <div className="space-y-3">
-                  <h4 className="font-medium">Deductions</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Federal Tax</span>
-                      <span className="text-destructive">-${(currentRecord.taxDeductions * 0.5).toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">State Tax</span>
-                      <span className="text-destructive">-${(currentRecord.taxDeductions * 0.2).toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Social Security</span>
-                      <span className="text-destructive">-${(currentRecord.taxDeductions * 0.2).toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Medicare</span>
-                      <span className="text-destructive">-${(currentRecord.taxDeductions * 0.1).toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Benefits</span>
-                      <span className="text-destructive">-${currentRecord.benefitDeductions.toFixed(0)}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between font-medium">
-                      <span>Total Deductions</span>
-                      <span className="text-destructive">-${currentRecord.deductions.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Net Pay */}
-                <div className="space-y-3">
-                  <h4 className="font-medium">Net Pay</h4>
-                  <div className="bg-primary/10 p-4 rounded-lg text-center">
-                    <div className="text-3xl font-bold text-primary">${currentRecord.netPay.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground mt-1">Take-home pay</div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full bg-transparent"
-                    onClick={() => handleDownloadPaystub(currentRecord.id)}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Pay Stub
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Pay History */}
+        {/* Filters */}
         <Card>
-          <CardHeader>
-            <CardTitle>Pay History</CardTitle>
-            <CardDescription>Your recent payroll records</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {employeePayrollRecords.slice(0, 6).map((record) => (
-                <div key={record.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-full">
-                      <Calendar className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{format(new Date(record.period.startDate), "MMMM yyyy")} Payroll</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(record.period.startDate), "MMM dd")} -{" "}
-                        {format(new Date(record.period.endDate), "MMM dd")}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">${record.netPay.toLocaleString()}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={record.status === "paid" ? "default" : "outline"} className="text-xs">
-                        {record.status}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDownloadPaystub(record.id)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Download className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+          <CardContent className="pt-6">
+            <div className="flex gap-4">
+              <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by month" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months</SelectItem>
+                  {MONTHS.map((month, index) => (
+                    <SelectItem key={index + 1} value={(index + 1).toString()}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={yearFilter} onValueChange={setYearFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filter by year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {uniqueYears.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
+
+        {/* Payroll Records */}
+        <div className="space-y-4">
+          {loading ? (
+            <Card>
+              <CardContent className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </CardContent>
+            </Card>
+          ) : filteredPayrolls.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No payroll records found</p>
+                <p className="text-sm mt-1">Your salary records will appear here once created by your employer</p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredPayrolls.map((payroll) => (
+              <Card key={payroll.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5" />
+                        {MONTHS[payroll.payroll_month - 1]} {payroll.payroll_year}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Salary Report
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => generatePDF(payroll)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Export PDF
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Salary Breakdown */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Base Salary</p>
+                        <p className="text-lg font-semibold">₹{payroll.base_salary.toFixed(2)}</p>
+                      </div>
+
+                      {payroll.extra_amount > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Extra Amount</p>
+                          <p className="text-lg font-semibold text-green-600">
+                            +₹{payroll.extra_amount.toFixed(2)}
+                          </p>
+                        </div>
+                      )}
+
+                      {payroll.salary_increment > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Salary Increment</p>
+                          <p className="text-lg font-semibold text-green-600">
+                            +₹{payroll.salary_increment.toFixed(2)}
+                          </p>
+                        </div>
+                      )}
+
+                      {payroll.deduction > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Deduction</p>
+                          <p className="text-lg font-semibold text-red-600">
+                            -₹{payroll.deduction.toFixed(2)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Total Salary */}
+                    <div className="pt-4 border-t">
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-semibold">Total Salary</span>
+                        <span className="text-3xl font-bold text-primary">
+                          ₹{payroll.total_salary.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Remarks */}
+                    {payroll.remarks && (
+                      <div className="pt-3 border-t">
+                        <p className="text-sm font-medium text-muted-foreground mb-1">Remarks:</p>
+                        <p className="text-sm">{payroll.remarks}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
     </EmployeeLayout>
   )
