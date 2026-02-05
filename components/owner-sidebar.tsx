@@ -21,6 +21,7 @@ import {
   Menu,
   X,
   Box,
+  MessageSquare,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -33,6 +34,7 @@ const navigation = [
   { name: "Inventory", href: "/owner/inventory", icon: Box },
   { name: "Payroll", href: "/owner/payroll", icon: DollarSign },
   { name: "Reports", href: "/owner/reports", icon: BarChart3 },
+  { name: "Messages", href: "/owner/messages", icon: MessageSquare },
   { name: "Notifications", href: "/owner/notifications", icon: Bell },
   { name: "Settings", href: "/owner/settings", icon: Settings },
 ]
