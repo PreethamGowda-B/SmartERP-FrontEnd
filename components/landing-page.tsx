@@ -183,16 +183,14 @@ export function LandingPage() {
       <section ref={setSectionRef("features")} id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
         <div className="text-center mb-16">
           <h2
-            className={`text-4xl font-bold text-foreground mb-4 transition-all duration-700 ${
-              visibleSections["features"] ? "animate-fade-in-up" : "opacity-0 translate-y-10"
-            }`}
+            className={`text-4xl font-bold text-foreground mb-4 transition-all duration-700 ${visibleSections["features"] ? "animate-fade-in-up" : "opacity-0 translate-y-10"
+              }`}
           >
             Everything You Need
           </h2>
           <p
-            className={`text-lg text-muted-foreground transition-all duration-700 delay-100 ${
-              visibleSections["features"] ? "animate-fade-in-up" : "opacity-0 translate-y-10"
-            }`}
+            className={`text-lg text-muted-foreground transition-all duration-700 delay-100 ${visibleSections["features"] ? "animate-fade-in-up" : "opacity-0 translate-y-10"
+              }`}
           >
             Powerful features designed for modern businesses
           </p>
@@ -204,9 +202,8 @@ export function LandingPage() {
             return (
               <div
                 key={index}
-                className={`group p-6 rounded-lg border border-border bg-card hover:border-primary/50 hover:shadow-lg transition-all duration-300 hover-lift animate-feature-card ${
-                  visibleSections["features"] ? "opacity-100" : "opacity-0"
-                }`}
+                className={`group p-6 rounded-lg border border-border bg-card hover:border-primary/50 hover:shadow-lg transition-all duration-300 hover-lift animate-feature-card ${visibleSections["features"] ? "opacity-100" : "opacity-0"
+                  }`}
                 style={{
                   animationDelay: visibleSections["features"] ? `${index * 50}ms` : "0ms",
                   transitionDelay: visibleSections["features"] ? `${index * 50}ms` : "0ms",
@@ -228,9 +225,8 @@ export function LandingPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <h2
-              className={`text-4xl font-bold text-foreground mb-8 transition-all duration-700 ${
-                visibleSections["benefits"] ? "animate-fade-in-left" : "opacity-0 -translate-x-10"
-              }`}
+              className={`text-4xl font-bold text-foreground mb-8 transition-all duration-700 ${visibleSections["benefits"] ? "animate-fade-in-left" : "opacity-0 -translate-x-10"
+                }`}
             >
               Why Choose SmartERP?
             </h2>
@@ -238,9 +234,8 @@ export function LandingPage() {
               {benefits.map((benefit, index) => (
                 <div
                   key={index}
-                  className={`flex items-start gap-3 transition-all duration-700 ${
-                    visibleSections["benefits"] ? "animate-fade-in-left" : "opacity-0 -translate-x-10"
-                  }`}
+                  className={`flex items-start gap-3 transition-all duration-700 ${visibleSections["benefits"] ? "animate-fade-in-left" : "opacity-0 -translate-x-10"
+                    }`}
                   style={{
                     transitionDelay: visibleSections["benefits"] ? `${index * 100}ms` : "0ms",
                   }}
@@ -255,9 +250,8 @@ export function LandingPage() {
             </div>
           </div>
           <div
-            className={`relative h-96 rounded-lg overflow-hidden transition-all duration-700 ${
-              visibleSections["benefits"] ? "animate-fade-in-right" : "opacity-0 translate-x-10"
-            }`}
+            className={`relative h-96 rounded-lg overflow-hidden transition-all duration-700 ${visibleSections["benefits"] ? "animate-fade-in-right" : "opacity-0 translate-x-10"
+              }`}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg" />
             <div className="absolute inset-0 flex items-center justify-center">
@@ -273,9 +267,8 @@ export function LandingPage() {
       {/* CTA Section */}
       <section ref={setSectionRef("cta")} id="cta" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div
-          className={`relative overflow-hidden bg-foreground text-background rounded-2xl p-12 text-center transition-all duration-700 ${
-            visibleSections["cta"] ? "animate-fade-in-up" : "opacity-0 translate-y-10"
-          }`}
+          className={`relative overflow-hidden bg-foreground text-background rounded-2xl p-12 text-center transition-all duration-700 ${visibleSections["cta"] ? "animate-fade-in-up" : "opacity-0 translate-y-10"
+            }`}
         >
           <div
             className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"
@@ -311,11 +304,11 @@ export function LandingPage() {
           <div className="flex flex-col sm:flex-row justify-center gap-6 text-foreground text-sm">
             <div className="flex items-center gap-2 hover:text-primary transition-colors">
               <span>📧</span>
-              <span>thepreethu01@gmail.com</span>
+              <span>prozync@gmail.com</span>
             </div>
             <div className="flex items-center gap-2 hover:text-primary transition-colors">
               <span>📞</span>
-              <span>+91 8310982308</span>
+              <span>+91 9535134351</span>
             </div>
             <div className="flex items-center gap-2 hover:text-primary transition-colors">
               <span>📍</span>
