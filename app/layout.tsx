@@ -7,12 +7,11 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { JobProvider } from "@/contexts/job-context"
 import { NotificationProvider } from "@/contexts/notification-context"
 import { ThemeProvider } from "@/components/theme-provider"
-import { StructuredData } from "@/components/structured-data"
 import { Suspense } from "react"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://prozync.in"),
+  metadataBase: new URL("https://www.prozync.in"),
   title: "SmartERP - Crew Management System",
   description: "Professional crew management and ERP system for construction and field services",
   generator: "v0.app",
@@ -20,14 +19,12 @@ export const metadata: Metadata = {
     google: "8LA9xpb2ecPHIqpRwYsDtlZevGlvnniH4mD3X-qbwsE",
   },
   alternates: {
-    canonical: "https://prozync.in",
+    canonical: "/",
   },
   openGraph: {
-    url: "https://prozync.in",
+    url: "https://www.prozync.in",
     siteName: "SmartERP",
     type: "website",
-    title: "SmartERP - Crew Management System",
-    description: "Professional crew management and ERP system for construction and field services",
   },
 }
 
@@ -38,9 +35,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <StructuredData />
-      </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
           <Suspense fallback={null}>
