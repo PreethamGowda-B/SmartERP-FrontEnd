@@ -4,4 +4,5 @@ Allow: /owner
 Allow: /employee
 Disallow: /backend-test
 Disallow: /api
-Sitemap: https://www.prozync.in/sitemap.xml
+
+Sitemap: https://prozync.in/sitemap.xml
