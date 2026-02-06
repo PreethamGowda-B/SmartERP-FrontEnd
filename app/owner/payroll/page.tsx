@@ -93,7 +93,16 @@ export default function OwnerPayrollPage() {
     setLoading(true)
     try {
       const data = await apiClient("/api/payroll")
-      setPayrolls(Array.isArray(data) ? data : [])
+      // Convert string numbers to actual numbers for proper display
+      const parsedData = Array.isArray(data) ? data.map((payroll: any) => ({
+        ...payroll,
+        base_salary: parseFloat(payroll.base_salary),
+        extra_amount: parseFloat(payroll.extra_amount),
+        salary_increment: parseFloat(payroll.salary_increment),
+        deduction: parseFloat(payroll.deduction),
+        total_salary: parseFloat(payroll.total_salary)
+      })) : []
+      setPayrolls(parsedData)
     } catch (err: any) {
       console.error("Error fetching payrolls:", err)
     } finally {
