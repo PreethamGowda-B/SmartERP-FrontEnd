@@ -36,7 +36,6 @@ const navigation = [
   { name: "Settings", href: "/employee/settings", icon: Settings },
 ]
 
-]
 
 export function EmployeeSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
