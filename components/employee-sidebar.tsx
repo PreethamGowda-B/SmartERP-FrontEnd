@@ -93,8 +93,15 @@ return (
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
                 )}
               >
-                <item.icon className="h-4 w-4" />
-                {item.name}
+                <div className="flex items-center gap-3 flex-1">
+                  <item.icon className="h-4 w-4" />
+                  {item.name}
+                </div>
+                {item.name === "Notifications" && unreadCount > 0 && (
+                  <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
+                    {unreadCount}
+                  </span>
+                )}
               </NavLink>
             )
           })}
