@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Clock, LogIn, LogOut, Calendar, AlertCircle, CheckCircle2, XCircle } from "lucide-react"
+import { Clock, LogIn, LogOut, Calendar, AlertCircle, CheckCircle2, XCircle, Info } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -18,14 +18,22 @@ interface AttendanceRecord {
     working_hours: number | null
     status: string | null
     is_late: boolean
+    is_auto_clocked_out?: boolean
 }
 
-export default function AttendancePage() {
+export default function TimeTrackingPage() {
     const { user } = useAuth()
     const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null)
     const [history, setHistory] = useState<AttendanceRecord[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
+    const [currentTime, setCurrentTime] = useState(new Date())
+
+    // Update current time every second
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+        return () => clearInterval(timer)
+    }, [])
 
     const getToken = () => {
         if (user?.accessToken) return user.accessToken
@@ -86,7 +94,7 @@ export default function AttendancePage() {
         }
     }, [user])
 
-    const handleCheckIn = async () => {
+    const handleClockIn = async () => {
         const token = getToken()
         if (!token) return
 
@@ -94,7 +102,7 @@ export default function AttendancePage() {
         setError("")
 
         try {
-            const response = await fetch(`${BACKEND_URL}/api/attendance/check-in`, {
+            const response = await fetch(`${BACKEND_URL}/api/attendance/clock-in`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -108,7 +116,7 @@ export default function AttendancePage() {
                 setTodayAttendance(data)
                 fetchHistory()
             } else {
-                setError(data.message || "Failed to check in")
+                setError(data.message || "Failed to clock in")
             }
         } catch (err) {
             setError("Network error. Please try again.")
@@ -117,7 +125,7 @@ export default function AttendancePage() {
         }
     }
 
-    const handleCheckOut = async () => {
+    const handleClockOut = async () => {
         const token = getToken()
         if (!token) return
 
@@ -125,7 +133,7 @@ export default function AttendancePage() {
         setError("")
 
         try {
-            const response = await fetch(`${BACKEND_URL}/api/attendance/check-out`, {
+            const response = await fetch(`${BACKEND_URL}/api/attendance/clock-out`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -139,7 +147,7 @@ export default function AttendancePage() {
                 setTodayAttendance(data)
                 fetchHistory()
             } else {
-                setError(data.message || "Failed to check out")
+                setError(data.message || "Failed to clock out")
             }
         } catch (err) {
             setError("Network error. Please try again.")
@@ -201,16 +209,39 @@ export default function AttendancePage() {
         }
     }
 
-    const canCheckIn = !todayAttendance?.check_in_time
-    const canCheckOut = todayAttendance?.check_in_time && !todayAttendance?.check_out_time
+    const canClockIn = !todayAttendance?.check_in_time
+    const canClockOut = todayAttendance?.check_in_time && !todayAttendance?.check_out_time
 
     return (
         <EmployeeLayout>
             <div className="p-6 space-y-6">
                 <div>
-                    <h1 className="text-3xl font-bold">Attendance</h1>
-                    <p className="text-muted-foreground">Track your daily attendance</p>
+                    <h1 className="text-3xl font-bold">Time Tracking</h1>
+                    <p className="text-muted-foreground">Clock in and out to track your working hours</p>
                 </div>
+
+                {/* Shift Info Banner */}
+                <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                    <CardContent className="pt-6">
+                        <div className="flex items-start gap-3">
+                            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                            <div className="flex-1">
+                                <p className="font-medium text-blue-900 dark:text-blue-100">Shift Hours: 9:00 AM - 7:00 PM</p>
+                                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                                    • Clock in by 9:00 AM to avoid late mark<br />
+                                    • Clock out before 7:00 PM will be marked as half day<br />
+                                    • System auto clocks out at 7:00 PM if you forget
+                                </p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-sm text-blue-600 dark:text-blue-400">Current Time</p>
+                                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                                    {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {error && (
                     <Card className="border-destructive">
@@ -225,47 +256,52 @@ export default function AttendancePage() {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Calendar className="h-5 w-5" />
-                            Today's Attendance
+                            Today's Status
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        {/* Check-in/Check-out Buttons */}
+                        {/* Clock-in/Clock-out Buttons */}
                         <div className="flex gap-4">
                             <Button
-                                onClick={handleCheckIn}
-                                disabled={!canCheckIn || loading}
+                                onClick={handleClockIn}
+                                disabled={!canClockIn || loading}
                                 className="flex-1"
                                 size="lg"
                             >
                                 <LogIn className="h-5 w-5 mr-2" />
-                                Check In
+                                Clock In
                             </Button>
                             <Button
-                                onClick={handleCheckOut}
-                                disabled={!canCheckOut || loading}
+                                onClick={handleClockOut}
+                                disabled={!canClockOut || loading}
                                 variant="outline"
                                 className="flex-1"
                                 size="lg"
                             >
                                 <LogOut className="h-5 w-5 mr-2" />
-                                Check Out
+                                Clock Out
                             </Button>
                         </div>
 
                         {/* Today's Status */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground">Check In</p>
+                                <p className="text-sm text-muted-foreground">Clock In</p>
                                 <p className="text-lg font-semibold">{formatTime(todayAttendance?.check_in_time || null)}</p>
                                 {todayAttendance?.is_late && (
                                     <Badge variant="destructive" className="text-xs">
-                                        Late
+                                        Late (After 9 AM)
                                     </Badge>
                                 )}
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm text-muted-foreground">Check Out</p>
+                                <p className="text-sm text-muted-foreground">Clock Out</p>
                                 <p className="text-lg font-semibold">{formatTime(todayAttendance?.check_out_time || null)}</p>
+                                {todayAttendance?.is_auto_clocked_out && (
+                                    <Badge variant="outline" className="text-xs">
+                                        Auto (7 PM)
+                                    </Badge>
+                                )}
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm text-muted-foreground">Working Hours</p>
@@ -309,6 +345,9 @@ export default function AttendancePage() {
                                                     <span>In: {formatTime(record.check_in_time)}</span>
                                                     <span>Out: {formatTime(record.check_out_time)}</span>
                                                 </div>
+                                                {record.is_auto_clocked_out && (
+                                                    <p className="text-xs text-muted-foreground mt-1">Auto clocked out at 7 PM</p>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4">

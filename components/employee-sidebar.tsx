@@ -26,7 +26,7 @@ import {
 const navigation = [
   { name: "Dashboard", href: "/employee", icon: LayoutDashboard },
   { name: "My Jobs", href: "/employee/jobs", icon: Briefcase },
-  { name: "Time Tracking", href: "/employee/time", icon: Clock },
+  { name: "Time Tracking", href: "/employee/time-tracking", icon: Clock },
   { name: "Material Requests", href: "/employee/materials", icon: Package },
   { name: "Inventory", href: "/employee/inventory", icon: Package2 },
   { name: "Payroll", href: "/employee/payroll", icon: DollarSign },
