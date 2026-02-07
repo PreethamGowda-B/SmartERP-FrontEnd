@@ -5,9 +5,11 @@ import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ArrowLeft, Calendar, Clock, CheckCircle2, XCircle, AlertCircle, List, CalendarDays } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { useAuth } from "@/contexts/auth-context"
+import { AttendanceCalendar, DayDetail } from "@/components/attendance-calendar"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
@@ -20,6 +22,7 @@ interface AttendanceRecord {
     status: string | null
     is_late: boolean
     is_manual: boolean
+    is_auto_clocked_out?: boolean
     notes: string | null
 }
 
@@ -43,6 +46,8 @@ export default function EmployeeAttendanceDetailPage() {
     const [loading, setLoading] = useState(true)
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+    const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+    const [selectedDay, setSelectedDay] = useState<AttendanceRecord | null>(null)
 
     const getToken = () => {
         if (user?.accessToken) return user.accessToken
@@ -146,7 +151,7 @@ export default function EmployeeAttendanceDetailPage() {
                     </Button>
                     <div>
                         <h1 className="text-3xl font-bold">Employee Attendance</h1>
-                        <p className="text-muted-foreground">Detailed attendance records</p>
+                        <p className="text-muted-foreground">Detailed attendance records and calendar view</p>
                     </div>
                 </div>
 
@@ -159,7 +164,7 @@ export default function EmployeeAttendanceDetailPage() {
                                 <select
                                     value={selectedMonth}
                                     onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                                    className="w-full p-2 border rounded-md"
+                                    className="w-full p-2 border rounded-md bg-background"
                                 >
                                     {months.map((month, index) => (
                                         <option key={index} value={index + 1}>
@@ -173,7 +178,7 @@ export default function EmployeeAttendanceDetailPage() {
                                 <select
                                     value={selectedYear}
                                     onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                                    className="w-full p-2 border rounded-md"
+                                    className="w-full p-2 border rounded-md bg-background"
                                 >
                                     {[2024, 2025, 2026, 2027].map((year) => (
                                         <option key={year} value={year}>
@@ -245,17 +250,44 @@ export default function EmployeeAttendanceDetailPage() {
                     </div>
                 )}
 
-                {/* Attendance Records */}
+                {/* Attendance Records with View Toggle */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5" />
-                            Attendance Records - {months[selectedMonth - 1]} {selectedYear}
-                        </CardTitle>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2">
+                                <Calendar className="h-5 w-5" />
+                                Attendance Records - {months[selectedMonth - 1]} {selectedYear}
+                            </CardTitle>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setViewMode('list')}
+                                >
+                                    <List className="h-4 w-4 mr-2" />
+                                    List
+                                </Button>
+                                <Button
+                                    variant={viewMode === 'calendar' ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setViewMode('calendar')}
+                                >
+                                    <CalendarDays className="h-4 w-4 mr-2" />
+                                    Calendar
+                                </Button>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         {loading ? (
                             <p className="text-center text-muted-foreground py-8">Loading...</p>
+                        ) : viewMode === 'calendar' ? (
+                            <AttendanceCalendar
+                                records={records}
+                                month={selectedMonth}
+                                year={selectedYear}
+                                onDayClick={(day) => setSelectedDay(day)}
+                            />
                         ) : records.length === 0 ? (
                             <p className="text-center text-muted-foreground py-8">
                                 No attendance records for this period
@@ -286,6 +318,9 @@ export default function EmployeeAttendanceDetailPage() {
                                                         Out: {formatTime(record.check_out_time)}
                                                     </span>
                                                 </div>
+                                                {record.is_auto_clocked_out && (
+                                                    <p className="text-xs text-muted-foreground mt-1">Auto clocked out at 7 PM</p>
+                                                )}
                                                 {record.notes && (
                                                     <p className="text-xs text-muted-foreground mt-1">Note: {record.notes}</p>
                                                 )}
@@ -320,6 +355,14 @@ export default function EmployeeAttendanceDetailPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Day Detail Modal */}
+            {selectedDay && (
+                <DayDetail
+                    day={selectedDay}
+                    onClose={() => setSelectedDay(null)}
+                />
+            )}
         </OwnerLayout>
     )
 }
