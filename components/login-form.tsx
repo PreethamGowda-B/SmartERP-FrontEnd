@@ -159,7 +159,8 @@ export function LoginForm() {
               className="w-full flex items-center justify-center gap-2 hover:bg-slate-50 transition-all duration-300 hover-lift group"
               onClick={() => {
                 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
-                window.location.href = `${apiUrl}/api/auth/google`
+                // ✅ Pass the active tab (role) to the backend
+                window.location.href = `${apiUrl}/api/auth/google?role=${activeTab}`
               }}
             >
               <svg className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24">

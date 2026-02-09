@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation" // ✅ Import useRouter
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Users, UserCheck, UserX, Clock } from "lucide-react"
@@ -30,6 +31,7 @@ interface AttendanceSummary {
 }
 
 export default function OwnerAttendancePage() {
+  const router = useRouter() // ✅ Add router hook
   const { user } = useAuth()
   const [employees, setEmployees] = useState<EmployeeAttendance[]>([])
   const [summary, setSummary] = useState<AttendanceSummary>({
@@ -174,8 +176,8 @@ export default function OwnerAttendancePage() {
                     key={employee.user_id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
                     onClick={() => {
-                      // Navigate to employee detail page
-                      window.location.href = `/owner/attendance/${employee.user_id}`
+                      // ✅ Use router.push for client-side navigation
+                      router.push(`/owner/attendance/${employee.user_id}`)
                     }}
                   >
                     <div className="flex items-center gap-4">
