@@ -40,6 +40,17 @@ export default function InventoryTable({
   const [loading, setLoading] = useState(true)
   const api = process.env.NEXT_PUBLIC_API_URL || ""
 
+  // Helper function to get full image URL
+  const getImageUrl = (imageUrl: string | undefined) => {
+    if (!imageUrl) return null
+    // If it's already a full URL (Cloudinary), return as-is
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl
+    }
+    // Otherwise, prepend backend URL for local uploads
+    return `${api}/${imageUrl}`
+  }
+
   const categoryColors: Record<string, string> = {
     "Raw Materials": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
     "Finished Goods": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
@@ -197,7 +208,7 @@ export default function InventoryTable({
                     {item.image_url && (
                       <div className="h-20 w-20 flex-shrink-0 rounded-lg bg-muted overflow-hidden">
                         <img
-                          src={item.image_url || "/placeholder.svg"}
+                          src={getImageUrl(item.image_url) || "/placeholder.svg"}
                           alt={item.name}
                           className="h-full w-full object-cover"
                         />
