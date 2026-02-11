@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: ["/", "/owner", "/employee"],
       disallow: ["/backend-test", "/api"],
     },
-    sitemap: "https://smart-erp-front-end.vercel.app/sitemap.xml",
+    sitemap: "https://www.prozync.in/sitemap.xml",
   }
 }

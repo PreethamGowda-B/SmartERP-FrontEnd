@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.prozync.in"),
   title: "SmartERP - Crew Management System",
   description: "Professional crew management and ERP system for construction and field services",
+  keywords: ["SmartERP", "crew management", "employee portal", "payroll", "construction management"],
   generator: "v0.app",
   verification: {
     google: "8LA9xpb2ecPHIqpRwYsDtlZevGlvnniH4mD3X-qbwsE",
