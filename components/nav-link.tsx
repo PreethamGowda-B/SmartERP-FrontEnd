@@ -1,21 +1,21 @@
 "use client"
 
-import Link from 'next/link'
 import React from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useNavLoading } from './nav-loading-context'
 import { Loader2 } from 'lucide-react'
 
 export function NavLink({ href, children, id, className }: { href: string; children: React.ReactNode; id?: string; className?: string }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { loadingId, setLoadingId } = useNavLoading()
 
-  const handleClick = async (e: React.MouseEvent) => {
-    // prevent default to show loading state
+  const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
+    // Already on this route — do nothing to avoid infinite loading
+    if (pathname === href) return
     const navId = id || href
     setLoadingId(navId)
-    // navigate immediately; NavLoadingProvider will keep overlay up until page is ready
     router.push(href)
   }
 

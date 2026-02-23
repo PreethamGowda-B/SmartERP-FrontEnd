@@ -2,15 +2,13 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { OwnerSidebar } from "@/components/owner-sidebar"
 import { AIChatBot } from "@/components/ai-chat-bot"
 import { NavLoadingProvider, useNavLoading } from '@/components/nav-loading-context'
 import PageTransition from './page-transition'
-import { Button } from "@/components/ui/button"
-import { Bot } from "lucide-react"
 import DotsLoader from '@/components/dots-loader'
 
 interface OwnerLayoutProps {
@@ -20,7 +18,7 @@ interface OwnerLayoutProps {
 export function OwnerLayout({ children }: OwnerLayoutProps) {
   const { user, isLoading } = useAuth()
   const router = useRouter()
-  const [isChatBotOpen, setIsChatBotOpen] = useState(false)
+
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "owner")) {
@@ -53,16 +51,7 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
           <MainContent>{children}</MainContent>
         </div>
 
-        <Button
-          className={`fixed bottom-4 right-4 z-40 rounded-full h-12 w-12 shadow-lg transition-all duration-300 ${
-            isChatBotOpen ? "scale-0 opacity-0 pointer-events-none" : "scale-100 opacity-100"
-          }`}
-          onClick={() => setIsChatBotOpen(true)}
-        >
-          <Bot className="h-5 w-5" />
-        </Button>
-
-        <AIChatBot isOpen={isChatBotOpen} onToggle={() => setIsChatBotOpen(!isChatBotOpen)} />
+        <AIChatBot />
 
         <PageTransition />
       </div>
