@@ -242,6 +242,7 @@ export default function EmployeeDashboard() {
             <ClockInOut
               currentStatus={clockStatus}
               hoursToday={hoursToday}
+              attendanceRecord={todayAttendance}
               onClockChange={fetchStats}
             />
           </div>
