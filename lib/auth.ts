@@ -222,6 +222,8 @@ export const signOut = async (): Promise<void> => {
   }
 
   localStorage.removeItem("smarterp_user")
+  localStorage.removeItem("accessToken")
+  localStorage.removeItem("refreshToken")
 }
 
 export const getCurrentUser = (): User | null => {
