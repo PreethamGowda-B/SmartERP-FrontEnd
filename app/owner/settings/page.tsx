@@ -43,8 +43,12 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchCompanyData = async () => {
       try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/company/settings`, {
           credentials: 'include',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
         })
 
         if (response.ok) {
@@ -64,9 +68,13 @@ export default function SettingsPage() {
   const handleGenerateInviteLink = async () => {
     setLoadingInvite(true)
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/company/generate-invite`, {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       })
 
       if (response.ok) {
