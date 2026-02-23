@@ -21,6 +21,7 @@ export interface SignUpData {
   phone?: string
   position?: string
   department?: string
+  company_code?: string
 }
 
 export interface AuthState {
@@ -80,7 +81,8 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Signup failed" }))
       console.error("[v0] Backend signup error:", error)
-      return null
+      // Return a special object so the caller can show the real error message
+      throw new Error(error.message || "Signup failed")
     }
 
     const { user } = await response.json()

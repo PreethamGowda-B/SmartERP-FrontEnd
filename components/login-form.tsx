@@ -21,6 +21,7 @@ export function LoginForm() {
   const [phone, setPhone] = useState("")
   const [position, setPosition] = useState("")
   const [department, setDepartment] = useState("")
+  const [companyCode, setCompanyCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -75,6 +76,7 @@ export function LoginForm() {
           phone: phone.trim() || undefined,
           position: activeTab === "employee" ? position.trim() || undefined : undefined,
           department: activeTab === "employee" ? department.trim() || undefined : undefined,
+          company_code: activeTab === "employee" ? companyCode.trim() || undefined : undefined,
         }
 
         const user = await signUp(userData)
@@ -90,8 +92,12 @@ export function LoginForm() {
           setError("Email already exists. Please use a different email or sign in to your existing account.")
         }
       }
-    } catch (err) {
-      setError(mode === "login" ? "An error occurred during sign in" : "An error occurred during account creation")
+    } catch (err: any) {
+      if (mode === "signup") {
+        setError(err.message || "An error occurred during account creation")
+      } else {
+        setError("An error occurred during sign in")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -112,6 +118,7 @@ export function LoginForm() {
         setPhone("")
         setPosition("")
         setDepartment("")
+        setCompanyCode("")
       }
       setTimeout(() => setIsFlipping(false), 50)
     }, 150)
@@ -129,6 +136,7 @@ export function LoginForm() {
       setPhone("")
       setPosition("")
       setDepartment("")
+      setCompanyCode("")
       setTimeout(() => setIsFlipping(false), 50)
     }, 150)
   }
@@ -369,6 +377,22 @@ export function LoginForm() {
                   {mode === "signup" && (
                     <>
                       <div className="space-y-2 animate-slide-up stagger-4">
+                        <Label htmlFor="company_code" className="text-sm font-medium">
+                          Company Code <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="company_code"
+                          type="text"
+                          placeholder="Enter the code from your employer"
+                          value={companyCode}
+                          onChange={(e) => setCompanyCode(e.target.value.toUpperCase())}
+                          required
+                          className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift font-mono tracking-widest"
+                        />
+                        <p className="text-xs text-muted-foreground">Ask your employer for the company code (e.g. SMR1001)</p>
+                      </div>
+
+                      <div className="space-y-2 animate-slide-up stagger-5">
                         <Label htmlFor="phone" className="text-sm font-medium">
                           Phone Number (Optional)
                         </Label>
@@ -382,7 +406,7 @@ export function LoginForm() {
                         />
                       </div>
 
-                      <div className="space-y-2 animate-slide-up stagger-5">
+                      <div className="space-y-2 animate-slide-up stagger-6">
                         <Label htmlFor="position" className="text-sm font-medium">
                           Position (Optional)
                         </Label>
