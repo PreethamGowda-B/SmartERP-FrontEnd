@@ -18,6 +18,7 @@ import {
   DollarSign,
   MessageSquare,
   Bell,
+  BarChart3,
   Settings,
   LogOut,
   Menu,
@@ -33,6 +34,7 @@ const navigation = [
   { name: "Payroll", href: "/employee/payroll", icon: DollarSign },
   { name: "Messages", href: "/employee/messages", icon: MessageSquare },
   { name: "Notifications", href: "/employee/notifications", icon: Bell },
+  { name: "Reports", href: "/employee/reports", icon: BarChart3 },
   { name: "Settings", href: "/employee/settings", icon: Settings },
 ]
 
