@@ -6,23 +6,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Clock, MapPin, Play, Square, Loader2 } from "lucide-react"
-import { mockJobs } from "@/lib/data"
 import { useAuth } from "@/contexts/auth-context"
+import { useJobs } from "@/contexts/job-context"
+import { apiClient } from "@/lib/apiClient"
 
 interface ClockInOutProps {
   currentStatus: "clocked-out" | "clocked-in"
   currentLocation?: string
   currentJob?: string
   hoursToday: number
+  onClockChange?: () => void // callback so dashboard can refresh stats
 }
 
-export function ClockInOut({ currentStatus, currentLocation, currentJob, hoursToday }: ClockInOutProps) {
+export function ClockInOut({ currentStatus, currentLocation, currentJob, hoursToday, onClockChange }: ClockInOutProps) {
   const { user } = useAuth()
+  const { jobs } = useJobs()
   const [status, setStatus] = useState(currentStatus)
   const [isLoading, setIsLoading] = useState(false)
   const [location, setLocation] = useState(currentLocation || "")
   const [selectedJob, setSelectedJob] = useState(currentJob || "")
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [error, setError] = useState<string | null>(null)
+
+  // Sync prop changes (parent fetched real attendance)
+  useEffect(() => {
+    setStatus(currentStatus)
+  }, [currentStatus])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -37,12 +46,12 @@ export function ClockInOut({ currentStatus, currentLocation, currentJob, hoursTo
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const { latitude, longitude } = position.coords
-            // In a real app, you'd reverse geocode these coordinates
             resolve(`GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
           },
           () => {
             resolve("Location unavailable")
           },
+          { timeout: 5000 }
         )
       } else {
         resolve("GPS not supported")
@@ -52,27 +61,36 @@ export function ClockInOut({ currentStatus, currentLocation, currentJob, hoursTo
 
   const handleClockAction = async () => {
     if (status === "clocked-out" && !selectedJob) {
-      alert("Please select a job before clocking in")
+      setError("Please select a job before clocking in")
       return
     }
 
     setIsLoading(true)
+    setError(null)
 
     try {
       if (status === "clocked-out") {
+        // Clock IN
         const gpsLocation = await getCurrentLocation()
         setLocation(gpsLocation)
+        await apiClient("/api/attendance/clock-in", {
+          method: "POST",
+          body: JSON.stringify({ method: "manual" }),
+        })
+        setStatus("clocked-in")
+      } else {
+        // Clock OUT
+        await apiClient("/api/attendance/clock-out", {
+          method: "POST",
+          body: JSON.stringify({ method: "manual" }),
+        })
+        setStatus("clocked-out")
       }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      const newStatus = status === "clocked-out" ? "clocked-in" : "clocked-out"
-      setStatus(newStatus)
-
-      const action = newStatus === "clocked-in" ? "clocked in" : "clocked out"
-    } catch (error) {
-      alert("Failed to update time. Please try again.")
+      // Notify parent to refresh stats
+      onClockChange?.()
+    } catch (err: any) {
+      setError(err.message || "Failed to update time. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -86,11 +104,12 @@ export function ClockInOut({ currentStatus, currentLocation, currentJob, hoursTo
     })
   }
 
-  // Get user's assigned jobs
-  const userJobs =
-    user?.role === "owner"
-      ? mockJobs.filter((job) => job.status === "active")
-      : mockJobs.filter((job) => job.assignedEmployees.includes(user?.id || "") && job.status === "active")
+  // Get user's assigned active jobs from real job context
+  const userJobs = jobs.filter((job: any) => {
+    if (user?.role === "owner") return job.status === "active"
+    const assigned = Array.isArray(job.assignedEmployees) ? job.assignedEmployees : []
+    return assigned.some((a: any) => String(a) === String(user?.id)) && job.status === "active"
+  })
 
   return (
     <Card>
@@ -102,6 +121,12 @@ export function ClockInOut({ currentStatus, currentLocation, currentJob, hoursTo
         <CardDescription>Clock in/out and track your work hours with GPS location</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {error && (
+          <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-md px-3 py-2">
+            {error}
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Current Status</p>
@@ -140,11 +165,15 @@ export function ClockInOut({ currentStatus, currentLocation, currentJob, hoursTo
                 <SelectValue placeholder="Choose a job..." />
               </SelectTrigger>
               <SelectContent>
-                {userJobs.map((job) => (
-                  <SelectItem key={job.id} value={job.id}>
-                    {job.title} - {job.client}
-                  </SelectItem>
-                ))}
+                {userJobs.length > 0 ? (
+                  userJobs.map((job: any) => (
+                    <SelectItem key={job.id} value={job.id}>
+                      {job.title}{job.client ? ` - ${job.client}` : ""}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="_none" disabled>No active jobs assigned</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -154,14 +183,16 @@ export function ClockInOut({ currentStatus, currentLocation, currentJob, hoursTo
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm">
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span>{location || "Fetching location..."}</span>
+              <span>{location || "Location not available"}</span>
             </div>
-            <div className="text-sm">
-              <span className="text-muted-foreground">Working on: </span>
-              <span className="font-medium">
-                {userJobs.find((job) => job.id === selectedJob)?.title || "No job selected"}
-              </span>
-            </div>
+            {selectedJob && (
+              <div className="text-sm">
+                <span className="text-muted-foreground">Working on: </span>
+                <span className="font-medium">
+                  {userJobs.find((job: any) => job.id === selectedJob)?.title || "Selected job"}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
