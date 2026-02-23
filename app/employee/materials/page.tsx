@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,8 +8,14 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Package, Clock, Loader2, Plus } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Package, Plus, Loader2, AlertTriangle, CheckCircle2, Clock, XCircle, RefreshCw } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { apiClient } from "@/lib/apiClient"
 
@@ -17,269 +23,316 @@ interface MaterialRequest {
   id: number
   item_name: string
   quantity: number
-  urgency: string
-  description: string
-  status: string
+  urgency: "Low" | "Medium" | "High"
+  description: string | null
+  status: "pending" | "accepted" | "declined"
   requested_by_name: string
   created_at: string
 }
 
+const URGENCY_COLORS: Record<string, string> = {
+  Low: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  Medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+  High: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+}
+
+const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; className: string }> = {
+  pending: {
+    label: "Pending",
+    icon: <Clock className="h-3 w-3" />,
+    className: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+  },
+  accepted: {
+    label: "Accepted",
+    icon: <CheckCircle2 className="h-3 w-3" />,
+    className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  },
+  declined: {
+    label: "Declined",
+    icon: <XCircle className="h-3 w-3" />,
+    className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+  },
+}
+
+const EMPTY_FORM = { item_name: "", quantity: "", urgency: "Medium", description: "" }
+
 export default function EmployeeMaterialsPage() {
   const [requests, setRequests] = useState<MaterialRequest[]>([])
-  const [loading, setLoading] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  const [formData, setFormData] = useState({
-    item_name: "",
-    quantity: "",
-    urgency: "Medium",
-    description: "",
-  })
-
-  // Fetch user's material requests
-  const fetchRequests = async () => {
+  const loadRequests = useCallback(async () => {
     setLoading(true)
+    setFetchError(null)
     try {
       const data = await apiClient("/api/material-requests")
       setRequests(Array.isArray(data) ? data : [])
     } catch (err: any) {
-      console.error("Error fetching requests:", err)
+      console.error("Material requests fetch error:", err)
+      setFetchError(err.message || "Failed to load requests. Please try again.")
     } finally {
       setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    fetchRequests()
   }, [])
 
-  // Submit new material request
+  useEffect(() => {
+    loadRequests()
+  }, [loadRequests])
+
+  const handleFieldChange = (field: string, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }))
+    setSubmitError(null)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!formData.item_name.trim()) {
-      setError("Item name is required")
+    if (!form.item_name.trim()) {
+      setSubmitError("Item name is required.")
       return
     }
-
-    if (!formData.quantity || parseInt(formData.quantity) <= 0) {
-      setError("Valid quantity is required")
+    if (!form.quantity || Number(form.quantity) <= 0) {
+      setSubmitError("Please enter a valid quantity.")
       return
     }
 
     setSubmitting(true)
-    setError(null)
+    setSubmitError(null)
 
     try {
       await apiClient("/api/material-requests", {
         method: "POST",
         body: JSON.stringify({
-          item_name: formData.item_name,
-          quantity: parseInt(formData.quantity),
-          urgency: formData.urgency,
-          description: formData.description,
+          item_name: form.item_name.trim(),
+          quantity: Number(form.quantity),
+          urgency: form.urgency,
+          description: form.description.trim() || null,
         }),
       })
-
-      // Reset form
-      setFormData({
-        item_name: "",
-        quantity: "",
-        urgency: "Medium",
-        description: "",
-      })
-
-      // Refresh requests list
-      await fetchRequests()
-
-      // Close dialog
-      setDialogOpen(false)
-
-      alert("Material request submitted successfully!")
+      setSubmitSuccess(true)
+      setForm(EMPTY_FORM)
+      await loadRequests()
+      // Auto-close dialog after 1s
+      setTimeout(() => {
+        setDialogOpen(false)
+        setSubmitSuccess(false)
+      }, 1200)
     } catch (err: any) {
-      setError(err.message || "Failed to submit request")
+      setSubmitError(err.message || "Failed to submit request.")
     } finally {
       setSubmitting(false)
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "accepted":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-      case "declined":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-      default:
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-    }
-  }
-
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "Urgent":
-        return "text-red-600"
-      case "High":
-        return "text-orange-600"
-      case "Medium":
-        return "text-yellow-600"
-      default:
-        return "text-gray-600"
-    }
-  }
+  const pendingCount = requests.filter((r) => r.status === "pending").length
+  const acceptedCount = requests.filter((r) => r.status === "accepted").length
 
   return (
     <EmployeeLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-3xl font-bold">Material Requests</h1>
-            <p className="text-muted-foreground mt-1">Request materials needed for your work</p>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Package className="h-6 w-6 text-primary" />
+              Material Requests
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Request materials needed for your work
+            </p>
           </div>
+          <Button onClick={() => { setDialogOpen(true); setSubmitError(null); setSubmitSuccess(false) }}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Request
+          </Button>
+        </div>
 
-          {/* New Request Button with Dialog */}
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Request
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>New Material Request</DialogTitle>
-              </DialogHeader>
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-sm text-muted-foreground">Total Requests</p>
+              <p className="text-3xl font-bold">{requests.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-sm text-muted-foreground">Pending</p>
+              <p className="text-3xl font-bold text-orange-600">{pendingCount}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-sm text-muted-foreground">Accepted</p>
+              <p className="text-3xl font-bold text-green-600">{acceptedCount}</p>
+            </CardContent>
+          </Card>
+        </div>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3 text-sm flex items-center justify-between">
-                  <span>{error}</span>
-                  <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 ml-4">&times;</button>
+        {/* Requests List */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>My Requests</CardTitle>
+            <Button variant="ghost" size="sm" onClick={loadRequests} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Loading requests...</span>
+              </div>
+            ) : fetchError ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <AlertTriangle className="h-8 w-8 text-red-500" />
+                <p className="text-sm text-red-600 dark:text-red-400 text-center max-w-xs">{fetchError}</p>
+                <Button variant="outline" size="sm" onClick={loadRequests}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+              </div>
+            ) : requests.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
+                <Package className="h-10 w-10 opacity-30" />
+                <p className="text-sm">No requests yet. Create your first one!</p>
+                <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Request
+                </Button>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {requests.map((req) => {
+                  const status = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending
+                  return (
+                    <div key={req.id} className="py-4 flex items-start justify-between gap-4">
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium truncate">{req.item_name}</p>
+                          <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${URGENCY_COLORS[req.urgency] || URGENCY_COLORS.Medium}`}>
+                            {req.urgency}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Qty: <strong>{req.quantity}</strong>
+                          {req.description && <> · {req.description}</>}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(req.created_at).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap ${status.className}`}>
+                        {status.icon}
+                        {status.label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* New Request Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setSubmitError(null); setSubmitSuccess(false) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New Material Request</DialogTitle>
+            <DialogDescription>
+              Fill in the details below. Your owner will review and approve or decline.
+            </DialogDescription>
+          </DialogHeader>
+
+          {submitSuccess ? (
+            <div className="flex flex-col items-center py-6 gap-3 text-green-600">
+              <CheckCircle2 className="h-10 w-10" />
+              <p className="font-medium">Request submitted successfully!</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {submitError && (
+                <div className="flex items-start gap-2 text-sm text-red-700 bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg px-3 py-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>{submitError}</span>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="item_name">Item Name *</Label>
-                  <Input
-                    id="item_name"
-                    placeholder="e.g., Cement Bags, Steel Rods"
-                    value={formData.item_name}
-                    onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
-                    required
-                  />
-                </div>
+              <div className="space-y-1">
+                <Label htmlFor="item_name">Item Name *</Label>
+                <Input
+                  id="item_name"
+                  placeholder="e.g. Safety gloves, Paint brushes..."
+                  value={form.item_name}
+                  onChange={(e) => handleFieldChange("item_name", e.target.value)}
+                  required
+                />
+              </div>
 
-                <div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
                   <Label htmlFor="quantity">Quantity *</Label>
                   <Input
                     id="quantity"
                     type="number"
                     min="1"
-                    placeholder="e.g., 10"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                    placeholder="10"
+                    value={form.quantity}
+                    onChange={(e) => handleFieldChange("quantity", e.target.value)}
                     required
                   />
                 </div>
-
-                <div>
+                <div className="space-y-1">
                   <Label htmlFor="urgency">Urgency</Label>
-                  <Select
-                    value={formData.urgency}
-                    onValueChange={(value) => setFormData({ ...formData, urgency: value })}
-                  >
-                    <SelectTrigger>
+                  <Select value={form.urgency} onValueChange={(v) => handleFieldChange("urgency", v)}>
+                    <SelectTrigger id="urgency">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Low">Low</SelectItem>
                       <SelectItem value="Medium">Medium</SelectItem>
                       <SelectItem value="High">High</SelectItem>
-                      <SelectItem value="Urgent">Urgent</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Provide details about the material, specifications, or any special requirements..."
-                    rows={4}
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  />
-                </div>
-
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    "Submit Request"
-                  )}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {/* Requests List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>My Requests</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : requests.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                <p>No material requests yet</p>
-                <p className="text-sm">Submit your first request using the form</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {requests.map((request) => (
-                  <div key={request.id} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{request.item_name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Quantity: <span className="font-medium text-foreground">{request.quantity}</span>
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge className={getStatusColor(request.status)}>
-                          {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                        </Badge>
-                        <span className={`text-xs font-medium ${getUrgencyColor(request.urgency)}`}>
-                          {request.urgency}
-                        </span>
-                      </div>
-                    </div>
 
-                    {request.description && (
-                      <p className="text-sm text-muted-foreground mb-2">{request.description}</p>
-                    )}
-
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {new Date(request.created_at).toLocaleDateString()} at{" "}
-                      {new Date(request.created_at).toLocaleTimeString()}
-                    </div>
-                  </div>
-                ))}
+              <div className="space-y-1">
+                <Label htmlFor="description">Description (optional)</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Any specifications or special requirements..."
+                  value={form.description}
+                  onChange={(e) => handleFieldChange("description", e.target.value)}
+                  rows={3}
+                />
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Request"
+                )}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </EmployeeLayout>
   )
 }
