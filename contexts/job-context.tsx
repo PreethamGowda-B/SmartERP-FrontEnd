@@ -94,15 +94,15 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         loadJobs()
         hasSyncedRef.current = true
       }
-      // Reduced polling interval from 5000ms to 1500ms for faster real-time updates
-      intervalId = setInterval(loadJobs, 1500)
+      // Poll every 30 seconds — 1500ms was hammering the backend with ~40 calls/min
+      intervalId = setInterval(loadJobs, 30000)
     }
 
     return () => {
       mounted = false
       if (intervalId) clearInterval(intervalId)
     }
-  }, [user, isLoading]) // Removed 'jobs' from dependency array to prevent infinite loop
+  }, [user, isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { addNotification } = useNotifications()
 
@@ -143,24 +143,23 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
   const addJob = (job: Job) => {
     setJobs((prev) => [job, ...prev])
-    // persist to backend (best-effort)
-    ;(async () => {
-      try {
-        await apiClient("/api/jobs", { method: "POST", body: JSON.stringify(job) })
-      } catch (err) {
-        console.warn("Failed to persist job to server, saved locally", err)
-      }
-    })()
+      // persist to backend (best-effort)
+      ; (async () => {
+        try {
+          await apiClient("/api/jobs", { method: "POST", body: JSON.stringify(job) })
+        } catch (err) {
+          console.warn("Failed to persist job to server, saved locally", err)
+        }
+      })()
 
     if (job.assignedEmployees && job.assignedEmployees.length > 0) {
       job.assignedEmployees.forEach((employeeId) => {
         addNotification({
-          type: "info",
+          type: "job",
           title: "New Job Assignment",
           message: `You've been assigned to the "${job.title}" project. Check your jobs page for details.`,
           priority: "medium",
-          userId: employeeId,
-          data: { jobId: job.id, jobTitle: job.title },
+          data: { jobId: job.id, jobTitle: job.title, userId: employeeId },
         })
       })
     }
@@ -178,12 +177,11 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
             newEmployees.forEach((employeeId) => {
               addNotification({
-                type: "info",
+                type: "job",
                 title: "New Job Assignment",
                 message: `You've been assigned to the "${updatedJob.title}" project. Check your jobs page for details.`,
                 priority: "medium",
-                userId: employeeId,
-                data: { jobId: updatedJob.id, jobTitle: updatedJob.title },
+                data: { jobId: updatedJob.id, jobTitle: updatedJob.title, userId: employeeId },
               })
             })
           }
@@ -195,25 +193,25 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       return updatedJobs
     })
 
-    // best-effort update to backend
-    ;(async () => {
-      try {
-        await apiClient(`/api/jobs/${id}`, { method: "PUT", body: JSON.stringify(updates) })
-      } catch (err) {
-        console.warn("Failed to update job on server, update applied locally", err)
-      }
-    })()
+      // best-effort update to backend
+      ; (async () => {
+        try {
+          await apiClient(`/api/jobs/${id}`, { method: "PUT", body: JSON.stringify(updates) })
+        } catch (err) {
+          console.warn("Failed to update job on server, update applied locally", err)
+        }
+      })()
   }
 
   const deleteJob = (id: string) => {
     setJobs((prev) => prev.filter((job) => job.id !== id))
-    ;(async () => {
-      try {
-        await apiClient(`/api/jobs/${id}`, { method: "DELETE" })
-      } catch (err) {
-        console.warn("Failed to delete job on server, deletion applied locally", err)
-      }
-    })()
+      ; (async () => {
+        try {
+          await apiClient(`/api/jobs/${id}`, { method: "DELETE" })
+        } catch (err) {
+          console.warn("Failed to delete job on server, deletion applied locally", err)
+        }
+      })()
   }
 
   const getJobsByEmployee = (employeeId: string) => {
