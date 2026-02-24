@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { JobProvider } from "@/contexts/job-context"
 import { NotificationProvider } from "@/contexts/notification-context"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/sonner"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -104,6 +105,7 @@ export default function RootLayout({
             <AuthProvider>
               <NotificationProvider>
                 <JobProvider>{children}</JobProvider>
+                <Toaster richColors closeButton position="top-right" />
               </NotificationProvider>
             </AuthProvider>
           </Suspense>

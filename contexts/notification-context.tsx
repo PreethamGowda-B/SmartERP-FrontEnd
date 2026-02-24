@@ -3,6 +3,8 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import { useAuth } from "./auth-context"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 export interface Notification {
   id: string
@@ -31,6 +33,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://smarterp-bac
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const { user } = useAuth()
+  const router = useRouter()
   const [sseConnection, setSSEConnection] = useState<EventSource | null>(null)
 
   // Get token from user or localStorage
@@ -64,11 +67,47 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [user])
 
+  // Initialize FCM and request permission
+  const setupFCM = useCallback(async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        const { messaging, VAPID_KEY } = await import("@/lib/firebase");
+        const { getToken: getFCMToken } = await import("firebase/messaging");
+
+        const currentToken = await getFCMToken(messaging, {
+          vapidKey: VAPID_KEY,
+        });
+
+        if (currentToken) {
+          console.log("✅ FCM Token generated");
+          // Send token to backend
+          const token = getToken();
+          if (token) {
+            await fetch(`${BACKEND_URL}/api/auth/update-push-token`, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ pushToken: currentToken }),
+            });
+          }
+        } else {
+          console.log("⚠️ No registration token available. Request permission to generate one.");
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error setting up FCM:", error);
+    }
+  }, [user]);
+
   // Establish SSE connection for real-time notifications
   useEffect(() => {
     const token = getToken()
     if (!token || !user) {
-      // Close existing connection if user logs out
       if (sseConnection) {
         sseConnection.close()
         setSSEConnection(null)
@@ -76,11 +115,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       return
     }
 
-    // Fetch initial notifications
     fetchNotifications()
+    setupFCM() // Request FCM permission
 
-    // Establish SSE connection
-    const eventSource = new EventSource(`${BACKEND_URL}/api/notifications/sse?token=${getToken()}`, {
+    const eventSource = new EventSource(`${BACKEND_URL}/api/notifications/sse?token=${token}`, {
       withCredentials: false,
     })
 
@@ -95,9 +133,36 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         if (data.type === "connected") {
           console.log("✅ SSE connected:", data.message)
         } else if (data.type === "notification") {
-          // New notification received
-          console.log("🔔 New notification received:", data.data)
-          setNotifications((prev) => [data.data, ...prev])
+          const notification = data.data
+          console.log("🔔 New notification received:", notification)
+
+          setNotifications((prev) => [notification, ...prev])
+
+          // 1. Play notification sound
+          const audio = new Audio("/notification.mp3")
+          audio.play().catch((e) => console.log("🔇 Audio play blocked by browser", e))
+
+          // 2. Show toast notification
+          toast(notification.title, {
+            description: notification.message,
+            duration: 5000,
+            action: {
+              label: "View",
+              onClick: () => {
+                // Determine redirect path based on notification type/data
+                let redirectPath = "/notifications"
+                if (user.role === "owner") {
+                  if (notification.type === "job") redirectPath = "/owner/jobs"
+                  else if (notification.type === "material_request") redirectPath = "/owner/materials"
+                } else {
+                  if (notification.type === "job") redirectPath = "/employee/jobs"
+                  else if (notification.type === "message") redirectPath = "/employee/messages"
+                }
+                router.push(redirectPath)
+                markAsRead(notification.id)
+              },
+            },
+          })
         }
       } catch (error) {
         console.error("❌ Error parsing SSE message:", error)
@@ -111,12 +176,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     setSSEConnection(eventSource)
 
-    // Cleanup on unmount
     return () => {
       eventSource.close()
       console.log("📡 SSE connection closed")
     }
-  }, [user, fetchNotifications])
+  }, [user, fetchNotifications, router])
 
   const addNotification = (notificationData: Omit<Notification, "id" | "created_at" | "read">) => {
     // This is for local notifications only (not used in production)
