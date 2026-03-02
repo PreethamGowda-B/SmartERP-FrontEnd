@@ -33,17 +33,22 @@ export default function SettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false)
 
   // ── Company ───────────────────────────────────────────────────────────────
-  // Pre-fill company_code from localStorage immediately (set at signup)
-  const storedCode = typeof window !== "undefined" ? localStorage.getItem("company_code") : ""
   const [company, setCompany] = useState({
-    name: "", address: "", phone: "", contact_email: "",
-    company_id: storedCode || "",
+    name: "", address: "", phone: "", contact_email: "", company_id: "",
   })
   const [bizSettings, setBizSettings] = useState({
     autoApproval: false, overtimeAlerts: true, budgetAlerts: true,
     defaultHourlyRate: "25", overtimeMultiplier: "1.5",
   })
   const [savingCompany, setSavingCompany] = useState(false)
+
+  // Pre-fill company_id from localStorage on client mount (set at signup/previous load)
+  useEffect(() => {
+    const stored = localStorage.getItem("company_code")
+    if (stored) {
+      setCompany((prev) => ({ ...prev, company_id: prev.company_id || stored }))
+    }
+  }, [])
 
   // ── Notifications ─────────────────────────────────────────────────────────
   const [notifPrefs, setNotifPrefs] = useState({
@@ -86,11 +91,15 @@ export default function SettingsPage() {
           contact_email: c.contact_email || "",
           company_id: cid,
         })
-        // Persist company_id so it shows even before API resolves on next load
+        // Persist for future loads
         if (cid) localStorage.setItem("company_code", cid)
         if (c.settings && Object.keys(c.settings).length) {
           setBizSettings((prev) => ({ ...prev, ...c.settings }))
         }
+      } else {
+        // API failed — keep whatever is already in state (pre-filled from localStorage)
+        const fallback = localStorage.getItem("company_code")
+        if (fallback) setCompany((prev) => ({ ...prev, company_id: prev.company_id || fallback }))
       }
     } catch (e) {
       console.error("Settings load error:", e)
