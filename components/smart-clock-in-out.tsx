@@ -15,6 +15,7 @@ interface ActiveRecord {
   date: string          // "YYYY-MM-DD"
   location: string | null
   status: string
+  status_label?: string
 }
 
 export function SmartClockInOut() {
@@ -25,6 +26,7 @@ export function SmartClockInOut() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notification, setNotification] = useState<string | null>(null)
+  const [attendanceStatus, setAttendanceStatus] = useState<string | null>(null) // 'Present' | 'Late' | 'Half Day'
 
   // ─── Tick every second ──────────────────────────────────────────────────
   useEffect(() => {
@@ -112,12 +114,24 @@ export function SmartClockInOut() {
       const record = await res.json()
       setActiveRecord(record)
 
-      // Tell the employee whether they are on-time or late
+      // Determine status label from backend or compute locally
       const now = new Date()
-      if (now.getHours() >= 9) {
-        setNotification("You clocked in after 9:00 AM — this will be marked as Late.")
+      const hour = now.getHours()
+      const minute = now.getMinutes()
+      let label = record.status_label || 'Present'
+      if (!record.status_label) {
+        if (hour >= 13) label = 'Half Day'
+        else if (hour > 9 || (hour === 9 && minute > 0)) label = 'Late'
+        else label = 'Present'
+      }
+      setAttendanceStatus(label)
+
+      if (label === 'Half Day') {
+        setNotification(`You clocked in after 1:00 PM — recorded as Half Day. Shift starts at 9:00 AM.`)
+      } else if (label === 'Late') {
+        setNotification(`You clocked in after 9:00 AM — recorded as Late.`)
       } else {
-        setNotification("Clocked in successfully. Have a great day!")
+        setNotification("Clocked in successfully — you're on time! Have a great day! 🎉")
       }
     } catch (err: any) {
       setError(err.message || "Failed to clock in")
@@ -135,7 +149,7 @@ export function SmartClockInOut() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({}), // backend auto-finds today's open record
+        body: JSON.stringify({}),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
@@ -143,6 +157,7 @@ export function SmartClockInOut() {
       }
       setActiveRecord(null)
       setElapsedMs(0)
+      setAttendanceStatus(null)
       if (!notification) setNotification("Clocked out successfully.")
     } catch (err: any) {
       setError(err.message || "Failed to clock out")
@@ -198,7 +213,7 @@ export function SmartClockInOut() {
             Smart Clock In/Out
           </CardTitle>
           <CardDescription>
-            Clock in before 9:00 AM to mark as Present. Auto clock-out at 7:00 PM.
+            Attendance Rules: Before 9:00 AM = ✅ Present &bull; 9:01 AM–12:59 PM = 🟡 Late &bull; 1:00 PM–6:59 PM = 🟠 Half Day. Auto clock-out at 7:00 PM.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -229,6 +244,17 @@ export function SmartClockInOut() {
                     <p className="text-sm text-muted-foreground">Time Elapsed</p>
                     <p className="text-lg font-semibold font-mono text-blue-600">{formatElapsed(elapsedMs)}</p>
                   </div>
+                  {attendanceStatus && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-muted-foreground">Today's Status</p>
+                      <span className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${attendanceStatus === 'Present' ? 'bg-green-100 text-green-700' :
+                          attendanceStatus === 'Late' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-orange-100 text-orange-700'
+                        }`}>
+                        {attendanceStatus === 'Present' ? '✅' : attendanceStatus === 'Late' ? '🟡' : '🟠'} {attendanceStatus}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
