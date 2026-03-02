@@ -33,7 +33,12 @@ export default function SettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false)
 
   // ── Company ───────────────────────────────────────────────────────────────
-  const [company, setCompany] = useState({ name: "", address: "", phone: "", contact_email: "", company_id: "" })
+  // Pre-fill company_code from localStorage immediately (set at signup)
+  const storedCode = typeof window !== "undefined" ? localStorage.getItem("company_code") : ""
+  const [company, setCompany] = useState({
+    name: "", address: "", phone: "", contact_email: "",
+    company_id: storedCode || "",
+  })
   const [bizSettings, setBizSettings] = useState({
     autoApproval: false, overtimeAlerts: true, budgetAlerts: true,
     defaultHourlyRate: "25", overtimeMultiplier: "1.5",
@@ -73,13 +78,16 @@ export default function SettingsPage() {
 
       if (companyRes.ok) {
         const c = await companyRes.json()
+        const cid = c.company_id || ""
         setCompany({
           name: c.name || "",
           address: c.address || "",
           phone: c.phone || "",
           contact_email: c.contact_email || "",
-          company_id: c.company_id || "",
+          company_id: cid,
         })
+        // Persist company_id so it shows even before API resolves on next load
+        if (cid) localStorage.setItem("company_code", cid)
         if (c.settings && Object.keys(c.settings).length) {
           setBizSettings((prev) => ({ ...prev, ...c.settings }))
         }
@@ -423,7 +431,10 @@ export default function SettingsPage() {
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground py-4 text-center">Loading company info…</p>
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                  <p>Company ID not found.</p>
+                  <p className="text-xs mt-1">If you just signed up, try refreshing the page.</p>
+                </div>
               )}
             </CardContent>
           </Card>

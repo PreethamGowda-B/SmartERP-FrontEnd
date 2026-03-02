@@ -85,13 +85,16 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
       throw new Error(error.message || "Signup failed")
     }
 
-    const { user } = await response.json()
+    const data = await response.json()
+    const { user, company_code } = data
     console.log("[v0] Backend signup successful:", user.email)
 
-    // Store user locally for quick access
-    localStorage.setItem("smarterp_user", JSON.stringify(user))
+    // If owner, store the company_code so the settings page can show it immediately
+    const userWithMeta = { ...user, company_code: company_code || user.company_code }
+    localStorage.setItem("smarterp_user", JSON.stringify(userWithMeta))
+    if (company_code) localStorage.setItem("company_code", company_code)
 
-    return user
+    return userWithMeta
   } catch (error) {
     console.log(
       "[v0] Backend unavailable, falling back to mock auth:",
