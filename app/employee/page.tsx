@@ -51,10 +51,16 @@ export default function EmployeeDashboard() {
   const [pendingRequests, setPendingRequests] = useState<number>(0)
   const [loadingStats, setLoadingStats] = useState(true)
 
-  // Filter jobs assigned to this employee (accepted ones = active)
+  // Filter jobs assigned to this employee (active = accepted by employee OR status=active)
   const myJobs = jobs.filter((job: any) => {
+    const userId = String(user?.id || "")
+    // Check normalized assignedEmployees array (comes from job-context normalization)
     const assigned = Array.isArray(job.assignedEmployees) ? job.assignedEmployees : []
-    return assigned.some((a: any) => String(a) === String(user?.id))
+    const inAssigned = assigned.some((a: any) => String(a) === userId)
+    // Also check direct assigned_to field (comes directly from backend)
+    const assignedTo = job.assigned_to ? String(job.assigned_to) : ""
+    const isAssignedTo = assignedTo === userId
+    return inAssigned || isAssignedTo
   })
   const activeJobs = myJobs.filter((job: any) =>
     job.employee_status === "accepted" || job.status === "active"

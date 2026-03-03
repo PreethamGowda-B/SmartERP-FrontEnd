@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect, useRef } from "react"
-import { mockJobs, type Job } from "@/lib/data"
+import { type Job } from "@/lib/data"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/apiClient"
 import { useNotifications } from "@/contexts/notification-context"
@@ -23,10 +23,27 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
   const [jobs, setJobs] = useState<Job[]>(() => {
     if (typeof window !== "undefined") {
-      const savedJobs = localStorage.getItem("smarterp-jobs")
-      return savedJobs ? JSON.parse(savedJobs) : mockJobs
+      try {
+        const savedJobs = localStorage.getItem("smarterp-jobs")
+        if (savedJobs) {
+          const parsed = JSON.parse(savedJobs)
+          // Detect and discard mock/demo data (mock IDs are simple integers like "1","2","3")
+          // Real IDs from the backend are UUIDs or larger integers
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const isMockData = parsed.every((j: any) => {
+              const id = String(j.id || "")
+              return id === "1" || id === "2" || id === "3" || id === "4" || id === "5"
+            })
+            if (!isMockData) {
+              return parsed
+            }
+          }
+        }
+      } catch (e) {
+        // ignore parse errors
+      }
     }
-    return mockJobs
+    return []
   })
 
   const hasSyncedRef = useRef(false)

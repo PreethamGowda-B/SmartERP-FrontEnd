@@ -4,16 +4,12 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Clock, MapPin, Play, Square, Loader2, AlertTriangle, Timer } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
-import { useJobs } from "@/contexts/job-context"
 import { apiClient } from "@/lib/apiClient"
 
 interface ClockInOutProps {
   currentStatus: "clocked-out" | "clocked-in"
   currentLocation?: string
-  currentJob?: string
   hoursToday: number
   /** full attendance record from today so we can show late/auto-clockout badges */
   attendanceRecord?: {
@@ -51,17 +47,13 @@ function getClockStatusMessage(): { type: "ok" | "late" | "cutoff" | "early"; me
 export function ClockInOut({
   currentStatus,
   currentLocation,
-  currentJob,
   hoursToday,
   attendanceRecord,
   onClockChange,
 }: ClockInOutProps) {
-  const { user } = useAuth()
-  const { jobs } = useJobs()
   const [status, setStatus] = useState(currentStatus)
   const [isLoading, setIsLoading] = useState(false)
   const [location, setLocation] = useState(currentLocation || "")
-  const [selectedJob, setSelectedJob] = useState(currentJob || "")
   const [currentTime, setCurrentTime] = useState(new Date())
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -95,10 +87,6 @@ export function ClockInOut({
     })
 
   const handleClockAction = async () => {
-    if (status === "clocked-out" && !selectedJob) {
-      setError("Please select a job before clocking in")
-      return
-    }
 
     setIsLoading(true)
     setError(null)
@@ -140,13 +128,6 @@ export function ClockInOut({
       hour12: true,
     })
 
-  // Get user's assigned active jobs from real job context
-  const userJobs = jobs.filter((job: any) => {
-    if (user?.role === "owner") return job.status === "active"
-    const assigned = Array.isArray(job.assignedEmployees) ? job.assignedEmployees : []
-    return assigned.some((a: any) => String(a) === String(user?.id)) && job.status === "active"
-  })
-
   const isCutoffPassed = clockMsg.type === "cutoff"
   const isEarly = clockMsg.type === "early"
 
@@ -165,12 +146,12 @@ export function ClockInOut({
         {status === "clocked-out" && !attendanceRecord?.check_in_time && (
           <div
             className={`flex items-start gap-2 px-3 py-2 rounded-lg text-sm border ${clockMsg.type === "ok"
-                ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:text-green-300"
-                : clockMsg.type === "late"
-                  ? "bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
-                  : clockMsg.type === "cutoff"
-                    ? "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:text-red-300"
-                    : "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+              ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:text-green-300"
+              : clockMsg.type === "late"
+                ? "bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
+                : clockMsg.type === "cutoff"
+                  ? "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:text-red-300"
+                  : "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
               }`}
           >
             {clockMsg.type === "cutoff" || clockMsg.type === "late" ? (
@@ -255,30 +236,6 @@ export function ClockInOut({
           </div>
         )}
 
-        {/* Job selector (only when not clocked in and no completed record) */}
-        {status === "clocked-out" && !attendanceRecord?.check_out_time && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Select Job to Work On</label>
-            <Select value={selectedJob} onValueChange={setSelectedJob}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a job..." />
-              </SelectTrigger>
-              <SelectContent>
-                {userJobs.length > 0 ? (
-                  userJobs.map((job: any) => (
-                    <SelectItem key={job.id} value={job.id}>
-                      {job.title}{job.client ? ` - ${job.client}` : ""}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="_none" disabled>
-                    No active jobs assigned
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
 
         {/* Location when clocked in */}
         {status === "clocked-in" && (
