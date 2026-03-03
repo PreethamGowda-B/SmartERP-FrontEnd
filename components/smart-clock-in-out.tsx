@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -70,6 +68,32 @@ export function SmartClockInOut() {
     fetchOpenRecord()
   }, [fetchOpenRecord])
 
+  // ─── Clock Out ──────────────────────────────────────────────────────────
+  const handleClockOut = useCallback(async () => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      const res = await fetch(`${API}/api/attendance/clock-out`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({}),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.message || `Clock-out failed (${res.status})`)
+      }
+      setActiveRecord(null)
+      setElapsedMs(0)
+      setAttendanceStatus(null)
+      if (!notification) setNotification("Clocked out successfully.")
+    } catch (err: any) {
+      setError(err.message || "Failed to clock out")
+    } finally {
+      setSubmitting(false)
+    }
+  }, [notification])
+
   // ─── Auto clock-out at 7 PM ─────────────────────────────────────────────
   useEffect(() => {
     if (!activeRecord) return
@@ -78,7 +102,7 @@ export function SmartClockInOut() {
       setNotification("You have been automatically clocked out at 7:00 PM")
       handleClockOut()
     }
-  }, [currentTime, activeRecord])
+  }, [currentTime, activeRecord, handleClockOut])
 
   // ─── Get GPS location ───────────────────────────────────────────────────
   const getLocation = (): Promise<string> =>
@@ -140,31 +164,7 @@ export function SmartClockInOut() {
     }
   }
 
-  // ─── Clock Out ──────────────────────────────────────────────────────────
-  const handleClockOut = async () => {
-    setSubmitting(true)
-    setError(null)
-    try {
-      const res = await fetch(`${API}/api/attendance/clock-out`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({}),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.message || `Clock-out failed (${res.status})`)
-      }
-      setActiveRecord(null)
-      setElapsedMs(0)
-      setAttendanceStatus(null)
-      if (!notification) setNotification("Clocked out successfully.")
-    } catch (err: any) {
-      setError(err.message || "Failed to clock out")
-    } finally {
-      setSubmitting(false)
-    }
-  }
+
 
   // ─── Formatting ─────────────────────────────────────────────────────────
   const formatElapsed = (ms: number) => {
@@ -248,8 +248,8 @@ export function SmartClockInOut() {
                     <div className="col-span-2">
                       <p className="text-sm text-muted-foreground">Today's Status</p>
                       <span className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${attendanceStatus === 'Present' ? 'bg-green-100 text-green-700' :
-                          attendanceStatus === 'Late' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-orange-100 text-orange-700'
+                        attendanceStatus === 'Late' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-orange-100 text-orange-700'
                         }`}>
                         {attendanceStatus === 'Present' ? '✅' : attendanceStatus === 'Late' ? '🟡' : '🟠'} {attendanceStatus}
                       </span>

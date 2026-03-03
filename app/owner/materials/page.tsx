@@ -45,6 +45,7 @@ export default function OwnerMaterialsPage() {
 
   useEffect(() => {
     fetchRequests()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Accept request

@@ -135,7 +135,7 @@ export default function OwnerDashboard() {
               Dashboard Overview
             </h1>
             <p className="text-muted-foreground mt-1">
-              Welcome back! Here's what's happening with your business today.
+              Welcome back! Here&apos;s what&apos;s happening with your business today.
             </p>
           </div>
           <div className="flex items-center gap-3">

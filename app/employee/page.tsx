@@ -168,7 +168,7 @@ export default function EmployeeDashboard() {
               Welcome back, {user?.name?.split(" ")[0]}!
             </h1>
             <p className="text-muted-foreground animate-fade-in-up stagger-2">
-              Here's your work overview for today.
+              Here&apos;s your work overview for today.
               {todayAttendance?.is_late && (
                 <span className="ml-2 text-yellow-600 font-medium text-xs">⚠ Late check-in</span>
               )}

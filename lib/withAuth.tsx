@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { apiClient } from './apiClient';
 import DotsLoader from '@/components/dots-loader';
 
@@ -20,7 +20,7 @@ export function useAuthGuard() {
     }
     check();
     return () => { mounted = false; };
-  }, []);
+  }, [router]);
 
   return { user, loading };
 }

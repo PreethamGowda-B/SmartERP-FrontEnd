@@ -29,40 +29,34 @@ export interface AuthState {
   isLoading: boolean
 }
 
-// User authentication system
+// User authentication system (mock offline fallback — no passwords stored)
 interface StoredUserData extends User {
-  password: string
+  passwordHash: string // only a hash for offline comparison, never plaintext
 }
 
-const mockUsersWithPasswords: StoredUserData[] = []
-
-const getUsersWithPasswords = (): StoredUserData[] => {
+const getMockUsers = (): StoredUserData[] => {
   if (typeof window === "undefined") return []
-
-  const stored = localStorage.getItem("smarterp_users_with_passwords")
+  const stored = sessionStorage.getItem("smarterp_mock_users")
   if (stored) {
-    try {
-      return JSON.parse(stored)
-    } catch {
-      return []
-    }
+    try { return JSON.parse(stored) } catch { return [] }
   }
   return []
 }
 
-const saveUsersWithPasswordsToStorage = (users: StoredUserData[]) => {
+const saveMockUsers = (users: StoredUserData[]) => {
   if (typeof window === "undefined") return
-  localStorage.setItem("smarterp_users_with_passwords", JSON.stringify(users))
+  // Use sessionStorage (cleared on tab close) instead of localStorage
+  sessionStorage.setItem("smarterp_mock_users", JSON.stringify(users))
 }
 
-const getStoredUsers = (): User[] => {
-  const usersWithPasswords = getUsersWithPasswords()
-  return usersWithPasswords.map(({ password, ...user }) => user)
-}
-
-const saveUsersToStorage = (users: User[]) => {
-  if (typeof window === "undefined") return
-  localStorage.setItem("smarterp_users", JSON.stringify(users))
+// Simple hash for offline mock auth (not cryptographic — use only in fallback)
+const simpleHash = (str: string): string => {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0
+  }
+  return String(hash)
 }
 
 export const signUp = async (userData: SignUpData): Promise<User | null> => {
@@ -104,14 +98,14 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
     // Fallback to mock auth if backend is unavailable
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    const allUsersWithPasswords = getUsersWithPasswords()
+    const allMockUsers = getMockUsers()
 
-    if (allUsersWithPasswords.some((user) => user.email === userData.email)) {
+    if (allMockUsers.some((user) => user.email === userData.email)) {
       console.log("[v0] Mock auth: Email already exists")
       return null
     }
 
-    const newUserWithPassword: StoredUserData = {
+    const newMockUser: StoredUserData = {
       id: Date.now().toString(),
       email: userData.email,
       name: userData.name,
@@ -119,33 +113,13 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
       phone: userData.phone,
       position: userData.position,
       department: userData.department,
-      password: userData.password,
+      passwordHash: simpleHash(userData.password), // never store plaintext
     }
 
-    const updatedUsers = [...allUsersWithPasswords, newUserWithPassword]
-    saveUsersWithPasswordsToStorage(updatedUsers)
+    saveMockUsers([...allMockUsers, newMockUser])
     console.log("[v0] Mock auth: User created successfully")
 
-    if (userData.role === "employee") {
-      const ownerNotification = {
-        type: "info" as const,
-        title: "New Employee Registration",
-        message: `${userData.name} has created an employee account and is waiting for approval.`,
-        priority: "medium" as const,
-        data: { newEmployeeId: newUserWithPassword.id, employeeData: userData },
-      }
-
-      const existingNotifications = JSON.parse(localStorage.getItem("smarterp-notifications") || "[]")
-      const newNotification = {
-        ...ownerNotification,
-        id: Date.now().toString(),
-        time: new Date().toISOString(),
-        read: false,
-      }
-      localStorage.setItem("smarterp-notifications", JSON.stringify([newNotification, ...existingNotifications]))
-    }
-
-    const { password, ...newUser } = newUserWithPassword
+    const { passwordHash, ...newUser } = newMockUser
     return newUser
   }
 }
@@ -172,17 +146,17 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     const data = await response.json()
     console.log("[v0] Backend login successful:", data.user?.email)
 
-    // ✅ Merge tokens with user data
+    // ✅ Merge access token with user data
+    // Note: refreshToken is handled by httpOnly cookie set by the server — NOT stored in localStorage
     const userWithTokens = {
       ...data.user,
       accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
     }
 
-    // ✅ Store everything for later use
+    // ✅ Store user + access token (short-lived, 15min) for API calls
     localStorage.setItem("smarterp_user", JSON.stringify(userWithTokens))
     if (data.accessToken) localStorage.setItem("accessToken", data.accessToken)
-    if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken)
+    // ⚠️ refreshToken NOT stored in localStorage — it's in the httpOnly cookie
 
     return userWithTokens
   } catch (error) {
@@ -191,14 +165,14 @@ export const signIn = async (email: string, password: string): Promise<User | nu
       error instanceof Error ? error.message : String(error),
     )
 
-    // 🧩 Fallback: Local mock auth
+    // 🧩 Fallback: Local mock auth (offline mode)
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    const allUsersWithPasswords = getUsersWithPasswords()
-    const userWithPassword = allUsersWithPasswords.find((u) => u.email === email)
+    const allMockUsers = getMockUsers()
+    const mockUser = allMockUsers.find((u) => u.email === email)
 
-    if (userWithPassword && userWithPassword.password === password) {
-      const { password: _, ...user } = userWithPassword
+    if (mockUser && mockUser.passwordHash === simpleHash(password)) {
+      const { passwordHash: _, ...user } = mockUser
       localStorage.setItem("smarterp_user", JSON.stringify(user))
       console.log("[v0] Mock auth: Login successful")
       return user
@@ -213,10 +187,14 @@ export const signIn = async (email: string, password: string): Promise<User | nu
 export const signOut = async (): Promise<void> => {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+    const refreshToken = localStorage.getItem("refreshToken")
     await fetch(`${apiUrl}/api/auth/logout`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
       mode: "cors",
+      // Send refreshToken in body in case cookies aren't available cross-domain
+      body: JSON.stringify({ refreshToken }),
     }).catch(() => {
       // Ignore errors during logout
     })
@@ -227,6 +205,7 @@ export const signOut = async (): Promise<void> => {
   localStorage.removeItem("smarterp_user")
   localStorage.removeItem("accessToken")
   localStorage.removeItem("refreshToken")
+  sessionStorage.removeItem("smarterp_mock_users")
 }
 
 export const getCurrentUser = (): User | null => {

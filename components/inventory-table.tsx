@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -206,11 +207,12 @@ export default function InventoryTable({
                 <div key={item.id} className="border rounded-lg p-4 hover:bg-accent/5 transition">
                   <div className="flex gap-4">
                     {item.image_url && (
-                      <div className="h-20 w-20 flex-shrink-0 rounded-lg bg-muted overflow-hidden">
-                        <img
+                      <div className="h-20 w-20 flex-shrink-0 rounded-lg bg-muted overflow-hidden relative">
+                        <Image
                           src={getImageUrl(item.image_url) || "/placeholder.svg"}
                           alt={item.name}
-                          className="h-full w-full object-cover"
+                          fill
+                          className="object-cover"
                         />
                       </div>
                     )}
