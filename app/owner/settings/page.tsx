@@ -227,9 +227,30 @@ export default function SettingsPage() {
                 <Label>Contact Email</Label>
                 <Input type="email" value={company.contact_email} onChange={(e) => setCompany((p) => ({ ...p, contact_email: e.target.value }))} placeholder="info@company.com" />
               </div>
+              <div className="space-y-2">
+                <Label>Company ID</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={company.company_id}
+                    onChange={(e) => setCompany((p) => ({ ...p, company_id: e.target.value.toUpperCase().replace(/\s/g, "") }))}
+                    placeholder="e.g. MYCO001"
+                    className="font-mono"
+                    maxLength={20}
+                  />
+                  {company.company_id && (
+                    <Button variant="outline" size="icon" onClick={() => copyToClipboard(company.company_id, "Company ID")}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Share this ID with employees so they can register under your company. Employees will see this in their Settings tab.
+                </p>
+              </div>
               <Button onClick={handleUpdateCompany} disabled={savingCompany}>
                 {savingCompany ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : "Update Company Info"}
               </Button>
+
             </CardContent>
           </Card>
 
