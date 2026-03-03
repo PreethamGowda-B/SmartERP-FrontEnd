@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
-import { User, Bell, Shield, Loader2, Eye, EyeOff } from "lucide-react"
+import { User, Bell, Shield, Loader2, Eye, EyeOff, Building2, Copy, CheckCheck } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
@@ -39,6 +39,18 @@ export default function EmployeeSettingsPage() {
   const [showPw, setShowPw] = useState(false)
   const [savingPw, setSavingPw] = useState(false)
 
+  // ── Company info (read-only) ───────────────────────────────────────────────
+  interface CompanyInfo {
+    company_id: string
+    name?: string
+    address?: string
+    phone?: string
+    contact_email?: string
+  }
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null)
+  const [loadingCompany, setLoadingCompany] = useState(true)
+  const [copied, setCopied] = useState(false)
+
   // ── Load profile on mount ─────────────────────────────────────────────────
   const loadProfile = useCallback(async () => {
     try {
@@ -53,7 +65,27 @@ export default function EmployeeSettingsPage() {
     } catch (e) { console.error("Profile load error:", e) }
   }, [])
 
-  useEffect(() => { loadProfile() }, [loadProfile])
+  const loadCompanyInfo = useCallback(async () => {
+    setLoadingCompany(true)
+    try {
+      const res = await fetch(`${API}/api/settings/company-info`, { credentials: "include", headers: authHeaders() })
+      if (res.ok) {
+        const data = await res.json()
+        setCompanyInfo(data)
+      }
+    } catch (e) { console.error("Company info load error:", e) }
+    finally { setLoadingCompany(false) }
+  }, [])
+
+  useEffect(() => { loadProfile(); loadCompanyInfo() }, [loadProfile, loadCompanyInfo])
+
+  const copyCompanyId = () => {
+    if (!companyInfo?.company_id) return
+    navigator.clipboard.writeText(companyInfo.company_id).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleUpdateProfile = async () => {
@@ -223,6 +255,91 @@ export default function EmployeeSettingsPage() {
               <Button onClick={handleChangePassword} disabled={savingPw || !passwords.current || !passwords.newPw}>
                 {savingPw ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Changing…</> : "Change Password"}
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* ── Company Information (read-only) ── */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />Company Information
+                {loadingCompany && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground ml-auto" />}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Company ID — always visible */}
+              <div className="space-y-2">
+                <Label>Company ID</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={companyInfo?.company_id || "—"}
+                    disabled
+                    className="font-mono text-sm opacity-80 flex-1"
+                  />
+                  {companyInfo?.company_id && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={copyCompanyId}
+                      title="Copy Company ID"
+                    >
+                      {copied ? <CheckCheck className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Share this ID with new employees to join your company</p>
+              </div>
+
+              <Separator />
+
+              {/* Company Name */}
+              <div className="space-y-2">
+                <Label>Company Name</Label>
+                <Input
+                  value={companyInfo?.name || ""}
+                  disabled
+                  className="opacity-80"
+                  placeholder="Not set by owner yet"
+                />
+              </div>
+
+              {/* Address */}
+              <div className="space-y-2">
+                <Label>Address</Label>
+                <Input
+                  value={companyInfo?.address || ""}
+                  disabled
+                  className="opacity-80"
+                  placeholder="Not set by owner yet"
+                />
+              </div>
+
+              {/* Phone */}
+              <div className="space-y-2">
+                <Label>Company Phone</Label>
+                <Input
+                  value={companyInfo?.phone || ""}
+                  disabled
+                  className="opacity-80"
+                  placeholder="Not set by owner yet"
+                />
+              </div>
+
+              {/* Contact Email */}
+              <div className="space-y-2">
+                <Label>Contact Email</Label>
+                <Input
+                  value={companyInfo?.contact_email || ""}
+                  disabled
+                  className="opacity-80"
+                  placeholder="Not set by owner yet"
+                />
+              </div>
+
+              <p className="text-xs text-muted-foreground pt-1">
+                Contact your owner/admin to update company information.
+              </p>
             </CardContent>
           </Card>
 
