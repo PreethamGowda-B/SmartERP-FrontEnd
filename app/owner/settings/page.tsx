@@ -125,6 +125,9 @@ export default function SettingsPage() {
   }
 
   const handleUpdateCompany = async () => {
+    if (!company.name?.trim()) {
+      return toast({ title: "Company name required", description: "Please enter a company name before saving.", variant: "destructive" })
+    }
     setSavingCompany(true)
     try {
       const res = await fetch(`${API}/api/settings/company`, {
@@ -132,10 +135,22 @@ export default function SettingsPage() {
         body: JSON.stringify({ ...company, settings: bizSettings }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.message)
-      toast({ title: "Company settings updated", description: "Changes have been saved." })
+      if (!res.ok) throw new Error(data.message || "Server error")
+      // Update local state with what the server returned (includes short company_id)
+      if (data.company) {
+        setCompany((prev) => ({
+          ...prev,
+          name: data.company.name || prev.name,
+          company_id: data.company.company_id || prev.company_id,
+        }))
+        if (data.company.company_id) localStorage.setItem("company_code", data.company.company_id)
+      }
+      toast({
+        title: "✅ Company information updated!",
+        description: "Your changes are now visible to employees.",
+      })
     } catch (e: any) {
-      toast({ title: "Error", description: e.message || "Failed to update company", variant: "destructive" })
+      toast({ title: "Update failed", description: e.message || "Failed to update company", variant: "destructive" })
     } finally { setSavingCompany(false) }
   }
 
