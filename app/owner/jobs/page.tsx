@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { JobForm } from "@/components/job-form"
 import { Button } from "@/components/ui/button"
@@ -12,64 +12,91 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import type { Job } from "@/lib/data"
 import { useJobs } from "@/contexts/job-context"
-import { Plus, Search, Filter, Calendar, Users, CheckCircle2, Clock, XCircle, AlertCircle, TrendingUp, Edit, Trash2 } from "lucide-react"
+import {
+  Plus, Search, Filter, Calendar, Users, CheckCircle2, Clock,
+  XCircle, AlertCircle, TrendingUp, Edit, Trash2, RefreshCw,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
+
+const AUTO_REFRESH_MS = 30_000
 
 function formatDate(dateString?: string) {
   if (!dateString) return "Not set"
   try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { 
-      month: "short", 
-      day: "numeric", 
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short", day: "numeric", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
     })
   } catch {
     return "Invalid date"
   }
 }
 
+function formatLastUpdated(date: Date | null) {
+  if (!date) return "Never"
+  return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+}
+
 function getEmployeeStatusBadge(employeeStatus?: string) {
   const status = employeeStatus?.toLowerCase() || "pending"
-  
   switch (status) {
     case "accepted":
       return (
         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-          <CheckCircle2 className="w-3 h-3 mr-1" />
-          Accepted
+          <CheckCircle2 className="w-3 h-3 mr-1" />Accepted
         </Badge>
       )
     case "declined":
       return (
         <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-          <XCircle className="w-3 h-3 mr-1" />
-          Declined
+          <XCircle className="w-3 h-3 mr-1" />Declined
         </Badge>
       )
-    case "pending":
     default:
       return (
         <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-          <Clock className="w-3 h-3 mr-1" />
-          Pending
+          <Clock className="w-3 h-3 mr-1" />Pending
         </Badge>
       )
   }
 }
 
 export default function OwnerJobsPage() {
-  const { jobs, addJob, updateJob, deleteJob } = useJobs()
+  const { jobs, addJob, updateJob, deleteJob, refreshJobs } = useJobs()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
   const [employeeStatusFilter, setEmployeeStatusFilter] = useState("all")
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingJob, setEditingJob] = useState<Job | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // ── Refresh state ─────────────────────────────────────────────────────────
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const isRefreshingRef = useRef(false) // guard against duplicate concurrent calls
+
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshingRef.current) return // duplicate call guard
+    isRefreshingRef.current = true
+    setIsRefreshing(true)
+    try {
+      await refreshJobs()
+      setLastUpdated(new Date())
+    } finally {
+      setIsRefreshing(false)
+      isRefreshingRef.current = false
+    }
+  }, [refreshJobs])
+
+  // Initial fetch + 30-second auto-refresh with proper cleanup
+  useEffect(() => {
+    handleRefresh()
+    const intervalId = setInterval(handleRefresh, AUTO_REFRESH_MS)
+    return () => clearInterval(intervalId)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Filters ───────────────────────────────────────────────────────────────
   const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
       job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -82,70 +109,77 @@ export default function OwnerJobsPage() {
     return matchesSearch && matchesStatus && matchesPriority && matchesEmployeeStatus
   })
 
-  const handleCreateJob = () => {
-    setEditingJob(null)
-    setIsFormOpen(true)
-  }
-
-  const handleEditJob = (job: Job) => {
-    setEditingJob(job)
-    setIsFormOpen(true)
-  }
-
+  // ── Job CRUD handlers ─────────────────────────────────────────────────────
+  const handleCreateJob = () => { setEditingJob(null); setIsFormOpen(true) }
+  const handleEditJob = (job: Job) => { setEditingJob(job); setIsFormOpen(true) }
   const handleDeleteJob = (job: Job) => {
-    if (confirm("Are you sure you want to delete this job?")) {
-      deleteJob(job.id)
-    }
+    if (confirm("Are you sure you want to delete this job?")) deleteJob(job.id)
   }
-
   const handleSubmitJob = async (jobData: Partial<Job>) => {
-    setIsLoading(true)
+    setIsSubmitting(true)
     await new Promise((resolve) => setTimeout(resolve, 1000))
-
     if (editingJob) {
       updateJob(editingJob.id, jobData)
     } else {
-      const newJob: Job = {
-        id: Date.now().toString(),
-        spent: 0,
-        ...jobData,
-      } as Job
-      addJob(newJob)
+      addJob({ id: Date.now().toString(), spent: 0, ...jobData } as Job)
     }
-
-    setIsLoading(false)
+    setIsSubmitting(false)
     setIsFormOpen(false)
     setEditingJob(null)
   }
 
-  const handleCancelForm = () => {
-    setIsFormOpen(false)
-    setEditingJob(null)
-  }
-
-  const acceptedJobs = jobs.filter(j => j.employee_status === 'accepted').length
-  const pendingJobs = jobs.filter(j => j.employee_status === 'pending').length
-  const declinedJobs = jobs.filter(j => j.employee_status === 'declined').length
-  const completedJobs = jobs.filter(j => j.status === 'completed').length
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  const acceptedJobs = jobs.filter(j => j.employee_status === "accepted").length
+  const pendingJobs = jobs.filter(j => j.employee_status === "pending").length
+  const declinedJobs = jobs.filter(j => j.employee_status === "declined").length
+  const completedJobs = jobs.filter(j => j.status === "completed").length
 
   return (
     <OwnerLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               Job Management
             </h1>
             <p className="text-muted-foreground mt-1">Manage projects and track employee responses</p>
           </div>
-          <Button onClick={handleCreateJob} size="lg">
-            <Plus className="h-4 w-4 mr-2" />
-            New Job
-          </Button>
+
+          <div className="flex items-center gap-3">
+            {/* Last Updated */}
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              <span>Updated: {formatLastUpdated(lastUpdated)}</span>
+            </div>
+
+            {/* Manual Refresh Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="gap-2"
+              title="Refresh jobs"
+            >
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              {isRefreshing ? "Refreshing…" : "Refresh"}
+            </Button>
+
+            <Button onClick={handleCreateJob} size="lg">
+              <Plus className="h-4 w-4 mr-2" />
+              New Job
+            </Button>
+          </div>
         </div>
 
-        {/* Enhanced Stats */}
+        {/* Mobile Last Updated */}
+        <p className="sm:hidden text-xs text-muted-foreground flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          Last updated: {formatLastUpdated(lastUpdated)}
+        </p>
+
+        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="border-green-200 bg-green-50/50">
             <CardContent className="p-4">
@@ -158,7 +192,6 @@ export default function OwnerJobsPage() {
               </div>
             </CardContent>
           </Card>
-
           <Card className="border-yellow-200 bg-yellow-50/50">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -170,7 +203,6 @@ export default function OwnerJobsPage() {
               </div>
             </CardContent>
           </Card>
-
           <Card className="border-blue-200 bg-blue-50/50">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -182,7 +214,6 @@ export default function OwnerJobsPage() {
               </div>
             </CardContent>
           </Card>
-
           <Card className="border-red-200 bg-red-50/50">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -199,7 +230,7 @@ export default function OwnerJobsPage() {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search jobs, clients, or locations..."
               value={searchTerm}
@@ -237,69 +268,55 @@ export default function OwnerJobsPage() {
           {filteredJobs.map((job) => {
             const employeeStatus = job.employee_status || "pending"
             const progress = job.progress || 0
-            const isCompleted = job.status?.toLowerCase() === 'completed'
+            const isCompleted = job.status?.toLowerCase() === "completed"
 
             return (
               <Card
                 key={job.id}
                 className={cn(
                   "group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-2",
-                  employeeStatus === 'accepted' && "border-green-100",
-                  employeeStatus === 'declined' && "border-red-100 opacity-75",
-                  employeeStatus === 'pending' && "border-yellow-100"
+                  employeeStatus === "accepted" && "border-green-100",
+                  employeeStatus === "declined" && "border-red-100 opacity-75",
+                  employeeStatus === "pending" && "border-yellow-100"
                 )}
               >
-                {/* Status indicator bar */}
                 <div
                   className={cn(
                     "h-2 w-full",
                     isCompleted && "bg-green-500",
-                    !isCompleted && employeeStatus === 'accepted' && "bg-blue-500",
-                    employeeStatus === 'pending' && "bg-yellow-500",
-                    employeeStatus === 'declined' && "bg-red-500"
+                    !isCompleted && employeeStatus === "accepted" && "bg-blue-500",
+                    employeeStatus === "pending" && "bg-yellow-500",
+                    employeeStatus === "declined" && "bg-red-500"
                   )}
                 />
-
                 <CardHeader className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg line-clamp-2 flex-1">
-                      {job.title}
-                    </CardTitle>
+                    <CardTitle className="text-lg line-clamp-2 flex-1">{job.title}</CardTitle>
                     <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditJob(job)}
-                        className="h-8 w-8"
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => handleEditJob(job)} className="h-8 w-8">
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteJob(job)}
+                        variant="ghost" size="icon" onClick={() => handleDeleteJob(job)}
                         className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-
                   <div className="flex gap-2 flex-wrap">
-                    <Badge variant={job.status === 'completed' ? 'default' : 'outline'}>
-                      {job.status || 'pending'}
+                    <Badge variant={job.status === "completed" ? "default" : "outline"}>
+                      {job.status || "pending"}
                     </Badge>
                     {getEmployeeStatusBadge(employeeStatus)}
                   </div>
-
                   <CardDescription className="line-clamp-2">
                     {job.description || "No description"}
                   </CardDescription>
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  {/* Progress - only for accepted jobs */}
-                  {employeeStatus === 'accepted' && (
+                  {employeeStatus === "accepted" && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="font-medium">Progress</span>
@@ -315,7 +332,6 @@ export default function OwnerJobsPage() {
                     </div>
                   )}
 
-                  {/* Employee response timestamps */}
                   <div className="space-y-2 text-xs text-muted-foreground">
                     {job.employee_email && (
                       <div className="flex items-center gap-2">
@@ -335,7 +351,7 @@ export default function OwnerJobsPage() {
                         <span>Declined: {formatDate(job.declined_at)}</span>
                       </div>
                     )}
-                    {!job.accepted_at && !job.declined_at && employeeStatus === 'pending' && (
+                    {!job.accepted_at && !job.declined_at && employeeStatus === "pending" && (
                       <div className="flex items-center gap-2 text-yellow-700">
                         <AlertCircle className="w-3 h-3" />
                         <span>Waiting for employee response</span>
@@ -343,7 +359,6 @@ export default function OwnerJobsPage() {
                     )}
                   </div>
 
-                  {/* Created date */}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
                     <Calendar className="w-3 h-3" />
                     <span>Created: {formatDate(job.created_at)}</span>
@@ -375,8 +390,8 @@ export default function OwnerJobsPage() {
             <JobForm
               job={editingJob || undefined}
               onSubmit={handleSubmitJob}
-              onCancel={handleCancelForm}
-              isLoading={isLoading}
+              onCancel={() => { setIsFormOpen(false); setEditingJob(null) }}
+              isLoading={isSubmitting}
             />
           </DialogContent>
         </Dialog>
