@@ -28,6 +28,7 @@ interface MonthlyStats {
   attendancePercent: number
   workingDays: number
   avgHoursPerDay: number
+  totalDaysWorked: number
 }
 
 export default function EmployeeTimePage() {
@@ -236,8 +237,8 @@ export default function EmployeeTimePage() {
                         variant={
                           record.status === "present" ? "default"
                             : record.status === "late" ? "secondary"
-                            : record.status === "clocked-in" ? "outline"
-                            : "destructive"
+                              : record.status === "clocked-in" ? "outline"
+                                : "destructive"
                         }
                         className="text-xs w-20 justify-center"
                       >

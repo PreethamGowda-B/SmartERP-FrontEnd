@@ -22,6 +22,11 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const { user, isLoading } = useAuth()
   const router = useRouter()
 
+  // ── Location tracking (runs on every employee page) ──────────────────────
+  // Must be called at the top level to follow the Rules of Hooks
+  useLocationTracking({})
+  // ───────────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "employee")) {
       router.push("/")
@@ -46,8 +51,8 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   }
 
   // ── Location tracking (runs on every employee page) ──────────────────────
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useLocationTracking({})
+  // Must be called at the top level to follow the Rules of Hooks
+  // useLocationTracking is also called once at the top
   // ───────────────────────────────────────────────────────────────────────────
 
   return (
