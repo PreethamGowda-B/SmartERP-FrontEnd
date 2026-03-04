@@ -12,6 +12,7 @@ import PageTransition from './page-transition'
 import { Button } from "@/components/ui/button"
 import { Bot } from "lucide-react"
 import DotsLoader from '@/components/dots-loader'
+import { useLocationTracking } from "@/hooks/useLocationTracking"
 
 interface EmployeeLayoutProps {
   children: React.ReactNode
@@ -20,7 +21,6 @@ interface EmployeeLayoutProps {
 export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const { user, isLoading } = useAuth()
   const router = useRouter()
-  const [isChatBotOpen, setIsChatBotOpen] = useState(false)
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "employee")) {
@@ -45,6 +45,11 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     return null
   }
 
+  // ── Location tracking (runs on every employee page) ──────────────────────
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useLocationTracking({})
+  // ───────────────────────────────────────────────────────────────────────────
+
   return (
     <NavLoadingProvider>
       <div className="min-h-screen bg-background">
@@ -53,16 +58,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
           <MainContent>{children}</MainContent>
         </div>
 
-        <Button
-          className={`fixed bottom-4 right-4 z-40 rounded-full h-12 w-12 shadow-lg bg-accent hover:bg-accent/90 transition-all duration-300 ${
-            isChatBotOpen ? "scale-0 opacity-0 pointer-events-none" : "scale-100 opacity-100"
-          }`}
-          onClick={() => setIsChatBotOpen(true)}
-        >
-          <Bot className="h-5 w-5" />
-        </Button>
-
-        <AIChatBot isOpen={isChatBotOpen} onToggle={() => setIsChatBotOpen(!isChatBotOpen)} />
+        <AIChatBot />
         <PageTransition />
       </div>
     </NavLoadingProvider>

@@ -13,7 +13,6 @@ import { useJobs } from "@/contexts/job-context"
 import { useNotifications } from "@/contexts/notification-context"
 import { DateTimeWeather } from "@/components/date-time-weather"
 import { apiClient } from "@/lib/apiClient"
-import { useLocationTracking } from "@/hooks/useLocationTracking"
 import {
   Briefcase,
   DollarSign,
@@ -47,14 +46,27 @@ export default function EmployeeDashboard() {
   const { jobs } = useJobs()
   const { notifications } = useNotifications()
 
-  // ─── Location tracking ───────────────────────────────────────────────────
+  // ─── Location banner state (hook now lives in EmployeeLayout) ─────────────
   const [locationPermission, setLocationPermission] = useState<
     "granted" | "denied" | "prompt" | "unsupported" | null
   >(null)
   const [bannerDismissed, setBannerDismissed] = useState(false)
 
-  useLocationTracking({ onPermissionChange: setLocationPermission })
-  // ────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined" || !("geolocation" in navigator)) {
+      setLocationPermission("unsupported")
+      return
+    }
+    if (!("permissions" in navigator)) {
+      setLocationPermission("prompt")
+      return
+    }
+    navigator.permissions.query({ name: "geolocation" }).then(result => {
+      setLocationPermission(result.state as "granted" | "denied" | "prompt")
+      result.onchange = () => setLocationPermission(result.state as "granted" | "denied" | "prompt")
+    })
+  }, [])
+  // ────────────────────────────────────────────────────────────────────────────
 
   const [todayAttendance, setTodayAttendance] = useState<AttendanceToday | null>(null)
   const [hoursThisWeek, setHoursThisWeek] = useState<number>(0)
@@ -176,8 +188,8 @@ export default function EmployeeDashboard() {
         {!bannerDismissed && locationPermission !== null && (
           <div
             className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg text-sm font-medium ${locationPermission === "denied" || locationPermission === "unsupported"
-                ? "bg-yellow-50 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700"
-                : "bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700"
+              ? "bg-yellow-50 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-700"
+              : "bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700"
               }`}
           >
             <span>
