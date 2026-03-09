@@ -123,6 +123,12 @@ export function LoginForm() {
         if (user) {
           if (user.accessToken) localStorage.setItem("accessToken", user.accessToken)
           if (user.refreshToken) localStorage.setItem("refreshToken", user.refreshToken)
+
+          // ✅ Sync tokens with Android native bridge if available
+          if (typeof window !== "undefined" && (window as any).Android?.saveToken) {
+            (window as any).Android.saveToken(user.accessToken, user.refreshToken || null)
+          }
+
           localStorage.setItem("user", JSON.stringify(user))
           setUser(user)
           router.push(user.role === "owner" ? "/owner" : "/employee")

@@ -206,6 +206,11 @@ export const signOut = async (): Promise<void> => {
   localStorage.removeItem("accessToken")
   localStorage.removeItem("refreshToken")
   sessionStorage.removeItem("smarterp_mock_users")
+
+  // ✅ Notify Android bridge to clear native session
+  if (typeof window !== "undefined" && (window as any).Android?.logout) {
+    (window as any).Android.logout()
+  }
 }
 
 export const getCurrentUser = (): User | null => {

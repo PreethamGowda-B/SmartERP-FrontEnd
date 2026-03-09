@@ -1,3 +1,10 @@
+// Helper to sync tokens with Android Native bridge
+function syncWithAndroid(token: string, refreshToken?: string | null) {
+  if (typeof window !== "undefined" && (window as any).Android?.saveToken) {
+    (window as any).Android.saveToken(token, refreshToken || null)
+  }
+}
+
 export async function apiClient(path: string, options: RequestInit = {}) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
@@ -35,6 +42,9 @@ export async function apiClient(path: string, options: RequestInit = {}) {
           if (newTokens.accessToken) localStorage.setItem("accessToken", newTokens.accessToken)
           if (newTokens.refreshToken) localStorage.setItem("refreshToken", newTokens.refreshToken)
 
+          // ✅ Sync updated tokens back to Android native app
+          syncWithAndroid(newTokens.accessToken, newTokens.refreshToken)
+
           // Retry original request with new token
           res = await fetch(`${baseUrl}${path}`, {
             ...options,
@@ -52,6 +62,11 @@ export async function apiClient(path: string, options: RequestInit = {}) {
         localStorage.removeItem("smarterp_user")
         localStorage.removeItem("accessToken")
         localStorage.removeItem("refreshToken")
+
+        // Notify Android that we've logged out
+        if ((window as any).Android?.logout) {
+          (window as any).Android.logout()
+        }
       }
       throw error
     }

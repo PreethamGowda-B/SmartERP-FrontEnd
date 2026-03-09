@@ -15,7 +15,7 @@ export function useAuthGuard() {
         const me = await apiClient('/api/users/me');
         if (mounted) setUser(me);
       } catch (err) {
-        router.replace('/login');
+        router.replace('/auth/login');
       } finally { if (mounted) setLoading(false); }
     }
     check();
