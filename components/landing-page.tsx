@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { AntigravityBackground } from "@/components/ui/antigravity-background"
-import { motion, useScroll, useTransform, useSpring } from "framer-motion"
 import {
   Building2,
   Users,
@@ -22,12 +21,6 @@ export function LandingPage() {
   const router = useRouter()
   const [counters, setCounters] = useState({ users: 0, jobs: 0, teams: 0 })
   const [visibleSections, setVisibleSections] = useState<Record<string, boolean>>({})
-
-  // Advanced scroll tracking for parallax
-  const { scrollYProgress } = useScroll()
-  const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30 })
-  const opacity = useTransform(smoothProgress, [0, 0.2], [1, 0])
-  const scale = useTransform(smoothProgress, [0, 0.2], [1, 0.95])
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -94,242 +87,201 @@ export function LandingPage() {
       <AntigravityBackground />
 
       {/* Header */}
-      <motion.header
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 100, damping: 20 }}
-        className="sticky top-0 z-50 bg-background/60 backdrop-blur-xl border-b border-white/5"
-      >
+      <header className="sticky top-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <div className="p-2 bg-primary rounded-xl shadow-2xl shadow-primary/20">
+          <div className="flex items-center gap-2 animate-fade-in-left">
+            <div className="p-2 bg-primary rounded-lg">
               <Building2 className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-black tracking-tighter text-foreground">SmartERP</span>
-          </motion.div>
-          <div className="flex items-center gap-6">
-            <Button
-              variant="ghost"
-              onClick={() => router.push("/auth/login")}
-              className="text-foreground/80 hover:text-foreground hover:bg-white/5 transition-all font-semibold"
-            >
+            <span className="text-xl font-bold text-foreground">SmartERP</span>
+          </div>
+          <div className="flex items-center gap-4 animate-fade-in-right">
+            <Button variant="ghost" onClick={() => router.push("/auth/login")} className="hover-lift">
               Sign In
             </Button>
-            <Button
-              onClick={() => router.push("/auth/login")}
-              className="bg-white text-black hover:bg-white/90 shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-all font-bold rounded-xl px-6"
-            >
+            <Button onClick={() => router.push("/auth/login")} className="hover-lift hover-scale animate-button-glow">
               Get Started
             </Button>
           </div>
         </div>
-      </motion.header>
+      </header>
 
       {/* Hero Section */}
-      <motion.section
-        style={{ opacity, scale }}
-        className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-20"
-      >
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+        {/* Removed static gradient background */}
+
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <h1 className="text-6xl sm:text-8xl font-black text-foreground mb-10 tracking-tighter leading-[0.9] text-balance">
-              <span className="bg-gradient-to-r from-primary via-blue-400 to-accent bg-clip-text text-transparent inline-block">
+          <div className="animate-fade-in-up">
+            <h1 className="text-6xl sm:text-7xl font-bold text-foreground mb-6 text-balance leading-tight">
+              <span className="bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent animate-text-shimmer">
                 Streamline Your
               </span>
               <br />
-              <span className="text-foreground drop-shadow-sm">Crew Management</span>
+              <span className="text-foreground animate-fade-in-up stagger-1">Crew Management</span>
             </h1>
-          </motion.div>
+          </div>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="text-xl sm:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto font-light leading-relaxed text-balance"
-          >
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto text-balance animate-fade-in-up stagger-1">
             Complete ERP solution for construction and field service businesses. Manage jobs, track attendance, process payroll, and more.
-          </motion.p>
+          </p>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col sm:flex-row gap-6 justify-center mb-24"
-          >
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-fade-in-up stagger-2">
             <Button
               size="lg"
               onClick={() => router.push("/auth/login")}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg px-10 py-8 rounded-2xl shadow-2xl shadow-primary/40 transition-all hover:scale-105 active:scale-95 group"
+              className="hover-lift hover-scale animate-press text-lg px-8 py-6 group animate-button-glow"
             >
               Start Free Trial
-              <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
             <Button
               size="lg"
               variant="outline"
               onClick={() => router.push("/auth/login")}
-              className="border-white/10 bg-white/5 hover:bg-white/10 text-white font-bold text-lg px-10 py-8 rounded-2xl backdrop-blur-md transition-all hover:scale-105 active:scale-95 group"
+              className="hover-lift hover-scale animate-press text-lg px-8 py-6 group"
             >
               Learn More
-              <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-          </motion.div>
+          </div>
 
           {/* Counters */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-4xl mx-auto"
-          >
-            {[
-              { label: "Active Users", val: counters.users, color: "text-primary" },
-              { label: "Jobs Tracked", val: counters.jobs, color: "text-accent" },
-              { label: "Teams", val: counters.teams, color: "text-primary" }
-            ].map((stat, i) => (
-              <motion.div
-                key={i}
-                whileHover={{ y: -10, backgroundColor: "rgba(255,255,255,0.05)" }}
-                className="p-10 rounded-[2.5rem] premium-glass transition-all duration-500 group border-white/5"
-              >
-                <div className={`text-5xl font-black mb-3 ${stat.color} tracking-tighter`}>
-                  {stat.val.toLocaleString()}+
-                </div>
-                <div className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground/60">{stat.label}</div>
-              </motion.div>
-            ))}
-          </motion.div>
+          <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto animate-fade-in-up stagger-3">
+            <div className="p-6 rounded-lg bg-card/50 backdrop-blur border border-border/50 hover:border-primary/50 transition-all duration-300 hover-lift group animate-stat-card">
+              <div className="text-3xl font-bold text-primary mb-2 group-hover:scale-110 transition-transform">
+                {counters.users.toLocaleString()}+
+              </div>
+              <div className="text-sm text-muted-foreground">Active Users</div>
+            </div>
+            <div
+              className="p-6 rounded-lg bg-card/50 backdrop-blur border border-border/50 hover:border-accent/50 transition-all duration-300 hover-lift group animate-stat-card"
+              style={{ animationDelay: "0.1s" }}
+            >
+              <div className="text-3xl font-bold text-accent mb-2 group-hover:scale-110 transition-transform">
+                {counters.jobs.toLocaleString()}+
+              </div>
+              <div className="text-sm text-muted-foreground">Jobs Tracked</div>
+            </div>
+            <div
+              className="p-6 rounded-lg bg-card/50 backdrop-blur border border-border/50 hover:border-primary/50 transition-all duration-300 hover-lift group animate-stat-card"
+              style={{ animationDelay: "0.2s" }}
+            >
+              <div className="text-3xl font-bold text-primary mb-2 group-hover:scale-110 transition-transform">
+                {counters.teams.toLocaleString()}+
+              </div>
+              <div className="text-sm text-muted-foreground">Teams</div>
+            </div>
+          </div>
         </div>
-      </motion.section>
+      </section>
 
       {/* Features Section */}
-      <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 relative">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          className="text-center mb-24"
-        >
-          <h2 className="text-5xl sm:text-6xl font-black text-foreground mb-6 tracking-tighter">
-            Everything in One Orbit
+      <section ref={setSectionRef("features")} id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
+        <div className="text-center mb-16">
+          <h2
+            className={`text-4xl font-bold text-foreground mb-4 transition-all duration-700 ${visibleSections["features"] ? "animate-fade-in-up" : "opacity-0 translate-y-10"
+              }`}
+          >
+            Everything You Need
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto font-light">
-            A multi-tenant architecture designed for massive scale and tactical precision.
+          <p
+            className={`text-lg text-muted-foreground transition-all duration-700 delay-100 ${visibleSections["features"] ? "animate-fade-in-up" : "opacity-0 translate-y-10"
+              }`}
+          >
+            Powerful features designed for modern businesses
           </p>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => {
             const Icon = feature.icon
             return (
-              <motion.div
+              <div
                 key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
-                whileHover={{ y: -10, scale: 1.02 }}
-                className="group p-8 rounded-[2rem] premium-glass premium-glass-hover"
+                className={`group p-6 rounded-lg border border-border/50 bg-card/30 backdrop-blur-sm hover:border-primary/50 hover:shadow-lg transition-all duration-300 hover-lift animate-feature-card ${visibleSections["features"] ? "opacity-100" : "opacity-0"
+                  }`}
+                style={{
+                  animationDelay: visibleSections["features"] ? `${index * 50}ms` : "0ms",
+                  transitionDelay: visibleSections["features"] ? `${index * 50}ms` : "0ms",
+                }}
               >
-                <div className="mb-8 p-5 bg-primary/10 rounded-2xl w-fit group-hover:bg-primary/20 transition-all duration-500 group-hover:rotate-[15deg]">
-                  <Icon className="h-8 w-8 text-primary" />
+                <div className="mb-4 p-3 bg-primary/10 rounded-lg w-fit group-hover:bg-primary/20 transition-colors duration-300 group-hover:scale-110 transform group-hover:rotate-6">
+                  <Icon className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-black text-foreground mb-4 tracking-tight">{feature.title}</h3>
-                <p className="text-muted-foreground font-medium leading-relaxed">{feature.description}</p>
-              </motion.div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">{feature.description}</p>
+              </div>
             )
           })}
         </div>
       </section>
 
       {/* Benefits Section */}
-      <section id="benefits" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 relative">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <h2 className="text-5xl font-black text-foreground mb-12 tracking-tighter">
-              Modernized For <br />The Field Hub
+      <section ref={setSectionRef("benefits")} id="benefits" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2
+              className={`text-4xl font-bold text-foreground mb-8 transition-all duration-700 ${visibleSections["benefits"] ? "animate-fade-in-left" : "opacity-0 -translate-x-10"
+                }`}
+            >
+              Why Choose SmartERP?
             </h2>
-            <div className="space-y-6">
+            <div className="space-y-4">
               {benefits.map((benefit, index) => (
-                <motion.div
+                <div
                   key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 + 0.5 }}
-                  className="flex items-center gap-4 group"
+                  className={`flex items-start gap-3 transition-all duration-700 ${visibleSections["benefits"] ? "animate-fade-in-left" : "opacity-0 -translate-x-10"
+                    }`}
+                  style={{
+                    transitionDelay: visibleSections["benefits"] ? `${index * 100}ms` : "0ms",
+                  }}
                 >
-                  <div className="p-1 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
-                    <CheckCircle className="h-6 w-6 text-primary" />
-                  </div>
-                  <span className="text-xl text-foreground font-medium">{benefit}</span>
-                </motion.div>
+                  <CheckCircle
+                    className="h-6 w-6 text-primary flex-shrink-0 mt-1 animate-check-bounce"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  />
+                  <span className="text-lg text-foreground">{benefit}</span>
+                </div>
               ))}
             </div>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-            whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-            className="relative h-[500px] rounded-[3rem] overflow-hidden premium-glass border-white/5"
+          </div>
+          <div
+            className={`relative h-96 rounded-lg overflow-hidden transition-all duration-700 ${visibleSections["benefits"] ? "animate-fade-in-right" : "opacity-0 translate-x-10"
+              }`}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/20" />
-            <div className="absolute inset-0 flex items-center justify-center p-12">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg" />
+            <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
-                <motion.div
-                  animate={{ y: [0, -20, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                  className="text-8xl font-black text-white/10 mb-6 tracking-tighter"
-                >
-                  SmartERP
-                </motion.div>
-                <p className="text-xl text-muted-foreground font-light tracking-widest uppercase">Professional Intelligence</p>
+                <div className="text-6xl font-bold text-primary/20 mb-4">SmartERP</div>
+                <p className="text-muted-foreground">Professional crew management platform</p>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section id="cta" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          className="relative overflow-hidden bg-white text-black rounded-[3rem] p-16 sm:p-24 text-center shadow-2xl shadow-white/10"
+      <section ref={setSectionRef("cta")} id="cta" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div
+          className={`relative overflow-hidden bg-foreground text-background rounded-2xl p-12 text-center transition-all duration-700 ${visibleSections["cta"] ? "animate-fade-in-up" : "opacity-0 translate-y-10"
+            }`}
         >
           <div className="relative z-10">
-            <h2 className="text-5xl sm:text-7xl font-black mb-8 tracking-tighter">Ready to Get Started?</h2>
-            <p className="text-xl sm:text-2xl mb-12 font-medium opacity-70 max-w-2xl mx-auto">
+            <h2 className="text-4xl font-bold mb-4 animate-fade-in-up">Ready to Get Started?</h2>
+            <p className="text-lg mb-8 opacity-90 animate-fade-in-up stagger-1">
               Join thousands of businesses already using SmartERP to manage their crews efficiently.
             </p>
             <Button
               size="lg"
-              variant="default"
+              variant="secondary"
               onClick={() => router.push("/auth/login")}
-              className="bg-black text-white hover:bg-black/90 font-black text-xl px-12 py-10 rounded-[2rem] transition-all hover:scale-105 group shadow-2xl"
+              className="hover-lift hover-scale animate-press group animate-button-glow"
             >
               Start Your Free Trial
-              <ArrowRight className="ml-3 h-8 w-8 group-hover:translate-x-2 transition-transform" />
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       {/* Contact Info Section */}

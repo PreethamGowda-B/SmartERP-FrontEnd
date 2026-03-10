@@ -211,45 +211,6 @@
   .animate-press:active {
     transform: scale(0.98);
   }
-
-  /* Ultra-Premium Glassmorphism */
-  .premium-glass {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(15px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  }
-
-  .premium-glass-hover {
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .premium-glass-hover:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-5px);
-    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
-  }
-
-  /* Aurora Mesh Gradient Animation */
-  .animate-aurora {
-    animation: aurora 20s linear infinite;
-    background-size: 300% 300%;
-  }
-}
-
-@keyframes aurora {
-  0% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
-
-  100% {
-    background-position: 0% 50%;
-  }
 }
 
 @keyframes fadeInUp {
