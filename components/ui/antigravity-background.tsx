@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react'
 
 export const AntigravityBackground: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null)
-    const mouseRef = useRef<{ x: number, y: number }>({ x: -1000, y: -1000 })
+    const mouseRef = useRef<{ x: number, y: number }>({ x: -2000, y: -2000 })
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -15,19 +15,19 @@ export const AntigravityBackground: React.FC = () => {
 
         let width: number, height: number
         let particles: Particle[] = []
-        const particleCount = 80
+        // Increased particle count for ultra-premium feel
+        const particleCount = 100
 
         class Particle {
             x: number = 0
             y: number = 0
-            originX: number = 0
-            originY: number = 0
             size: number = 0
             vx: number = 0
             vy: number = 0
             density: number = 0
             opacity: number = 0
             color: string = ''
+            pulse: number = 0
 
             constructor() {
                 this.init()
@@ -36,17 +36,16 @@ export const AntigravityBackground: React.FC = () => {
             init() {
                 this.x = Math.random() * width
                 this.y = Math.random() * height
-                this.originX = this.x
-                this.originY = this.y
-                // Bubble-like varying sizes
-                this.size = Math.random() * 3 + 1
-                this.vx = (Math.random() - 0.5) * 0.5
-                this.vy = (Math.random() - 0.5) * 0.5
+                // Bubble-like varying sizes for depth
+                this.size = Math.random() * 2.5 + 0.5
+                this.vx = (Math.random() - 0.5) * 0.4
+                this.vy = (Math.random() - 0.5) * 0.4
                 this.density = (Math.random() * 30) + 1
-                this.opacity = Math.random() * 0.5 + 0.1
+                this.opacity = Math.random() * 0.4 + 0.1
+                this.pulse = Math.random() * 0.005 + 0.002
 
-                // Varied blue/indigo shades for depth
-                const colors = ['#818cf8', '#6366f1', '#4f46e5']
+                // Varied theme colors
+                const colors = ['#6366f1', '#818cf8', '#4f46e5', '#f59e0b']
                 this.color = colors[Math.floor(Math.random() * colors.length)]
             }
 
@@ -55,25 +54,31 @@ export const AntigravityBackground: React.FC = () => {
                 this.x += this.vx
                 this.y += this.vy
 
-                // Mouse interaction physics (Repulsion)
+                // Mouse interaction physics (Sophisticated Repulsion)
                 const dx = mouseRef.current.x - this.x
                 const dy = mouseRef.current.y - this.y
                 const distance = Math.sqrt(dx * dx + dy * dy)
-                const forceDirectionX = dx / distance
-                const forceDirectionY = dy / distance
-                const maxDistance = 150
-                const force = (maxDistance - distance) / maxDistance
+                const maxDistance = 180
 
                 if (distance < maxDistance) {
-                    this.x -= forceDirectionX * force * this.density * 0.6
-                    this.y -= forceDirectionY * force * this.density * 0.6
+                    const forceDirectionX = dx / distance
+                    const forceDirectionY = dy / distance
+                    const force = (maxDistance - distance) / maxDistance
+                    const movement = force * this.density * 0.5
+
+                    this.x -= forceDirectionX * movement
+                    this.y -= forceDirectionY * movement
                 }
 
-                // Bounds checking
+                // Smooth wrap-around
                 if (this.x < 0) this.x = width
                 if (this.x > width) this.x = 0
                 if (this.y < 0) this.y = height
                 if (this.y > height) this.y = 0
+
+                // Subtle breathing effect
+                this.opacity += this.pulse
+                if (this.opacity > 0.6 || this.opacity < 0.1) this.pulse *= -1
             }
 
             draw() {
@@ -83,10 +88,12 @@ export const AntigravityBackground: React.FC = () => {
                 ctx.fillStyle = this.color
                 ctx.globalAlpha = this.opacity
                 ctx.fill()
-                // Extra soft glow for bubbles
-                ctx.shadowBlur = 5
+
+                // Add minor glow back to premium bubbles
+                ctx.shadowBlur = 4
                 ctx.shadowColor = this.color
                 ctx.globalAlpha = 1
+                ctx.shadowBlur = 0
             }
         }
 
@@ -108,17 +115,16 @@ export const AntigravityBackground: React.FC = () => {
         const animate = () => {
             ctx.clearRect(0, 0, width, height)
 
-            // Draw faint connections for "network" feel
-            ctx.shadowBlur = 0
+            // Draw cinematic network connections (faint)
             for (let i = 0; i < particles.length; i++) {
                 for (let j = i + 1; j < particles.length; j++) {
                     const dx = particles[i].x - particles[j].x
                     const dy = particles[i].y - particles[j].y
                     const distance = Math.sqrt(dx * dx + dy * dy)
 
-                    if (distance < 120) {
+                    if (distance < 130) {
                         ctx.beginPath()
-                        ctx.strokeStyle = `rgba(129, 140, 248, ${0.1 * (1 - distance / 120)})`
+                        ctx.strokeStyle = `rgba(99, 102, 241, ${0.1 * (1 - distance / 130)})`
                         ctx.lineWidth = 0.5
                         ctx.moveTo(particles[i].x, particles[i].y)
                         ctx.lineTo(particles[j].x, particles[j].y)
@@ -136,8 +142,8 @@ export const AntigravityBackground: React.FC = () => {
         }
 
         const handleMouseMove = (e: MouseEvent) => {
-            mouseRef.current.x = e.x
-            mouseRef.current.y = e.y
+            mouseRef.current.x = e.clientX
+            mouseRef.current.y = e.clientY
         }
 
         const handleTouchMove = (e: TouchEvent) => {
@@ -165,12 +171,21 @@ export const AntigravityBackground: React.FC = () => {
         <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-background">
             <canvas
                 ref={canvasRef}
-                className="absolute inset-0 w-full h-full opacity-70"
+                className="absolute inset-0 w-full h-full opacity-60"
             />
 
-            {/* Soft Ambient Blobs */}
-            <div className="absolute top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[100px] animate-float" />
-            <div className="absolute bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-accent/5 rounded-full blur-[120px] animate-float" style={{ animationDelay: '-4s' }} />
+            {/* Aurora Layers: These create the ₹1L+ depth feel */}
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[140px] animate-aurora mix-blend-screen" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-accent/20 rounded-full blur-[160px] animate-aurora mix-blend-screen" style={{ animationDelay: '-10s' }} />
+            <div className="absolute top-[30%] left-[20%] w-[30%] h-[30%] bg-secondary/10 rounded-full blur-[120px] animate-aurora mix-blend-screen" style={{ animationDelay: '-5s' }} />
+
+            {/* Subtle Grid Texture for that professional SaaS look */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                style={{
+                    backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+                    backgroundSize: '100px 100px'
+                }}
+            />
         </div>
     )
 }
