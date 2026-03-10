@@ -5,6 +5,27 @@ function syncWithAndroid(token: string, refreshToken?: string | null) {
   }
 }
 
+// Helper to handle unified logout across Web and Android
+function handleLogout() {
+  if (typeof window !== "undefined") {
+    console.warn("[v0] Session expired or invalid — logging out")
+    localStorage.removeItem("smarterp_user")
+    localStorage.removeItem("accessToken")
+    localStorage.removeItem("refreshToken")
+
+    // Clear any other session-related data
+    sessionStorage.removeItem("smarterp_mock_users")
+
+    // Notify Android that we've logged out
+    if ((window as any).Android?.logout) {
+      (window as any).Android.logout()
+    } else {
+      // For website version, redirect to login
+      window.location.href = "/auth/login"
+    }
+  }
+}
+
 export async function apiClient(path: string, options: RequestInit = {}) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
@@ -17,19 +38,25 @@ export async function apiClient(path: string, options: RequestInit = {}) {
     ...(options.headers as Record<string, string>),
   }
 
-  let res = await fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers,
-    credentials: "include", // ✅ allows cookie-based sessions too
-  })
+  let res: Response
+  try {
+    res = await fetch(`${baseUrl}${path}`, {
+      ...options,
+      headers,
+      credentials: "include", // ✅ allows cookie-based sessions too
+    })
+  } catch (error) {
+    console.error("[v0] Network error in apiClient:", error)
+    throw error
+  }
 
   // 🧩 If token expired or invalid → try refresh
   if (res.status === 401) {
     console.warn("[v0] Unauthorized — attempting refresh")
 
-    try {
-      const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null
-      if (refreshToken) {
+    const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null
+    if (refreshToken) {
+      try {
         const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -54,21 +81,26 @@ export async function apiClient(path: string, options: RequestInit = {}) {
             },
             credentials: "include",
           })
-        }
-      }
-    } catch (error) {
-      console.error("[v0] Token refresh failed:", error)
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("smarterp_user")
-        localStorage.removeItem("accessToken")
-        localStorage.removeItem("refreshToken")
 
-        // Notify Android that we've logged out
-        if ((window as any).Android?.logout) {
-          (window as any).Android.logout()
+          // If retry also returns 401, log out
+          if (res.status === 401) {
+            handleLogout()
+            throw new Error("Session expired after refresh")
+          }
+        } else {
+          // Refresh call failed with a status like 401 or 403
+          handleLogout()
+          throw new Error("Session expired")
         }
+      } catch (error) {
+        console.error("[v0] Token refresh failed:", error)
+        handleLogout()
+        throw error
       }
-      throw error
+    } else {
+      // No refresh token available, just log out
+      handleLogout()
+      throw new Error("No refresh token available")
     }
   }
 
