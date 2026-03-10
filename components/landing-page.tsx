@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { AntigravityBackground } from "@/components/ui/antigravity-background"
 import {
   Building2,
   Users,
@@ -89,9 +90,11 @@ export function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden">
+      <AntigravityBackground />
+
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+      <header className="sticky top-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2 animate-fade-in-left">
             <div className="p-2 bg-primary rounded-lg">
@@ -112,7 +115,7 @@ export function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
+        {/* Removed static gradient background */}
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
           <div className="animate-fade-in-up">
@@ -202,7 +205,7 @@ export function LandingPage() {
             return (
               <div
                 key={index}
-                className={`group p-6 rounded-lg border border-border bg-card hover:border-primary/50 hover:shadow-lg transition-all duration-300 hover-lift animate-feature-card ${visibleSections["features"] ? "opacity-100" : "opacity-0"
+                className={`group p-6 rounded-lg border border-border/50 bg-card/30 backdrop-blur-sm hover:border-primary/50 hover:shadow-lg transition-all duration-300 hover-lift animate-feature-card ${visibleSections["features"] ? "opacity-100" : "opacity-0"
                   }`}
                 style={{
                   animationDelay: visibleSections["features"] ? `${index * 50}ms` : "0ms",
@@ -298,7 +301,7 @@ export function LandingPage() {
       </section>
 
       {/* Contact Info Section */}
-      <section className="border-t border-border bg-card/50 py-10">
+      <section className="border-t border-border/50 bg-card/20 backdrop-blur-sm py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
           <h3 className="text-xl font-bold text-foreground mb-4">Contact Us</h3>
           <div className="flex flex-col sm:flex-row justify-center gap-6 text-foreground text-sm">
@@ -319,7 +322,7 @@ export function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card/50 py-8 animate-fade-in-up">
+      <footer className="border-t border-border/50 bg-card/20 backdrop-blur-sm py-8 animate-fade-in-up">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
           <p>© 2025 SmartERP. All rights reserved. Professional crew management made simple. Mr Preethu Gowda</p>
         </div>
