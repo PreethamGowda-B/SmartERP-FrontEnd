@@ -10,6 +10,7 @@ import { ArrowLeft, Calendar, Clock, CheckCircle2, XCircle, AlertCircle, List, C
 import { OwnerLayout } from "@/components/owner-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { AttendanceCalendar, DayDetail } from "@/components/attendance-calendar"
+import { getAccessToken } from "@/lib/apiClient"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
@@ -53,9 +54,13 @@ export default function EmployeeAttendanceDetailPage() {
         setLoading(true)
 
         try {
+            const token = getAccessToken()
             const response = await fetch(
                 `${BACKEND_URL}/api/attendance/employee/${userId}?month=${selectedMonth}&year=${selectedYear}`,
                 {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    },
                     credentials: "include", // Send HttpOnly cookies
                 }
             )
