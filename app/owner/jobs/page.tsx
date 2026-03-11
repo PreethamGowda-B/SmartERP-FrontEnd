@@ -6,7 +6,7 @@ import { JobForm } from "@/components/job-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -386,6 +386,11 @@ export default function OwnerJobsPage() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingJob ? "Edit Job" : "Create New Job"}</DialogTitle>
+              <DialogDescription>
+                {editingJob 
+                  ? "Update the details and assignments for this existing job." 
+                  : "Fill out the form below to create a new job and assign it to employees."}
+              </DialogDescription>
             </DialogHeader>
             <JobForm
               job={editingJob || undefined}

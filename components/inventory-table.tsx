@@ -129,10 +129,12 @@ export default function InventoryTable({
     }
 
     try {
+      const token = getAccessToken()
       const response = await fetch(`${api}/api/inventory/${item.id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
       })

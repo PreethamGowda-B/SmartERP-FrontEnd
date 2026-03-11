@@ -6,7 +6,7 @@ import InventoryForm from "@/components/inventory-form"
 import InventoryTable from "@/components/inventory-table"
 import InventoryInsights from "@/components/inventory-insights"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus } from "lucide-react"
 
 type InventoryItem = {
@@ -89,6 +89,9 @@ export default function OwnerInventoryPage() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Stock" : "Add New Stock"}</DialogTitle>
+            <DialogDescription>
+              {editingItem ? "Update the details of this item." : "Fill in the details to add a new item to your inventory."}
+            </DialogDescription>
           </DialogHeader>
           <InventoryForm role="owner" onItemAdded={handleItemAdded} item={editingItem} onCancel={handleCancelEdit} />
         </DialogContent>

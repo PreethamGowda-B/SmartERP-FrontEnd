@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { getAccessToken } from "@/lib/apiClient"
 
 type InventoryItem = {
   id: number
@@ -123,8 +124,13 @@ export default function InventoryForm({
       const url = item ? `${api}/api/inventory/${item.id}` : `${api}/api/inventory`
       const method = item ? "PUT" : "POST"
 
+      const token = getAccessToken()
+      const headers: Record<string, string> = {}
+      if (token) headers["Authorization"] = `Bearer ${token}`
+
       const res = await fetch(url, {
         method,
+        headers,
         credentials: "include", // Send HttpOnly cookies
         body: formData,
       })
