@@ -1,3 +1,40 @@
+// ============================================================
+// In-memory token store — NOT localStorage (XSS-safe for cross-domain)
+// Tokens are cleared when the browser tab is closed.
+// ============================================================
+let _accessToken: string | null = null
+let _refreshToken: string | null = null
+
+export function setTokens(accessToken: string, refreshToken: string) {
+  _accessToken = accessToken
+  _refreshToken = refreshToken
+  // Also persist refresh token in sessionStorage for page refreshes
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("_rt", refreshToken)
+  }
+}
+
+export function clearTokens() {
+  _accessToken = null
+  _refreshToken = null
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem("_rt")
+  }
+}
+
+export function getAccessToken() {
+  return _accessToken
+}
+
+// Restore refresh token from sessionStorage on page reload
+function getRefreshToken(): string | null {
+  if (_refreshToken) return _refreshToken
+  if (typeof window !== "undefined") {
+    return sessionStorage.getItem("_rt")
+  }
+  return null
+}
+
 // Helper to sync tokens with Android Native bridge
 function syncWithAndroid(token: string, refreshToken?: string | null) {
   if (typeof window !== "undefined" && (window as any).Android?.saveToken) {
@@ -9,18 +46,13 @@ function syncWithAndroid(token: string, refreshToken?: string | null) {
 function handleLogout() {
   if (typeof window !== "undefined") {
     console.warn("[v0] Session expired or invalid — logging out")
+    clearTokens()
     localStorage.removeItem("smarterp_user")
-    localStorage.removeItem("accessToken")
-    localStorage.removeItem("refreshToken")
-
-    // Clear any other session-related data
     sessionStorage.removeItem("smarterp_mock_users")
 
-    // Notify Android that we've logged out
     if ((window as any).Android?.logout) {
       (window as any).Android.logout()
     } else {
-      // For website version, redirect to login
       window.location.href = "/auth/login"
     }
   }
@@ -34,52 +66,59 @@ export async function apiClient(path: string, options: RequestInit = {}) {
     ...(options.headers as Record<string, string>),
   }
 
+  // ✅ Attach access token if available (cross-domain Authorization header)
+  const token = _accessToken
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+  }
+
   let res: Response
   try {
     res = await fetch(`${baseUrl}${path}`, {
       ...options,
       headers,
-      credentials: "include", // ✅ enables cookie-based sessions (HttpOnly tokens)
+      credentials: "include", // still include for same-domain cookie fallback
     })
   } catch (error) {
     console.error("[v0] Network error in apiClient:", error)
     throw error
   }
 
-  // 🧩 If token expired or invalid → try refresh
+  // 🧩 If token expired → try refresh
   if (res.status === 401) {
     console.warn("[v0] Unauthorized — attempting refresh")
 
+    const storedRefreshToken = getRefreshToken()
+
     try {
-      // ✅ We don't send the token manually. The browser sends the HttpOnly refresh_token cookie automatically.
       const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
+        body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
       })
 
       if (refreshRes.ok) {
-        // The backend returns access tokens but also SETS them as secure cookies.
-        // We do NOT store them in localStorage anymore.
         const newTokens = await refreshRes.json()
 
-        // ✅ Sync updated tokens back to Android native app (if in Android environment)
-        syncWithAndroid(newTokens.accessToken, newTokens.refreshToken)
+        if (newTokens.accessToken) {
+          setTokens(newTokens.accessToken, newTokens.refreshToken || storedRefreshToken || "")
+          syncWithAndroid(newTokens.accessToken, newTokens.refreshToken)
+          headers["Authorization"] = `Bearer ${newTokens.accessToken}`
+        }
 
-        // Retry original request (browser will automatically send the newly set HttpOnly cookie)
+        // Retry original request with new token
         res = await fetch(`${baseUrl}${path}`, {
           ...options,
           headers,
           credentials: "include",
         })
 
-        // If retry also returns 401, log out
         if (res.status === 401) {
           handleLogout()
           throw new Error("Session expired after refresh")
         }
       } else {
-        // Refresh call failed with a status like 401 or 403
         handleLogout()
         throw new Error("Session expired")
       }

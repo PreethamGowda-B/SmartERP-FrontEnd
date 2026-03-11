@@ -1,4 +1,5 @@
 // Mock authentication system for SmartERP
+import { setTokens, clearTokens } from "@/lib/apiClient"
 export interface User {
   id: string
   email: string
@@ -146,12 +147,14 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     const data = await response.json()
     console.log("[v0] Backend login successful:", data.user?.email)
 
-    // User is returned from the backend.
-    // accessToken and refreshToken are handled automatically via HttpOnly cookies.
     const userDetails = data.user || data
 
-    // ✅ Store user profile (name, email, role) for UI rendering
-    // ⚠️ Tokens are NO LONGER stored in localStorage for security (XSS prevention)
+    // ✅ Store tokens in memory for Authorization header (cross-domain safe)
+    if (data.accessToken && data.refreshToken) {
+      setTokens(data.accessToken, data.refreshToken)
+    }
+
+    // ✅ Store user profile (name, email, role) for UI rendering only
     localStorage.setItem("smarterp_user", JSON.stringify(userDetails))
 
     return userDetails
@@ -195,6 +198,7 @@ export const signOut = async (): Promise<void> => {
     console.error("Logout error:", error)
   }
 
+  clearTokens()
   localStorage.removeItem("smarterp_user")
   sessionStorage.removeItem("smarterp_mock_users")
 

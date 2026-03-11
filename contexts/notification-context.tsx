@@ -5,6 +5,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { useAuth } from "./auth-context"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { getAccessToken } from "@/lib/apiClient"
 
 export interface Notification {
   id: string
@@ -101,8 +102,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     fetchNotifications()
     setupFCM() // Request FCM permission
 
-    // SSE doesn't accept normal fetch opts, but withCredentials sends HttpOnly cookies automatically
-    const eventSource = new EventSource(`${BACKEND_URL}/api/notifications/sse`, {
+    // SSE requires token as query param since EventSource doesn't support custom headers
+    const token = getAccessToken()
+    const sseUrl = token
+      ? `${BACKEND_URL}/api/notifications/sse?token=${encodeURIComponent(token)}`
+      : `${BACKEND_URL}/api/notifications/sse`
+    const eventSource = new EventSource(sseUrl, {
       withCredentials: true,
     })
 

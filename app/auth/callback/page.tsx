@@ -4,6 +4,7 @@ import { useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
+import { setTokens } from "@/lib/apiClient"
 
 function CallbackContent() {
     const router = useRouter()
@@ -11,19 +12,30 @@ function CallbackContent() {
     const { setUser } = useAuth()
 
     useEffect(() => {
+        const userParam = searchParams.get("user")
         const accessToken = searchParams.get("accessToken")
         const refreshToken = searchParams.get("refreshToken")
-        const userParam = searchParams.get("user")
+        const errorParam = searchParams.get("error")
 
-        if (accessToken && refreshToken && userParam) {
+        if (errorParam) {
+             router.push(`/login?error=${errorParam}`)
+             return
+        }
+
+        if (userParam) {
             try {
                 const user = JSON.parse(decodeURIComponent(userParam))
 
-                // Store user context
-                localStorage.setItem("user", JSON.stringify(user))
+                // ✅ Store tokens in memory for cross-domain API calls
+                if (accessToken && refreshToken) {
+                    setTokens(accessToken, refreshToken)
+                }
+
+                // Store user profile for UI rendering
+                localStorage.setItem("smarterp_user", JSON.stringify(user))
 
                 // Update context
-                setUser({ ...user, accessToken, refreshToken })
+                setUser(user)
 
                 // Redirect based on role
                 if (user.role === "owner") {
@@ -36,7 +48,7 @@ function CallbackContent() {
                 router.push("/login?error=auth_failed")
             }
         } else {
-            router.push("/login?error=missing_tokens")
+            router.push("/login?error=missing_data")
         }
     }, [router, searchParams, setUser])
 
