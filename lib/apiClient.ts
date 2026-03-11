@@ -1,15 +1,18 @@
 // ============================================================
-// In-memory token store — NOT localStorage (XSS-safe for cross-domain)
-// Tokens are cleared when the browser tab is closed.
+// Token store — persisted in sessionStorage so page reloads work
+// instantly without any async refresh race condition.
+// sessionStorage is cleared when the browser tab is closed.
 // ============================================================
-let _accessToken: string | null = null
-let _refreshToken: string | null = null
+let _accessToken: string | null =
+  typeof window !== "undefined" ? sessionStorage.getItem("_at") : null
+let _refreshToken: string | null =
+  typeof window !== "undefined" ? sessionStorage.getItem("_rt") : null
 
 export function setTokens(accessToken: string, refreshToken: string) {
   _accessToken = accessToken
   _refreshToken = refreshToken
-  // Also persist refresh token in sessionStorage for page refreshes
   if (typeof window !== "undefined") {
+    sessionStorage.setItem("_at", accessToken)
     sessionStorage.setItem("_rt", refreshToken)
   }
 }
@@ -18,6 +21,7 @@ export function clearTokens() {
   _accessToken = null
   _refreshToken = null
   if (typeof window !== "undefined") {
+    sessionStorage.removeItem("_at")
     sessionStorage.removeItem("_rt")
   }
 }

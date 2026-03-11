@@ -17,6 +17,14 @@ import { cn } from "@/lib/utils"
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
 const AUTO_REFRESH_MS = 30_000
 
+import { getAccessToken } from "@/lib/apiClient"
+function jobAuthHeaders(): Record<string, string> {
+  const token = getAccessToken()
+  const h: Record<string, string> = { "Content-Type": "application/json" }
+  if (token) h["Authorization"] = `Bearer ${token}`
+  return h
+}
+
 function getStatusIcon(status?: string) {
   switch (status?.toLowerCase() || "pending") {
     case "completed": return <CheckCircle2 className="w-4 h-4 text-green-600" />
@@ -86,7 +94,7 @@ export default function EmployeeJobsPage() {
       const res = await fetch(`${API_URL}/api/jobs/${jobId}/accept`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: jobAuthHeaders(),
       })
       if (res.ok) {
         showNotification("success", "Job accepted successfully!")
@@ -108,7 +116,7 @@ export default function EmployeeJobsPage() {
       const res = await fetch(`${API_URL}/api/jobs/${jobId}/decline`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: jobAuthHeaders(),
       })
       if (res.ok) {
         showNotification("success", "Job declined.")
@@ -130,7 +138,7 @@ export default function EmployeeJobsPage() {
       const res = await fetch(`${API_URL}/api/jobs/${jobId}/progress`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: jobAuthHeaders(),
         body: JSON.stringify({ progress }),
       })
       if (res.ok) {

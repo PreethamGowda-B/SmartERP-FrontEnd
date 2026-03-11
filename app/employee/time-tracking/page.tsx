@@ -48,7 +48,8 @@ export default function TimeTrackingPage() {
     const fetchTodayAttendance = async () => {
         try {
             const response = await fetch(`${BACKEND_URL}/api/attendance/today`, {
-                credentials: "include", // Send HttpOnly cookies
+                credentials: "include",
+                headers: authHeaders(),
             })
 
             if (response.ok) {
@@ -69,7 +70,8 @@ export default function TimeTrackingPage() {
             const response = await fetch(
                 `${BACKEND_URL}/api/attendance/history?month=${currentMonth}&year=${currentYear}`,
                 {
-                    credentials: "include", // Send HttpOnly cookies
+                    credentials: "include",
+                    headers: authHeaders(),
                 }
             )
 
@@ -96,10 +98,8 @@ export default function TimeTrackingPage() {
         try {
             const response = await fetch(`${BACKEND_URL}/api/attendance/clock-in`, {
                 method: "POST",
-                credentials: "include", // Send HttpOnly cookies
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                credentials: "include",
+                headers: authHeaders(),
             })
 
             const data = await response.json()
@@ -124,10 +124,8 @@ export default function TimeTrackingPage() {
         try {
             const response = await fetch(`${BACKEND_URL}/api/attendance/clock-out`, {
                 method: "POST",
-                credentials: "include", // Send HttpOnly cookies
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                credentials: "include",
+                headers: authHeaders(),
             })
 
             const data = await response.json()
