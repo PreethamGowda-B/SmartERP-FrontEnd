@@ -105,6 +105,7 @@ export default function InventoryTable({
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
         },
         credentials: "include",
       })
