@@ -146,19 +146,15 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     const data = await response.json()
     console.log("[v0] Backend login successful:", data.user?.email)
 
-    // ✅ Merge access token with user data
-    // Note: refreshToken is handled by httpOnly cookie set by the server — NOT stored in localStorage
-    const userWithTokens = {
-      ...data.user,
-      accessToken: data.accessToken,
-    }
+    // User is returned from the backend.
+    // accessToken and refreshToken are handled automatically via HttpOnly cookies.
+    const userDetails = data.user || data
 
-    // ✅ Store user + access token (short-lived, 15min) for API calls
-    localStorage.setItem("smarterp_user", JSON.stringify(userWithTokens))
-    if (data.accessToken) localStorage.setItem("accessToken", data.accessToken)
-    // ⚠️ refreshToken NOT stored in localStorage — it's in the httpOnly cookie
+    // ✅ Store user profile (name, email, role) for UI rendering
+    // ⚠️ Tokens are NO LONGER stored in localStorage for security (XSS prevention)
+    localStorage.setItem("smarterp_user", JSON.stringify(userDetails))
 
-    return userWithTokens
+    return userDetails
   } catch (error) {
     console.log(
       "[v0] Backend unavailable, falling back to mock auth:",
@@ -187,14 +183,11 @@ export const signIn = async (email: string, password: string): Promise<User | nu
 export const signOut = async (): Promise<void> => {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-    const refreshToken = localStorage.getItem("refreshToken")
     await fetch(`${apiUrl}/api/auth/logout`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       mode: "cors",
-      // Send refreshToken in body in case cookies aren't available cross-domain
-      body: JSON.stringify({ refreshToken }),
     }).catch(() => {
       // Ignore errors during logout
     })
@@ -203,8 +196,6 @@ export const signOut = async (): Promise<void> => {
   }
 
   localStorage.removeItem("smarterp_user")
-  localStorage.removeItem("accessToken")
-  localStorage.removeItem("refreshToken")
   sessionStorage.removeItem("smarterp_mock_users")
 
   // ✅ Notify Android bridge to clear native session

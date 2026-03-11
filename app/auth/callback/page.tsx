@@ -19,10 +19,8 @@ function CallbackContent() {
             try {
                 const user = JSON.parse(decodeURIComponent(userParam))
 
-                // Store tokens
-                localStorage.setItem("accessToken", accessToken)
-                localStorage.setItem("refreshToken", refreshToken)
-                localStorage.setItem("user", JSON.stringify({ ...user, accessToken, refreshToken }))
+                // Store user context
+                localStorage.setItem("user", JSON.stringify(user))
 
                 // Update context
                 setUser({ ...user, accessToken, refreshToken })

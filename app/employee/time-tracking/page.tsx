@@ -35,22 +35,11 @@ export default function TimeTrackingPage() {
         return () => clearInterval(timer)
     }, [])
 
-    const getToken = () => {
-        if (user?.accessToken) return user.accessToken
-        if (typeof window !== "undefined") {
-            return localStorage.getItem("accessToken")
-        }
-        return null
-    }
-
     // Fetch today's attendance
     const fetchTodayAttendance = async () => {
-        const token = getToken()
-        if (!token) return
-
         try {
             const response = await fetch(`${BACKEND_URL}/api/attendance/today`, {
-                headers: { Authorization: `Bearer ${token}` },
+                credentials: "include", // Send HttpOnly cookies
             })
 
             if (response.ok) {
@@ -64,9 +53,6 @@ export default function TimeTrackingPage() {
 
     // Fetch attendance history
     const fetchHistory = async () => {
-        const token = getToken()
-        if (!token) return
-
         try {
             const currentMonth = new Date().getMonth() + 1
             const currentYear = new Date().getFullYear()
@@ -74,7 +60,7 @@ export default function TimeTrackingPage() {
             const response = await fetch(
                 `${BACKEND_URL}/api/attendance/history?month=${currentMonth}&year=${currentYear}`,
                 {
-                    headers: { Authorization: `Bearer ${token}` },
+                    credentials: "include", // Send HttpOnly cookies
                 }
             )
 
@@ -95,18 +81,15 @@ export default function TimeTrackingPage() {
     }, [user])
 
     const handleClockIn = async () => {
-        const token = getToken()
-        if (!token) return
-
         setLoading(true)
         setError("")
 
         try {
             const response = await fetch(`${BACKEND_URL}/api/attendance/clock-in`, {
                 method: "POST",
+                credentials: "include", // Send HttpOnly cookies
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                 },
             })
 
@@ -126,18 +109,15 @@ export default function TimeTrackingPage() {
     }
 
     const handleClockOut = async () => {
-        const token = getToken()
-        if (!token) return
-
         setLoading(true)
         setError("")
 
         try {
             const response = await fetch(`${BACKEND_URL}/api/attendance/clock-out`, {
                 method: "POST",
+                credentials: "include", // Send HttpOnly cookies
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                 },
             })
 

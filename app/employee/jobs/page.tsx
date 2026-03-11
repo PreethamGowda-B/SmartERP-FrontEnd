@@ -83,10 +83,10 @@ export default function EmployeeJobsPage() {
   const handleAcceptJob = async (jobId: string) => {
     setUpdatingJobId(jobId)
     try {
-      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/jobs/${jobId}/accept`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
       })
       if (res.ok) {
         showNotification("success", "Job accepted successfully!")
@@ -105,10 +105,10 @@ export default function EmployeeJobsPage() {
   const handleDeclineJob = async (jobId: string) => {
     setUpdatingJobId(jobId)
     try {
-      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/jobs/${jobId}/decline`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
       })
       if (res.ok) {
         showNotification("success", "Job declined.")
@@ -127,10 +127,10 @@ export default function EmployeeJobsPage() {
   const handleProgressUpdate = async (jobId: string, progress: number) => {
     setUpdatingJobId(jobId)
     try {
-      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/jobs/${jobId}/progress`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ progress }),
       })
       if (res.ok) {

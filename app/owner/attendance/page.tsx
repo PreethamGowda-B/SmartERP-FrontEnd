@@ -42,23 +42,12 @@ export default function OwnerAttendancePage() {
   })
   const [loading, setLoading] = useState(true)
 
-  const getToken = () => {
-    if (user?.accessToken) return user.accessToken
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("accessToken")
-    }
-    return null
-  }
-
   const fetchAttendanceOverview = async () => {
-    const token = getToken()
-    if (!token) return
-
     setLoading(true)
 
     try {
       const response = await fetch(`${BACKEND_URL}/api/attendance/overview`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include", // Send HttpOnly cookies
       })
 
       if (response.ok) {

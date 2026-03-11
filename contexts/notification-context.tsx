@@ -36,25 +36,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const router = useRouter()
   const [sseConnection, setSSEConnection] = useState<EventSource | null>(null)
 
-  // Get token from user or localStorage
-  const getToken = () => {
-    if (user?.accessToken) return user.accessToken
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("accessToken")
-    }
-    return null
-  }
-
   // Fetch notifications from backend
   const fetchNotifications = useCallback(async () => {
-    const token = getToken()
-    if (!token || !user) return
-
     try {
       const response = await fetch(`${BACKEND_URL}/api/notifications`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: "include", // Send HttpOnly cookies
       })
 
       if (response.ok) {
@@ -84,17 +70,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         if (currentToken) {
           console.log("✅ FCM Token generated");
           // Send token to backend
-          const token = getToken();
-          if (token) {
-            await fetch(`${BACKEND_URL}/api/auth/update-push-token`, {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({ pushToken: currentToken }),
-            });
-          }
+          await fetch(`${BACKEND_URL}/api/auth/update-push-token`, {
+            method: "PATCH",
+            credentials: "include", // Send HttpOnly cookies
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ pushToken: currentToken }),
+          });
         } else {
           console.log("⚠️ No registration token available. Request permission to generate one.");
         }
@@ -106,8 +89,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Establish SSE connection for real-time notifications
   useEffect(() => {
-    const token = getToken()
-    if (!token || !user) {
+    // We remove the early "token check" here since auth depends on HttpOnly cookies now
+    if (!user) {
       if (sseConnection) {
         sseConnection.close()
         setSSEConnection(null)
@@ -118,8 +101,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     fetchNotifications()
     setupFCM() // Request FCM permission
 
-    const eventSource = new EventSource(`${BACKEND_URL}/api/notifications/sse?token=${token}`, {
-      withCredentials: false,
+    // SSE doesn't accept normal fetch opts, but withCredentials sends HttpOnly cookies automatically
+    const eventSource = new EventSource(`${BACKEND_URL}/api/notifications/sse`, {
+      withCredentials: true,
     })
 
     eventSource.onopen = () => {
@@ -194,15 +178,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }
 
   const markAsRead = async (id: string) => {
-    const token = getToken()
-    if (!token) return
-
     try {
       const response = await fetch(`${BACKEND_URL}/api/notifications/${id}/read`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: "include", // Send HttpOnly cookies
       })
 
       if (response.ok) {
@@ -217,15 +196,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }
 
   const markAllAsRead = async () => {
-    const token = getToken()
-    if (!token) return
-
     try {
       const response = await fetch(`${BACKEND_URL}/api/notifications/mark-all-read`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: "include", // Send HttpOnly cookies
       })
 
       if (response.ok) {

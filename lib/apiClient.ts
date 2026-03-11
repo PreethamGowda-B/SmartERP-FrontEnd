@@ -29,12 +29,8 @@ function handleLogout() {
 export async function apiClient(path: string, options: RequestInit = {}) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
-  // Get access token from localStorage (for Bearer auth)
-  const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
-
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}), // ✅ attach token if available
     ...(options.headers as Record<string, string>),
   }
 
@@ -43,7 +39,7 @@ export async function apiClient(path: string, options: RequestInit = {}) {
     res = await fetch(`${baseUrl}${path}`, {
       ...options,
       headers,
-      credentials: "include", // ✅ allows cookie-based sessions too
+      credentials: "include", // ✅ enables cookie-based sessions (HttpOnly tokens)
     })
   } catch (error) {
     console.error("[v0] Network error in apiClient:", error)
@@ -54,53 +50,43 @@ export async function apiClient(path: string, options: RequestInit = {}) {
   if (res.status === 401) {
     console.warn("[v0] Unauthorized — attempting refresh")
 
-    const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null
-    if (refreshToken) {
-      try {
-        const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+    try {
+      // ✅ We don't send the token manually. The browser sends the HttpOnly refresh_token cookie automatically.
+      const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      })
+
+      if (refreshRes.ok) {
+        // The backend returns access tokens but also SETS them as secure cookies.
+        // We do NOT store them in localStorage anymore.
+        const newTokens = await refreshRes.json()
+
+        // ✅ Sync updated tokens back to Android native app (if in Android environment)
+        syncWithAndroid(newTokens.accessToken, newTokens.refreshToken)
+
+        // Retry original request (browser will automatically send the newly set HttpOnly cookie)
+        res = await fetch(`${baseUrl}${path}`, {
+          ...options,
+          headers,
           credentials: "include",
-          body: JSON.stringify({ refreshToken }),
         })
 
-        if (refreshRes.ok) {
-          const newTokens = await refreshRes.json()
-          if (newTokens.accessToken) localStorage.setItem("accessToken", newTokens.accessToken)
-          if (newTokens.refreshToken) localStorage.setItem("refreshToken", newTokens.refreshToken)
-
-          // ✅ Sync updated tokens back to Android native app
-          syncWithAndroid(newTokens.accessToken, newTokens.refreshToken)
-
-          // Retry original request with new token
-          res = await fetch(`${baseUrl}${path}`, {
-            ...options,
-            headers: {
-              ...headers,
-              Authorization: `Bearer ${newTokens.accessToken}`,
-            },
-            credentials: "include",
-          })
-
-          // If retry also returns 401, log out
-          if (res.status === 401) {
-            handleLogout()
-            throw new Error("Session expired after refresh")
-          }
-        } else {
-          // Refresh call failed with a status like 401 or 403
+        // If retry also returns 401, log out
+        if (res.status === 401) {
           handleLogout()
-          throw new Error("Session expired")
+          throw new Error("Session expired after refresh")
         }
-      } catch (error) {
-        console.error("[v0] Token refresh failed:", error)
+      } else {
+        // Refresh call failed with a status like 401 or 403
         handleLogout()
-        throw error
+        throw new Error("Session expired")
       }
-    } else {
-      // No refresh token available, just log out
+    } catch (error) {
+      console.error("[v0] Token refresh failed:", error)
       handleLogout()
-      throw new Error("No refresh token available")
+      throw error
     }
   }
 

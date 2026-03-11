@@ -14,10 +14,8 @@ import { EmployeeLayout } from "@/components/employee-layout"
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
 function authHeaders() {
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
     return {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
     }
 }
 

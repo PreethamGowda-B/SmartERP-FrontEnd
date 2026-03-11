@@ -63,12 +63,10 @@ export default function InventoryTable({
   const fetchItems = async () => {
     try {
       setLoading(true)
-      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
 
       const response = await fetch(api + "/api/inventory", {
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
       })
@@ -100,13 +98,10 @@ export default function InventoryTable({
     }
 
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
-
       const response = await fetch(`${api}/api/inventory/${item.id}/archive`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
       })
@@ -130,13 +125,10 @@ export default function InventoryTable({
     }
 
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
-
       const response = await fetch(`${api}/api/inventory/${item.id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
       })

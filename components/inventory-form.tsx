@@ -106,8 +106,6 @@ export default function InventoryForm({
 
     setLoading(true)
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
-
       const formData = new FormData()
       formData.append("name", name)
       formData.append("description", description)
@@ -127,10 +125,7 @@ export default function InventoryForm({
 
       const res = await fetch(url, {
         method,
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
+        credentials: "include", // Send HttpOnly cookies
         body: formData,
       })
 
