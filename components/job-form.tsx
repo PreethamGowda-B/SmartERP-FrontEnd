@@ -13,10 +13,12 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
-import { mockEmployees, type Job } from "@/lib/data"
-import { CalendarIcon, Loader2 } from "lucide-react"
+import { CalendarIcon, Loader2, Users as UsersIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { apiClient } from "@/lib/apiClient"
+import { useEffect } from "react"
+import type { Job } from "@/lib/data"
 
 interface JobFormProps {
   job?: Job
@@ -40,6 +42,26 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
     visible_to_all: (job as any)?.visible_to_all ?? true,  // Default to true so employees can see jobs
   })
 
+  const [employees, setEmployees] = useState<any[]>([])
+  const [isEmployeesLoading, setIsEmployeesLoading] = useState(false)
+
+  useEffect(() => {
+    async function fetchEmployees() {
+      setIsEmployeesLoading(true)
+      try {
+        const data = await apiClient("/api/employees")
+        if (Array.isArray(data)) {
+          setEmployees(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch employees:", error)
+      } finally {
+        setIsEmployeesLoading(false)
+      }
+    }
+    fetchEmployees()
+  }, [])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit({
@@ -54,7 +76,7 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
     setFormData((prev) => ({
       ...prev,
       assignedEmployees: prev.assignedEmployees.includes(employeeId)
-        ? prev.assignedEmployees.filter((id) => id !== employeeId)
+        ? prev.assignedEmployees.filter((id: string) => id !== employeeId)
         : [...prev.assignedEmployees, employeeId],
     }))
   }
@@ -217,23 +239,36 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
 
           <div className="space-y-3">
             <Label>Assign Employees</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {mockEmployees.map((employee) => (
-                <div key={employee.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={employee.id}
-                    checked={formData.assignedEmployees.includes(employee.id)}
-                    onCheckedChange={() => handleEmployeeToggle(employee.id)}
-                  />
-                  <Label htmlFor={employee.id} className="flex-1 cursor-pointer">
-                    <div>
-                      <p className="text-sm font-medium">{employee.name}</p>
-                      <p className="text-xs text-muted-foreground">{employee.position}</p>
-                    </div>
-                  </Label>
-                </div>
-              ))}
-            </div>
+            {isEmployeesLoading ? (
+              <div className="flex items-center gap-2 py-4 text-muted-foreground text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Loading employees...</span>
+              </div>
+            ) : employees.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-lg bg-accent/5">
+                <UsersIcon className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                <p className="text-sm text-muted-foreground">No employees found.</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">Please add employees first in the Employee Management page.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {employees.map((employee) => (
+                  <div key={employee.id} className="flex items-center space-x-2 p-2 border rounded hover:bg-accent/5 transition-colors">
+                    <Checkbox
+                      id={`emp-${employee.id}`}
+                      checked={formData.assignedEmployees.includes(employee.id.toString())}
+                      onCheckedChange={() => handleEmployeeToggle(employee.id.toString())}
+                    />
+                    <Label htmlFor={`emp-${employee.id}`} className="flex-1 cursor-pointer">
+                      <div>
+                        <p className="text-sm font-medium">{employee.name}</p>
+                        <p className="text-xs text-muted-foreground">{employee.position || 'Employee'}</p>
+                      </div>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between p-4 bg-accent/5 rounded-lg border border-accent/20">
