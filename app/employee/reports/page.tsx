@@ -11,12 +11,15 @@ import {
 } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 
+import { getAccessToken } from "@/lib/apiClient"
+
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
-function authHeaders() {
-    return {
-        "Content-Type": "application/json",
-    }
+function authHeaders(): Record<string, string> {
+    const token = getAccessToken()
+    const headers: Record<string, string> = { "Content-Type": "application/json" }
+    if (token) headers["Authorization"] = `Bearer ${token}`
+    return headers
 }
 
 async function fetchReport(endpoint: string, period: string) {

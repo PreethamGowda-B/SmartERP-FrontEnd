@@ -14,12 +14,15 @@ import { useAuth } from "@/contexts/auth-context"
 import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader2, Eye, EyeOff } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 
+import { getAccessToken } from "@/lib/apiClient"
+
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
-function authHeaders() {
-  return {
-    "Content-Type": "application/json",
-  }
+function authHeaders(): Record<string, string> {
+  const token = getAccessToken()
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (token) headers["Authorization"] = `Bearer ${token}`
+  return headers
 }
 
 export default function SettingsPage() {

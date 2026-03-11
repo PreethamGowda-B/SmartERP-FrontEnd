@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Clock, Calendar, TrendingUp, Award, Loader2 } from "lucide-react"
 
+import { getAccessToken } from "@/lib/apiClient"
+
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
 interface AttendanceRecord {
@@ -41,7 +43,11 @@ export default function EmployeeTimePage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API}/api/attendance/me`, { credentials: "include" })
+      const token = getAccessToken()
+      const res = await fetch(`${API}/api/attendance/me`, {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       if (!res.ok) throw new Error("Failed to load attendance")
       const data = await res.json()
       setRecords(data.records || [])

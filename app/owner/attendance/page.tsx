@@ -10,6 +10,14 @@ import { useAuth } from "@/contexts/auth-context"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
+import { getAccessToken } from "@/lib/apiClient"
+function authHeaders(): Record<string, string> {
+  const token = getAccessToken()
+  const headers: Record<string, string> = {}
+  if (token) headers["Authorization"] = `Bearer ${token}`
+  return headers
+}
+
 interface EmployeeAttendance {
   user_id: string
   employee_name: string
@@ -47,7 +55,8 @@ export default function OwnerAttendancePage() {
 
     try {
       const response = await fetch(`${BACKEND_URL}/api/attendance/overview`, {
-        credentials: "include", // Send HttpOnly cookies
+        credentials: "include",
+        headers: authHeaders(),
       })
 
       if (response.ok) {

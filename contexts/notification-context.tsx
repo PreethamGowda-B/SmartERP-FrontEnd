@@ -73,9 +73,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           // Send token to backend
           await fetch(`${BACKEND_URL}/api/auth/update-push-token`, {
             method: "PATCH",
-            credentials: "include", // Send HttpOnly cookies
+            credentials: "include",
             headers: {
               "Content-Type": "application/json",
+              ...(getAccessToken() ? { "Authorization": `Bearer ${getAccessToken()}` } : {}),
             },
             body: JSON.stringify({ pushToken: currentToken }),
           });

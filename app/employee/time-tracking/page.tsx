@@ -10,6 +10,15 @@ import { useAuth } from "@/contexts/auth-context"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
+import { getAccessToken } from "@/lib/apiClient"
+
+function authHeaders(): Record<string, string> {
+  const token = getAccessToken()
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (token) headers["Authorization"] = `Bearer ${token}`
+  return headers
+}
+
 interface AttendanceRecord {
     id: number
     date: string

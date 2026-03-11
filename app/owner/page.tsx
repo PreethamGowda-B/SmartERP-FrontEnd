@@ -14,12 +14,15 @@ import {
 import { Button } from "@/components/ui/button"
 import { DateTimeWeather } from "@/components/date-time-weather"
 
+import { getAccessToken } from "@/lib/apiClient"
+
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
-function authHeaders() {
-  return {
-    "Content-Type": "application/json",
-  }
+function authHeaders(): Record<string, string> {
+  const token = getAccessToken()
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (token) headers["Authorization"] = `Bearer ${token}`
+  return headers
 }
 
 type DashboardMetrics = {
