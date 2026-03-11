@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { DateTimeWeather } from "@/components/date-time-weather"
 
 import { getAccessToken } from "@/lib/apiClient"
+import { useAuth } from "@/contexts/auth-context"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
@@ -57,6 +58,7 @@ function statusColor(status: string) {
 
 export default function OwnerDashboard() {
   const router = useRouter()
+  const { isLoading: authLoading } = useAuth()
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
@@ -87,7 +89,9 @@ export default function OwnerDashboard() {
     }
   }, [])
 
-  useEffect(() => { fetchDashboardData() }, [fetchDashboardData])
+  useEffect(() => {
+    if (!authLoading) fetchDashboardData()
+  }, [fetchDashboardData, authLoading])
 
   const activeJobs = metrics?.activeJobs ?? 0
   const totalEmployees = metrics?.activeEmployees ?? 0

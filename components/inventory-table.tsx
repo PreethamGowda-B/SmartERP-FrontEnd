@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Search, Edit, Archive, Trash2 } from "lucide-react"
+import { getAccessToken } from "@/lib/apiClient"
 
 type InventoryItem = {
   id: number
@@ -64,9 +65,11 @@ export default function InventoryTable({
     try {
       setLoading(true)
 
+      const token = getAccessToken()
       const response = await fetch(api + "/api/inventory", {
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
       })

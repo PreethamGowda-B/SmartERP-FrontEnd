@@ -33,15 +33,17 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://smarterp-bac
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
   const [sseConnection, setSSEConnection] = useState<EventSource | null>(null)
 
   // Fetch notifications from backend
   const fetchNotifications = useCallback(async () => {
     try {
+      const token = getAccessToken()
       const response = await fetch(`${BACKEND_URL}/api/notifications`, {
-        credentials: "include", // Send HttpOnly cookies
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
 
       if (response.ok) {
@@ -91,7 +93,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Establish SSE connection for real-time notifications
   useEffect(() => {
-    // We remove the early "token check" here since auth depends on HttpOnly cookies now
+    // Wait for auth to finish (proactive token refresh) before making API calls
+    if (isLoading) return
+
     if (!user) {
       if (sseConnection) {
         sseConnection.close()
