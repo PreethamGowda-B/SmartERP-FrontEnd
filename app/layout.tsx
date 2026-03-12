@@ -66,6 +66,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+        {/* Recovery script for ChunkLoadError (helps during deployments) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('error', function(e) {
+                if (e.message && (e.message.includes('ChunkLoadError') || e.message.includes('Loading chunk'))) {
+                  console.warn('ChunkLoadError detected, reloading page...');
+                  window.location.reload();
+                }
+              }, true);
+            `,
+          }}
+        />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
           <script
             type="application/ld+json"
