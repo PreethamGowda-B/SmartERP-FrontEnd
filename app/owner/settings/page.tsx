@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/contexts/auth-context"
-import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader2, Eye, EyeOff } from "lucide-react"
+import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader2, Eye, EyeOff, Sparkles } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
+import Link from "next/link"
 
 import { getAccessToken } from "@/lib/apiClient"
 
@@ -217,7 +218,15 @@ export default function SettingsPage() {
   return (
     <OwnerLayout>
       <div className="p-6 space-y-6">
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <h1 className="text-3xl font-bold">Settings</h1>
+          <Button asChild className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 shadow-md">
+            <Link href="/owner/billing">
+              <Sparkles className="h-4 w-4 mr-2" />
+              Upgrade Plan
+            </Link>
+          </Button>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 

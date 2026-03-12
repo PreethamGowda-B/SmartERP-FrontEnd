@@ -2,6 +2,7 @@
 // Token store — shifted to check both sessionStorage and localStorage
 // to support PERSISTENT login (across tab closes) and Android bridge compatibility.
 // ============================================================
+import { triggerFeatureLock } from "@/components/locked-feature-prompt"
 let _accessToken: string | null =
   typeof window !== "undefined" 
     ? (sessionStorage.getItem("_at") || localStorage.getItem("_at") || localStorage.getItem("accessToken")) 
@@ -153,6 +154,12 @@ export async function apiClient(path: string, options: RequestInit = {}) {
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: res.statusText }))
+    
+    // Trigger global UI prompt if feature is locked due to plan tier
+    if (res.status === 403 && error.upgrade_required) {
+      triggerFeatureLock({ feature: error.feature, message: error.message })
+    }
+    
     throw error
   }
 

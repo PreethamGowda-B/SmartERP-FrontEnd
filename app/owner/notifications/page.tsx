@@ -49,7 +49,7 @@ export default function NotificationsPage() {
   const { user } = useAuth()
   const [filter, setFilter] = useState("all")
 
-  const ownerNotifications = notifications.filter((notification) => !notification.userId || user?.role === "owner")
+  const ownerNotifications = notifications;
 
   const filteredNotifications = ownerNotifications.filter((notification) => {
     if (filter === "unread") return !notification.read
@@ -147,7 +147,7 @@ export default function NotificationsPage() {
                     {!notification.read && <div className="w-2 h-2 bg-primary rounded-full" />}
                   </div>
                   <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
-                  <p className="text-xs text-muted-foreground">{formatNotificationTime(notification.time)}</p>
+                  <p className="text-xs text-muted-foreground">{formatNotificationTime(notification.created_at)}</p>
                 </div>
                 {!notification.read && (
                   <Button variant="ghost" size="sm" onClick={() => markAsRead(notification.id)}>

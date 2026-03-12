@@ -23,6 +23,7 @@ import {
   Box,
   MessageSquare,
   MapPin,
+  CreditCard,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -39,6 +40,7 @@ const navigation = [
   { name: "Notifications", href: "/owner/notifications", icon: Bell },
   { name: "Tracking", href: "/owner/tracking", icon: MapPin },
   { name: "Settings", href: "/owner/settings", icon: Settings },
+  { name: "Billing", href: "/owner/billing", icon: CreditCard },
 ]
 
 export function OwnerSidebar() {

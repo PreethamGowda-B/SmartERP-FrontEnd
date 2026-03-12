@@ -10,6 +10,8 @@ import { AIChatBot } from "@/components/ai-chat-bot"
 import { NavLoadingProvider, useNavLoading } from '@/components/nav-loading-context'
 import PageTransition from './page-transition'
 import DotsLoader from '@/components/dots-loader'
+import { TrialWelcomeModal } from '@/components/trial-welcome-modal'
+import { LockedFeaturePrompt } from '@/components/locked-feature-prompt'
 
 interface OwnerLayoutProps {
   children: React.ReactNode
@@ -54,6 +56,9 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
         <AIChatBot />
 
         <PageTransition />
+        
+        <TrialWelcomeModal />
+        <LockedFeaturePrompt />
       </div>
     </NavLoadingProvider>
   )

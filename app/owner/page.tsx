@@ -13,6 +13,8 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DateTimeWeather } from "@/components/date-time-weather"
+import { DashboardTrialBanner } from "@/components/dashboard-trial-banner"
+import { SubscriptionStatus } from "@/components/subscription-status"
 
 import { getAccessToken } from "@/lib/apiClient"
 import { useAuth } from "@/contexts/auth-context"
@@ -133,6 +135,7 @@ export default function OwnerDashboard() {
   return (
     <OwnerLayout>
       <div className="space-y-8 animate-in fade-in duration-1000">
+        <DashboardTrialBanner />
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -150,6 +153,8 @@ export default function OwnerDashboard() {
             <DateTimeWeather />
           </div>
         </div>
+
+        <SubscriptionStatus />
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
