@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (!rt) return;
 
-          // Background refresh
+          // Background refresh & profile sync
           fetch(`${apiUrl}/api/auth/refresh`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -53,7 +53,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               const data = await refreshRes.json()
               if (data.accessToken) {
                 setTokens(data.accessToken, data.refreshToken || rt || "")
-                console.log("[v0] ✅ Proactive token refresh successful (background)")
+                
+                // Now fetch the fresh user profile to sync company code
+                const meRes = await fetch(`${apiUrl}/api/auth/me`, {
+                  headers: { "Authorization": `Bearer ${data.accessToken}` }
+                })
+                if (meRes.ok) {
+                  const freshUser = await meRes.json()
+                  setUser(freshUser)
+                  localStorage.setItem("smarterp_user", JSON.stringify(freshUser))
+                  if (freshUser.company_code) {
+                    localStorage.setItem("company_code", freshUser.company_code)
+                  }
+                  console.log("[v0] ✅ Profile synced with latest DB state")
+                }
               }
             } else if (!refreshRes.ok) {
               console.warn("[v0] Proactive token refresh failed (background)")
