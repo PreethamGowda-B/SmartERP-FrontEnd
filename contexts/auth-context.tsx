@@ -18,50 +18,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    async function initAuth() {
-      const currentUser = getCurrentUser()
-      setUser(currentUser)
+    let isMounted = true;
 
-      // ✅ Proactively refresh tokens on EVERY page load.
-      // This prevents the race condition where all pages fire before
-      // the 401→refresh cycle completes and sets _accessToken.
-      if (currentUser) {
-        try {
+    async function initAuth() {
+      try {
+        const currentUser = getCurrentUser()
+        
+        // 1. Immediately update user state from cache to allow instant UI rendering
+        if (currentUser && isMounted) {
+          setUser(currentUser)
+        }
+        
+        // 2. Set loading to false as early as possible so the user sees the dashboard/landing page
+        // No need to wait for a network request just to show cached data.
+        if (isMounted) setIsLoading(false)
+
+        // 3. Perform the token refresh in the background (non-blocking)
+        if (currentUser) {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
           const rt = typeof window !== "undefined" 
             ? (sessionStorage.getItem("_rt") || localStorage.getItem("_rt") || localStorage.getItem("refreshToken")) 
             : null
           
-          if (!rt) {
-            console.log("[v0] No refresh token found in storage — skipping proactive refresh")
-            setIsLoading(false)
-            return
-          }
+          if (!rt) return;
 
-          const refreshRes = await fetch(`${apiUrl}/api/auth/refresh`, {
+          // Background refresh
+          fetch(`${apiUrl}/api/auth/refresh`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: rt ? JSON.stringify({ refreshToken: rt }) : undefined,
-          })
-          if (refreshRes.ok) {
-            const data = await refreshRes.json()
-            if (data.accessToken) {
-              setTokens(data.accessToken, data.refreshToken || rt || "")
-              console.log("[v0] ✅ Proactive token refresh successful")
+            body: JSON.stringify({ refreshToken: rt }),
+          }).then(async (refreshRes) => {
+            if (refreshRes.ok && isMounted) {
+              const data = await refreshRes.json()
+              if (data.accessToken) {
+                setTokens(data.accessToken, data.refreshToken || rt || "")
+                console.log("[v0] ✅ Proactive token refresh successful (background)")
+              }
+            } else if (!refreshRes.ok) {
+              console.warn("[v0] Proactive token refresh failed (background)")
             }
-          } else {
-            console.warn("[v0] Proactive token refresh failed — user may need to re-login")
-          }
-        } catch {
-          console.warn("[v0] Proactive token refresh error — continuing without pre-fetched token")
+          }).catch(err => {
+            console.warn("[v0] Proactive token refresh error (background):", err)
+          })
         }
+      } catch (err) {
+        console.error("[v0] Auth initialization error:", err)
+        if (isMounted) setIsLoading(false)
       }
-
-      setIsLoading(false)
     }
 
     initAuth()
+    
+    return () => { isMounted = false }
   }, [])
 
   const handleSignOut = async () => {
