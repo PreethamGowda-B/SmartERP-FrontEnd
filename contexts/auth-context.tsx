@@ -28,7 +28,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (currentUser) {
         try {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-          const rt = typeof window !== "undefined" ? sessionStorage.getItem("_rt") : null
+          const rt = typeof window !== "undefined" 
+            ? (sessionStorage.getItem("_rt") || localStorage.getItem("_rt") || localStorage.getItem("refreshToken")) 
+            : null
+          
+          if (!rt) {
+            console.log("[v0] No refresh token found in storage — skipping proactive refresh")
+            setIsLoading(false)
+            return
+          }
+
           const refreshRes = await fetch(`${apiUrl}/api/auth/refresh`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

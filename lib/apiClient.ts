@@ -1,19 +1,25 @@
 // ============================================================
-// Token store — persisted in sessionStorage so page reloads work
-// instantly without any async refresh race condition.
-// sessionStorage is cleared when the browser tab is closed.
+// Token store — shifted to check both sessionStorage and localStorage
+// to support PERSISTENT login (across tab closes) and Android bridge compatibility.
 // ============================================================
 let _accessToken: string | null =
-  typeof window !== "undefined" ? sessionStorage.getItem("_at") : null
+  typeof window !== "undefined" 
+    ? (sessionStorage.getItem("_at") || localStorage.getItem("_at") || localStorage.getItem("accessToken")) 
+    : null
 let _refreshToken: string | null =
-  typeof window !== "undefined" ? sessionStorage.getItem("_rt") : null
+  typeof window !== "undefined" 
+    ? (sessionStorage.getItem("_rt") || localStorage.getItem("_rt") || localStorage.getItem("refreshToken")) 
+    : null
 
 export function setTokens(accessToken: string, refreshToken: string) {
   _accessToken = accessToken
   _refreshToken = refreshToken
   if (typeof window !== "undefined") {
+    // Save to BOTH for maximum reliability across reloads/bridge syncs
     sessionStorage.setItem("_at", accessToken)
     sessionStorage.setItem("_rt", refreshToken)
+    localStorage.setItem("_at", accessToken)
+    localStorage.setItem("_rt", refreshToken)
   }
 }
 
@@ -23,18 +29,30 @@ export function clearTokens() {
   if (typeof window !== "undefined") {
     sessionStorage.removeItem("_at")
     sessionStorage.removeItem("_rt")
+    localStorage.removeItem("_at")
+    localStorage.removeItem("_rt")
+    // Also clear Android-specific keys if they exist
+    localStorage.removeItem("accessToken")
+    localStorage.removeItem("refreshToken")
   }
 }
 
 export function getAccessToken() {
-  return _accessToken
+  if (_accessToken) return _accessToken
+  if (typeof window !== "undefined") {
+    const token = sessionStorage.getItem("_at") || localStorage.getItem("_at") || localStorage.getItem("accessToken")
+    if (token) _accessToken = token
+    return token
+  }
+  return null
 }
 
-// Restore refresh token from sessionStorage on page reload
 function getRefreshToken(): string | null {
   if (_refreshToken) return _refreshToken
   if (typeof window !== "undefined") {
-    return sessionStorage.getItem("_rt")
+    const token = sessionStorage.getItem("_rt") || localStorage.getItem("_rt") || localStorage.getItem("refreshToken")
+    if (token) _refreshToken = token
+    return token
   }
   return null
 }
@@ -71,7 +89,7 @@ export async function apiClient(path: string, options: RequestInit = {}) {
   }
 
   // ✅ Attach access token if available (cross-domain Authorization header)
-  const token = _accessToken
+  const token = getAccessToken()
   if (token) {
     headers["Authorization"] = `Bearer ${token}`
   }
