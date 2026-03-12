@@ -7,7 +7,9 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import { useNotifications } from "@/contexts/notification-context"
+import { apiClient } from "@/lib/apiClient"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useEffect } from "react"
 import {
   HardHat,
   LayoutDashboard,
@@ -41,6 +43,7 @@ const navigation = [
 
 export function EmployeeSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [planName, setPlanName] = useState<string>("free")
   const pathname = usePathname()
   const { user, signOut } = useAuth()
   const { getUnreadCount } = useNotifications()
@@ -49,6 +52,20 @@ export function EmployeeSidebar() {
   const handleSignOut = async () => {
     await signOut()
   }
+
+  useEffect(() => {
+    async function fetchPlan() {
+      try {
+        const res = await apiClient("/api/subscription/status")
+        if (res && res.plan && res.plan.name) {
+          setPlanName(res.plan.name.toLowerCase())
+        }
+      } catch (err) {
+        console.error("Employee sidebar failed to fetch plan status:", err)
+      }
+    }
+    fetchPlan()
+  }, [])
 
   return (
     <>
@@ -83,7 +100,12 @@ export function EmployeeSidebar() {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {navigation.map((item) => {
+            {navigation.filter((item) => {
+              if (planName === "free") {
+                if (["Messages", "Payroll", "Tracking"].includes(item.name)) return false;
+              }
+              return true;
+            }).map((item) => {
               const isActive = pathname === item.href
               return (
                 <NavLink

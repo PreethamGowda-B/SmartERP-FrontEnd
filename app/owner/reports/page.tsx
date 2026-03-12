@@ -13,24 +13,12 @@ import {
 } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 
-import { getAccessToken } from "@/lib/apiClient"
+import { apiClient } from "@/lib/apiClient"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
-function authHeaders(): Record<string, string> {
-  const token = getAccessToken()
-  const headers: Record<string, string> = { "Content-Type": "application/json" }
-  if (token) headers["Authorization"] = `Bearer ${token}`
-  return headers
-}
-
 async function fetchReport(endpoint: string, period: string) {
-  const res = await fetch(`${API}/api/reports/${endpoint}?period=${period}`, {
-    credentials: "include",
-    headers: authHeaders(),
-  })
-  if (!res.ok) throw new Error(`Failed to fetch ${endpoint}`)
-  return res.json()
+  return await apiClient(`/api/reports/${endpoint}?period=${period}`)
 }
 
 function StatCard({ icon: Icon, label, value, sub, color = "text-primary" }: any) {

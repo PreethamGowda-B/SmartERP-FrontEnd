@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { NavLink } from "@/components/nav-link"
+import { apiClient } from "@/lib/apiClient"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -24,6 +25,7 @@ import {
   MessageSquare,
   MapPin,
   CreditCard,
+  Headset,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -41,16 +43,32 @@ const navigation = [
   { name: "Tracking", href: "/owner/tracking", icon: MapPin },
   { name: "Settings", href: "/owner/settings", icon: Settings },
   { name: "Billing", href: "/owner/billing", icon: CreditCard },
+  { name: "Contact Support", href: "/owner/support", icon: Headset },
 ]
 
 export function OwnerSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [planName, setPlanName] = useState<string>("free")
   const pathname = usePathname()
   const { user, signOut } = useAuth()
 
   const handleSignOut = async () => {
     await signOut()
   }
+
+  useEffect(() => {
+    async function fetchPlan() {
+      try {
+        const res = await apiClient("/api/subscription/status")
+        if (res && res.plan && res.plan.name) {
+          setPlanName(res.plan.name.toLowerCase())
+        }
+      } catch (err) {
+        console.error("Sidebar failed to fetch plan status:", err)
+      }
+    }
+    fetchPlan()
+  }, [])
 
   return (
     <>
@@ -84,7 +102,15 @@ export function OwnerSidebar() {
 
         {/* Scrollable nav area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-          {navigation.map((item) => {
+          {navigation.filter((item) => {
+            if (planName === "free") {
+              if (["Messages", "Payroll", "Tracking"].includes(item.name)) return false
+            }
+            if (item.name === "Contact Support") {
+              return planName === "pro" || planName.includes("pro")
+            }
+            return true
+          }).map((item) => {
             const isActive = pathname === item.href
             return (
               <NavLink

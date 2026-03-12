@@ -157,7 +157,13 @@ export async function apiClient(path: string, options: RequestInit = {}) {
     
     // Trigger global UI prompt if feature is locked due to plan tier
     if (res.status === 403 && error.upgrade_required) {
-      triggerFeatureLock({ feature: error.feature, message: error.message })
+      triggerFeatureLock({
+        feature: error.feature || "this premium feature",
+        current_plan: error.current_plan,
+        message: error.message
+      })
+      // Return a Promise that never resolves to halt standard UI error propagation
+      return new Promise(() => {})
     }
     
     throw error

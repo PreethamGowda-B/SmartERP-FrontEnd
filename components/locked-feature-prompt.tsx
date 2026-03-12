@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation"
 // Global event bus for intercepting upgrade required errors
 type FeatureLockEvent = {
   feature?: string
+  current_plan?: string
   message: string
 }
 
@@ -64,22 +65,39 @@ export function LockedFeaturePrompt() {
             Feature Locked
           </DialogTitle>
           <DialogDescription className="text-base text-center leading-relaxed text-zinc-600 dark:text-zinc-400">
-            {lockData.message || "This feature is not available on your current plan."}
+            This feature is not available on your current plan.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800 my-4 flex items-start gap-3">
-            <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-            <div className="text-sm text-zinc-700 dark:text-zinc-300">
-                Upgrade to a higher tier plan to unlock {lockData.feature ? <strong className="text-zinc-900 dark:text-white">{lockData.feature.replace(/_/g, " ")}</strong> : "this feature"} and scale your business without limits.
-            </div>
+        <div className="bg-zinc-50 dark:bg-zinc-900/50 p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 my-4 space-y-3">
+          <div className="flex gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <span className="text-muted-foreground w-28">Current Plan:</span>
+            <span className="font-bold uppercase text-foreground">
+              {lockData.current_plan || "FREE"}
+            </span>
+          </div>
+          <div className="flex gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <span className="text-muted-foreground w-28">Required Plan:</span>
+            <span className="font-bold uppercase text-indigo-600 dark:text-indigo-400">
+              BASIC or PRO
+            </span>
+          </div>
+          
+          <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 mt-3 text-sm text-zinc-700 dark:text-zinc-300">
+            <p className="mb-2">Upgrade your plan to unlock premium features like:</p>
+            <ul className="space-y-1.5 ml-2 text-muted-foreground">
+              <li>• Location Tracking</li>
+              <li>• Payroll Generation</li>
+              <li>• Advanced Reports</li>
+            </ul>
+          </div>
         </div>
 
         <DialogFooter className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto font-medium">
             Cancel
           </Button>
-          <Button onClick={handleGoToBilling} className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md transition-all">
+          <Button onClick={handleGoToBilling} className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md transition-all font-medium">
             See Upgrade Options <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </DialogFooter>
