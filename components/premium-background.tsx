@@ -23,90 +23,80 @@ export function PremiumBackground() {
 
   return (
     <div className="absolute inset-0 z-0 overflow-hidden bg-white">
-      {/* Cinematic Video-style Background Motion (White Theme) */}
-      <div className="absolute inset-0 opacity-40">
+      {/* Optimized Background Motion Layers */}
+      <div className="absolute inset-0 opacity-20">
+        <motion.div
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.1, 0.2, 0.1],
+            x: [0, 30, 0],
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          style={{ willChange: "transform" }}
+          className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-slate-200 blur-[60px]"
+        />
         <motion.div
           animate={{
             scale: [1, 1.2, 1],
-            opacity: [0.1, 0.3, 0.1],
-            x: [0, 50, 0],
-            y: [0, -30, 0],
+            opacity: [0.1, 0.2, 0.1],
+            y: [0, 40, 0],
           }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full bg-slate-200 blur-[130px]"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 1.3, 1],
-            opacity: [0.15, 0.25, 0.15],
-            x: [0, -40, 0],
-            y: [0, 60, 0],
-          }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[80%] rounded-full bg-primary/5 blur-[150px]"
+          transition={{ duration: 20, repeat: Infinity, ease: "linear", delay: 1 }}
+          style={{ willChange: "transform" }}
+          className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-primary/5 blur-[80px]"
         />
       </div>
 
-      {/* Floating Particles (Refined for Light Theme) */}
+      {/* Simplified Particles */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        {[...Array(30)].map((_, i) => (
+        {[...Array(15)].map((_, i) => (
           <motion.div
             key={i}
             className="absolute rounded-full"
             style={{
-              width: Math.random() * 3 + 1 + "px",
-              height: Math.random() * 3 + 1 + "px",
+              width: Math.random() * 2 + 1 + "px",
+              height: Math.random() * 2 + 1 + "px",
               top: Math.random() * 100 + "%",
               left: Math.random() * 100 + "%",
-              opacity: Math.random() * 0.3 + 0.1,
-              backgroundColor: '#3b82f6', // subtle primary blue
-              boxShadow: '0 0 4px rgba(59, 130, 246, 0.2)'
+              opacity: Math.random() * 0.2 + 0.1,
+              backgroundColor: '#3b82f6',
+              willChange: "transform"
             }}
             animate={{
-              y: [0, -Math.random() * 80 - 40],
-              x: [0, (Math.random() - 0.5) * 40],
-              opacity: [0.1, 0.4, 0.1],
-              scale: [1, 1.2, 1],
+              y: [0, -60],
+              opacity: [0.1, 0.3, 0.1],
             }}
             transition={{
-              duration: Math.random() * 12 + 8,
+              duration: Math.random() * 10 + 10,
               repeat: Infinity,
               ease: "linear",
-              delay: Math.random() * 5,
             }}
           />
         ))}
       </div>
 
-      {/* Modern Grid Texture */}
+      {/* Lightweight Grid Texture */}
       <div 
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        className="absolute inset-0 opacity-[0.02] pointer-events-none"
         style={{
           backgroundImage: 'radial-gradient(circle at center, #000000 0.5px, transparent 0.5px)',
-          backgroundSize: '40px 40px',
+          backgroundSize: '50px 50px',
         }}
       />
 
-      {/* Interactive Cursor "Spotlight" Animation */}
+      {/* Performance-tuned Cursor Spotlight */}
       <motion.div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/10 blur-[100px] pointer-events-none"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-primary/10 blur-[50px] pointer-events-none"
         animate={{
-          x: `calc(-50% + ${mousePosition.x * 2}px)`,
-          y: `calc(-50% + ${mousePosition.y * 2}px)`,
+          x: `calc(-50% + ${mousePosition.x * 1.2}px)`,
+          y: `calc(-50% + ${mousePosition.y * 1.2}px)`,
         }}
-        transition={{ type: "spring", damping: 50, stiffness: 80 }}
+        transition={{ type: "spring", damping: 60, stiffness: 60 }}
+        style={{ willChange: "transform" }}
       />
-      <motion.div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-accent/5 blur-[70px] pointer-events-none"
-        animate={{
-          x: `calc(-50% - ${mousePosition.x}px)`,
-          y: `calc(-50% - ${mousePosition.y}px)`,
-        }}
-        transition={{ type: "spring", damping: 60, stiffness: 70 }}
-      />
-
-      {/* Soft Vignette for focus */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(255,255,255,0.4)_120%)] pointer-events-none" />
+      
+      {/* Soft focus vignette */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(255,255,255,0.3)_100%)] pointer-events-none" />
     </div>
   )
 }
