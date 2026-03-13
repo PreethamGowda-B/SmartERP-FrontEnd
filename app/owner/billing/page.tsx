@@ -7,9 +7,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Zap, Clock, ShieldCheck, ArrowRight, Minus, Sparkles } from "lucide-react"
+import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader2, Eye, EyeOff, Sparkles, CheckCircle2, Zap, Clock, ShieldCheck, ArrowRight, Minus } from "lucide-react"
+import Link from "next/link"
+import Script from "next/script"
+import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/apiClient"
+
+declare global {
+  interface Window {
+    Razorpay: any
+  }
+}
 
 type PlanInfo = {
   id: number
@@ -25,7 +34,9 @@ type UsageInfo = { employees: number, inventory_items: number }
 
 export default function BillingPage() {
   const { user } = useAuth()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(true)
+  const [upgrading, setUpgrading] = useState(false)
   const [plan, setPlan] = useState<PlanInfo | null>(null)
   const [usage, setUsage] = useState<UsageInfo | null>(null)
   const [isAnnual, setIsAnnual] = useState(true)
@@ -90,16 +101,92 @@ export default function BillingPage() {
   }
 
   const handleUpgrade = async (planId: number) => {
+    if (upgrading) return
+    setUpgrading(true)
+
     try {
-      const res = await apiClient("/api/subscription/upgrade", { method: "POST" })
-      alert(res.message) // Stub action for now
-    } catch (err) {
-      console.error(err)
+      const billingCycle = isAnnual ? 'yearly' : 'monthly'
+      
+      // 1. Create Order on Backend
+      const orderRes = await apiClient("/api/subscription/create-order", {
+        method: "POST",
+        body: JSON.stringify({ planId, billingCycle })
+      })
+
+      if (!orderRes.id) {
+        throw new Error(orderRes.message || "Failed to create order")
+      }
+
+      // 2. Open Razorpay Checkout
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderRes.amount,
+        currency: orderRes.currency,
+        name: "SmartERP",
+        description: `Upgrade to ${planId === 3 ? 'Pro' : 'Basic'} Plan`,
+        order_id: orderRes.id,
+        handler: async function (response: any) {
+          try {
+            // 3. Verify Payment on Backend
+            const verifyRes = await apiClient("/api/subscription/verify-payment", {
+              method: "POST",
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                planId,
+                billingCycle
+              })
+            })
+
+            if (verifyRes.ok) {
+              toast({
+                title: "Upgrade Successful! 🎉",
+                description: `Your plan has been upgraded to ${planId === 3 ? 'Pro' : 'Basic'}.`,
+              })
+              // Refresh status
+              window.location.reload()
+            } else {
+              throw new Error(verifyRes.message || "Verification failed")
+            }
+          } catch (err: any) {
+            toast({
+              title: "Upgrade Failed",
+              description: err.message || "Something went wrong during verification.",
+              variant: "destructive"
+            })
+          }
+        },
+        prefill: {
+          name: user?.name,
+          email: user?.email,
+        },
+        theme: {
+          color: "#4f46e5",
+        },
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.open()
+
+    } catch (err: any) {
+      console.error("Upgrade error:", err)
+      toast({
+        title: "Upgrade Error",
+        description: err.message || "Failed to initiate upgrade process.",
+        variant: "destructive"
+      })
+    } finally {
+      setUpgrading(false)
     }
   }
 
   return (
     <OwnerLayout>
+      <Script
+        id="razorpay-checkout-js"
+        src="https://checkout.razorpay.com/v1/checkout.js"
+      />
       <div className="space-y-10 animate-in fade-in duration-700 pb-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -253,9 +340,16 @@ export default function BillingPage() {
                             ) : (
                                 <Button 
                                     onClick={() => handleUpgrade(p.id)} 
+                                    disabled={upgrading}
                                     className={`w-full text-white font-medium shadow-md ${p.popular ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900'}`}
                                 >
-                                    {plan && p.id > plan.id ? "Upgrade" : "Downgrade"} <ArrowRight className="w-4 h-4 ml-2" />
+                                    {upgrading ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <>
+                                        {plan && p.id > plan.id ? "Upgrade" : "Downgrade"} <ArrowRight className="w-4 h-4 ml-2" />
+                                      </>
+                                    )}
                                 </Button>
                             )}
                         </CardFooter>
