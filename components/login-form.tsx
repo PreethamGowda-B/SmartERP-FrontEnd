@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { signIn, signUp } from "@/lib/auth"
 import { useAuth } from "@/contexts/auth-context"
 import { Building2, Loader2, HardHat, UserPlus, CheckCircle2, RefreshCw, Mail } from "lucide-react"
+import { PremiumBackground } from "./premium-background"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
@@ -257,8 +258,9 @@ export function LoginForm() {
       </Dialog>
 
       {/* ── Main Login / Signup Form (unchanged from original) ────────────── */}
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4 animate-fade-in-up">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5 animate-pulse-soft" />
+      <div className="min-h-screen flex items-center justify-center relative p-4 animate-fade-in-up">
+        {/* The new premium animated background injected behind the card */}
+        <PremiumBackground />
 
         <Card className="w-full max-w-md relative z-10 animate-fade-in-up stagger-2 hover-lift border-2 hover:border-primary/20 transition-all duration-500">
           <CardHeader className="text-center animate-fade-in-down stagger-1">

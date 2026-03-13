@@ -48,7 +48,12 @@ const navigation = [
 
 export function OwnerSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [planName, setPlanName] = useState<string>("free")
+  const [features, setFeatures] = useState<Record<string, boolean>>({
+    payroll: false,
+    messages: false,
+    location_tracking: false,
+    priority_support: false
+  })
   const pathname = usePathname()
   const { user, signOut } = useAuth()
 
@@ -60,8 +65,8 @@ export function OwnerSidebar() {
     async function fetchPlan() {
       try {
         const res = await apiClient("/api/subscription/status")
-        if (res && res.plan && res.plan.name) {
-          setPlanName(res.plan.name.toLowerCase())
+        if (res && res.plan && res.plan.features) {
+          setFeatures(res.plan.features)
         }
       } catch (err) {
         console.error("Sidebar failed to fetch plan status:", err)
@@ -103,12 +108,10 @@ export function OwnerSidebar() {
         {/* Scrollable nav area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
           {navigation.filter((item) => {
-            if (planName === "free") {
-              if (["Messages", "Payroll", "Tracking"].includes(item.name)) return false
-            }
-            if (item.name === "Contact Support") {
-              return planName === "pro" || planName.includes("pro")
-            }
+            if (item.name === "Messages" && !features.messages) return false
+            if (item.name === "Payroll" && !features.payroll) return false
+            if (item.name === "Tracking" && !features.location_tracking) return false
+            if (item.name === "Contact Support" && !features.priority_support) return false
             return true
           }).map((item) => {
             const isActive = pathname === item.href
