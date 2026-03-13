@@ -8,6 +8,8 @@ import { JobProvider } from "@/contexts/job-context"
 import { NotificationProvider } from "@/contexts/notification-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { LockedFeaturePrompt } from "@/components/locked-feature-prompt"
+import { SlowNetworkNotice } from "@/components/slow-network-notice"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -119,6 +121,8 @@ export default function RootLayout({
               <NotificationProvider>
                 <JobProvider>{children}</JobProvider>
                 <Toaster richColors closeButton position="top-right" />
+                <LockedFeaturePrompt />
+                <SlowNetworkNotice />
               </NotificationProvider>
             </AuthProvider>
           </Suspense>

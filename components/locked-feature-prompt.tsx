@@ -18,6 +18,7 @@ type FeatureLockEvent = {
   feature?: string
   current_plan?: string
   message: string
+  user_role?: string
 }
 
 const subscribers: Array<(event: FeatureLockEvent) => void> = []
@@ -65,7 +66,7 @@ export function LockedFeaturePrompt() {
             Feature Locked
           </DialogTitle>
           <DialogDescription className="text-base text-center leading-relaxed text-zinc-600 dark:text-zinc-400">
-            This feature is not available on your current plan.
+            {lockData.message || "This feature is not available on your current plan."}
           </DialogDescription>
         </DialogHeader>
 
@@ -79,7 +80,7 @@ export function LockedFeaturePrompt() {
           <div className="flex gap-2 text-sm text-zinc-700 dark:text-zinc-300">
             <span className="text-muted-foreground w-28">Required Plan:</span>
             <span className="font-bold uppercase text-indigo-600 dark:text-indigo-400">
-              BASIC or PRO
+              {lockData.feature === 'ai_assistant' ? 'PRO' : 'BASIC or PRO'}
             </span>
           </div>
           
@@ -94,12 +95,20 @@ export function LockedFeaturePrompt() {
         </div>
 
         <DialogFooter className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto font-medium">
-            Cancel
-          </Button>
-          <Button onClick={handleGoToBilling} className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md transition-all font-medium">
-            See Upgrade Options <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+          {(!lockData.user_role || lockData.user_role === 'owner') ? (
+            <>
+              <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto font-medium">
+                Maybe Later
+              </Button>
+              <Button onClick={handleGoToBilling} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md transition-all font-medium flex-1">
+                Upgrade Plan <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => setIsOpen(false)} className="w-full font-medium bg-zinc-800 text-white">
+              Got it
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

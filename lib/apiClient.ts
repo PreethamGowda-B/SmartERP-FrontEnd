@@ -3,6 +3,38 @@
 // to support PERSISTENT login (across tab closes) and Android bridge compatibility.
 // ============================================================
 import { triggerFeatureLock } from "@/components/locked-feature-prompt"
+import { triggerSlowNetworkNotice } from "@/components/slow-network-notice"
+
+// ─── Slow Network Tracking ──────────────────────────────────────────────────
+// Keeps track of active requests that have exceeded the 20s threshold
+const slowActiveRequests = new Set<string>()
+const pendingRequests = new Map<string, NodeJS.Timeout>()
+
+function markRequestStart(requestId: string) {
+  const timeout = setTimeout(() => {
+    slowActiveRequests.add(requestId)
+    triggerSlowNetworkNotice(true)
+  }, 20000) // 20 seconds
+  pendingRequests.set(requestId, timeout)
+}
+
+function markRequestEnd(requestId: string) {
+  const timeout = pendingRequests.get(requestId)
+  if (timeout) {
+    clearTimeout(timeout)
+    pendingRequests.delete(requestId)
+  }
+  
+  if (slowActiveRequests.has(requestId)) {
+    slowActiveRequests.delete(requestId)
+    // Only hide if NO other slow requests are still running
+    if (slowActiveRequests.size === 0) {
+      triggerSlowNetworkNotice(false)
+    }
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 let _accessToken: string | null =
   typeof window !== "undefined" 
     ? (sessionStorage.getItem("_at") || localStorage.getItem("_at") || localStorage.getItem("accessToken")) 
@@ -95,79 +127,86 @@ export async function apiClient(path: string, options: RequestInit = {}) {
     headers["Authorization"] = `Bearer ${token}`
   }
 
-  let res: Response
+  const requestId = Math.random().toString(36).substring(7)
+  markRequestStart(requestId)
+
   try {
-    res = await fetch(`${baseUrl}${path}`, {
-      ...options,
-      headers,
-      credentials: "include", // still include for same-domain cookie fallback
-    })
-  } catch (error) {
-    console.error("[v0] Network error in apiClient:", error)
-    throw error
-  }
-
-  // 🧩 If token expired → try refresh
-  if (res.status === 401) {
-    console.warn("[v0] Unauthorized — attempting refresh")
-
-    const storedRefreshToken = getRefreshToken()
-
+    let res: Response
     try {
-      const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
+      res = await fetch(`${baseUrl}${path}`, {
+        ...options,
+        headers,
+        credentials: "include", // still include for same-domain cookie fallback
       })
-
-      if (refreshRes.ok) {
-        const newTokens = await refreshRes.json()
-
-        if (newTokens.accessToken) {
-          setTokens(newTokens.accessToken, newTokens.refreshToken || storedRefreshToken || "")
-          syncWithAndroid(newTokens.accessToken, newTokens.refreshToken)
-          headers["Authorization"] = `Bearer ${newTokens.accessToken}`
-        }
-
-        // Retry original request with new token
-        res = await fetch(`${baseUrl}${path}`, {
-          ...options,
-          headers,
-          credentials: "include",
-        })
-
-        if (res.status === 401) {
-          handleLogout()
-          throw new Error("Session expired after refresh")
-        }
-      } else {
-        handleLogout()
-        throw new Error("Session expired")
-      }
     } catch (error) {
-      console.error("[v0] Token refresh failed:", error)
-      handleLogout()
+      console.error("[v0] Network error in apiClient:", error)
       throw error
     }
-  }
 
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: res.statusText }))
-    
-    // Trigger global UI prompt if feature is locked due to plan tier
-    if (res.status === 403 && error.upgrade_required) {
-      triggerFeatureLock({
-        feature: error.feature || "this premium feature",
-        current_plan: error.current_plan,
-        message: error.message
-      })
-      // Return a Promise that never resolves to halt standard UI error propagation
-      return new Promise(() => {})
+    // 🧩 If token expired → try refresh
+    if (res.status === 401) {
+      console.warn("[v0] Unauthorized — attempting refresh")
+
+      const storedRefreshToken = getRefreshToken()
+
+      try {
+        const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
+        })
+
+        if (refreshRes.ok) {
+          const newTokens = await refreshRes.json()
+
+          if (newTokens.accessToken) {
+            setTokens(newTokens.accessToken, newTokens.refreshToken || storedRefreshToken || "")
+            syncWithAndroid(newTokens.accessToken, newTokens.refreshToken)
+            headers["Authorization"] = `Bearer ${newTokens.accessToken}`
+          }
+
+          // Retry original request with new token
+          res = await fetch(`${baseUrl}${path}`, {
+            ...options,
+            headers,
+            credentials: "include",
+          })
+
+          if (res.status === 401) {
+            handleLogout()
+            throw new Error("Session expired after refresh")
+          }
+        } else {
+          handleLogout()
+          throw new Error("Session expired")
+        }
+      } catch (error) {
+        console.error("[v0] Token refresh failed:", error)
+        handleLogout()
+        throw error
+      }
     }
-    
-    throw error
-  }
 
-  return res.json()
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: res.statusText }))
+      
+      // Trigger global UI prompt if feature is locked due to plan tier
+      if (res.status === 403 && error.upgrade_required) {
+        triggerFeatureLock({
+          feature: error.feature || "this premium feature",
+          current_plan: error.current_plan,
+          message: error.message
+        })
+        // Return a Promise that never resolves to halt standard UI error propagation
+        return new Promise(() => {})
+      }
+      
+      throw error
+    }
+
+    return await res.json()
+  } finally {
+    markRequestEnd(requestId)
+  }
 }

@@ -23,11 +23,10 @@ const API_URL =
 
 /* ---------------- BACKEND CALL ---------------- */
 
-async function askBackendAI(message: string) {
-  const token = localStorage.getItem("token")
+async function askBackendAI(message: string, onFeatureLocked: (data: any) => void) {
+  const token = localStorage.getItem("_at") || localStorage.getItem("accessToken");
 
   const res = await fetch(`${API_URL}/api/ai/chat`, {
-
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -37,7 +36,12 @@ async function askBackendAI(message: string) {
   })
 
   if (!res.ok) {
-    throw new Error("AI request failed")
+    const errorData = await res.json().catch(() => ({}));
+    if (res.status === 403 && errorData.upgrade_required) {
+      onFeatureLocked(errorData);
+      throw new Error("PLAN_LOCKED");
+    }
+    throw new Error(errorData.error || errorData.message || "AI request failed");
   }
 
   const data = await res.json()
@@ -77,20 +81,34 @@ export function AIChatBot() {
     ])
 
     try {
-      const reply = await askBackendAI(userText)
+      const { triggerFeatureLock } = await import("@/components/locked-feature-prompt")
+      const reply = await askBackendAI(userText, (data) => {
+        triggerFeatureLock(data)
+      })
       setMessages((prev) => [
         ...prev,
         { id: Date.now() + 1, text: reply, sender: "bot" },
       ])
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          text: "AI backend is not available right now.",
-          sender: "bot",
-        },
-      ])
+    } catch (err: any) {
+      if (err.message === "PLAN_LOCKED") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + 1,
+            text: "🔒 This feature requires a Pro subscription. I've opened the upgrade details for you.",
+            sender: "bot",
+          },
+        ])
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + 1,
+            text: err.message || "AI Assistant is temporarily unavailable. Please try again in a few moments.",
+            sender: "bot",
+          },
+        ])
+      }
     } finally {
       setLoading(false)
     }
