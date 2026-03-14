@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { LockedFeaturePrompt } from "@/components/locked-feature-prompt"
 import { SlowNetworkNotice } from "@/components/slow-network-notice"
+import { NotificationPermissionPrompt } from "@/components/notification-permission-prompt"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -58,6 +59,7 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: "/icon.png",
   },
+  manifest: "/manifest.json",
 }
 
 export default function RootLayout({
@@ -123,6 +125,7 @@ export default function RootLayout({
                 <Toaster richColors closeButton position="top-right" />
                 <LockedFeaturePrompt />
                 <SlowNetworkNotice />
+                <NotificationPermissionPrompt />
               </NotificationProvider>
             </AuthProvider>
           </Suspense>

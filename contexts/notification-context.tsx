@@ -66,21 +66,29 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const { messaging, VAPID_KEY } = await import("@/lib/firebase");
         const { getToken: getFCMToken } = await import("firebase/messaging");
 
+        // Explicitly register service worker for reliability
+        const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+        console.log("✅ Service Worker registered:", registration.scope);
+
         const currentToken = await getFCMToken(messaging, {
           vapidKey: VAPID_KEY,
+          serviceWorkerRegistration: registration,
         });
 
         if (currentToken) {
           console.log("✅ FCM Token generated");
-          // Send token to backend
-          await fetch(`${BACKEND_URL}/api/auth/update-push-token`, {
-            method: "PATCH",
+          // Send token to the new multi-device endpoint
+          await fetch(`${BACKEND_URL}/api/notifications/devices`, {
+            method: "POST",
             credentials: "include",
             headers: {
               "Content-Type": "application/json",
               ...(getAccessToken() ? { "Authorization": `Bearer ${getAccessToken()}` } : {}),
             },
-            body: JSON.stringify({ pushToken: currentToken }),
+            body: JSON.stringify({ 
+              fcmToken: currentToken,
+              deviceType: 'web'
+            }),
           });
         } else {
           console.log("⚠️ No registration token available. Request permission to generate one.");
