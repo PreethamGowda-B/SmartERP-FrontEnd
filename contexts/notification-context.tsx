@@ -64,11 +64,25 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         const { messaging, VAPID_KEY } = await import("@/lib/firebase");
-        const { getToken: getFCMToken } = await import("firebase/messaging");
+        const { getToken: getFCMToken, onMessage } = await import("firebase/messaging");
 
         // Explicitly register service worker for reliability
         const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
         console.log("✅ Service Worker registered:", registration.scope);
+
+        // Handle foreground messages
+        onMessage(messaging, (payload) => {
+          console.log("🔔 FCM Foreground message received:", payload);
+          // Only show local notification if app is hidden to avoid double notification in-app
+          if (document.visibilityState === 'hidden' && payload.notification) {
+            registration.showNotification(payload.notification.title || "New Notification", {
+              body: payload.notification.body,
+              icon: '/icon.png',
+              badge: '/icon.png',
+              data: payload.data
+            });
+          }
+        });
 
         const currentToken = await getFCMToken(messaging, {
           vapidKey: VAPID_KEY,

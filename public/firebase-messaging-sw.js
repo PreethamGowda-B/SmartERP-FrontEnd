@@ -1,4 +1,5 @@
 // Firebase Messaging Service Worker
+// Version: 1.0.2 (Native Elevation Update)
 // This file is required for background push notifications
 
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
