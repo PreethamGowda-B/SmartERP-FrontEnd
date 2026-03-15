@@ -16,17 +16,8 @@ import { DateTimeWeather } from "@/components/date-time-weather"
 import { DashboardTrialBanner } from "@/components/dashboard-trial-banner"
 import { SubscriptionStatus } from "@/components/subscription-status"
 
-import { getAccessToken } from "@/lib/apiClient"
+import { apiClient } from "@/lib/apiClient"
 import { useAuth } from "@/contexts/auth-context"
-
-const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
-
-function authHeaders(): Record<string, string> {
-  const token = getAccessToken()
-  const headers: Record<string, string> = { "Content-Type": "application/json" }
-  if (token) headers["Authorization"] = `Bearer ${token}`
-  return headers
-}
 
 type DashboardMetrics = {
   activeJobs: number
@@ -70,19 +61,13 @@ export default function OwnerDashboard() {
     try {
       setLoading(true)
       setError(null)
-      const [metricsRes, activityRes] = await Promise.all([
-        fetch(`${API}/api/dashboard/owner/metrics`, { credentials: "include", headers: authHeaders() }),
-        fetch(`${API}/api/dashboard/owner/recent-activity`, { credentials: "include", headers: authHeaders() }),
+      const [metricsData, activityData] = await Promise.all([
+        apiClient("/api/dashboard/owner/metrics"),
+        apiClient("/api/dashboard/owner/recent-activity"),
       ])
-
-      if (!metricsRes.ok) throw new Error(`Metrics failed: ${metricsRes.status}`)
-      const metricsData = await metricsRes.json()
+      
       setMetrics(metricsData)
-
-      if (activityRes.ok) {
-        const activityData = await activityRes.json()
-        setRecentActivity(Array.isArray(activityData) ? activityData : [])
-      }
+      setRecentActivity(Array.isArray(activityData) ? activityData : [])
     } catch (err: any) {
       console.error("Error fetching dashboard data:", err)
       setError(err.message)

@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { signIn, signUp } from "@/lib/auth"
+import { apiClient } from "@/lib/apiClient"
 import { useAuth } from "@/contexts/auth-context"
 import { Building2, Loader2, HardHat, UserPlus, CheckCircle2, RefreshCw, Mail } from "lucide-react"
 import { PremiumBackground } from "./premium-background"
@@ -62,13 +63,10 @@ export function LoginForm() {
     setOtpSending(true)
     setOtpError("")
     try {
-      const res = await fetch(`${API_URL}/api/auth/send-otp`, {
+      const data = await apiClient("/api/auth/send-otp", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: targetEmail }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || "Failed to send OTP")
       startCooldown()
     } catch (err: any) {
       setOtpError(err.message || "Failed to send OTP. Please try again.")
@@ -84,13 +82,10 @@ export function LoginForm() {
     setOtpError("")
     try {
       // 1. Verify OTP
-      const verifyRes = await fetch(`${API_URL}/api/auth/verify-otp`, {
+      const verifyData = await apiClient("/api/auth/verify-otp", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: pendingSignupRef.current.email, otp }),
       })
-      const verifyData = await verifyRes.json()
-      if (!verifyRes.ok) throw new Error(verifyData.message || "Invalid OTP")
 
       // 2. OTP verified — create the account
       const user = await signUp(pendingSignupRef.current)
