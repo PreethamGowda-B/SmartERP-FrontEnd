@@ -90,7 +90,7 @@ function getRefreshToken(): string | null {
   return null
 }
 
-// Helper to sync tokens with Android Native bridge
+// Helper to sync with Android bridge
 function syncWithAndroid(token: string, refreshToken?: string | null) {
   if (typeof window !== "undefined" && (window as any).Android?.saveToken) {
     (window as any).Android.saveToken(token, refreshToken || null)
@@ -113,6 +113,9 @@ function handleLogout() {
   }
 }
 
+// Lock to prevent multiple concurrent refresh attempts
+let refreshPromise: Promise<any> | null = null
+
 export async function apiClient(path: string, options: RequestInit = {}) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
@@ -121,7 +124,7 @@ export async function apiClient(path: string, options: RequestInit = {}) {
     ...(options.headers as Record<string, string>),
   }
 
-  // ✅ Attach access token if available (cross-domain Authorization header)
+  // Attach access token if available
   const token = getAccessToken()
   if (token) {
     headers["Authorization"] = `Bearer ${token}`
@@ -136,53 +139,60 @@ export async function apiClient(path: string, options: RequestInit = {}) {
       res = await fetch(`${baseUrl}${path}`, {
         ...options,
         headers,
-        credentials: "include", // still include for same-domain cookie fallback
+        credentials: "include",
       })
     } catch (error) {
       console.error("[v0] Network error in apiClient:", error)
       throw error
     }
 
-    // 🧩 If token expired → try refresh
+    // If token expired → try refresh
     if (res.status === 401) {
       console.warn("[v0] Unauthorized — attempting refresh")
 
-      const storedRefreshToken = getRefreshToken()
-
-      try {
-        const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
+      if (!refreshPromise) {
+        const storedRefreshToken = getRefreshToken()
+        refreshPromise = fetch(`${baseUrl}/api/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
+        }).then(async (r) => {
+          if (r.ok) {
+            const data = await r.json()
+            if (data.accessToken) {
+              setTokens(data.accessToken, data.refreshToken || storedRefreshToken || "")
+              syncWithAndroid(data.accessToken, data.refreshToken)
+              console.log("[v0] Token refreshed successfully")
+            }
+            return data
+          }
+          throw new Error("Refresh failed")
+        }).finally(() => {
+          refreshPromise = null
+        })
+      }
+
+      try {
+        await refreshPromise
+        
+        // Retry original request with new token
+        const newToken = getAccessToken()
+        if (newToken) {
+          headers["Authorization"] = `Bearer ${newToken}`
+        }
+        
+        res = await fetch(`${baseUrl}${path}`, {
+          ...options,
+          headers,
+          credentials: "include",
         })
 
-        if (refreshRes.ok) {
-          const newTokens = await refreshRes.json()
-
-          if (newTokens.accessToken) {
-            setTokens(newTokens.accessToken, newTokens.refreshToken || storedRefreshToken || "")
-            syncWithAndroid(newTokens.accessToken, newTokens.refreshToken)
-            headers["Authorization"] = `Bearer ${newTokens.accessToken}`
-          }
-
-          // Retry original request with new token
-          res = await fetch(`${baseUrl}${path}`, {
-            ...options,
-            headers,
-            credentials: "include",
-          })
-
-          if (res.status === 401) {
-            handleLogout()
-            throw new Error("Session expired after refresh")
-          }
-        } else {
+        if (res.status === 401) {
           handleLogout()
-          throw new Error("Session expired")
+          throw new Error("Session expired after refresh")
         }
       } catch (error) {
-        console.error("[v0] Token refresh failed:", error)
         handleLogout()
         throw error
       }
@@ -191,18 +201,18 @@ export async function apiClient(path: string, options: RequestInit = {}) {
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: res.statusText }))
       
-      // Trigger global UI prompt if feature is locked due to plan tier
+      // Feature locking logic
       if (res.status === 403 && error.upgrade_required) {
         triggerFeatureLock({
           feature: error.feature || "this premium feature",
           current_plan: error.current_plan,
           message: error.message
         })
-        // Return a Promise that never resolves to halt standard UI error propagation
         return new Promise(() => {})
       }
       
-      throw error
+      // Attach status to error for better handling in hooks
+      throw { ...error, status: res.status }
     }
 
     return await res.json()

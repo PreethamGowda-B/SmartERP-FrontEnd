@@ -4,7 +4,7 @@ export interface User {
   id: string
   email: string
   name: string
-  role: "owner" | "employee"
+  role: "owner" | "employee" | "super_admin"
   avatar?: string
   phone?: string
   position?: string

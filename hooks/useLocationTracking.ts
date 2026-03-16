@@ -37,8 +37,11 @@ export function useLocationTracking({ onPermissionChange }: UseLocationTrackingO
     const lastSentRef = useRef<{ lat: number; lng: number } | null>(null)
     const lastSendTime = useRef<number>(0)
     const permRef = useRef<"granted" | "denied" | "prompt" | "unsupported">("prompt")
+    const isDisabledByTier = useRef<boolean>(false)
 
     const sendLocation = useCallback(async (lat: number, lng: number) => {
+        if (isDisabledByTier.current) return
+
         try {
             await apiClient("/api/location/update", {
                 method: "POST",
@@ -46,9 +49,15 @@ export function useLocationTracking({ onPermissionChange }: UseLocationTrackingO
             })
             lastSentRef.current = { lat, lng }
             lastSendTime.current = Date.now()
-        } catch (err) {
-            // Silent fail — location is best-effort
-            console.warn("[useLocationTracking] Failed to send location:", err)
+        } catch (err: any) {
+            // If Forbidden (403), it means the plan doesn't support this.
+            // Disable tracking for this session to avoid repeated modals/unnecessary requests.
+            if (err?.status === 403 || (err?.message && err.message.toLowerCase().includes('upgrade'))) {
+                console.warn("[useLocationTracking] Disabling location tracking: Tier restriction detected")
+                isDisabledByTier.current = true
+            } else {
+                console.warn("[useLocationTracking] Failed to send location:", err)
+            }
         }
     }, [])
 

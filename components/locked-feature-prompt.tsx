@@ -34,6 +34,13 @@ export function LockedFeaturePrompt() {
 
   useEffect(() => {
     const handleLock = (event: FeatureLockEvent) => {
+      // Check if this feature has already been suppressed this session
+      const suppressionKey = `suppress_lock_${event.feature || 'generic'}`
+      if (typeof window !== "undefined" && sessionStorage.getItem(suppressionKey)) {
+        console.log(`[LockedFeaturePrompt] Suppression active for: ${event.feature}`)
+        return
+      }
+
       setLockData(event)
       setIsOpen(true)
     }
@@ -44,6 +51,14 @@ export function LockedFeaturePrompt() {
       if (index > -1) subscribers.splice(index, 1)
     }
   }, [])
+
+  const handleMaybeLater = () => {
+    if (lockData?.feature) {
+      const suppressionKey = `suppress_lock_${lockData.feature}`
+      sessionStorage.setItem(suppressionKey, "true")
+    }
+    setIsOpen(false)
+  }
 
   const handleGoToBilling = () => {
     setIsOpen(false)
@@ -97,7 +112,7 @@ export function LockedFeaturePrompt() {
         <DialogFooter className="flex flex-col sm:flex-row gap-2">
           {(!lockData.user_role || lockData.user_role === 'owner') ? (
             <>
-              <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto font-medium">
+              <Button variant="outline" onClick={handleMaybeLater} className="w-full sm:w-auto font-medium">
                 Maybe Later
               </Button>
               <Button onClick={handleGoToBilling} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md transition-all font-medium flex-1">

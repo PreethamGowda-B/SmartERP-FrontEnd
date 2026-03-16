@@ -10,7 +10,8 @@ import {
   ShieldAlert,
   Info,
   CheckCircle2,
-  Users
+  Users,
+  BellRing
 } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
@@ -44,63 +45,69 @@ export default function AdminAnnouncements() {
 
   return (
     <AdminLayout>
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Global Broadcast Center</h1>
-          <p className="text-muted-foreground mt-1 text-sm font-medium opacity-60">Send high-priority system notifications to all company owners</p>
+      <div className="max-w-5xl mx-auto space-y-10">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Global Broadcast Center</h1>
+            <p className="text-slate-500 mt-1 text-sm font-bold uppercase tracking-widest opacity-80">Dispatch system-wide notifications to all tenants</p>
+          </div>
+          <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-xl border border-amber-100">
+             <BellRing className="h-4 w-4 text-amber-600" />
+             <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Active System Channel</span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="p-8 rounded-3xl border border-white/5 bg-black/40 backdrop-blur-md space-y-6 relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-8 opacity-5">
-                  <Megaphone className="h-32 w-32 text-accent" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {/* Main Form */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="bg-white p-10 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-12 opacity-[0.03] rotate-12">
+                  <Megaphone className="h-48 w-48 text-slate-900" />
                </div>
 
-               <form onSubmit={handleBroadcast} className="space-y-6 relative z-10">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-1">Announcement Subject</label>
+               <form onSubmit={handleBroadcast} className="space-y-8 relative z-10">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Announcement Heading</label>
                     <input 
                       type="text"
-                      placeholder="e.g. System Maintenance, New Feature Alert..."
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white focus:outline-none focus:border-accent/40 transition-all font-medium"
+                      placeholder="e.g. Critical Update: Scheduled Maintenance..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all font-black placeholder:text-slate-300 placeholder:font-bold"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest ml-1">Message Content</label>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Message Detail</label>
                     <textarea 
-                      placeholder="Describe the update or requirement clearly..."
-                      rows={6}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white focus:outline-none focus:border-accent/40 transition-all font-medium resize-none"
+                      placeholder="Enter the full content of your announcement here..."
+                      rows={8}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all font-bold placeholder:text-slate-300 placeholder:font-medium resize-none"
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-4 border-t border-slate-50">
+                    <div className="flex items-center gap-2 p-1.5 bg-slate-50 rounded-2xl border border-slate-100">
                        <button 
                          type="button"
                          onClick={() => setPriority('low')}
-                         className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${priority === 'low' ? 'bg-blue-500/10 border-blue-500 text-blue-500' : 'bg-white/5 border-transparent text-muted-foreground'}`}
+                         className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${priority === 'low' ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
                        >
                          Info
                        </button>
                        <button 
                          type="button"
                          onClick={() => setPriority('medium')}
-                         className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${priority === 'medium' ? 'bg-orange-500/10 border-orange-500 text-orange-500' : 'bg-white/5 border-transparent text-muted-foreground'}`}
+                         className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${priority === 'medium' ? 'bg-white text-amber-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
                        >
                          Standard
                        </button>
                        <button 
                          type="button"
                          onClick={() => setPriority('high')}
-                         className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${priority === 'high' ? 'bg-red-500/10 border-red-500 text-red-500' : 'bg-white/5 border-transparent text-muted-foreground'}`}
+                         className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${priority === 'high' ? 'bg-white text-red-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
                        >
                          Urgent
                        </button>
@@ -109,41 +116,62 @@ export default function AdminAnnouncements() {
                     <Button 
                       type="submit"
                       disabled={sending}
-                      className="bg-accent hover:bg-accent/80 text-white rounded-2xl px-8 py-6 h-auto flex items-center gap-3 font-bold group"
+                      className="bg-slate-900 hover:bg-black text-white rounded-2xl px-10 py-7 h-auto flex items-center gap-4 font-black uppercase tracking-widest text-xs transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-slate-900/20"
                     >
-                      {sending ? "Broadcasting..." : "Dispatch Broadcast"}
-                      <Send className="h-4 w-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                      {sending ? "Processing..." : "Dispatch Now"}
+                      <Send className="h-4 w-4" />
                     </Button>
                   </div>
                </form>
             </div>
           </div>
 
-          {/* Sidebar Tips */}
-          <div className="space-y-4">
-             <div className="p-6 rounded-2xl border border-white/5 bg-accent/5 backdrop-blur-sm space-y-4">
-                <div className="flex items-center gap-3 text-accent">
-                   <ShieldAlert className="h-5 w-5" />
-                   <h4 className="font-bold text-sm uppercase tracking-wide">Developer Policy</h4>
+          {/* Sidebar Info */}
+          <div className="space-y-6">
+             <div className="p-8 rounded-[2rem] bg-slate-900 text-white space-y-6 shadow-2xl relative overflow-hidden">
+                <div className="absolute bottom-0 right-0 p-6 opacity-10">
+                   <ShieldAlert className="h-24 w-24" />
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                   Global broadcasts reach <span className="text-white font-bold">all company owners</span>. Use 'Urgent' priority only for critical system updates or downtime alerts.
-                </p>
+                <div className="relative z-10">
+                   <h4 className="font-black text-lg uppercase tracking-tight mb-3">Broadcast Guidelines</h4>
+                   <p className="text-sm text-slate-400 leading-relaxed font-bold">
+                      Platform-wide announcements are delivered to <span className="text-white">every company owner</span> instance-wide.
+                   </p>
+                   <ul className="mt-6 space-y-4">
+                      <li className="flex items-start gap-3">
+                         <div className="h-5 w-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                         </div>
+                         <span className="text-xs text-slate-400 font-medium">Use 'Urgent' for maintenance notifications.</span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                         <div className="h-5 w-5 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                         </div>
+                         <span className="text-xs text-slate-400 font-medium">Clear subjects improve open rates by 40%.</span>
+                      </li>
+                   </ul>
+                </div>
              </div>
 
-             <div className="p-6 rounded-2xl border border-white/5 bg-white/5 backdrop-blur-sm space-y-4">
-                <div className="flex items-center gap-3 text-white">
-                   <Users className="h-5 w-5" />
-                   <h4 className="font-bold text-sm uppercase tracking-wide">Audience Segment</h4>
-                </div>
-                <div className="space-y-3">
-                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
-                      <span className="text-muted-foreground">Target Role:</span>
-                      <span className="text-accent italic">Company Owners</span>
+             <div className="p-8 rounded-[2rem] bg-white border border-slate-200 shadow-sm space-y-6">
+                <div className="flex items-center gap-4">
+                   <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+                      <Users className="h-6 w-6 text-slate-900" />
                    </div>
-                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
-                      <span className="text-muted-foreground">Delivery:</span>
-                      <span className="text-white">In-App + Push</span>
+                   <div>
+                      <h4 className="font-black text-slate-900 text-sm uppercase tracking-tight">Reach Metrics</h4>
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Target Audience</p>
+                   </div>
+                </div>
+                <div className="space-y-4 pt-4 border-t border-slate-50">
+                   <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Primary Target</span>
+                      <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded">Tenants</span>
+                   </div>
+                   <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Channels</span>
+                      <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Dashboard + Mail</span>
                    </div>
                 </div>
              </div>
