@@ -50,7 +50,7 @@ export function DashboardTrialBanner() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, height: 0 }}
-      className={`relative overflow-hidden shadow-lg mb-6 rounded-xl border border-white/10 ${bgColor} text-white`}
+      className={`relative overflow-hidden shadow-lg rounded-none border-b border-white/10 ${bgColor} text-white`}
     >
       <div className="absolute inset-0 bg-[url('/grain.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
       
@@ -61,7 +61,7 @@ export function DashboardTrialBanner() {
           </div>
           <div>
             <h3 className="font-semibold text-[15px] md:text-base leading-tight drop-shadow-sm">
-                Pro Trial Active — {days} {days === 1 ? 'day' : 'days'} remaining
+                Under {days} days your trial will end
             </h3>
             <p className="text-sm text-white/80 mt-0.5 leading-snug">
                 {days <= 3 

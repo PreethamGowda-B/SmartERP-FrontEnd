@@ -50,6 +50,7 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
       <div className="min-h-screen bg-background">
         <OwnerSidebar />
         <div className="lg:pl-64">
+          <DashboardTrialBanner />
           <MainContent>{children}</MainContent>
         </div>
 

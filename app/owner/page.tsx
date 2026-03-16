@@ -120,7 +120,6 @@ export default function OwnerDashboard() {
   return (
     <OwnerLayout>
       <div className="space-y-8 animate-in fade-in duration-1000">
-        <DashboardTrialBanner />
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
