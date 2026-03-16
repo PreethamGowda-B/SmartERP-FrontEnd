@@ -26,19 +26,25 @@ function CallbackContent() {
             try {
                 const user = JSON.parse(decodeURIComponent(userParam))
 
+                const isSuperAdmin = user.role === "super_admin"
+
                 // ✅ Store tokens in memory for cross-domain API calls
                 if (accessToken && refreshToken) {
-                    setTokens(accessToken, refreshToken)
+                    setTokens(accessToken, refreshToken, isSuperAdmin)
                 }
 
-                // Store user profile for UI rendering
-                localStorage.setItem("smarterp_user", JSON.stringify(user))
+                // Store user profile for UI rendering (with isolation)
+                const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
+                localStorage.setItem(userKey, JSON.stringify(user))
 
                 // Update context
                 setUser(user)
 
                 // Redirect based on role
-                if (user.role === "owner") {
+                if (isSuperAdmin) {
+                    // Try to use the [adminRoute] from the URL or fallback to the known slug
+                    router.push("/super-admin-control-center/dashboard")
+                } else if (user.role === "owner") {
                     router.push("/owner")
                 } else {
                     router.push("/employee")

@@ -35,45 +35,78 @@ function markRequestEnd(requestId: string) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-let _accessToken: string | null =
-  typeof window !== "undefined" 
-    ? (sessionStorage.getItem("_at") || localStorage.getItem("_at") || localStorage.getItem("accessToken")) 
-    : null
-let _refreshToken: string | null =
-  typeof window !== "undefined" 
-    ? (sessionStorage.getItem("_rt") || localStorage.getItem("_rt") || localStorage.getItem("refreshToken")) 
-    : null
+let _accessToken: string | null = null
+let _refreshToken: string | null = null
 
-export function setTokens(accessToken: string, refreshToken: string) {
+const ADMIN_AT = "_admin_at"
+const ADMIN_RT = "_admin_rt"
+const USER_AT = "_at"
+const USER_RT = "_rt"
+
+function getStorageKeys() {
+  if (typeof window === "undefined") return { at: USER_AT, rt: USER_RT }
+  
+  // Heuristic: If we are on an admin route or the admin user is the active one in localStorage context
+  const isAdminPath = window.location.pathname.includes('super-admin-control-center') || 
+                      window.location.pathname.includes('[adminRoute]')
+  
+  // We check if an admin user exists
+  const adminUser = localStorage.getItem("smarterp_admin_user")
+  
+  if (isAdminPath || adminUser) {
+    return { at: ADMIN_AT, rt: ADMIN_RT }
+  }
+  return { at: USER_AT, rt: USER_RT }
+}
+
+export function setTokens(accessToken: string, refreshToken: string, isAdmin = false) {
   _accessToken = accessToken
   _refreshToken = refreshToken
   if (typeof window !== "undefined") {
-    // Save to BOTH for maximum reliability across reloads/bridge syncs
-    sessionStorage.setItem("_at", accessToken)
-    sessionStorage.setItem("_rt", refreshToken)
-    localStorage.setItem("_at", accessToken)
-    localStorage.setItem("_rt", refreshToken)
+    const { at, rt } = isAdmin ? { at: ADMIN_AT, rt: ADMIN_RT } : { at: USER_AT, rt: USER_RT }
+    
+    sessionStorage.setItem(at, accessToken)
+    sessionStorage.setItem(rt, refreshToken)
+    localStorage.setItem(at, accessToken)
+    localStorage.setItem(rt, refreshToken)
+    
+    // Sync with legacy names if not admin
+    if (!isAdmin) {
+      localStorage.setItem("accessToken", accessToken)
+      localStorage.setItem("refreshToken", refreshToken)
+    }
   }
 }
 
-export function clearTokens() {
-  _accessToken = null
-  _refreshToken = null
+export function clearTokens(isAdmin?: boolean) {
+  if (typeof isAdmin === 'undefined') {
+    _accessToken = null
+    _refreshToken = null
+  }
   if (typeof window !== "undefined") {
-    sessionStorage.removeItem("_at")
-    sessionStorage.removeItem("_rt")
-    localStorage.removeItem("_at")
-    localStorage.removeItem("_rt")
-    // Also clear Android-specific keys if they exist
-    localStorage.removeItem("accessToken")
-    localStorage.removeItem("refreshToken")
+    const keysToClear = isAdmin === true ? [{at: ADMIN_AT, rt: ADMIN_RT}] : 
+                       isAdmin === false ? [{at: USER_AT, rt: USER_RT}] :
+                       [{at: ADMIN_AT, rt: ADMIN_RT}, {at: USER_AT, rt: USER_RT}]
+    
+    keysToClear.forEach(k => {
+      sessionStorage.removeItem(k.at)
+      sessionStorage.removeItem(k.rt)
+      localStorage.removeItem(k.at)
+      localStorage.removeItem(k.rt)
+    })
+    
+    if (isAdmin !== true) {
+      localStorage.removeItem("accessToken")
+      localStorage.removeItem("refreshToken")
+    }
   }
 }
 
 export function getAccessToken() {
   if (_accessToken) return _accessToken
   if (typeof window !== "undefined") {
-    const token = sessionStorage.getItem("_at") || localStorage.getItem("_at") || localStorage.getItem("accessToken")
+    const { at } = getStorageKeys()
+    const token = sessionStorage.getItem(at) || localStorage.getItem(at) || localStorage.getItem("accessToken")
     if (token) _accessToken = token
     return token
   }
@@ -83,7 +116,8 @@ export function getAccessToken() {
 function getRefreshToken(): string | null {
   if (_refreshToken) return _refreshToken
   if (typeof window !== "undefined") {
-    const token = sessionStorage.getItem("_rt") || localStorage.getItem("_rt") || localStorage.getItem("refreshToken")
+    const { rt } = getStorageKeys()
+    const token = sessionStorage.getItem(rt) || localStorage.getItem(rt) || localStorage.getItem("refreshToken")
     if (token) _refreshToken = token
     return token
   }
@@ -101,8 +135,9 @@ function syncWithAndroid(token: string, refreshToken?: string | null) {
 function handleLogout() {
   if (typeof window !== "undefined") {
     console.warn("[v0] Session expired or invalid — logging out")
-    clearTokens()
+    clearTokens() // Clears all token storage
     localStorage.removeItem("smarterp_user")
+    localStorage.removeItem("smarterp_admin_user")
     sessionStorage.removeItem("smarterp_mock_users")
 
     if ((window as any).Android?.logout) {
@@ -161,9 +196,9 @@ export async function apiClient(path: string, options: RequestInit = {}) {
           if (r.ok) {
             const data = await r.json()
             if (data.accessToken) {
-              setTokens(data.accessToken, data.refreshToken || storedRefreshToken || "")
+              setTokens(data.accessToken, data.refreshToken || storedRefreshToken || "", data.isSuperAdmin)
               syncWithAndroid(data.accessToken, data.refreshToken)
-              console.log("[v0] Token refreshed successfully")
+              console.log("[v0] Token refreshed successfully", data.isSuperAdmin ? "(Admin)" : "(User)")
             }
             return data
           }

@@ -141,21 +141,22 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Login failed" }))
       console.error("[v0] Backend login error:", error)
-      return null
+      // Throw with details if available (for suspension message)
+      throw new Error(error.details || error.message || "Login failed")
     }
 
     const data = await response.json()
-    console.log("[v0] Backend login successful:", data.user?.email)
-
     const userDetails = data.user || data
+    const isSuperAdmin = userDetails.role === 'super_admin'
 
     // ✅ Store tokens in memory for Authorization header (cross-domain safe)
     if (data.accessToken && data.refreshToken) {
-      setTokens(data.accessToken, data.refreshToken)
+      setTokens(data.accessToken, data.refreshToken, isSuperAdmin)
     }
 
     // ✅ Store user profile (name, email, role) for UI rendering only
-    localStorage.setItem("smarterp_user", JSON.stringify(userDetails))
+    const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
+    localStorage.setItem(userKey, JSON.stringify(userDetails))
 
     return userDetails
   } catch (error) {
@@ -200,6 +201,7 @@ export const signOut = async (): Promise<void> => {
 
   clearTokens()
   localStorage.removeItem("smarterp_user")
+  localStorage.removeItem("smarterp_admin_user")
   sessionStorage.removeItem("smarterp_mock_users")
 
   // ✅ Notify Android bridge to clear native session
@@ -211,6 +213,15 @@ export const signOut = async (): Promise<void> => {
 export const getCurrentUser = (): User | null => {
   if (typeof window === "undefined") return null
 
-  const stored = localStorage.getItem("smarterp_user")
+  // Priority: If on an admin path, check admin user first
+  const isAdminPath = window.location.pathname.includes('super-admin-control-center') || 
+                      window.location.pathname.includes('[adminRoute]')
+
+  if (isAdminPath) {
+    const adminStored = localStorage.getItem("smarterp_admin_user")
+    if (adminStored) return JSON.parse(adminStored)
+  }
+
+  const stored = localStorage.getItem("smarterp_user") || localStorage.getItem("smarterp_admin_user")
   return stored ? JSON.parse(stored) : null
 }
