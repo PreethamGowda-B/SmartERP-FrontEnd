@@ -46,6 +46,17 @@ export function LoginForm() {
   // Hold pending signup data while waiting for OTP
   const pendingSignupRef = useRef<any>(null)
 
+  // ── Handle Error from Redirect (e.g. Google Auth) ─────────────────────────
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search)
+      const errorParam = urlParams.get("error")
+      if (errorParam === "account_suspended") {
+        setError("Your account is suspended/disabled because of some unusual activities found in your account. Please contact our customer care to reactivate account. Customer care email: prozyncinnovations@gmail.com")
+      }
+    }
+  }, [])
+
   const startCooldown = () => {
     setResendCooldown(60)
     cooldownRef.current = setInterval(() => {
