@@ -52,10 +52,10 @@ export function LoginForm() {
       const urlParams = new URLSearchParams(window.location.search)
       const errorParam = urlParams.get("error")
       if (errorParam === "account_suspended") {
-        setError("Your account is suspended/disabled because of some unusual activities found in your account. Please contact our customer care to reactivate account. Customer care email: prozyncinnovations@gmail.com")
+        router.push("/suspended")
       }
     }
-  }, [])
+  }, [router])
 
   const startCooldown = () => {
     setResendCooldown(60)
@@ -140,6 +140,8 @@ export function LoginForm() {
           setUser(user)
           router.push(user.role === "owner" ? "/owner" : "/employee")
         } else {
+          // If signIn returned null but didn't throw, it might have handled a redirect (suspension)
+          // We only set the generic error if we are still on the page
           setError("Invalid email or password. Please check your credentials or create an account.")
         }
       } else {

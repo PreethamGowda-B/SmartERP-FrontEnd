@@ -35,9 +35,6 @@ function markRequestEnd(requestId: string) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-let _accessToken: string | null = null
-let _refreshToken: string | null = null
-
 const ADMIN_AT = "_admin_at"
 const ADMIN_RT = "_admin_rt"
 const USER_AT = "_at"
@@ -46,22 +43,28 @@ const USER_RT = "_rt"
 function getStorageKeys() {
   if (typeof window === "undefined") return { at: USER_AT, rt: USER_RT }
   
-  // Heuristic: If we are on an admin route or the admin user is the active one in localStorage context
-  const isAdminPath = window.location.pathname.includes('super-admin-control-center') || 
-                      window.location.pathname.includes('[adminRoute]')
+  const adminSlug = process.env.NEXT_PUBLIC_ADMIN_ROUTE || 'platform-control-xyz'
   
-  // We check if an admin user exists
+  const pathname = window.location.pathname
+  const isAdminPath = pathname.includes(`/${adminSlug}`) || 
+                      pathname.includes('/super-admin') ||
+                      pathname.includes('[adminRoute]')
+  
+  // Also check if we have an active admin session in localStorage
   const adminUser = localStorage.getItem("smarterp_admin_user")
   
-  if (isAdminPath || adminUser) {
+  // Contextual priority: 
+  // 1. If we are on an admin SPECIFIC path, definitely use admin keys.
+  // 2. If we are on a generic path but ONLY have an admin user, use admin keys.
+  // 3. Otherwise, use user keys.
+  if (isAdminPath || (adminUser && !localStorage.getItem("smarterp_user"))) {
     return { at: ADMIN_AT, rt: ADMIN_RT }
   }
+  
   return { at: USER_AT, rt: USER_RT }
 }
 
 export function setTokens(accessToken: string, refreshToken: string, isAdmin = false) {
-  _accessToken = accessToken
-  _refreshToken = refreshToken
   if (typeof window !== "undefined") {
     const { at, rt } = isAdmin ? { at: ADMIN_AT, rt: ADMIN_RT } : { at: USER_AT, rt: USER_RT }
     
@@ -70,7 +73,7 @@ export function setTokens(accessToken: string, refreshToken: string, isAdmin = f
     localStorage.setItem(at, accessToken)
     localStorage.setItem(rt, refreshToken)
     
-    // Sync with legacy names if not admin
+    // Sync with generic keys if not admin for backward compatibility
     if (!isAdmin) {
       localStorage.setItem("accessToken", accessToken)
       localStorage.setItem("refreshToken", refreshToken)
@@ -79,10 +82,6 @@ export function setTokens(accessToken: string, refreshToken: string, isAdmin = f
 }
 
 export function clearTokens(isAdmin?: boolean) {
-  if (typeof isAdmin === 'undefined') {
-    _accessToken = null
-    _refreshToken = null
-  }
   if (typeof window !== "undefined") {
     const keysToClear = isAdmin === true ? [{at: ADMIN_AT, rt: ADMIN_RT}] : 
                        isAdmin === false ? [{at: USER_AT, rt: USER_RT}] :
@@ -103,23 +102,17 @@ export function clearTokens(isAdmin?: boolean) {
 }
 
 export function getAccessToken() {
-  if (_accessToken) return _accessToken
   if (typeof window !== "undefined") {
     const { at } = getStorageKeys()
-    const token = sessionStorage.getItem(at) || localStorage.getItem(at) || localStorage.getItem("accessToken")
-    if (token) _accessToken = token
-    return token
+    return sessionStorage.getItem(at) || localStorage.getItem(at) || localStorage.getItem("accessToken")
   }
   return null
 }
 
 function getRefreshToken(): string | null {
-  if (_refreshToken) return _refreshToken
   if (typeof window !== "undefined") {
     const { rt } = getStorageKeys()
-    const token = sessionStorage.getItem(rt) || localStorage.getItem(rt) || localStorage.getItem("refreshToken")
-    if (token) _refreshToken = token
-    return token
+    return sessionStorage.getItem(rt) || localStorage.getItem(rt) || localStorage.getItem("refreshToken")
   }
   return null
 }
@@ -160,9 +153,9 @@ export async function apiClient(path: string, options: RequestInit = {}) {
   }
 
   // Attach access token if available
-  const token = getAccessToken()
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`
+  const currentToken = getAccessToken()
+  if (currentToken) {
+    headers["Authorization"] = `Bearer ${currentToken}`
   }
 
   const requestId = Math.random().toString(36).substring(7)

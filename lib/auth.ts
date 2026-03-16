@@ -139,10 +139,19 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     })
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Login failed" }))
-      console.error("[v0] Backend login error:", error)
+      const errorData = await response.json().catch(() => ({ message: "Login failed" }))
+      console.error("[v0] Backend login error:", errorData)
+      
+      // 🚀 Handle account suspension with direct redirect
+      if (errorData.error === "company_suspended") {
+        if (typeof window !== "undefined") {
+          window.location.href = "/suspended"
+          return null
+        }
+      }
+      
       // Throw with details if available (for suspension message)
-      throw new Error(error.details || error.message || "Login failed")
+      throw new Error(errorData.details || errorData.message || "Login failed")
     }
 
     const data = await response.json()
@@ -214,8 +223,11 @@ export const getCurrentUser = (): User | null => {
   if (typeof window === "undefined") return null
 
   // Priority: If on an admin path, check admin user first
-  const isAdminPath = window.location.pathname.includes('super-admin-control-center') || 
-                      window.location.pathname.includes('[adminRoute]')
+  const adminSlug = process.env.NEXT_PUBLIC_ADMIN_ROUTE || 'platform-control-xyz'
+  const pathname = window.location.pathname
+  const isAdminPath = pathname.includes(`/${adminSlug}`) || 
+                      pathname.includes('/super-admin') || 
+                      pathname.includes('[adminRoute]')
 
   if (isAdminPath) {
     const adminStored = localStorage.getItem("smarterp_admin_user")
