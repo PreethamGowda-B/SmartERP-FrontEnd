@@ -169,13 +169,19 @@ export const signIn = async (email: string, password: string): Promise<User | nu
 
     return userDetails
   } catch (error) {
-    console.log(
-      "[v0] Backend unavailable, falling back to mock auth:",
-      error instanceof Error ? error.message : String(error),
-    )
+    // ⚠️ Only fall back to mock auth if the backend was UNREACHABLE (network error).
+    // If the backend returned a real HTTP error (4xx/5xx), we already threw above — don't mask it.
+    const isNetworkError = error instanceof TypeError && (error.message.includes("fetch") || error.message.includes("network") || error.message.includes("Failed"))
 
-    // 🧩 Fallback: Local mock auth (offline mode)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    if (!isNetworkError) {
+      // Re-throw real backend errors so the login form can display them properly
+      throw error
+    }
+
+    console.warn("[v0] Backend unreachable (network error), activating offline mock auth:", error instanceof Error ? error.message : String(error))
+
+    // 🧩 Offline-only fallback: Local mock auth (only when backend is completely unreachable)
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     const allMockUsers = getMockUsers()
     const mockUser = allMockUsers.find((u) => u.email === email)
