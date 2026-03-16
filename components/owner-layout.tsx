@@ -12,6 +12,7 @@ import PageTransition from './page-transition'
 import DotsLoader from '@/components/dots-loader'
 import { TrialWelcomeModal } from '@/components/trial-welcome-modal'
 import { LockedFeaturePrompt } from '@/components/locked-feature-prompt'
+import { DashboardTrialBanner } from '@/components/dashboard-trial-banner'
 
 interface OwnerLayoutProps {
   children: React.ReactNode
