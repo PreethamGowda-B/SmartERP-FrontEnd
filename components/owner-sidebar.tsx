@@ -26,6 +26,7 @@ import {
   MapPin,
   CreditCard,
   Headset,
+  Megaphone,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -43,6 +44,7 @@ const navigation = [
   { name: "Tracking", href: "/owner/tracking", icon: MapPin },
   { name: "Settings", href: "/owner/settings", icon: Settings },
   { name: "Billing", href: "/owner/billing", icon: CreditCard },
+  { name: "HR Hub", href: "/owner/hr-hub", icon: Megaphone },
   { name: "Contact Support", href: "/owner/support", icon: Headset },
 ]
 

@@ -22,6 +22,7 @@ import {
   Bell,
   BarChart3,
   Settings,
+  Megaphone,
   LogOut,
   Menu,
   X,
@@ -37,6 +38,7 @@ const navigation = [
   { name: "Messages", href: "/employee/messages", icon: MessageSquare },
   { name: "Notifications", href: "/employee/notifications", icon: Bell },
   { name: "Reports", href: "/employee/reports", icon: BarChart3 },
+  { name: "Workplace", href: "/employee/hr-hub", icon: Megaphone },
   { name: "Settings", href: "/employee/settings", icon: Settings },
 ]
 
