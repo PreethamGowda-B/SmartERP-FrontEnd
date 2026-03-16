@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { useAuth } from "./auth-context"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { getAccessToken } from "@/lib/apiClient"
+import { apiClient, getAccessToken } from "@/lib/apiClient"
 
 export interface Notification {
   id: string
@@ -29,7 +29,7 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://smarterp-backendend.onrender.com"
+// BACKEND_URL removed as apiClient handles it
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -40,17 +40,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   // Fetch notifications from backend
   const fetchNotifications = useCallback(async () => {
     try {
-      const token = getAccessToken()
-      const response = await fetch(`${BACKEND_URL}/api/notifications`, {
-        credentials: "include",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setNotifications(data)
-        console.log(`✅ Fetched ${data.length} notifications`)
-      }
+      const data = await apiClient("/api/notifications")
+      setNotifications(data || [])
+      console.log(`✅ Fetched ${data?.length || 0} notifications`)
     } catch (error) {
       console.error("❌ Error fetching notifications:", error)
     }
@@ -92,13 +84,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         if (currentToken) {
           console.log("✅ FCM Token generated");
           // Send token to the new multi-device endpoint
-          await fetch(`${BACKEND_URL}/api/notifications/devices`, {
+          await apiClient("/api/notifications/devices", {
             method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              ...(getAccessToken() ? { "Authorization": `Bearer ${getAccessToken()}` } : {}),
-            },
             body: JSON.stringify({ 
               fcmToken: currentToken,
               deviceType: 'web'
@@ -130,6 +117,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setupFCM() // Request FCM permission
 
     // SSE requires token as query param since EventSource doesn't support custom headers
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://smarterp-backendend.onrender.com"
     const token = getAccessToken()
     const sseUrl = token
       ? `${BACKEND_URL}/api/notifications/sse?token=${encodeURIComponent(token)}`
@@ -211,17 +199,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const markAsRead = async (id: string) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/notifications/${id}/read`, {
+      await apiClient(`/api/notifications/${id}/read`, {
         method: "PATCH",
-        credentials: "include", // Send HttpOnly cookies
       })
 
-      if (response.ok) {
-        setNotifications((prev) =>
-          prev.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)),
-        )
-        console.log(`✅ Notification ${id} marked as read`)
-      }
+      setNotifications((prev) =>
+        prev.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)),
+      )
+      console.log(`✅ Notification ${id} marked as read`)
     } catch (error) {
       console.error("❌ Error marking notification as read:", error)
     }
@@ -229,15 +214,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/notifications/mark-all-read`, {
+      await apiClient("/api/notifications/mark-all-read", {
         method: "PATCH",
-        credentials: "include", // Send HttpOnly cookies
       })
 
-      if (response.ok) {
-        setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })))
-        console.log("✅ All notifications marked as read")
-      }
+      setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })))
+      console.log("✅ All notifications marked as read")
     } catch (error) {
       console.error("❌ Error marking all as read:", error)
     }
