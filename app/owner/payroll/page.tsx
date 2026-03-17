@@ -22,9 +22,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, Plus, Loader2, Search, Calendar } from "lucide-react"
+import { DollarSign, Plus, Loader2, Search, Calendar, FileText } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
+import { ExportButton } from "@/components/export-button"
 
 interface Employee {
   id: string
@@ -185,15 +186,37 @@ export default function OwnerPayrollPage() {
             <p className="text-muted-foreground mt-1">Create and manage employee payroll records</p>
           </div>
 
-          {/* Create Payroll Button */}
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Payroll
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+          <div className="flex items-center gap-3">
+            <ExportButton
+              filename="Payroll_Report"
+              title="Payroll Records Report"
+              subtitle={`Total Records: ${filteredPayrolls.length}`}
+              data={filteredPayrolls.map(p => ({
+                ...p,
+                month_name: MONTHS[p.payroll_month - 1],
+                period: `${MONTHS[p.payroll_month - 1]} ${p.payroll_year}`
+              }))}
+              columns={[
+                { header: "Employee Name", dataKey: "employee_name" },
+                { header: "Email", dataKey: "employee_email" },
+                { header: "Period", dataKey: "period" },
+                { header: "Base Salary", dataKey: "base_salary" },
+                { header: "Extra Amount", dataKey: "extra_amount" },
+                { header: "Increment", dataKey: "salary_increment" },
+                { header: "Deduction", dataKey: "deduction" },
+                { header: "Total Salary", dataKey: "total_salary" },
+                { header: "Remarks", dataKey: "remarks" }
+              ]}
+            />
+            {/* Create Payroll Button */}
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Payroll
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>Create New Payroll</DialogTitle>
                 <DialogDescription>
@@ -343,6 +366,7 @@ export default function OwnerPayrollPage() {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
 
         {/* Filters */}
         <Card>

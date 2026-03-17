@@ -11,6 +11,8 @@ import { useAuth } from "@/contexts/auth-context"
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
 import { getAccessToken } from "@/lib/apiClient"
+import { ExportButton } from "@/components/export-button"
+
 function authHeaders(): Record<string, string> {
   const token = getAccessToken()
   const headers: Record<string, string> = {}
@@ -109,9 +111,33 @@ export default function OwnerAttendancePage() {
   return (
     <OwnerLayout>
       <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Attendance Management</h1>
-          <p className="text-muted-foreground">Monitor employee attendance</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Attendance Management</h1>
+            <p className="text-muted-foreground">Monitor employee attendance</p>
+          </div>
+          <ExportButton
+            filename={`Attendance_Report_${new Date().toISOString().split('T')[0]}`}
+            title="Attendance Report"
+            subtitle={`Total Employees: ${summary.total}`}
+            data={employees.map(e => ({
+              ...e,
+              formatted_date: e.date ? new Date(e.date).toLocaleDateString() : "—",
+              in_time: e.check_in_time ? new Date(e.check_in_time).toLocaleTimeString() : "—",
+              out_time: e.check_out_time ? new Date(e.check_out_time).toLocaleTimeString() : "—",
+              hours: e.working_hours ? `${e.working_hours} hrs` : "—",
+              formatted_status: e.status || (e.check_in_time ? "Present" : "Absent")
+            }))}
+            columns={[
+              { header: "Employee Name", dataKey: "employee_name" },
+              { header: "Email", dataKey: "employee_email" },
+              { header: "Date", dataKey: "formatted_date" },
+              { header: "Check In", dataKey: "in_time" },
+              { header: "Check Out", dataKey: "out_time" },
+              { header: "Status", dataKey: "formatted_status" },
+              { header: "Working Hours", dataKey: "hours" }
+            ]}
+          />
         </div>
 
         {/* Summary Cards */}

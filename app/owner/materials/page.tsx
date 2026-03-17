@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Package, Search, Loader2, Check, X, Clock } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
+import { ExportButton } from "@/components/export-button"
 
 interface MaterialRequest {
   id: number
@@ -121,9 +122,29 @@ export default function OwnerMaterialsPage() {
   return (
     <OwnerLayout>
       <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Material Requests</h1>
-          <p className="text-muted-foreground mt-1">Review and approve material requests from employees</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Material Requests</h1>
+            <p className="text-muted-foreground mt-1">Review and approve material requests from employees</p>
+          </div>
+          <ExportButton
+            filename="Material_Requests_Report"
+            title="Material Requests Report"
+            subtitle={`Total Requests: ${filteredRequests.length}`}
+            data={filteredRequests.map(r => ({
+              ...r,
+              formatted_date: new Date(r.created_at).toLocaleString()
+            }))}
+            columns={[
+              { header: "Item Name", dataKey: "item_name" },
+              { header: "Requested By", dataKey: "requested_by_name" },
+              { header: "Quantity", dataKey: "quantity" },
+              { header: "Urgency", dataKey: "urgency" },
+              { header: "Status", dataKey: "status" },
+              { header: "Description", dataKey: "description" },
+              { header: "Requested At", dataKey: "formatted_date" }
+            ]}
+          />
         </div>
 
         {error && (

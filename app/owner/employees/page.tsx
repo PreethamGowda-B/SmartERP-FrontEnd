@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Users, Search, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye, Save, X } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
+import { ExportButton } from "@/components/export-button"
 
 interface Employee {
   id: number
@@ -164,6 +165,23 @@ export default function EmployeesPage() {
               Manage employees who have registered via the Employee Portal
             </p>
           </div>
+          <ExportButton
+            filename="Employee_Directory_Report"
+            title="Employee Directory Report"
+            subtitle={`Total Employees: ${totalCount}`}
+            data={filtered.map(e => ({
+              ...e,
+              formatted_created_at: e.created_at ? new Date(e.created_at).toLocaleDateString() : "—"
+            }))}
+            columns={[
+              { header: "Name", dataKey: "name" },
+              { header: "Email", dataKey: "email" },
+              { header: "Department", dataKey: "department" },
+              { header: "Position", dataKey: "position" },
+              { header: "Status", dataKey: "status" },
+              { header: "Account Created", dataKey: "formatted_created_at" }
+            ]}
+          />
         </div>
 
         {/* Global error banner */}

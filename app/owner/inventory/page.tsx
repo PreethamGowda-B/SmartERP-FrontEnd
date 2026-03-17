@@ -8,6 +8,7 @@ import InventoryInsights from "@/components/inventory-insights"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus } from "lucide-react"
+import { ExportButton } from "@/components/export-button"
 
 type InventoryItem = {
   id: number
@@ -67,10 +68,30 @@ export default function OwnerInventoryPage() {
               </h1>
               <p className="text-muted-foreground mt-1">Manage and track all inventory items across your organization.</p>
             </div>
-            <Button onClick={handleOpenForm} size="lg">
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Stock
-            </Button>
+            <div className="flex items-center gap-3">
+              <ExportButton
+                filename="Inventory_Report"
+                title="Inventory Status Report"
+                subtitle={`Total Unique Items: ${inventoryItems.length}`}
+                data={inventoryItems.map(item => ({
+                  ...item,
+                  status: item.quantity <= (item.min_quantity || 0) ? "Low Stock" : "Available"
+                }))}
+                columns={[
+                  { header: "Item Name", dataKey: "name" },
+                  { header: "Category", dataKey: "category" },
+                  { header: "Current Quantity", dataKey: "quantity" },
+                  { header: "Min Quantity", dataKey: "min_quantity" },
+                  { header: "Status", dataKey: "status" },
+                  { header: "Supplier", dataKey: "supplier_name" },
+                  { header: "Description", dataKey: "description" }
+                ]}
+              />
+              <Button onClick={handleOpenForm} size="lg">
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Stock
+              </Button>
+            </div>
           </div>
 
           <InventoryTable role="owner" refreshTrigger={refreshTrigger} onItemsChange={handleItemsChange} onEdit={handleEdit} />

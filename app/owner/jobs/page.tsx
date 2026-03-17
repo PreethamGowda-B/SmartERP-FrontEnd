@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import type { Job } from "@/lib/data"
 import { useJobs } from "@/contexts/job-context"
+import { ExportButton } from "@/components/export-button"
 import {
   Plus, Search, Filter, Calendar, Users, CheckCircle2, Clock,
   XCircle, AlertCircle, TrendingUp, Edit, Trash2, RefreshCw,
@@ -165,6 +166,28 @@ export default function OwnerJobsPage() {
               <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
               {isRefreshing ? "Refreshing…" : "Refresh"}
             </Button>
+
+            <ExportButton
+              filename="Jobs_Status_Report"
+              title="Project Jobs Report"
+              subtitle={`Total Jobs: ${filteredJobs.length}`}
+              data={filteredJobs.map(j => ({
+                ...j,
+                formatted_created: j.created_at ? new Date(j.created_at).toLocaleDateString() : "—",
+                formatted_accepted: j.accepted_at ? new Date(j.accepted_at).toLocaleDateString() : "—",
+                formatted_completed: j.completed_at ? new Date(j.completed_at).toLocaleDateString() : "—",
+                progress_text: `${j.progress || 0}%`
+              }))}
+              columns={[
+                { header: "Job Title", dataKey: "title" },
+                { header: "Status", dataKey: "status" },
+                { header: "Assigned Employee", dataKey: "employee_email" },
+                { header: "Progress", dataKey: "progress_text" },
+                { header: "Created Date", dataKey: "formatted_created" },
+                { header: "Accepted Date", dataKey: "formatted_accepted" },
+                { header: "Completed Date", dataKey: "formatted_completed" }
+              ]}
+            />
 
             <Button onClick={handleCreateJob} size="lg">
               <Plus className="h-4 w-4 mr-2" />
