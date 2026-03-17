@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { EmployeeSidebar } from "@/components/employee-sidebar"
 import { AIChatBot } from "@/components/ai-chat-bot"
-import { NavLoadingProvider, useNavLoading } from '@/components/nav-loading-context'
+import { useLoading } from "@/contexts/loading-context"
 import PageTransition from './page-transition'
 import { Button } from "@/components/ui/button"
 import { Bot } from "lucide-react"
@@ -56,24 +56,22 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   // ───────────────────────────────────────────────────────────────────────────
 
   return (
-    <NavLoadingProvider>
-      <div className="min-h-screen bg-background">
-        <EmployeeSidebar />
-        <div className="lg:pl-64">
-          <MainContent>{children}</MainContent>
-        </div>
-
-        <AIChatBot />
-        <PageTransition />
+    <div className="min-h-screen bg-background">
+      <EmployeeSidebar />
+      <div className="lg:pl-64">
+        <MainContent>{children}</MainContent>
       </div>
-    </NavLoadingProvider>
+
+      <AIChatBot />
+      <PageTransition />
+    </div>
   )
 }
 
 function MainContent({ children }: { children: React.ReactNode }) {
-  const { loadingId } = useNavLoading()
+  const { isActivelyLoading } = useLoading()
   return (
-    <main className={`p-4 lg:p-8 transition-all duration-400 ease-in-out ${loadingId ? 'opacity-30 translate-y-2' : 'opacity-100 translate-y-0'}`}>
+    <main className={`p-4 lg:p-8 transition-all duration-400 ease-in-out ${isActivelyLoading ? 'opacity-30 translate-y-2 blur-[2px]' : 'opacity-100 translate-y-0 filter-none'}`}>
       {children}
     </main>
   )

@@ -12,6 +12,8 @@ import { LockedFeaturePrompt } from "@/components/locked-feature-prompt"
 import { SlowNetworkNotice } from "@/components/slow-network-notice"
 import { NotificationPermissionPrompt } from "@/components/notification-permission-prompt"
 import { Suspense } from "react"
+import { LoadingProvider } from "@/contexts/loading-context"
+import PremiumLoader from "@/components/premium-loader"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -119,15 +121,18 @@ export default function RootLayout({
             }}
           />
           <Suspense fallback={null}>
-            <AuthProvider>
-              <NotificationProvider>
-                <JobProvider>{children}</JobProvider>
-                <Toaster richColors closeButton position="top-right" />
-                <LockedFeaturePrompt />
-                <SlowNetworkNotice />
-                <NotificationPermissionPrompt />
-              </NotificationProvider>
-            </AuthProvider>
+            <LoadingProvider>
+              <AuthProvider>
+                <NotificationProvider>
+                  <JobProvider>{children}</JobProvider>
+                  <Toaster richColors closeButton position="top-right" />
+                  <LockedFeaturePrompt />
+                  <SlowNetworkNotice />
+                  <NotificationPermissionPrompt />
+                  <PremiumLoader />
+                </NotificationProvider>
+              </AuthProvider>
+            </LoadingProvider>
           </Suspense>
           <Analytics />
         </ThemeProvider>

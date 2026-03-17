@@ -1,11 +1,13 @@
-import DotsLoader from '@/components/dots-loader'
+import { SkeletonTable } from "@/components/skeleton-components"
 
 export default function Loading() {
   return (
-    <div className="min-h-[240px] flex items-center justify-center">
-      <div style={{ width: 160, height: 100 }} className="flex items-center justify-center bg-white rounded-lg shadow-md">
-        <DotsLoader />
+    <div className="p-4 lg:p-8 space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <div className="h-8 w-48 bg-muted/20 animate-pulse rounded-md" />
+        <div className="h-4 w-64 bg-muted/20 animate-pulse rounded-md" />
       </div>
+      <SkeletonTable rows={8} cols={4} />
     </div>
   )
 }

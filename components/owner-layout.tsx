@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { OwnerSidebar } from "@/components/owner-sidebar"
 import { AIChatBot } from "@/components/ai-chat-bot"
-import { NavLoadingProvider, useNavLoading } from '@/components/nav-loading-context'
+import { useLoading } from "@/contexts/loading-context"
 import PageTransition from './page-transition'
 import DotsLoader from '@/components/dots-loader'
 import { TrialWelcomeModal } from '@/components/trial-welcome-modal'
@@ -47,30 +47,28 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
   }
 
   return (
-    <NavLoadingProvider>
-      <div className="min-h-screen bg-background">
-        <OwnerSidebar />
-        <div className="lg:pl-64">
-          <DashboardTrialBanner />
-          <MainContent>{children}</MainContent>
-        </div>
-
-        <AIChatBot />
-
-        <PageTransition />
-        
-        <TrialWelcomeModal />
-        <LockedFeaturePrompt />
+    <div className="min-h-screen bg-background">
+      <OwnerSidebar />
+      <div className="lg:pl-64">
+        <DashboardTrialBanner />
+        <MainContent>{children}</MainContent>
       </div>
-    </NavLoadingProvider>
+
+      <AIChatBot />
+
+      <PageTransition />
+      
+      <TrialWelcomeModal />
+      <LockedFeaturePrompt />
+    </div>
   )
 }
 
 function MainContent({ children }: { children: React.ReactNode }) {
-  const { loadingId } = useNavLoading()
+  const { isActivelyLoading } = useLoading()
   return (
     <main
-      className={`p-4 lg:p-8 transition-all duration-400 ease-in-out ${loadingId ? 'opacity-30 translate-y-2' : 'opacity-100 translate-y-0'}`}>
+      className={`p-4 lg:p-8 transition-all duration-400 ease-in-out ${isActivelyLoading ? 'opacity-30 translate-y-2 blur-[2px]' : 'opacity-100 translate-y-0 filter-none'}`}>
       {children}
     </main>
   )
