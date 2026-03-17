@@ -42,8 +42,12 @@ export function ExportButton({
   const [isExporting, setIsExporting] = useState(false)
   
   useEffect(() => {
-    console.log(`[v0] [ExportButton] Component Mounted: ${title}`, { filename, columns: columns.length });
-  }, [title, filename, columns.length]);
+    console.log(`[v0] [${title}] ExportButton Mounted`, { filename, isExporting });
+  }, [title, filename, isExporting]);
+
+  const onOpenChange = (open: boolean) => {
+    console.log(`[v0] [${title}] DropdownMenu onOpenChange: ${open}`);
+  };
 
   const handleExport = async (type: "pdf" | "excel") => {
     console.log(`[v0] [ExportButton] handleExport triggered! Type: ${type}, state.isExporting: ${isExporting}`);
@@ -96,9 +100,19 @@ export function ExportButton({
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2 shadow-sm border-primary/20 hover:border-primary/50 transition-all font-semibold" disabled={isExporting}>
+        <Button 
+          variant="outline" 
+          className="gap-2 shadow-sm border-primary/20 hover:border-primary/50 transition-all font-semibold" 
+          disabled={isExporting}
+          onClick={(e) => {
+            console.log(`[v0] [${title}] Button onClick`);
+          }}
+          onPointerDown={(e) => {
+            console.log(`[v0] [${title}] Button onPointerDown - Position: ${e.clientX}, ${e.clientY}`);
+          }}
+        >
           {isExporting ? (
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
           ) : (
@@ -111,12 +125,15 @@ export function ExportButton({
       <DropdownMenuContent align="end" className="w-[190px] p-2">
         <DropdownMenuItem 
           onSelect={() => {
-            console.log("[v0] [ExportButton] PDF DropdownItem onSelect");
+            console.log(`[v0] [${title}] PDF onSelect`);
             handleExport("pdf");
           }} 
-          onClick={() => {
-            console.log("[v0] [ExportButton] PDF DropdownItem onClick");
+          onClick={(e) => {
+            console.log(`[v0] [${title}] PDF onClick`);
             handleExport("pdf");
+          }}
+          onPointerDown={(e) => {
+            console.log(`[v0] [${title}] PDF onPointerDown`);
           }}
           className="gap-3 cursor-pointer py-2 px-3 rounded-md hover:bg-red-50 focus:bg-red-50 transition-colors"
         >
@@ -130,12 +147,15 @@ export function ExportButton({
         </DropdownMenuItem>
         <DropdownMenuItem 
           onSelect={() => {
-            console.log("[v0] [ExportButton] Excel DropdownItem onSelect");
+            console.log(`[v0] [${title}] Excel onSelect`);
             handleExport("excel");
           }} 
-          onClick={() => {
-            console.log("[v0] [ExportButton] Excel DropdownItem onClick");
+          onClick={(e) => {
+            console.log(`[v0] [${title}] Excel onClick`);
             handleExport("excel");
+          }}
+          onPointerDown={(e) => {
+            console.log(`[v0] [${title}] Excel onPointerDown`);
           }}
           className="gap-3 cursor-pointer mt-1 py-2 px-3 rounded-md hover:bg-green-50 focus:bg-green-50 transition-colors"
         >
@@ -148,6 +168,11 @@ export function ExportButton({
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>
+      {/* TEMPORARY DEBUG BUTTONS */}
+      <div className="hidden">
+        <button onClick={() => handleExport("pdf")} id="debug-pdf">PDF</button>
+        <button onClick={() => handleExport("excel")} id="debug-excel">Excel</button>
+      </div>
     </DropdownMenu>
   )
 }
