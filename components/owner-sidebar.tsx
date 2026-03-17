@@ -27,6 +27,7 @@ import {
   CreditCard,
   Headset,
   Megaphone,
+  Files,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -37,6 +38,7 @@ const navigation = [
   { name: "Attendance", href: "/owner/attendance", icon: Clock },
   { name: "Materials", href: "/owner/materials", icon: Package },
   { name: "Inventory", href: "/owner/inventory", icon: Box },
+  { name: "Documents", href: "/owner/documents", icon: Files },
   { name: "Payroll", href: "/owner/payroll", icon: DollarSign },
   { name: "Reports", href: "/owner/reports", icon: BarChart3 },
   { name: "Messages", href: "/owner/messages", icon: MessageSquare },
