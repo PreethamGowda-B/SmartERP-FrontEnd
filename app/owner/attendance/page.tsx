@@ -125,7 +125,7 @@ export default function OwnerAttendancePage() {
               const month = now.getMonth() + 1
               const year = now.getFullYear()
               const data = await apiClient(`/api/attendance/report?month=${month}&year=${year}`)
-              
+
               // Flatten the grouped data from backend for the export table
               const flatData: any[] = []
               if (data && data.employees) {

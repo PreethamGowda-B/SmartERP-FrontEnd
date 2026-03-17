@@ -42,6 +42,7 @@ export function ExportButton({
   const [isExporting, setIsExporting] = useState(false)
 
   const handleExport = async (type: "pdf" | "excel") => {
+    console.log(`[ExportButton] User clicked export: ${type}`);
     setIsExporting(true)
     onExportStart?.()
     
@@ -50,8 +51,10 @@ export function ExportButton({
       let exportData = data || []
       
       if (onExport) {
+        console.log("[ExportButton] Calling onExport to fetch data...");
         toast.info("Preparing full report data...")
         exportData = await onExport()
+        console.log(`[ExportButton] Data fetched. Count: ${exportData?.length || 0}`);
       }
 
       if (!exportData || exportData.length === 0) {
@@ -65,8 +68,10 @@ export function ExportButton({
       const options = { filename, title, subtitle, columns, data: exportData }
       
       if (type === "pdf") {
+        console.log("[ExportButton] Triggering PDF generation...");
         exportToPDF(options)
       } else {
+        console.log("[ExportButton] Triggering Excel generation...");
         exportToExcel(options)
       }
       
@@ -95,7 +100,7 @@ export function ExportButton({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[190px] p-2">
         <DropdownMenuItem 
-          onClick={() => handleExport("pdf")} 
+          onSelect={() => handleExport("pdf")} 
           className="gap-3 cursor-pointer py-2 px-3 rounded-md hover:bg-red-50 focus:bg-red-50 transition-colors"
         >
           <div className="bg-red-100 p-1.5 rounded-md">
@@ -107,7 +112,7 @@ export function ExportButton({
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onClick={() => handleExport("excel")} 
+          onSelect={() => handleExport("excel")} 
           className="gap-3 cursor-pointer mt-1 py-2 px-3 rounded-md hover:bg-green-50 focus:bg-green-50 transition-colors"
         >
           <div className="bg-green-100 p-1.5 rounded-md">

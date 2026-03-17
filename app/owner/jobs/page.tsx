@@ -413,8 +413,8 @@ export default function OwnerJobsPage() {
             <DialogHeader>
               <DialogTitle>{editingJob ? "Edit Job" : "Create New Job"}</DialogTitle>
               <DialogDescription>
-                {editingJob 
-                  ? "Update the details and assignments for this existing job." 
+                {editingJob
+                  ? "Update the details and assignments for this existing job."
                   : "Fill out the form below to create a new job and assign it to employees."}
               </DialogDescription>
             </DialogHeader>

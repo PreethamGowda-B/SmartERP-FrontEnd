@@ -65,7 +65,7 @@ export default function OwnerDashboard() {
         apiClient("/api/dashboard/owner/metrics"),
         apiClient("/api/dashboard/owner/recent-activity"),
       ])
-      
+
       setMetrics(metricsData)
       setRecentActivity(Array.isArray(activityData) ? activityData : [])
     } catch (err: any) {

@@ -146,6 +146,7 @@ let refreshPromise: Promise<any> | null = null
 
 export async function apiClient(path: string, options: RequestInit = {}) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+  console.log(`[apiClient] Request: ${options.method || 'GET'} ${path}`);
 
   const isFormData = options.body instanceof FormData
   const headers: Record<string, string> = {
@@ -244,7 +245,9 @@ export async function apiClient(path: string, options: RequestInit = {}) {
       throw { ...error, status: res.status }
     }
 
-    return await res.json()
+    const json = await res.json()
+    console.log(`[apiClient] Success: ${path}`, { status: res.status });
+    return json
   } finally {
     markRequestEnd(requestId)
   }
