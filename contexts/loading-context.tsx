@@ -13,8 +13,8 @@ type LoadingContextType = {
 
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined)
 
-const ANTI_FLICKER_DELAY = 300 // ms
-const MIN_DISPLAY_TIME = 800 // ms
+const ANTI_FLICKER_DELAY = 100 // ms - faster feedback for clicking
+const MIN_DISPLAY_TIME = 2000 // ms - user requested 2 seconds
 
 export function LoadingProvider({ children }: { children: React.ReactNode }) {
   const [isActivelyLoading, setIsActivelyLoading] = useState(false)
