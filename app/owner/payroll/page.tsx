@@ -189,23 +189,30 @@ export default function OwnerPayrollPage() {
           <div className="flex items-center gap-3">
             <ExportButton
               filename="Payroll_Report"
-              title="Payroll Records Report"
-              subtitle={`Total Records: ${filteredPayrolls.length}`}
-              data={filteredPayrolls.map(p => ({
-                ...p,
-                month_name: MONTHS[p.payroll_month - 1],
-                period: `${MONTHS[p.payroll_month - 1]} ${p.payroll_year}`
-              }))}
+              title="Employee Payroll Summary"
+              subtitle={`Company-wide Financial Disbursement Report`}
+              onExport={async () => {
+                const data = await apiClient("/api/payroll/all")
+                return Array.isArray(data) ? data.map((p: any) => ({
+                  ...p,
+                  month_name: MONTHS[p.payroll_month - 1],
+                  period: `${MONTHS[p.payroll_month - 1]} ${p.payroll_year}`,
+                  base_salary: parseFloat(p.base_salary),
+                  extra_amount: parseFloat(p.extra_amount),
+                  salary_increment: parseFloat(p.salary_increment),
+                  deduction: parseFloat(p.deduction),
+                  total_salary: parseFloat(p.total_salary)
+                })) : []
+              }}
               columns={[
                 { header: "Employee Name", dataKey: "employee_name" },
                 { header: "Email", dataKey: "employee_email" },
                 { header: "Period", dataKey: "period" },
-                { header: "Base Salary", dataKey: "base_salary" },
-                { header: "Extra Amount", dataKey: "extra_amount" },
-                { header: "Increment", dataKey: "salary_increment" },
-                { header: "Deduction", dataKey: "deduction" },
-                { header: "Total Salary", dataKey: "total_salary" },
-                { header: "Remarks", dataKey: "remarks" }
+                { header: "Base Salary", dataKey: "base_salary", type: "currency" },
+                { header: "Extra", dataKey: "extra_amount", type: "currency" },
+                { header: "Increment", dataKey: "salary_increment", type: "currency" },
+                { header: "Deduction", dataKey: "deduction", type: "currency" },
+                { header: "Total Salary", dataKey: "total_salary", type: "currency" }
               ]}
             />
             {/* Create Payroll Button */}

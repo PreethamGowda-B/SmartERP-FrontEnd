@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress"
 import type { Job } from "@/lib/data"
 import { useJobs } from "@/contexts/job-context"
 import { ExportButton } from "@/components/export-button"
+import { apiClient } from "@/lib/apiClient"
 import {
   Plus, Search, Filter, Calendar, Users, CheckCircle2, Clock,
   XCircle, AlertCircle, TrendingUp, Edit, Trash2, RefreshCw,
@@ -170,22 +171,24 @@ export default function OwnerJobsPage() {
             <ExportButton
               filename="Jobs_Status_Report"
               title="Project Jobs Report"
-              subtitle={`Total Jobs: ${filteredJobs.length}`}
-              data={filteredJobs.map(j => ({
-                ...j,
-                formatted_created: j.created_at ? new Date(j.created_at).toLocaleDateString() : "—",
-                formatted_accepted: j.accepted_at ? new Date(j.accepted_at).toLocaleDateString() : "—",
-                formatted_completed: j.completed_at ? new Date(j.completed_at).toLocaleDateString() : "—",
-                progress_text: `${j.progress || 0}%`
-              }))}
+              subtitle={`Detailed Project Execution Analysis`}
+              onExport={async () => {
+                const data = await apiClient("/api/jobs")
+                return Array.isArray(data) ? data.map((j: any) => ({
+                  ...j,
+                  progress_text: `${j.progress || 0}%`
+                })) : []
+              }}
               columns={[
                 { header: "Job Title", dataKey: "title" },
                 { header: "Status", dataKey: "status" },
-                { header: "Assigned Employee", dataKey: "employee_email" },
-                { header: "Progress", dataKey: "progress_text" },
-                { header: "Created Date", dataKey: "formatted_created" },
-                { header: "Accepted Date", dataKey: "formatted_accepted" },
-                { header: "Completed Date", dataKey: "formatted_completed" }
+                { header: "Client", dataKey: "client" },
+                { header: "Location", dataKey: "location" },
+                { header: "Assigned To", dataKey: "employee_email" },
+                { header: "Employee Resp.", dataKey: "employee_status" },
+                { header: "Progress", dataKey: "progress_text", type: "number" },
+                { header: "Deadline", dataKey: "deadline", type: "date" },
+                { header: "Created Date", dataKey: "created_at", type: "date" }
               ]}
             />
 

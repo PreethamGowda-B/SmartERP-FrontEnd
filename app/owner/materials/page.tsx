@@ -130,19 +130,19 @@ export default function OwnerMaterialsPage() {
           <ExportButton
             filename="Material_Requests_Report"
             title="Material Requests Report"
-            subtitle={`Total Requests: ${filteredRequests.length}`}
-            data={filteredRequests.map(r => ({
-              ...r,
-              formatted_date: new Date(r.created_at).toLocaleString()
-            }))}
+            subtitle={`Procurement & Supply Chain Analysis`}
+            onExport={async () => {
+              const data = await apiClient("/api/material-requests")
+              return Array.isArray(data) ? data : []
+            }}
             columns={[
               { header: "Item Name", dataKey: "item_name" },
               { header: "Requested By", dataKey: "requested_by_name" },
-              { header: "Quantity", dataKey: "quantity" },
+              { header: "Qty", dataKey: "quantity", type: "number" },
               { header: "Urgency", dataKey: "urgency" },
               { header: "Status", dataKey: "status" },
               { header: "Description", dataKey: "description" },
-              { header: "Requested At", dataKey: "formatted_date" }
+              { header: "Requested Date", dataKey: "created_at", type: "date" }
             ]}
           />
         </div>

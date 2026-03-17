@@ -147,8 +147,9 @@ let refreshPromise: Promise<any> | null = null
 export async function apiClient(path: string, options: RequestInit = {}) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
+  const isFormData = options.body instanceof FormData
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(!isFormData && { "Content-Type": "application/json" }),
     ...(options.headers as Record<string, string>),
   }
 

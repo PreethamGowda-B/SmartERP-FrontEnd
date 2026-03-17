@@ -167,19 +167,19 @@ export default function EmployeesPage() {
           </div>
           <ExportButton
             filename="Employee_Directory_Report"
-            title="Employee Directory Report"
-            subtitle={`Total Employees: ${totalCount}`}
-            data={filtered.map(e => ({
-              ...e,
-              formatted_created_at: e.created_at ? new Date(e.created_at).toLocaleDateString() : "—"
-            }))}
+            title="Employee Directory"
+            subtitle={`Official Organization Roster`}
+            onExport={async () => {
+              const data = await apiClient("/api/employees")
+              return Array.isArray(data) ? data : []
+            }}
             columns={[
               { header: "Name", dataKey: "name" },
               { header: "Email", dataKey: "email" },
               { header: "Department", dataKey: "department" },
               { header: "Position", dataKey: "position" },
               { header: "Status", dataKey: "status" },
-              { header: "Account Created", dataKey: "formatted_created_at" }
+              { header: "Joined Date", dataKey: "created_at", type: "date" }
             ]}
           />
         </div>

@@ -15,6 +15,7 @@ import { toast } from "sonner"
 interface ExportColumn {
   header: string
   dataKey: string
+  type?: "text" | "number" | "currency" | "date"
 }
 
 interface ExportButtonProps {
@@ -22,7 +23,8 @@ interface ExportButtonProps {
   title: string
   subtitle?: string
   columns: ExportColumn[]
-  data: any[]
+  data?: any[] // Optional if onExport is provided
+  onExport?: () => Promise<any[]> // Async fetch for full dataset
   onExportStart?: () => void
   onExportEnd?: () => void
 }
@@ -33,25 +35,34 @@ export function ExportButton({
   subtitle,
   columns,
   data,
+  onExport,
   onExportStart,
   onExportEnd
 }: ExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false)
 
   const handleExport = async (type: "pdf" | "excel") => {
-    if (data.length === 0) {
-      toast.error("No data available to export")
-      return
-    }
-
     setIsExporting(true)
     onExportStart?.()
     
-    // Small delay to show loader and prevent UI freeze
-    await new Promise(resolve => setTimeout(resolve, 500))
-
     try {
-      const options = { filename, title, subtitle, columns, data }
+      // Fetch dynamic data if onExport is provided, otherwise use data prop
+      let exportData = data || []
+      
+      if (onExport) {
+        toast.info("Preparing full report data...")
+        exportData = await onExport()
+      }
+
+      if (!exportData || exportData.length === 0) {
+        toast.error("No data available to export")
+        return
+      }
+
+      // Small delay for smooth transition
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      const options = { filename, title, subtitle, columns, data: exportData }
       
       if (type === "pdf") {
         exportToPDF(options)
@@ -72,24 +83,40 @@ export function ExportButton({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2" disabled={isExporting}>
+        <Button variant="outline" className="gap-2 shadow-sm border-primary/20 hover:border-primary/50 transition-all font-semibold" disabled={isExporting}>
           {isExporting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
           ) : (
-            <Download className="h-4 w-4" />
+            <Download className="h-4 w-4 text-primary" />
           )}
-          Export
+          {isExporting ? "Exporting..." : "Export"}
           <ChevronDown className="h-4 w-4 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[180px]">
-        <DropdownMenuItem onClick={() => handleExport("pdf")} className="gap-2 cursor-pointer">
-          <FileText className="h-4 w-4 text-red-500" />
-          Export as PDF
+      <DropdownMenuContent align="end" className="w-[190px] p-2">
+        <DropdownMenuItem 
+          onClick={() => handleExport("pdf")} 
+          className="gap-3 cursor-pointer py-2 px-3 rounded-md hover:bg-red-50 focus:bg-red-50 transition-colors"
+        >
+          <div className="bg-red-100 p-1.5 rounded-md">
+            <FileText className="h-4 w-4 text-red-600" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-medium text-sm">Export as PDF</span>
+            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Report Format</span>
+          </div>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleExport("excel")} className="gap-2 cursor-pointer">
-          <FileSpreadsheet className="h-4 w-4 text-green-600" />
-          Export as Excel
+        <DropdownMenuItem 
+          onClick={() => handleExport("excel")} 
+          className="gap-3 cursor-pointer mt-1 py-2 px-3 rounded-md hover:bg-green-50 focus:bg-green-50 transition-colors"
+        >
+          <div className="bg-green-100 p-1.5 rounded-md">
+            <FileSpreadsheet className="h-4 w-4 text-green-700" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-medium text-sm">Export as Excel</span>
+            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Data Sheet</span>
+          </div>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

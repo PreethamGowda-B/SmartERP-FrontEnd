@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/auth-context"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
-import { getAccessToken } from "@/lib/apiClient"
+import { getAccessToken, apiClient } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"
 
 function authHeaders(): Record<string, string> {
@@ -118,24 +118,54 @@ export default function OwnerAttendancePage() {
           </div>
           <ExportButton
             filename={`Attendance_Report_${new Date().toISOString().split('T')[0]}`}
-            title="Attendance Report"
-            subtitle={`Total Employees: ${summary.total}`}
-            data={employees.map(e => ({
-              ...e,
-              formatted_date: e.date ? new Date(e.date).toLocaleDateString() : "—",
-              in_time: e.check_in_time ? new Date(e.check_in_time).toLocaleTimeString() : "—",
-              out_time: e.check_out_time ? new Date(e.check_out_time).toLocaleTimeString() : "—",
-              hours: e.working_hours ? `${e.working_hours} hrs` : "—",
-              formatted_status: e.status || (e.check_in_time ? "Present" : "Absent")
-            }))}
+            title="Employee Attendance Report"
+            subtitle={`Monthly Attendance & Performance Analysis`}
+            onExport={async () => {
+              const now = new Date()
+              const month = now.getMonth() + 1
+              const year = now.getFullYear()
+              const data = await apiClient(`/api/attendance/report?month=${month}&year=${year}`)
+              
+              // Flatten the grouped data from backend for the export table
+              const flatData: any[] = []
+              if (data && data.employees) {
+                data.employees.forEach((emp: any) => {
+                  if (emp.records && emp.records.length > 0) {
+                    emp.records.forEach((rec: any) => {
+                      flatData.push({
+                        employee_name: emp.employee.name,
+                        employee_email: emp.employee.email,
+                        date: rec.date,
+                        check_in: rec.check_in,
+                        check_out: rec.check_out,
+                        status: rec.status,
+                        working_hours: rec.hours
+                      })
+                    })
+                  } else {
+                    // Include employee even if no records for the month (as absent/no data)
+                    flatData.push({
+                      employee_name: emp.employee.name,
+                      employee_email: emp.employee.email,
+                      date: "—",
+                      check_in: "—",
+                      check_out: "—",
+                      status: "No Data",
+                      working_hours: 0
+                    })
+                  }
+                })
+              }
+              return flatData
+            }}
             columns={[
-              { header: "Employee Name", dataKey: "employee_name" },
+              { header: "Employee", dataKey: "employee_name" },
               { header: "Email", dataKey: "employee_email" },
-              { header: "Date", dataKey: "formatted_date" },
-              { header: "Check In", dataKey: "in_time" },
-              { header: "Check Out", dataKey: "out_time" },
-              { header: "Status", dataKey: "formatted_status" },
-              { header: "Working Hours", dataKey: "hours" }
+              { header: "Date", dataKey: "date", type: "date" },
+              { header: "Check In", dataKey: "check_in", type: "date" },
+              { header: "Check Out", dataKey: "check_out", type: "date" },
+              { header: "Status", dataKey: "status" },
+              { header: "Hours", dataKey: "working_hours", type: "number" }
             ]}
           />
         </div>

@@ -5,6 +5,7 @@ import { OwnerLayout } from "@/components/owner-layout"
 import InventoryForm from "@/components/inventory-form"
 import InventoryTable from "@/components/inventory-table"
 import InventoryInsights from "@/components/inventory-insights"
+import { apiClient } from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus } from "lucide-react"
@@ -72,16 +73,19 @@ export default function OwnerInventoryPage() {
               <ExportButton
                 filename="Inventory_Report"
                 title="Inventory Status Report"
-                subtitle={`Total Unique Items: ${inventoryItems.length}`}
-                data={inventoryItems.map(item => ({
-                  ...item,
-                  status: item.quantity <= (item.min_quantity || 0) ? "Low Stock" : "Available"
-                }))}
+                subtitle={`Operational Stock Analysis`}
+                onExport={async () => {
+                  const res = await apiClient("/api/inventory?limit=10000")
+                  return res.map((item: any) => ({
+                    ...item,
+                    status: item.quantity <= (item.min_quantity || 0) ? "Low Stock" : "Available"
+                  }))
+                }}
                 columns={[
                   { header: "Item Name", dataKey: "name" },
                   { header: "Category", dataKey: "category" },
-                  { header: "Current Quantity", dataKey: "quantity" },
-                  { header: "Min Quantity", dataKey: "min_quantity" },
+                  { header: "Quantity", dataKey: "quantity", type: "number" },
+                  { header: "Min Stock", dataKey: "min_quantity", type: "number" },
                   { header: "Status", dataKey: "status" },
                   { header: "Supplier", dataKey: "supplier_name" },
                   { header: "Description", dataKey: "description" }

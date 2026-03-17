@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { OwnerLayout } from "@/components/owner-layout"
-import { apiClient } from "@/lib/apiClient"
+import { apiClient, getAccessToken } from "@/lib/apiClient"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -129,23 +129,15 @@ export default function EmployeeDocumentsPage() {
     formData.append('notes', notes)
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/documents`, {
+      await apiClient("/api/documents", {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
         body: formData
       })
 
-      if (response.ok) {
-        toast.success("Document uploaded successfully")
-        setIsUploadOpen(false)
-        resetUpload()
-        fetchData()
-      } else {
-        const error = await response.json()
-        throw new Error(error.message || "Upload failed")
-      }
+      toast.success("Document uploaded successfully")
+      setIsUploadOpen(false)
+      resetUpload()
+      fetchData()
     } catch (err: any) {
       toast.error(err.message || "Failed to upload document")
     } finally {
