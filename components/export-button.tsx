@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -40,9 +40,17 @@ export function ExportButton({
   onExportEnd
 }: ExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false)
+  
+  useEffect(() => {
+    console.log(`[v0] [ExportButton] Component Mounted: ${title}`, { filename, columns: columns.length });
+  }, [title, filename, columns.length]);
 
   const handleExport = async (type: "pdf" | "excel") => {
-    console.log(`[ExportButton] User clicked export: ${type}`);
+    console.log(`[v0] [ExportButton] handleExport triggered! Type: ${type}, state.isExporting: ${isExporting}`);
+    if (isExporting) {
+      console.warn("[v0] [ExportButton] Already exporting, skipping click.");
+      return;
+    }
     setIsExporting(true)
     onExportStart?.()
     
@@ -58,7 +66,9 @@ export function ExportButton({
       }
 
       if (!exportData || exportData.length === 0) {
+        console.error("[v0] [ExportButton] No data returned from onExport!");
         toast.error("No data available to export")
+        setIsExporting(false)
         return
       }
 
@@ -100,7 +110,14 @@ export function ExportButton({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[190px] p-2">
         <DropdownMenuItem 
-          onSelect={() => handleExport("pdf")} 
+          onSelect={() => {
+            console.log("[v0] [ExportButton] PDF DropdownItem onSelect");
+            handleExport("pdf");
+          }} 
+          onClick={() => {
+            console.log("[v0] [ExportButton] PDF DropdownItem onClick");
+            handleExport("pdf");
+          }}
           className="gap-3 cursor-pointer py-2 px-3 rounded-md hover:bg-red-50 focus:bg-red-50 transition-colors"
         >
           <div className="bg-red-100 p-1.5 rounded-md">
@@ -112,7 +129,14 @@ export function ExportButton({
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onSelect={() => handleExport("excel")} 
+          onSelect={() => {
+            console.log("[v0] [ExportButton] Excel DropdownItem onSelect");
+            handleExport("excel");
+          }} 
+          onClick={() => {
+            console.log("[v0] [ExportButton] Excel DropdownItem onClick");
+            handleExport("excel");
+          }}
           className="gap-3 cursor-pointer mt-1 py-2 px-3 rounded-md hover:bg-green-50 focus:bg-green-50 transition-colors"
         >
           <div className="bg-green-100 p-1.5 rounded-md">
