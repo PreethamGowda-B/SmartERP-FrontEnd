@@ -12,6 +12,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBL
 
 import { getAccessToken, apiClient } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"
+import { logger } from "@/lib/logger"
 
 function authHeaders(): Record<string, string> {
   const token = getAccessToken()
@@ -67,7 +68,7 @@ export default function OwnerAttendancePage() {
         setSummary(data.summary || { total: 0, present: 0, absent: 0, late: 0 })
       }
     } catch (err) {
-      console.error("Error fetching attendance overview:", err)
+      logger.error("Error fetching attendance overview:", err)
     } finally {
       setLoading(false)
     }

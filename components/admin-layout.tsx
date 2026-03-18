@@ -22,6 +22,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
+import { logger } from "@/lib/logger"
 
 
 interface AdminLayoutProps {
@@ -37,7 +38,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   // Strict check: Redirect if not super_admin (after loading)
   useEffect(() => {
     if (!isLoading && (!user || user.role !== 'super_admin')) {
-      console.warn("🚫 Access denied: Not a superadmin")
+      logger.warn("🚫 Access denied: Not a superadmin")
       router.push("/auth/login")
     }
   }, [user, isLoading, router])

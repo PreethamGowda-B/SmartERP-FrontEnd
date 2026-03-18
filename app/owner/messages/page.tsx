@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { MessageSquare, Send, Search, Loader2, Users } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 type Message = {
     id: number
@@ -54,7 +55,7 @@ export default function OwnerMessagesPage() {
             const data = await apiClient("/api/messages/conversations")
             setConversations(data)
         } catch (err) {
-            console.error("Error fetching conversations:", err)
+            logger.error("Error fetching conversations:", err)
         }
     }
 
@@ -74,7 +75,7 @@ export default function OwnerMessagesPage() {
 
             setTimeout(scrollToBottom, 100)
         } catch (err) {
-            console.error("Error fetching messages:", err)
+            logger.error("Error fetching messages:", err)
         }
     }
 
@@ -95,7 +96,7 @@ export default function OwnerMessagesPage() {
             setNewMessage("")
             await fetchMessages(selectedUserId)
         } catch (err) {
-            console.error("Error sending message:", err)
+            logger.error("Error sending message:", err)
             alert("Failed to send message. Please try again.")
         } finally {
             setSending(false)

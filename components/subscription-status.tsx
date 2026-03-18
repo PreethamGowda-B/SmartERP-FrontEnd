@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Zap, Clock, ArrowRight, ShieldCheck, Users, Box, AlertCircle, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 type SubscriptionStatusData = {
   plan: {
@@ -33,7 +34,7 @@ export function SubscriptionStatus() {
         const res = await apiClient("/api/subscription/status")
         setData(res)
       } catch (err) {
-        console.error("Failed to fetch subscription status:", err)
+        logger.error("Failed to fetch subscription status:", err)
         setError(true)
       } finally {
         setLoading(false)

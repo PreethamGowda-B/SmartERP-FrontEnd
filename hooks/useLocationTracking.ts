@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 const SEND_INTERVAL_MS = 12_000   // send every 12 seconds
 const MIN_DISTANCE_M = 5         // skip update if moved < 5 metres
@@ -53,10 +54,10 @@ export function useLocationTracking({ onPermissionChange }: UseLocationTrackingO
             // If Forbidden (403), it means the plan doesn't support this.
             // Disable tracking for this session to avoid repeated modals/unnecessary requests.
             if (err?.status === 403 || (err?.message && err.message.toLowerCase().includes('upgrade'))) {
-                console.warn("[useLocationTracking] Disabling location tracking: Tier restriction detected")
+                logger.warn("[useLocationTracking] Disabling location tracking: Tier restriction detected")
                 isDisabledByTier.current = true
             } else {
-                console.warn("[useLocationTracking] Failed to send location:", err)
+                logger.warn("[useLocationTracking] Failed to send location:", err)
             }
         }
     }, [])

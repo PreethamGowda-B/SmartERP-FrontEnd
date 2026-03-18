@@ -4,6 +4,8 @@
 // ============================================================
 import { triggerFeatureLock } from "@/components/locked-feature-prompt"
 import { triggerSlowNetworkNotice } from "@/components/slow-network-notice"
+import { logger } from "./logger"
+export { logger }
 
 // ─── Slow Network Tracking ──────────────────────────────────────────────────
 // Keeps track of active requests that have exceeded the 20s threshold
@@ -127,7 +129,7 @@ function syncWithAndroid(token: string, refreshToken?: string | null) {
 // Helper to handle unified logout across Web and Android
 function handleLogout() {
   if (typeof window !== "undefined") {
-    console.warn("[v0] Session expired or invalid — logging out")
+    logger.warn("[v0] Session expired or invalid — logging out")
     clearTokens() // Clears all token storage
     localStorage.removeItem("smarterp_user")
     localStorage.removeItem("smarterp_admin_user")
@@ -146,7 +148,7 @@ let refreshPromise: Promise<any> | null = null
 
 export async function apiClient(path: string, options: RequestInit = {}) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-  console.log(`[apiClient] Request: ${options.method || 'GET'} ${path}`);
+  logger.log(`[apiClient] Request: ${options.method || 'GET'} ${path}`);
 
   const isFormData = options.body instanceof FormData
   const headers: Record<string, string> = {
@@ -172,13 +174,13 @@ export async function apiClient(path: string, options: RequestInit = {}) {
         credentials: "include",
       })
     } catch (error) {
-      console.error("[v0] Network error in apiClient:", error)
-      throw error
+      logger.error("[v0] Network error in apiClient:", error)
+      throw new Error("Unable to connect to the server. Please check your internet connection and try again.")
     }
 
     // If token expired → try refresh
     if (res.status === 401) {
-      console.warn("[v0] Unauthorized — attempting refresh")
+      logger.warn("[v0] Unauthorized — attempting refresh")
 
       if (!refreshPromise) {
         const storedRefreshToken = getRefreshToken()
@@ -193,7 +195,7 @@ export async function apiClient(path: string, options: RequestInit = {}) {
             if (data.accessToken) {
               setTokens(data.accessToken, data.refreshToken || storedRefreshToken || "", data.isSuperAdmin)
               syncWithAndroid(data.accessToken, data.refreshToken)
-              console.log("[v0] Token refreshed successfully", data.isSuperAdmin ? "(Admin)" : "(User)")
+              logger.log("[v0] Token refreshed successfully", data.isSuperAdmin ? "(Admin)" : "(User)")
             }
             return data
           }
@@ -246,8 +248,29 @@ export async function apiClient(path: string, options: RequestInit = {}) {
     }
 
     const json = await res.json()
-    console.log(`[apiClient] Success: ${path}`, { status: res.status });
+    logger.log(`[apiClient] Success: ${path}`, { status: res.status });
     return json
+  } catch (error: any) {
+    // Log API errors to Sentry if it's a server failure or persistent issue
+    if (error.status >= 500 || !error.status) {
+      logger.error(`[apiClient] ${error.status ? 'API Error' : 'Connection Error'}: ${path}`, {
+        path,
+        status: error.status,
+        method: options.method || 'GET',
+        error: error.message || error
+      });
+    }
+
+    // If it's already a formatted error object from above, rethrow it
+    if (error.status || error.message === "Unable to connect to the server. Please check your internet connection and try again.") {
+      throw error;
+    }
+    
+    // Otherwise, wrap in a user-friendly message
+    throw { 
+      message: "Something went wrong. Please try again.",
+      originalError: error
+    };
   } finally {
     markRequestEnd(requestId)
   }

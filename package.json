@@ -37,6 +37,7 @@
     "@radix-ui/react-toggle": "latest",
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
+    "@sentry/nextjs": "^10.44.0",
     "@types/leaflet": "^1.9.21",
     "@vercel/analytics": "latest",
     "class-variance-authority": "^0.7.1",

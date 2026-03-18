@@ -11,6 +11,7 @@ import {
 import { Download, FileText, FileSpreadsheet, Loader2, ChevronDown } from "lucide-react"
 import { exportToPDF, exportToExcel } from "@/lib/export-utils"
 import { toast } from "sonner"
+import { logger } from "@/lib/logger"
 
 interface ExportColumn {
   header: string
@@ -42,17 +43,17 @@ export function ExportButton({
   const [isExporting, setIsExporting] = useState(false)
   
   useEffect(() => {
-    console.log(`[v0] [${title}] ExportButton Mounted`, { filename, isExporting });
+    logger.log(`[v0] [${title}] ExportButton Mounted`, { filename, isExporting });
   }, [title, filename, isExporting]);
 
   const onOpenChange = (open: boolean) => {
-    console.log(`[v0] [${title}] DropdownMenu onOpenChange: ${open}`);
+    logger.log(`[v0] [${title}] DropdownMenu onOpenChange: ${open}`);
   };
 
   const handleExport = async (type: "pdf" | "excel") => {
-    console.log(`[v0] [ExportButton] handleExport triggered! Type: ${type}, state.isExporting: ${isExporting}`);
+    logger.log(`[v0] [ExportButton] handleExport triggered! Type: ${type}, state.isExporting: ${isExporting}`);
     if (isExporting) {
-      console.warn("[v0] [ExportButton] Already exporting, skipping click.");
+      logger.warn("[v0] [ExportButton] Already exporting, skipping click.");
       return;
     }
     setIsExporting(true)
@@ -63,14 +64,14 @@ export function ExportButton({
       let exportData = data || []
       
       if (onExport) {
-        console.log("[ExportButton] Calling onExport to fetch data...");
+        logger.log("[ExportButton] Calling onExport to fetch data...");
         toast.info("Preparing full report data...")
         exportData = await onExport()
-        console.log(`[ExportButton] Data fetched. Count: ${exportData?.length || 0}`);
+        logger.log(`[ExportButton] Data fetched. Count: ${exportData?.length || 0}`);
       }
 
       if (!exportData || exportData.length === 0) {
-        console.error("[v0] [ExportButton] No data returned from onExport!");
+        logger.log("[v0] [ExportButton] No data returned from onExport!");
         toast.error("No data available to export")
         setIsExporting(false)
         return
@@ -82,17 +83,17 @@ export function ExportButton({
       const options = { filename, title, subtitle, columns, data: exportData }
       
       if (type === "pdf") {
-        console.log("[ExportButton] Triggering PDF generation...");
+        logger.log("[ExportButton] Triggering PDF generation...");
         exportToPDF(options)
       } else {
-        console.log("[ExportButton] Triggering Excel generation...");
+        logger.log("[ExportButton] Triggering Excel generation...");
         exportToExcel(options)
       }
       
       toast.success(`${type.toUpperCase()} Export completed successfully`)
     } catch (error) {
-      console.error("Export failed:", error)
-      toast.error("Export failed. Please try again.")
+      logger.error("Export failed:", error)
+      toast.error("Something went wrong while exporting. Please try again.")
     } finally {
       setIsExporting(false)
       onExportEnd?.()
@@ -107,10 +108,10 @@ export function ExportButton({
           className="gap-2 shadow-sm border-primary/20 hover:border-primary/50 transition-all font-semibold" 
           disabled={isExporting}
           onClick={(e) => {
-            console.log(`[v0] [${title}] Button onClick`);
+            logger.log(`[v0] [${title}] Button onClick`);
           }}
           onPointerDown={(e) => {
-            console.log(`[v0] [${title}] Button onPointerDown - Position: ${e.clientX}, ${e.clientY}`);
+            logger.log(`[v0] [${title}] Button onPointerDown - Position: ${e.clientX}, ${e.clientY}`);
           }}
         >
           {isExporting ? (
@@ -125,15 +126,11 @@ export function ExportButton({
       <DropdownMenuContent align="end" className="w-[190px] p-2">
         <DropdownMenuItem 
           onSelect={() => {
-            console.log(`[v0] [${title}] PDF onSelect`);
+            logger.log(`[v0] [${title}] PDF onSelect`);
             handleExport("pdf");
           }} 
-          onClick={(e) => {
-            console.log(`[v0] [${title}] PDF onClick`);
-            handleExport("pdf");
-          }}
           onPointerDown={(e) => {
-            console.log(`[v0] [${title}] PDF onPointerDown`);
+            logger.log(`[v0] [${title}] PDF onPointerDown`);
           }}
           className="gap-3 cursor-pointer py-2 px-3 rounded-md hover:bg-red-50 focus:bg-red-50 transition-colors"
         >
@@ -147,15 +144,11 @@ export function ExportButton({
         </DropdownMenuItem>
         <DropdownMenuItem 
           onSelect={() => {
-            console.log(`[v0] [${title}] Excel onSelect`);
+            logger.log(`[v0] [${title}] Excel onSelect`);
             handleExport("excel");
           }} 
-          onClick={(e) => {
-            console.log(`[v0] [${title}] Excel onClick`);
-            handleExport("excel");
-          }}
           onPointerDown={(e) => {
-            console.log(`[v0] [${title}] Excel onPointerDown`);
+            logger.log(`[v0] [${title}] Excel onPointerDown`);
           }}
           className="gap-3 cursor-pointer mt-1 py-2 px-3 rounded-md hover:bg-green-50 focus:bg-green-50 transition-colors"
         >
@@ -168,11 +161,6 @@ export function ExportButton({
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>
-      {/* TEMPORARY DEBUG BUTTONS */}
-      <div className="hidden">
-        <button onClick={() => handleExport("pdf")} id="debug-pdf">PDF</button>
-        <button onClick={() => handleExport("excel")} id="debug-excel">Excel</button>
-      </div>
     </DropdownMenu>
   )
 }

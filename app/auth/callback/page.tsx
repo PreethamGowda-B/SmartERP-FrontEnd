@@ -4,7 +4,7 @@ import { useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
-import { setTokens } from "@/lib/apiClient"
+import { setTokens, logger } from "@/lib/apiClient"
 
 function CallbackContent() {
     const router = useRouter()
@@ -50,7 +50,7 @@ function CallbackContent() {
                     router.push("/employee")
                 }
             } catch (error) {
-                console.error("Error parsing user data:", error)
+                logger.error("Error parsing user data:", error)
                 router.push("/login?error=auth_failed")
             }
         } else {

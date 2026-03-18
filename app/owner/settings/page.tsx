@@ -16,6 +16,7 @@ import { OwnerLayout } from "@/components/owner-layout"
 import Link from "next/link"
 
 import { getAccessToken } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
@@ -104,7 +105,7 @@ export default function SettingsPage() {
         if (fallback) setCompany((prev) => ({ ...prev, company_id: prev.company_id || fallback }))
       }
     } catch (e) {
-      console.error("Settings load error:", e)
+      logger.error("Settings load error:", e)
     }
   }, [])
 

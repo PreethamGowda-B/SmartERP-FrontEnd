@@ -14,6 +14,7 @@ import {
 import { DollarSign, Download, Loader2, Calendar, FileText } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 import jsPDF from "jspdf"
 
 interface PayrollRecord {
@@ -58,7 +59,7 @@ export default function EmployeePayrollPage() {
       })) : []
       setPayrolls(parsedData)
     } catch (err: any) {
-      console.error("Error fetching payrolls:", err)
+      logger.error("Error fetching payrolls:", err)
     } finally {
       setLoading(false)
     }

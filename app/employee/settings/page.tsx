@@ -13,6 +13,7 @@ import { User, Bell, Shield, Loader2, Eye, EyeOff, Building2, Copy, CheckCheck }
 import { EmployeeLayout } from "@/components/employee-layout"
 
 import { getAccessToken } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
@@ -63,7 +64,9 @@ export default function EmployeeSettingsPage() {
           setNotifPrefs((prev) => ({ ...prev, ...p.notification_prefs }))
         }
       }
-    } catch (e) { console.error("Profile load error:", e) }
+    } catch (e) {
+      logger.error("Profile load error:", e)
+    }
   }, [])
 
   const loadCompanyInfo = useCallback(async () => {
@@ -74,8 +77,11 @@ export default function EmployeeSettingsPage() {
         const data = await res.json()
         setCompanyInfo(data)
       }
-    } catch (e) { console.error("Company info load error:", e) }
-    finally { setLoadingCompany(false) }
+    } catch (e) {
+      logger.error("Company info load error:", e)
+    } finally {
+      setLoadingCompany(false)
+    }
   }, [])
 
   useEffect(() => { loadProfile(); loadCompanyInfo() }, [loadProfile, loadCompanyInfo])

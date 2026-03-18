@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Search, Edit, Archive, Trash2 } from "lucide-react"
 import { getAccessToken } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 type InventoryItem = {
   id: number
@@ -80,7 +81,7 @@ export default function InventoryTable({
       setItems(itemsData)
       onItemsChange?.(itemsData)
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       setItems([])
     } finally {
       setLoading(false)
@@ -118,7 +119,7 @@ export default function InventoryTable({
       alert("Item archived successfully")
       fetchItems() // Refresh the list
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       alert(err instanceof Error ? err.message : "Error archiving item")
     }
   }
@@ -147,7 +148,7 @@ export default function InventoryTable({
       alert("Item deleted successfully")
       fetchItems() // Refresh the list
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       alert(err instanceof Error ? err.message : "Error deleting item")
     }
   }

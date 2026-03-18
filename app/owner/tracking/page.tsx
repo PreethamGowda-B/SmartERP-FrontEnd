@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { MapPin, Users, Wifi, WifiOff, RefreshCw } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 // Leaflet CSS — loaded once at module level
 const LEAFLET_CSS_ID = "leaflet-css"
@@ -185,7 +186,7 @@ export default function EmployeeTrackingPage() {
                 })
             }
         } catch (err) {
-            console.error("[Tracking] Failed to fetch locations:", err)
+            logger.error("[Tracking] Failed to fetch locations:", err)
         } finally {
             setLoading(false)
         }

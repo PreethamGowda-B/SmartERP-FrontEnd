@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { logger } from "@/lib/logger"
 
 export function TrialWelcomeModal({ onConfirm }: { onConfirm?: () => void }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -30,7 +31,7 @@ export function TrialWelcomeModal({ onConfirm }: { onConfirm?: () => void }) {
           setIsOpen(true)
         }
       } catch (err) {
-        console.error("Failed to fetch subscription status:", err)
+        logger.error("Failed to fetch subscription status:", err)
       } finally {
         if (mounted) setIsLoading(false)
       }
@@ -47,7 +48,7 @@ export function TrialWelcomeModal({ onConfirm }: { onConfirm?: () => void }) {
       await apiClient("/api/subscription/welcome-dismissed", { method: "POST" })
       if (onConfirm) onConfirm()
     } catch (err) {
-      console.error("Failed to dismiss welcome modal:", err)
+      logger.error("Failed to dismiss welcome modal:", err)
     }
   }
 

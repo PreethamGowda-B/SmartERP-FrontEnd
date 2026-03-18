@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Sparkles, CalendarDays, AlertTriangle, ArrowRight, X } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
@@ -23,7 +24,7 @@ export function DashboardTrialBanner() {
           setData(res)
         }
       } catch (err) {
-        console.error("Failed to fetch trial banner status", err)
+        logger.error("Failed to fetch trial banner status", err)
       }
     }
     fetchBanner()

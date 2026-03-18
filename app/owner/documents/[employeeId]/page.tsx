@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient, getAccessToken } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -88,7 +89,7 @@ export default function EmployeeDocumentsPage() {
       const docs = await apiClient(`/api/documents/employee/${employeeId}`)
       setDocuments(Array.isArray(docs) ? docs : [])
     } catch (err) {
-      console.error("Failed to fetch documents:", err)
+      logger.error("Failed to fetch documents:", err)
       toast.error("Could not load documents")
     } finally {
       setLoading(false)

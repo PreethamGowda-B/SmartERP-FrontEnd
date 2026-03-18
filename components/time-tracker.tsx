@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { mockJobs } from "@/lib/data"
-import { useAuth } from "@/contexts/auth-context"
-import { Clock, MapPin, Play, Square, Pause } from "lucide-react"
+import { mockJobs } from \"@/lib/data\"
+import { useAuth } from \"@/contexts/auth-context\"
+import { logger } from \"@/lib/logger\"
+import { Clock, MapPin, Play, Square, Pause } from \"lucide-react\"
 
 interface TimeSession {
   startTime: Date
@@ -86,7 +87,7 @@ export function TimeTracker() {
     if (currentSession) {
       // Here you would save the time entry to the database
       const totalHours = elapsedTime / (1000 * 60 * 60)
-      console.log(`Time entry saved: ${totalHours.toFixed(2)} hours for job ${currentSession.jobId}`)
+      logger.log(`Time entry saved: ${totalHours.toFixed(2)} hours for job ${currentSession.jobId}`)
     }
 
     setIsTracking(false)

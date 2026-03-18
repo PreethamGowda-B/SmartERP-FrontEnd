@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { getAccessToken } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 type InventoryItem = {
   id: number
@@ -141,7 +142,7 @@ export default function InventoryForm({
       resetForm()
       onItemAdded?.()
     } catch (err) {
-      console.error(err)
+      logger.error(err)
       alert("Error submitting form")
     } finally {
       setLoading(false)

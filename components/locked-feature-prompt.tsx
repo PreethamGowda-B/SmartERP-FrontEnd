@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { logger } from "@/lib/logger"
 
 // Global event bus for intercepting upgrade required errors
 type FeatureLockEvent = {
@@ -37,7 +38,7 @@ export function LockedFeaturePrompt() {
       // Check if this feature has already been suppressed this session
       const suppressionKey = `suppress_lock_${event.feature || 'generic'}`
       if (typeof window !== "undefined" && sessionStorage.getItem(suppressionKey)) {
-        console.log(`[LockedFeaturePrompt] Suppression active for: ${event.feature}`)
+        logger.log(`[LockedFeaturePrompt] Suppression active for: ${event.feature}`)
         return
       }
 

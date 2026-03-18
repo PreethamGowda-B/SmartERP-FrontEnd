@@ -1,5 +1,5 @@
-// Mock authentication system for SmartERP
 import { setTokens, clearTokens } from "@/lib/apiClient"
+import { logger } from "./logger"
 export interface User {
   id: string
   email: string
@@ -11,6 +11,8 @@ export interface User {
   department?: string
   accessToken?: string
   refreshToken?: string
+  company_id?: string | number
+  company_code?: string
 }
 
 
@@ -63,7 +65,7 @@ const simpleHash = (str: string): string => {
 export const signUp = async (userData: SignUpData): Promise<User | null> => {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-    console.log("[v0] Attempting signup with backend:", apiUrl)
+    logger.log("[v0] Attempting signup with backend:", apiUrl)
 
     const response = await fetch(`${apiUrl}/api/auth/signup`, {
       method: "POST",
@@ -75,14 +77,14 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Signup failed" }))
-      console.error("[v0] Backend signup error:", error)
+      logger.error("[v0] Backend signup error:", error)
       // Return a special object so the caller can show the real error message
       throw new Error(error.message || "Signup failed")
     }
 
     const data = await response.json()
     const { user, company_code } = data
-    console.log("[v0] Backend signup successful:", user.email)
+    logger.log("[v0] Backend signup successful:", user.email)
 
     // If owner, store the company_code so the settings page can show it immediately
     const userWithMeta = { ...user, company_code: company_code || user.company_code }
@@ -91,7 +93,7 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
 
     return userWithMeta
   } catch (error) {
-    console.log(
+    logger.log(
       "[v0] Backend unavailable, falling back to mock auth:",
       error instanceof Error ? error.message : String(error),
     )
@@ -102,7 +104,7 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
     const allMockUsers = getMockUsers()
 
     if (allMockUsers.some((user) => user.email === userData.email)) {
-      console.log("[v0] Mock auth: Email already exists")
+      logger.log("[v0] Mock auth: Email already exists")
       return null
     }
 
@@ -118,7 +120,7 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
     }
 
     saveMockUsers([...allMockUsers, newMockUser])
-    console.log("[v0] Mock auth: User created successfully")
+    logger.log("[v0] Mock auth: User created successfully")
 
     const { passwordHash, ...newUser } = newMockUser
     return newUser
@@ -128,7 +130,7 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
 export const signIn = async (email: string, password: string): Promise<User | null> => {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-    console.log("[v0] Attempting login with backend:", apiUrl)
+    logger.log("[v0] Attempting login with backend:", apiUrl)
 
     const response = await fetch(`${apiUrl}/api/auth/login`, {
       method: "POST",
@@ -140,7 +142,7 @@ export const signIn = async (email: string, password: string): Promise<User | nu
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: "Login failed" }))
-      console.error("[v0] Backend login error:", errorData)
+      logger.error("[v0] Backend login error:", errorData)
       
       // 🚀 Handle account suspension with direct redirect
       if (errorData.error === "company_suspended") {
@@ -170,7 +172,7 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     return userDetails
   } catch (error) {
     if (error instanceof Error) {
-      console.error("[v0] Authentication failed:", error.message)
+      logger.error("[v0] Authentication failed:", error.message)
     }
     throw error
   }
@@ -189,7 +191,7 @@ export const signOut = async (): Promise<void> => {
       // Ignore errors during logout
     })
   } catch (error) {
-    console.error("Logout error:", error)
+    logger.error("Logout error:", error)
   }
 
   clearTokens()

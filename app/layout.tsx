@@ -78,7 +78,7 @@ export default function RootLayout({
             __html: `
               window.addEventListener('error', function(e) {
                 if (e.message && (e.message.includes('ChunkLoadError') || e.message.includes('Loading chunk'))) {
-                  console.warn('ChunkLoadError detected, reloading page...');
+                  ${process.env.NODE_ENV === 'development' ? "console.warn('ChunkLoadError detected, reloading page...');" : ""}
                   window.location.reload();
                 }
               }, true);

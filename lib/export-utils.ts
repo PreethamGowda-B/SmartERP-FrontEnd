@@ -1,6 +1,7 @@
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import * as XLSX from "xlsx"
+import { logger } from "./logger"
 
 interface ExportColumn {
   header: string
@@ -48,7 +49,7 @@ const formatExportValue = (value: any, type?: string) => {
  * Generate and download a PDF report
  */
 export const exportToPDF = ({ filename, title, subtitle, columns, data }: ExportOptions) => {
-  console.log(`[export-utils] Starting PDF Export: ${filename}`, { title, columnsCount: columns.length, dataCount: data.length });
+  logger.log(`[export-utils] Starting PDF Export: ${filename}`, { title, columnsCount: columns.length, dataCount: data.length });
   const doc = new jsPDF()
   const now = new Date().toLocaleString('en-GB', {
     day: '2-digit',
@@ -130,16 +131,16 @@ export const exportToPDF = ({ filename, title, subtitle, columns, data }: Export
     }
   })
 
-  console.log("[export-utils] PDF structure completed. Saving file...");
+  logger.log("[export-utils] PDF structure completed. Saving file...");
   doc.save(`${filename}.pdf`)
-  console.log("[export-utils] PDF doc.save() called.");
+  logger.log("[export-utils] PDF doc.save() called.");
 }
 
 /**
  * Generate and download an Excel spreadsheet
  */
 export const exportToExcel = ({ filename, title, columns, data }: ExportOptions) => {
-  console.log(`[export-utils] Starting Excel Export: ${filename}`, { title, columnsCount: columns.length, dataCount: data.length });
+  logger.log(`[export-utils] Starting Excel Export: ${filename}`, { title, columnsCount: columns.length, dataCount: data.length });
   // Map data to match headers and format values
   const worksheetData = data.map(item => {
     const row: any = {}
@@ -162,8 +163,8 @@ export const exportToExcel = ({ filename, title, columns, data }: ExportOptions)
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, title.substring(0, 31))
 
-  console.log("[export-utils] Excel structure completed. Saving file...");
+  logger.log("[export-utils] Excel structure completed. Saving file...");
   // Generate and download
   XLSX.writeFile(workbook, `${filename}.xlsx`)
-  console.log("[export-utils] Excel XLSX.writeFile() called.");
+  logger.log("[export-utils] Excel XLSX.writeFile() called.");
 }

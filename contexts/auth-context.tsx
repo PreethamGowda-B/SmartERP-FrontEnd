@@ -5,6 +5,8 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { type User, type AuthState, getCurrentUser, signOut } from "@/lib/auth"
 import { setTokens } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
+import * as Sentry from "@sentry/nextjs"
 
 interface AuthContextType extends AuthState {
   signOut: () => Promise<void>
@@ -65,26 +67,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   if (freshUser.company_code) {
                     localStorage.setItem("company_code", freshUser.company_code)
                   }
-                  console.log("[v0] ✅ Profile synced with latest DB state")
+                  logger.log("[v0] ✅ Profile synced with latest DB state")
                 }
               }
             } else if (!refreshRes.ok) {
-              console.warn("[v0] Proactive token refresh failed (background)")
+              logger.warn("[v0] Proactive token refresh failed (background)")
             }
           }).catch(err => {
-            console.warn("[v0] Proactive token refresh error (background):", err)
+            logger.warn("[v0] Proactive token refresh error (background):", err)
           })
         }
-      } catch (err) {
-        console.error("[v0] Auth initialization error:", err)
-        if (isMounted) setIsLoading(false)
-      }
+    } catch (err) {
+      logger.error("[v0] Auth initialization error:", { error: err })
+      if (isMounted) setIsLoading(false)
+    }
     }
 
     initAuth()
     
     return () => { isMounted = false }
   }, [])
+
+  // Sync with Sentry
+  useEffect(() => {
+    if (user) {
+      Sentry.setUser({
+        id: String(user.id),
+        email: user.email,
+        role: user.role,
+        company_id: user.company_id
+      })
+    } else {
+      Sentry.setUser(null)
+    }
+  }, [user])
 
   const handleSignOut = async () => {
     await signOut()

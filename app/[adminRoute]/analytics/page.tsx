@@ -13,6 +13,7 @@ import {
   Target
 } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 import { 
   AreaChart, 
   Area, 
@@ -41,7 +42,7 @@ export default function AnalyticsPage() {
         const res = await apiClient("/api/admin/dashboard")
         setData(res)
       } catch (err) {
-        console.error("Failed to fetch analytics data:", err)
+        logger.error("Failed to fetch analytics data:", err)
       } finally {
         setLoading(false)
       }

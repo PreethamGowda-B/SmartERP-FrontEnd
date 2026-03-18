@@ -6,6 +6,7 @@ import { type Job } from "@/lib/data"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/apiClient"
 import { useNotifications } from "@/contexts/notification-context"
+import { logger } from "@/lib/logger"
 
 interface JobContextType {
   jobs: Job[]
@@ -57,9 +58,9 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     async function loadJobs() {
       if (!user) return
       try {
-        console.log("[v0] Fetching jobs from backend...")
+        logger.log("[v0] Fetching jobs from backend...")
         const serverJobs = await apiClient("/api/jobs", { method: "GET" })
-        console.log("[v0] Successfully fetched jobs:", serverJobs)
+        logger.log("[v0] Successfully fetched jobs:", serverJobs)
         if (mounted && Array.isArray(serverJobs)) {
           // Normalize server jobs so each job has a stable shape the UI expects.
           const normalized = serverJobs.map((s: any) => {
@@ -99,7 +100,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (err) {
-        console.log(
+        logger.log(
           "[v0] Backend unavailable, using local jobs. Error:",
           err instanceof Error ? err.message : String(err),
         )
@@ -149,7 +150,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (err) {
           // ignore malformed data
-          console.warn("Failed to parse smarterp-jobs from storage event", err)
+          logger.warn("Failed to parse smarterp-jobs from storage event", err)
         }
       }
     }
@@ -165,7 +166,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         try {
           await apiClient("/api/jobs", { method: "POST", body: JSON.stringify(job) })
         } catch (err) {
-          console.warn("Failed to persist job to server, saved locally", err)
+          logger.warn("Failed to persist job to server, saved locally", err)
         }
       })()
 
@@ -215,7 +216,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         try {
           await apiClient(`/api/jobs/${id}`, { method: "PUT", body: JSON.stringify(updates) })
         } catch (err) {
-          console.warn("Failed to update job on server, update applied locally", err)
+          logger.warn("Failed to update job on server, update applied locally", err)
         }
       })()
   }
@@ -226,7 +227,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         try {
           await apiClient(`/api/jobs/${id}`, { method: "DELETE" })
         } catch (err) {
-          console.warn("Failed to delete job on server, deletion applied locally", err)
+          logger.warn("Failed to delete job on server, deletion applied locally", err)
         }
       })()
   }
@@ -254,7 +255,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
   const refreshJobs = async () => {
     if (!user) return
     try {
-      console.log("[v0] Manually refreshing jobs...")
+      logger.log("[v0] Manually refreshing jobs...")
       const serverJobs = await apiClient("/api/jobs", { method: "GET" })
       if (Array.isArray(serverJobs)) {
         const normalized = serverJobs.map((s: any) => {
@@ -279,7 +280,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
       }
     } catch (err) {
-      console.error("[v0] Failed to refresh jobs:", err)
+      logger.error("[v0] Failed to refresh jobs:", err)
     }
   }
 

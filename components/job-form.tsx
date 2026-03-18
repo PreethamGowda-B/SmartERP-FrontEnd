@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/apiClient"
 import { useEffect } from "react"
 import type { Job } from "@/lib/data"
+import { logger } from "@/lib/logger"
 
 interface JobFormProps {
   job?: Job
@@ -54,7 +55,7 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
           setEmployees(data)
         }
       } catch (error) {
-        console.error("Failed to fetch employees:", error)
+        logger.error("Failed to fetch employees:", error)
       } finally {
         setIsEmployeesLoading(false)
       }

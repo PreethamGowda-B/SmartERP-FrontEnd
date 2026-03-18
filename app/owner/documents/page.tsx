@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -32,7 +33,7 @@ export default function DocumentsPage() {
         const data = await apiClient("/api/documents")
         setEmployees(Array.isArray(data) ? data : [])
       } catch (err) {
-        console.error("Failed to fetch employees for documents:", err)
+        logger.error("Failed to fetch employees for documents:", err)
       } finally {
         setLoading(false)
       }

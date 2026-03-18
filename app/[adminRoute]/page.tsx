@@ -17,6 +17,7 @@ import {
   ShieldCheck
 } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 import { 
   AreaChart, 
   Area, 
@@ -90,7 +91,7 @@ export default function AdminDashboard() {
         const res = await apiClient("/api/admin/dashboard")
         setData(res)
       } catch (err) {
-        console.error("Failed to fetch admin stats:", err)
+        logger.error("Failed to fetch admin stats:", err)
       } finally {
         setLoading(false)
       }

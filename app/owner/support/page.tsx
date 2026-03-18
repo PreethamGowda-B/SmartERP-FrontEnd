@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 import { triggerFeatureLock } from "@/components/locked-feature-prompt"
 import { Phone, Mail, MessageCircle, ArrowRight, ShieldCheck, Zap } from "lucide-react"
 
@@ -28,7 +29,7 @@ export default function SupportPage() {
           setHasAccess(false)
         }
       } catch (err) {
-        console.error("Failed to load subscription status", err)
+        logger.error("Failed to load subscription status", err)
       } finally {
         setLoading(false)
       }

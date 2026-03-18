@@ -1,4 +1,5 @@
 // ✅ SmartERP authentication system (fixed for Render backend)
+import { logger } from "./logger"
 export interface User {
   id: string
   email: string
@@ -30,7 +31,7 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
     const baseUrl =
       process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000/api"
 
-    console.log("[SmartERP] Attempting signup at:", `${baseUrl}/auth/register`)
+    logger.log("[SmartERP] Attempting signup at:", `${baseUrl}/auth/register`)
 
     const response = await fetch(`${baseUrl}/auth/register`, {
       method: "POST",
@@ -43,10 +44,10 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
     if (!response.ok) throw new Error(data.message || "Signup failed")
 
     localStorage.setItem("smarterp_user", JSON.stringify(data.user || data))
-    console.log("[SmartERP] Signup success:", data.user?.email || data.email)
+    logger.log("[SmartERP] Signup success:", data.user?.email || data.email)
     return data.user || data
   } catch (error) {
-    console.error("[SmartERP] Signup error:", error)
+    logger.error("[SmartERP] Signup error:", error)
     return null
   }
 }
@@ -56,7 +57,7 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     const baseUrl =
       process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000/api"
 
-    console.log("[SmartERP] Attempting login at:", `${baseUrl}/auth/login`)
+    logger.log("[SmartERP] Attempting login at:", `${baseUrl}/auth/login`)
 
     const response = await fetch(`${baseUrl}/auth/login`, {
       method: "POST",
@@ -69,10 +70,10 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     if (!response.ok) throw new Error(data.message || "Login failed")
 
     localStorage.setItem("smarterp_user", JSON.stringify(data.user || data))
-    console.log("[SmartERP] Login success:", data.user?.email || data.email)
+    logger.log("[SmartERP] Login success:", data.user?.email || data.email)
     return data.user || data
   } catch (error) {
-    console.error("[SmartERP] Login error:", error)
+    logger.error("[SmartERP] Login error:", error)
     return null
   }
 }
@@ -83,10 +84,11 @@ export const signOut = async (): Promise<void> => {
       process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000/api"
     await fetch(`${baseUrl}/auth/logout`, { method: "POST", credentials: "include" })
   } catch (err) {
-    console.warn("[SmartERP] Logout failed:", err)
+    logger.warn("[SmartERP] Logout failed:", err)
   }
   localStorage.removeItem("smarterp_user")
 }
+
 
 export const getCurrentUser = (): User | null => {
   if (typeof window === "undefined") return null

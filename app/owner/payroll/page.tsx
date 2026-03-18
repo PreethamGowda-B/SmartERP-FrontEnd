@@ -26,6 +26,7 @@ import { DollarSign, Plus, Loader2, Search, Calendar, FileText } from "lucide-re
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"
+import { logger } from "@/lib/logger"
 
 interface Employee {
   id: string
@@ -106,7 +107,7 @@ export default function OwnerPayrollPage() {
       })) : []
       setPayrolls(parsedData)
     } catch (err: any) {
-      console.error("Error fetching payrolls:", err)
+      logger.error("Error fetching payrolls:", err)
     } finally {
       setLoading(false)
     }
@@ -380,7 +381,7 @@ export default function OwnerPayrollPage() {
           <CardContent className="pt-6">
             <div className="flex gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4"><Search /></span>
                 <Input
                   placeholder="Search by employee name or email..."
                   value={searchTerm}

@@ -11,6 +11,7 @@ import { OwnerLayout } from "@/components/owner-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { AttendanceCalendar, DayDetail } from "@/components/attendance-calendar"
 import { getAccessToken } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
@@ -71,7 +72,7 @@ export default function EmployeeAttendanceDetailPage() {
                 setSummary(data.summary || null)
             }
         } catch (err) {
-            console.error("Error fetching employee attendance:", err)
+            logger.error("Error fetching employee attendance:", err)
         } finally {
             setLoading(false)
         }

@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { MessageSquare, Send, Loader2 } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 type Message = {
   id: number
@@ -47,7 +48,7 @@ export default function MessagesPage() {
       setOwner(data)
       return data
     } catch (err) {
-      console.error("Error fetching owner:", err)
+      logger.error("Error fetching owner:", err)
       return null
     }
   }
@@ -65,7 +66,7 @@ export default function MessagesPage() {
 
       setTimeout(scrollToBottom, 100)
     } catch (err) {
-      console.error("Error fetching messages:", err)
+      logger.error("Error fetching messages:", err)
     }
   }
 
@@ -86,7 +87,7 @@ export default function MessagesPage() {
       setNewMessage("")
       await fetchMessages(owner.id)
     } catch (err) {
-      console.error("Error sending message:", err)
+      logger.error("Error sending message:", err)
       alert("Failed to send message. Please try again.")
     } finally {
       setSending(false)

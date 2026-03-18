@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Cloud, CloudRain, Sun } from "lucide-react"
+import { logger } from "@/lib/logger"
 
 export function DateTimeWeather() {
   const [dateTime, setDateTime] = useState<{
@@ -51,7 +52,7 @@ export function DateTimeWeather() {
         }
         setWeather(mockWeatherData)
       } catch (error) {
-        console.error("[v0] Failed to fetch weather:", error)
+        logger.error("[v0] Failed to fetch weather:", error)
         // Fallback weather
         setWeather({ temp: 22, condition: "Partly Cloudy", icon: "cloud" })
       }

@@ -6,6 +6,7 @@ import { useAuth } from "./auth-context"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { apiClient, getAccessToken } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 export interface Notification {
   id: string
@@ -42,9 +43,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     try {
       const data = await apiClient("/api/notifications")
       setNotifications(data || [])
-      console.log(`✅ Fetched ${data?.length || 0} notifications`)
+      logger.log(`✅ Fetched ${data?.length || 0} notifications`)
     } catch (error) {
-      console.error("❌ Error fetching notifications:", error)
+      logger.error("❌ Error fetching notifications:", error)
     }
   }, [user])
 
@@ -60,11 +61,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         // Explicitly register service worker for reliability
         const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-        console.log("✅ Service Worker registered:", registration.scope);
+        logger.log("✅ Service Worker registered:", registration.scope);
 
         // Handle foreground messages
         onMessage(messaging, (payload) => {
-          console.log("🔔 FCM Foreground message received:", payload);
+          logger.log("🔔 FCM Foreground message received:", payload);
           // Only show local notification if app is hidden to avoid double notification in-app
           if (document.visibilityState === 'hidden' && payload.notification) {
             registration.showNotification(payload.notification.title || "New Notification", {
@@ -82,7 +83,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         });
 
         if (currentToken) {
-          console.log("✅ FCM Token generated");
+          logger.log("✅ FCM Token generated");
           // Send token to the new multi-device endpoint
           await apiClient("/api/notifications/devices", {
             method: "POST",
@@ -92,11 +93,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             }),
           });
         } else {
-          console.log("⚠️ No registration token available. Request permission to generate one.");
+          logger.log("⚠️ No registration token available. Request permission to generate one.");
         }
       }
     } catch (error) {
-      console.error("❌ Error setting up FCM:", error);
+      logger.error("❌ Error setting up FCM:", error);
     }
   }, [user]);
 
@@ -127,7 +128,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     })
 
     eventSource.onopen = () => {
-      console.log("📡 SSE connection established")
+      logger.log("📡 SSE connection established")
     }
 
     eventSource.onmessage = (event) => {
@@ -135,16 +136,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const data = JSON.parse(event.data)
 
         if (data.type === "connected") {
-          console.log("✅ SSE connected:", data.message)
+          logger.log("✅ SSE connected:", data.message)
         } else if (data.type === "notification") {
           const notification = data.data
-          console.log("🔔 New notification received:", notification)
+          logger.log("🔔 New notification received:", notification)
 
           setNotifications((prev) => [notification, ...prev])
 
           // 1. Play notification sound
           const audio = new Audio("/notification.mp3")
-          audio.play().catch((e) => console.log("🔇 Audio play blocked by browser", e))
+          audio.play().catch((e) => logger.log("🔇 Audio play blocked by browser", e))
 
           // 2. Show toast notification
           toast(notification.title, {
@@ -169,12 +170,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           })
         }
       } catch (error) {
-        console.error("❌ Error parsing SSE message:", error)
+        logger.error("❌ Error parsing SSE message:", error)
       }
     }
 
     eventSource.onerror = (error) => {
-      console.error("❌ SSE connection error:", error)
+      logger.error("❌ SSE connection error:", error)
       eventSource.close()
     }
 
@@ -182,7 +183,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     return () => {
       eventSource.close()
-      console.log("📡 SSE connection closed")
+      logger.log("📡 SSE connection closed")
     }
   }, [user, fetchNotifications, router])
 
@@ -206,9 +207,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setNotifications((prev) =>
         prev.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)),
       )
-      console.log(`✅ Notification ${id} marked as read`)
+      logger.log(`✅ Notification ${id} marked as read`)
     } catch (error) {
-      console.error("❌ Error marking notification as read:", error)
+      logger.error("❌ Error marking notification as read:", error)
     }
   }
 
@@ -219,9 +220,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       })
 
       setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })))
-      console.log("✅ All notifications marked as read")
+      logger.log("✅ All notifications marked as read")
     } catch (error) {
-      console.error("❌ Error marking all as read:", error)
+      logger.error("❌ Error marking all as read:", error)
     }
   }
 

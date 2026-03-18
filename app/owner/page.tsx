@@ -18,6 +18,7 @@ import { SubscriptionStatus } from "@/components/subscription-status"
 
 import { apiClient } from "@/lib/apiClient"
 import { useAuth } from "@/contexts/auth-context"
+import { logger } from "@/lib/logger"
 
 type DashboardMetrics = {
   activeJobs: number
@@ -69,7 +70,7 @@ export default function OwnerDashboard() {
       setMetrics(metricsData)
       setRecentActivity(Array.isArray(activityData) ? activityData : [])
     } catch (err: any) {
-      console.error("Error fetching dashboard data:", err)
+      logger.error("Error fetching dashboard data:", err)
       setError(err.message)
     } finally {
       setLoading(false)

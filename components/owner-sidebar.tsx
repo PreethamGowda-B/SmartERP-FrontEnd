@@ -30,6 +30,7 @@ import {
   Files,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { logger } from "@/lib/logger"
 
 const navigation = [
   { name: "Dashboard", href: "/owner", icon: LayoutDashboard },
@@ -73,7 +74,7 @@ export function OwnerSidebar() {
           setFeatures(res.plan.features)
         }
       } catch (err) {
-        console.error("Sidebar failed to fetch plan status:", err)
+        logger.error("Sidebar failed to fetch plan status:", err)
       }
     }
     fetchPlan()

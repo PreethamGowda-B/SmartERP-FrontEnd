@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/auth-context"
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
 import { getAccessToken } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 function authHeaders(): Record<string, string> {
   const token = getAccessToken()
@@ -57,7 +58,7 @@ export default function TimeTrackingPage() {
                 setTodayAttendance(data)
             }
         } catch (err) {
-            console.error("Error fetching today's attendance:", err)
+            logger.error("Error fetching today's attendance:", err)
         }
     }
 
@@ -80,7 +81,7 @@ export default function TimeTrackingPage() {
                 setHistory(data)
             }
         } catch (err) {
-            console.error("Error fetching history:", err)
+            logger.error("Error fetching history:", err)
         }
     }
 

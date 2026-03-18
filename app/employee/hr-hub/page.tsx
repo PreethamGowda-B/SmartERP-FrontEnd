@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -62,7 +63,7 @@ export default function EmployeeWorkplace() {
       setAnnouncements(annRes || [])
       setLeaves(leaveRes || [])
     } catch (error) {
-      console.error("Failed to fetch Workplace data:", error)
+      logger.error("Failed to fetch Workplace data:", error)
       toast.error("Failed to load workplace data")
     } finally {
       setLoading(false)

@@ -18,6 +18,7 @@ import {
 import { Package, Plus, Loader2, AlertTriangle, CheckCircle2, Clock, XCircle, RefreshCw } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 
 interface MaterialRequest {
   id: number
@@ -73,7 +74,7 @@ export default function EmployeeMaterialsPage() {
       const data = await apiClient("/api/material-requests")
       setRequests(Array.isArray(data) ? data : [])
     } catch (err: any) {
-      console.error("Material requests fetch error:", err)
+      logger.error("Material requests fetch error:", err)
       setFetchError(err.message || "Failed to load requests. Please try again.")
     } finally {
       setLoading(false)

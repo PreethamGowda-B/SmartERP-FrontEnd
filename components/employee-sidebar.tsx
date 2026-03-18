@@ -10,6 +10,7 @@ import { useNotifications } from "@/contexts/notification-context"
 import { apiClient } from "@/lib/apiClient"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useEffect } from "react"
+import { logger } from "@/lib/logger"
 import {
   HardHat,
   LayoutDashboard,
@@ -67,7 +68,7 @@ export function EmployeeSidebar() {
           setFeatures(res.plan.features)
         }
       } catch (err) {
-        console.error("Employee sidebar failed to fetch plan status:", err)
+        logger.error("Employee sidebar failed to fetch plan status:", err)
       }
     }
     fetchPlan()

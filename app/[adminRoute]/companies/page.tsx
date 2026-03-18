@@ -20,6 +20,7 @@ import {
 import { apiClient } from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { logger } from "@/lib/logger"
 
 interface Company {
   id: number
@@ -45,7 +46,7 @@ export default function AdminCompanies() {
         const data = await apiClient("/api/admin/companies")
         setCompanies(data || [])
       } catch (err) {
-        console.error("Failed to fetch companies:", err)
+        logger.error("Failed to fetch companies:", err)
         toast.error("Failed to load platform companies")
       } finally {
         setLoading(false)

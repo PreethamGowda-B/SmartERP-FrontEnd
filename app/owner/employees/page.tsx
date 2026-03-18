@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Users, Search, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye, Save, X } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 import { ExportButton } from "@/components/export-button"
 
 interface Employee {
