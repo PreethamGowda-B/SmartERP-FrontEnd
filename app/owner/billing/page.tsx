@@ -137,7 +137,8 @@ export default function BillingPage() {
         notes: {
           companyId: user?.company_id,
           planId: planId.toString(),
-          billingCycle
+          billingCycle,
+          userId: user?.id
         },
         handler: async function (response: any) {
           try {
