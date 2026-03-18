@@ -86,13 +86,7 @@ export default function BillingPage() {
       missing: ["No AI Assistant", "No Payroll Generation", "No Location Tracking", "30-day message history"]
     },
     {
-      id: 4, name: "Basic Test Plan", limitText: "Temporary plan for payment verification", price: 10,
-      features: ["Same as Basic", "Verification Only"],
-      missing: ["Production usage not recommended"],
-      test: true
-    },
-    {
-      id: 2, name: "Basic", limitText: "For growing businesses", price: isAnnual ? 9990 : 10,
+      id: 2, name: "Basic", limitText: "For growing businesses", price: isAnnual ? 9990 : 999,
       features: ["Up to 50 employees", "Up to 200 inventory items", "Location Tracking", "Payroll Generation", "Advanced Reports & Exports", "90-day message history"],
       missing: ["No AI Assistant", "No priority support"]
     },
@@ -293,9 +287,8 @@ export default function BillingPage() {
            
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
              {plans
-                .filter(p => !('test' in p) || (plan && plan.id === 1))
                 .map((p) => {
-                  const isCurrent = plan && !plan.is_trial && (plan.id === p.id || (('test' in p) && plan.id === 2));
+                  const isCurrent = plan && !plan.is_trial && plan.id === p.id;
                const isProTrial = plan?.is_trial && p.id === 3;
                
                return (
@@ -314,7 +307,6 @@ export default function BillingPage() {
                         <CardHeader className="text-center pt-8 pb-6">
                             <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
                               {p.name}
-                              {p.test && <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200">TEST</Badge>}
                             </CardTitle>
                             <CardDescription className="min-h-10 mt-2 text-sm">{p.limitText}</CardDescription>
                             <div className="mt-4 flex flex-col items-center justify-center">
