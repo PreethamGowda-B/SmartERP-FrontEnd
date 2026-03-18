@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader2, Eye, EyeOff, Sparkles, CheckCircle2, Zap, Clock, ShieldCheck, ArrowRight, Minus } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import Script from "next/script"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
@@ -34,6 +35,7 @@ type PlanInfo = {
 type UsageInfo = { employees: number, inventory_items: number }
 
 export default function BillingPage() {
+  const router = useRouter()
   const { user } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
@@ -132,6 +134,11 @@ export default function BillingPage() {
         name: "SmartERP",
         description: `Upgrade to ${plans.find(p => p.id === planId)?.name || 'Basic'} Plan`,
         order_id: orderRes.id,
+        notes: {
+          companyId: user?.company_id,
+          planId: planId.toString(),
+          billingCycle
+        },
         handler: async function (response: any) {
           try {
             // 3. Verify Payment on Backend
@@ -149,19 +156,18 @@ export default function BillingPage() {
             if (verifyRes.ok) {
               toast({
                 title: "Upgrade Successful! 🎉",
-                description: `Your plan has been upgraded to ${planId === 3 ? 'Pro' : 'Basic'}.`,
+                description: `Your plan has been upgraded. Redirecting...`,
               })
-              // Refresh status
-              window.location.reload()
+              router.push("/owner/payment-success")
             } else {
               throw new Error(verifyRes.message || "Verification failed")
             }
           } catch (err: any) {
-            toast({
-              title: "Upgrade Failed",
-              description: err.message || "Something went wrong during verification.",
-              variant: "destructive"
-            })
+            logger.error("Payment verification failed", err)
+            // Background webhook will finalize it if direct verification fails
+            router.push("/owner/payment-success")
+          } finally {
+            setUpgrading(false)
           }
         },
         prefill: {
