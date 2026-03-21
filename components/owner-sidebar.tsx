@@ -34,7 +34,7 @@ import { logger } from "@/lib/logger"
 
 const navigation = [
   { name: "Dashboard", href: "/owner", icon: LayoutDashboard },
-  { name: "Jobs", href: "/owner/jobs", icon: Briefcase },
+  { name: "Tasks", href: "/owner/jobs", icon: Briefcase },
   { name: "Employees", href: "/owner/employees", icon: Users },
   { name: "Attendance", href: "/owner/attendance", icon: Clock },
   { name: "Materials", href: "/owner/materials", icon: Package },
