@@ -75,7 +75,7 @@ export default function AdminSubscriptions() {
     }
   }
 
-  const filteredCompanies = companies.filter(c => 
+  const filteredCompanies = (Array.isArray(companies) ? companies : []).filter(c => 
     c.company_name?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 

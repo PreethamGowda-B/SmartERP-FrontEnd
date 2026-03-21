@@ -69,7 +69,7 @@ export default function AdminCompanies() {
     }
   }
 
-  const filteredCompanies = companies.filter(c => {
+  const filteredCompanies = (Array.isArray(companies) ? companies : []).filter(c => {
     const matchesSearch = (c.company_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           c.company_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           c.owner_email?.toLowerCase().includes(searchQuery.toLowerCase()))

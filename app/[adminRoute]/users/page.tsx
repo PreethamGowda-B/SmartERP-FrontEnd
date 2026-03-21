@@ -41,7 +41,8 @@ export default function AdminUsers() {
     const fetchUsers = async () => {
       try {
         const data = await apiClient("/api/admin/users")
-        setUsers(data || [])
+        // API returns { users: [], pagination: {} }
+        setUsers(data?.users || [])
       } catch (err) {
         toast.error("Failed to load platform users")
       } finally {
@@ -51,7 +52,7 @@ export default function AdminUsers() {
     fetchUsers()
   }, [])
 
-  const filteredUsers = users.filter(u => {
+  const filteredUsers = (Array.isArray(users) ? users : []).filter(u => {
     const matchesSearch = (u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           u.company_name?.toLowerCase().includes(searchQuery.toLowerCase()))

@@ -124,15 +124,28 @@ export function AIChatBot() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="fixed bottom-4 right-4 z-[9999]"
+            className="fixed bottom-4 right-4 z-[9999] group"
           >
+            {/* Hover Prompt Message */}
+            <motion.div
+              initial={{ opacity: 0, x: 20, scale: 0.8 }}
+              whileHover={{ opacity: 1, x: -10, scale: 1 }}
+              className="absolute right-full mr-4 top-1/2 -translate-y-1/2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl whitespace-nowrap shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300 border border-white/10"
+            >
+              <div className="flex items-center gap-2">
+                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                 Need help? Ask me!
+              </div>
+              <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-2 h-2 bg-slate-900 rotate-45 border-r border-t border-white/10" />
+            </motion.div>
+
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              className="h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center"
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              className="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-2xl flex items-center justify-center animate-bounce-subtle hover:rotate-12 transition-all duration-300 border-2 border-white/20"
               onClick={() => setIsOpen(true)}
             >
-              <Bot className="h-5 w-5" />
+              <Bot className="h-7 w-7" />
             </motion.button>
           </motion.div>
         )}

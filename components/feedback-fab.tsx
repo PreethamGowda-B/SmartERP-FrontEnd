@@ -66,10 +66,10 @@ export function FeedbackFAB() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl z-50 animate-bounce-subtle hover:scale-110 transition-transform duration-300 group"
+          className="fixed bottom-20 right-6 h-14 w-14 rounded-full shadow-2xl z-50 animate-bounce-subtle hover:scale-110 transition-transform duration-300 group bg-slate-900 border-2 border-white/20"
           size="icon"
         >
-          <MessageSquarePlus className="h-6 w-6 group-hover:rotate-12 transition-transform" />
+          <MessageSquarePlus className="h-6 w-6 group-hover:rotate-12 transition-transform text-white" />
           <span className="sr-only">Provide Feedback</span>
         </Button>
       </DialogTrigger>
