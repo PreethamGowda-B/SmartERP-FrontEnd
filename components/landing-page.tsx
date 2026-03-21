@@ -358,9 +358,38 @@ export function LandingPage() {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-border/50 bg-card/20 backdrop-blur-sm py-8 animate-fade-in-up">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
-            <p>© 2025 SmartERP. All rights reserved. Professional crew management made simple. Mr Preethu Gowda</p>
+        <footer className="border-t border-border/50 bg-card/20 backdrop-blur-sm py-12 animate-fade-in-up">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left mb-8">
+              <div className="space-y-4">
+                <div className="flex items-center justify-center md:justify-start gap-2">
+                  <div className="p-1.5 bg-primary rounded-lg">
+                    <Building2 className="h-4 w-4 text-primary-foreground" />
+                  </div>
+                  <span className="font-bold text-lg">SmartERP</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Professional crew management made simple. Built for scale.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-4">Product</h4>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li><button onClick={() => router.push("/auth/login")} className="hover:text-primary transition-colors">Features</button></li>
+                  <li><button onClick={() => router.push("/auth/login")} className="hover:text-primary transition-colors">Pricing</button></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-4">Legal</h4>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li><button onClick={() => router.push("/terms")} className="hover:text-primary transition-colors">Terms of Service</button></li>
+                  <li><button onClick={() => router.push("/privacy")} className="hover:text-primary transition-colors">Privacy Policy</button></li>
+                </ul>
+              </div>
+            </div>
+            <div className="pt-8 border-t border-border/50 text-center text-sm text-muted-foreground">
+              <p>© {new Date().getFullYear()} SmartERP. All rights reserved. Prozync Innovations. Mr Preethu Gowda</p>
+            </div>
           </div>
         </footer>
       </div>
