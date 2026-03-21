@@ -41,44 +41,38 @@ export function ExportButton({
   }, [title, filename, isExporting]);
 
   const handleExport = async () => {
-    logger.log(`[v0] [ExportButton] handleExport triggered! state.isExporting: ${isExporting}`);
-    if (isExporting) {
-      logger.warn("[v0] [ExportButton] Already exporting, skipping click.");
-      return;
-    }
+    if (isExporting) return;
     setIsExporting(true)
     onExportStart?.()
-    
+
+    const toastId = toast.loading("📊 Fetching data, please wait...")
+
     try {
-      // Fetch dynamic data if onExport is provided, otherwise use data prop
       let exportData = data || []
-      
+
       if (onExport) {
-        logger.log("[ExportButton] Calling onExport to fetch data...");
-        toast.info("Preparing full report data...")
         exportData = await onExport()
-        logger.log(`[ExportButton] Data fetched. Count: ${exportData?.length || 0}`);
       }
 
       if (!exportData || exportData.length === 0) {
-        logger.log("[v0] [ExportButton] No data returned from onExport!");
+        toast.dismiss(toastId)
         toast.error("No data available to export")
         setIsExporting(false)
         return
       }
 
+      toast.loading("🖨️ Generating PDF report...", { id: toastId })
+
       // Small delay for smooth transition
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, 400))
 
       const options = { filename, title, subtitle, columns, data: exportData }
-      
-      logger.log("[ExportButton] Triggering PDF generation...");
       exportToPDF(options)
-      
-      toast.success(`PDF Export completed successfully`)
+
+      toast.success(`✅ PDF downloaded successfully! (${exportData.length} records)`, { id: toastId })
     } catch (error) {
       logger.error("Export failed:", error)
-      toast.error("Something went wrong while exporting. Please try again.")
+      toast.error("❌ Export failed. Please try again.", { id: toastId })
     } finally {
       setIsExporting(false)
       onExportEnd?.()
