@@ -114,7 +114,7 @@ export default function RootLayout({
                 logo: "https://www.prozync.in/icon.png",
                 contactPoint: {
                   "@type": "ContactPoint",
-                  telephone: "+91-XXXXXXXXXX",
+                  telephone: "+91-9535134351",
                   contactType: "customer service",
                 },
               }),

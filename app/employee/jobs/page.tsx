@@ -14,7 +14,7 @@ import {
 import { EmployeeLayout } from "@/components/employee-layout"
 import { cn } from "@/lib/utils"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 const AUTO_REFRESH_MS = 30_000
 
 import { getAccessToken } from "@/lib/apiClient"
