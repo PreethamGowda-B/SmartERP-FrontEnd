@@ -8,11 +8,13 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Users, Search, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye, Save, X } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { ExportButton } from "@/components/export-button"
+import { toast } from "sonner"
 
 interface Employee {
   id: number
@@ -93,8 +95,10 @@ export default function EmployeesPage() {
       })
       setEditingId(null)
       await fetchEmployees()
+      toast.success("✅ Employee updated successfully")
     } catch (err: any) {
       setError(err.message || "Failed to update employee")
+      toast.error("Failed to update employee")
     } finally {
       setSubmitting(false)
     }
@@ -110,8 +114,10 @@ export default function EmployeesPage() {
         body: JSON.stringify({ is_active: !employee.is_active }),
       })
       await fetchEmployees()
+      toast.success(`✅ Account ${employee.is_active ? 'deactivated' : 'activated'}`)
     } catch (err: any) {
       setError(err.message || "Failed to update account status")
+      toast.error("Failed to update account status")
     } finally {
       setSubmitting(false)
     }
@@ -126,10 +132,13 @@ export default function EmployeesPage() {
       await apiClient(`/api/employees/${deleteConfirm.id}`, {
         method: "DELETE",
       })
+      const name = deleteConfirm.name
       setDeleteConfirm(null)
       await fetchEmployees()
+      toast.success(`🗑️ ${name} removed successfully`)
     } catch (err: any) {
       setError(err.message || "Failed to delete employee")
+      toast.error("Failed to delete employee")
     } finally {
       setSubmitting(false)
     }
@@ -264,10 +273,32 @@ export default function EmployeesPage() {
           </Select>
         </div>
 
-        {/* Loading state */}
+        {/* Loading state — Skeleton Cards */}
         {loading && (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                  <div className="flex gap-2 pt-1">
+                    <Skeleton className="h-8 flex-1" />
+                    <Skeleton className="h-8 flex-1" />
+                    <Skeleton className="h-8 w-8" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
 
