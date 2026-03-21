@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bot, Send, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { cn } from "@/lib/utils"
 
 /* ---------------- TYPES ---------------- */
 
@@ -50,7 +51,7 @@ async function askBackendAI(message: string, onFeatureLocked: (data: any) => voi
 
 /* ---------------- COMPONENT ---------------- */
 
-export function AIChatBot() {
+export function AIChatBot({ className }: { className?: string }) {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -124,7 +125,7 @@ export function AIChatBot() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="fixed bottom-4 right-4 z-[9999] group"
+            className={cn("z-[9999] group relative", className)}
           >
             {/* Hover Prompt Message */}
             <motion.div

@@ -54,8 +54,6 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
         <MainContent>{children}</MainContent>
       </div>
 
-      <AIChatBot />
-
       <PageTransition />
 
       <TrialWelcomeModal />

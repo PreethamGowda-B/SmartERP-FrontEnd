@@ -6,11 +6,8 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { EmployeeSidebar } from "@/components/employee-sidebar"
-import { AIChatBot } from "@/components/ai-chat-bot"
 import { useLoading } from "@/contexts/loading-context"
 import PageTransition from './page-transition'
-import { Button } from "@/components/ui/button"
-import { Bot } from "lucide-react"
 import DotsLoader from '@/components/dots-loader'
 import { useLocationTracking } from "@/hooks/useLocationTracking"
 
@@ -62,7 +59,6 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
         <MainContent>{children}</MainContent>
       </div>
 
-      <AIChatBot />
       <PageTransition />
     </div>
   )

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MessageSquarePlus, Send, Loader2, Bug, Lightbulb, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,49 +24,62 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 import { apiClient } from "@/lib/apiClient"
+import { cn } from "@/lib/utils"
 
-export function FeedbackFAB() {
+export function FeedbackFAB({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
+  const [type, setType] = useState('general')
+  const [subject, setSubject] = useState('')
+  const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    type: "general",
-    subject: "",
-    message: "",
-  })
+  const [token, setToken] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.message.trim()) {
-      toast.error("Please enter a message")
+  useEffect(() => {
+    // Standardize token retrieval from AuthContext and handle mounting check
+    const storedToken = localStorage.getItem("_at") || localStorage.getItem("accessToken")
+    setToken(storedToken)
+  }, [])
+
+  const handleSubmit = async () => {
+    if (!message.trim()) {
+      toast.error("Please provide a description of your feedback")
       return
     }
 
     setLoading(true)
     try {
-      await apiClient("/api/feedback", {
-        method: "POST",
+      await apiClient('/api/v1/feedback', {
+        method: 'POST',
         body: JSON.stringify({
-          ...formData,
-          pageUrl: typeof window !== "undefined" ? window.location.href : "",
-        }),
+          type,
+          subject,
+          message,
+          page_url: typeof window !== "undefined" ? window.location.href : "",
+        })
       })
-
-      toast.success("✅ Feedback sent! Thank you for helping us improve SmartERP.")
-      setFormData({ type: "general", subject: "", message: "" })
+      toast.success("Thank you! Your feedback has been sent to our team.")
       setOpen(false)
-    } catch (error: any) {
-      console.error("Feedback error:", error)
-      toast.error("Failed to send feedback. Please try again later.")
+      // Reset form
+      setSubject('')
+      setMessage('')
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send feedback. Please try again.")
     } finally {
       setLoading(false)
     }
   }
 
+  // Not logged in -> don't show FAB (or could show a minimal version)
+  if (!token) return null
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          className="fixed bottom-20 right-6 h-14 w-14 rounded-full shadow-2xl z-50 animate-bounce-subtle hover:scale-110 transition-transform duration-300 group bg-slate-900 border-2 border-white/20"
+          className={cn(
+            "h-14 w-14 rounded-full shadow-2xl animate-bounce-subtle hover:scale-110 transition-transform duration-300 group bg-slate-900 border-2 border-white/20",
+            className
+          )}
           size="icon"
         >
           <MessageSquarePlus className="h-6 w-6 group-hover:rotate-12 transition-transform text-white" />
@@ -74,7 +87,7 @@ export function FeedbackFAB() {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit}>
+        <div className="grid gap-4 py-4">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-primary" />
@@ -88,8 +101,8 @@ export function FeedbackFAB() {
             <div className="grid gap-2">
               <Label htmlFor="type">Feedback Type</Label>
               <Select
-                value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value })}
+                value={type}
+                onValueChange={setType}
               >
                 <SelectTrigger id="type">
                   <SelectValue placeholder="Select type" />
@@ -121,8 +134,8 @@ export function FeedbackFAB() {
               <Input
                 id="subject"
                 placeholder="What is this about?"
-                value={formData.subject}
-                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
@@ -131,14 +144,14 @@ export function FeedbackFAB() {
                 id="message"
                 placeholder="Tell us more..."
                 className="min-h-[120px]"
-                value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
                 required
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading} className="w-full">
+            <Button onClick={handleSubmit} disabled={loading} className="w-full">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -152,7 +165,7 @@ export function FeedbackFAB() {
               )}
             </Button>
           </DialogFooter>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   )
