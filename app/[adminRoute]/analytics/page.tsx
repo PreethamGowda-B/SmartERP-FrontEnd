@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
                    <div className="w-full h-full bg-slate-50 animate-pulse rounded-2xl" />
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={data?.charts.companyGrowth}>
+                    <AreaChart data={data?.charts?.companyGrowth || []}>
                       <defs>
                         <linearGradient id="colorCompanies" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
@@ -118,7 +118,7 @@ export default function AnalyticsPage() {
                    <div className="w-full h-full bg-slate-50 animate-pulse rounded-2xl" />
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data?.charts.userGrowth}>
+                    <BarChart data={data?.charts?.userGrowth || []}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b', fontWeight: 700 }} dy={10} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b', fontWeight: 700 }} />
@@ -138,7 +138,7 @@ export default function AnalyticsPage() {
                       <PieChartIcon className="h-5 w-5 text-emerald-500" /> Revenue Distribution
                     </h2>
                     <div className="space-y-4">
-                       {data?.charts.subscriptionDistribution.map((entry: any, index: number) => (
+                       {(data?.charts?.subscriptionDistribution || []).map((entry: any, index: number) => (
                          <div key={entry.name} className="flex items-center justify-between group">
                             <div className="flex items-center gap-3">
                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
@@ -148,7 +148,7 @@ export default function AnalyticsPage() {
                                <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden hidden md:block">
                                   <motion.div 
                                     initial={{ width: 0 }}
-                                    animate={{ width: `${(entry.value / (data.stats.totalCompanies || 1)) * 100}%` }}
+                                    animate={{ width: `${(entry.value / (data.stats?.totalCompanies || 1)) * 100}%` }}
                                     className="h-full"
                                     style={{ backgroundColor: COLORS[index % COLORS.length] }}
                                   />
@@ -164,7 +164,7 @@ export default function AnalyticsPage() {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={data?.charts.subscriptionDistribution}
+                            data={data?.charts?.subscriptionDistribution || []}
                             cx="50%"
                             cy="50%"
                             innerRadius={60}
@@ -172,7 +172,7 @@ export default function AnalyticsPage() {
                             paddingAngle={5}
                             dataKey="value"
                           >
-                            {data?.charts.subscriptionDistribution.map((entry: any, index: number) => (
+                            {data?.charts?.subscriptionDistribution?.map((entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>

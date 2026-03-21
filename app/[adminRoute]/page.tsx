@@ -163,7 +163,7 @@ export default function AdminDashboard() {
                 <div className="w-full h-full bg-slate-50 animate-pulse rounded-xl" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data?.charts.companyGrowth}>
+                  <AreaChart data={data?.charts?.companyGrowth || []}>
                     <defs>
                       <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
@@ -212,7 +212,7 @@ export default function AdminDashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={data?.charts.subscriptionDistribution}
+                      data={data?.charts?.subscriptionDistribution || []}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
@@ -220,7 +220,7 @@ export default function AdminDashboard() {
                       paddingAngle={5}
                       dataKey="value"
                     >
-                      {data?.charts.subscriptionDistribution.map((entry, index) => (
+                      {data?.charts?.subscriptionDistribution?.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -259,7 +259,7 @@ export default function AdminDashboard() {
                   Array(5).fill(0).map((_, i) => (
                     <div key={i} className="p-4 bg-slate-50/50 animate-pulse h-16" />
                   ))
-                ) : data?.pulse.map((item) => (
+                ) : (data?.pulse || []).map((item) => (
                   <div key={item.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center gap-4 group">
                     <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all duration-300">
                       <Circle className="h-3 w-3 fill-current" />
