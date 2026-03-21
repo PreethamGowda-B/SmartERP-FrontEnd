@@ -14,6 +14,7 @@ import { NotificationPermissionPrompt } from "@/components/notification-permissi
 import { Suspense } from "react"
 import { LoadingProvider } from "@/contexts/loading-context"
 import PremiumLoader from "@/components/premium-loader"
+import { FeedbackFAB } from "@/components/feedback-fab"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -130,6 +131,7 @@ export default function RootLayout({
                   <SlowNetworkNotice />
                   <NotificationPermissionPrompt />
                   <PremiumLoader />
+                  <FeedbackFAB />
                 </NotificationProvider>
               </AuthProvider>
             </LoadingProvider>
