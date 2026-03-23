@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { mockJobs } from \"@/lib/data\"
-import { useAuth } from \"@/contexts/auth-context\"
-import { logger } from \"@/lib/logger\"
-import { Clock, MapPin, Play, Square, Pause } from \"lucide-react\"
+import { mockJobs } from "@/lib/data"
+import { useAuth } from "@/contexts/auth-context"
+import { logger } from "@/lib/logger"
+import { Clock, MapPin, Play, Square, Pause } from "lucide-react"
 
 interface TimeSession {
   startTime: Date
