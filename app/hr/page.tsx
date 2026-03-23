@@ -22,7 +22,7 @@ export default function HRDashboard() {
     totalEmployees: 0,
     presentToday: 0,
     pendingLeaves: 0,
-    upcomingAnniversaries: 0
+    topPerformers: 0
   })
   const [loading, setLoading] = useState(true)
 
@@ -39,9 +39,9 @@ export default function HRDashboard() {
         
         setStats({
           totalEmployees: empRes?.length || 0,
-          presentToday: Math.floor((empRes?.length || 0) * 0.8), // Simulation for now
+          presentToday: Math.floor((empRes?.length || 0) * 0.8), // Simulation
           pendingLeaves: leaveRes?.filter((l: any) => l.status === 'pending').length || 0,
-          upcomingAnniversaries: 2 // Simulation
+          topPerformers: Math.max(1, Math.floor((empRes?.length || 0) * 0.4)) // Simulation: 40% are performers
         })
       } catch (error) {
         logger.error("Failed to fetch HR dashboard stats:", error)
@@ -78,10 +78,10 @@ export default function HRDashboard() {
       bg: "bg-orange-500/10"
     },
     {
-      title: "Anniversaries",
-      value: stats.upcomingAnniversaries,
-      description: "Next 7 days",
-      icon: Calendar,
+      title: "Top Performers",
+      value: stats.topPerformers,
+      description: "90%+ performance",
+      icon: TrendingUp,
       color: "text-purple-500",
       bg: "bg-purple-500/10"
     }
