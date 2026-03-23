@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect, useRef } from "react"
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react"
 import { type Job } from "@/lib/data"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/apiClient"
@@ -159,7 +159,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("storage", handler)
   }, [])
 
-  const addJob = (job: Job) => {
+  const addJob = useCallback((job: Job) => {
     setJobs((prev) => [job, ...prev])
       // persist to backend (best-effort)
       ; (async () => {
@@ -169,7 +169,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
           logger.warn("Failed to persist job to server, saved locally", err)
         }
       })()
-
+    
     if (job.assignedEmployees && job.assignedEmployees.length > 0) {
       job.assignedEmployees.forEach((employeeId) => {
         addNotification({
@@ -181,9 +181,9 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         })
       })
     }
-  }
+  }, [addNotification])
 
-  const updateJob = (id: string, updates: Partial<Job>) => {
+  const updateJob = useCallback((id: string, updates: Partial<Job>) => {
     setJobs((prev) => {
       const updatedJobs = prev.map((job) => {
         if (job.id === id) {
@@ -219,9 +219,9 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
           logger.warn("Failed to update job on server, update applied locally", err)
         }
       })()
-  }
+  }, [addNotification])
 
-  const deleteJob = (id: string) => {
+  const deleteJob = useCallback((id: string) => {
     setJobs((prev) => prev.filter((job) => job.id !== id))
       ; (async () => {
         try {
@@ -230,9 +230,9 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
           logger.warn("Failed to delete job on server, deletion applied locally", err)
         }
       })()
-  }
+  }, [])
 
-  const getJobsByEmployee = (employeeId: string) => {
+  const getJobsByEmployee = useCallback((employeeId: string) => {
     return jobs.filter((job) => {
       try {
         // assignedEmployees normalized to array of strings
@@ -250,9 +250,9 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       }
       return false
     })
-  }
+  }, [jobs])
 
-  const refreshJobs = async () => {
+  const refreshJobs = useCallback(async () => {
     if (!user) return
     try {
       logger.log("[v0] Manually refreshing jobs...")
@@ -282,7 +282,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       logger.error("[v0] Failed to refresh jobs:", err)
     }
-  }
+  }, [user])
 
   return (
     <JobContext.Provider

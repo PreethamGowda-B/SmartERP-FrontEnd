@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const AUTO_REFRESH_MS = 30_000
+const AUTO_REFRESH_MS = 60_000
 
 function formatDate(dateString?: string) {
   if (!dateString) return "Not set"
