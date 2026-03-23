@@ -10,6 +10,7 @@ import {
   Users, 
   CreditCard, 
   Megaphone, 
+  MessageSquare,
   BarChart3, 
   Settings,
   LogOut,
@@ -49,6 +50,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Users", icon: Users, href: "/users" },
     { name: "Subscriptions", icon: CreditCard, href: "/billing" },
     { name: "Announcements", icon: Megaphone, href: "/announcements" },
+    { name: "Feedback", icon: MessageSquare, href: "/feedback" },
     { name: "Analytics", icon: BarChart3, href: "/analytics" },
     { name: "Settings", icon: Settings, href: "/settings" },
   ]
