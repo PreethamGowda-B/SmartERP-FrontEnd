@@ -84,20 +84,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         if (currentToken) {
           logger.log("✅ FCM Token generated:", currentToken);
-          // Detect device type for targeted FCM payload selection
-          const ua = navigator.userAgent;
-          let deviceType = 'desktop_web';
-          if (/android/i.test(ua)) deviceType = 'android_pwa';
-          else if (/iphone|ipad|ipod/i.test(ua)) deviceType = 'ios';
           // Send token to the new multi-device endpoint
           await apiClient("/api/notifications/devices", {
             method: "POST",
-            body: JSON.stringify({ 
+            body: JSON.stringify({
               fcmToken: currentToken,
-              deviceType
+              deviceType: 'web'
             }),
           });
-          logger.log(`📱 FCM device registered as: ${deviceType}`);
         } else {
           logger.log("⚠️ No registration token available. Request permission to generate one.");
         }

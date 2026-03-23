@@ -146,10 +146,14 @@ export default function EmployeesPage() {
 
   // ─── Filtered list ────────────────────────────────────────────────────────
   const filtered = employees.filter((e) => {
+    const name = e.name || ""
+    const position = e.position || ""
+    const email = e.email || ""
+    
     const matchesSearch =
-      e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.email.toLowerCase().includes(searchTerm.toLowerCase())
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      position.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || e.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -324,7 +328,7 @@ export default function EmployeesPage() {
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-12 w-12">
-                        <AvatarFallback>{employee.name.charAt(0).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback>{(employee.name || "E").charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">

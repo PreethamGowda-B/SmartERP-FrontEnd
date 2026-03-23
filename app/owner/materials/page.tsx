@@ -84,8 +84,8 @@ export default function OwnerMaterialsPage() {
   // Filter requests
   const filteredRequests = requests.filter((request) => {
     const matchesSearch =
-      request.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.requested_by_name.toLowerCase().includes(searchTerm.toLowerCase())
+      (request.item_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (request.requested_by_name || "").toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || request.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -96,7 +96,7 @@ export default function OwnerMaterialsPage() {
   const declinedCount = requests.filter((r) => r.status === "declined").length
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "accepted":
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
       case "declined":
@@ -107,12 +107,12 @@ export default function OwnerMaterialsPage() {
   }
 
   const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case "Urgent":
+    switch (urgency?.toLowerCase()) {
+      case "urgent":
         return "text-red-600 font-semibold"
-      case "High":
+      case "high":
         return "text-orange-600 font-medium"
-      case "Medium":
+      case "medium":
         return "text-yellow-600"
       default:
         return "text-gray-600"
@@ -243,7 +243,7 @@ export default function OwnerMaterialsPage() {
                       </p>
                     </div>
                     <Badge className={getStatusColor(request.status)}>
-                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                      {request.status ? (request.status.charAt(0).toUpperCase() + request.status.slice(1)) : "Pending"}
                     </Badge>
                   </div>
                 </CardHeader>

@@ -99,11 +99,11 @@ export default function OwnerPayrollPage() {
       // Convert string numbers to actual numbers for proper display
       const parsedData = Array.isArray(data) ? data.map((payroll: any) => ({
         ...payroll,
-        base_salary: parseFloat(payroll.base_salary),
-        extra_amount: parseFloat(payroll.extra_amount),
-        salary_increment: parseFloat(payroll.salary_increment),
-        deduction: parseFloat(payroll.deduction),
-        total_salary: parseFloat(payroll.total_salary)
+        base_salary: parseFloat(payroll.base_salary) || 0,
+        extra_amount: parseFloat(payroll.extra_amount) || 0,
+        salary_increment: parseFloat(payroll.salary_increment) || 0,
+        deduction: parseFloat(payroll.deduction) || 0,
+        total_salary: parseFloat(payroll.total_salary) || 0
       })) : []
       setPayrolls(parsedData)
     } catch (err: any) {
@@ -165,9 +165,12 @@ export default function OwnerPayrollPage() {
 
   // Filter payrolls
   const filteredPayrolls = payrolls.filter(payroll => {
+    const empName = payroll.employee_name || ""
+    const empEmail = payroll.employee_email || ""
+    
     const matchesSearch =
-      payroll.employee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payroll.employee_email.toLowerCase().includes(searchTerm.toLowerCase())
+      empName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      empEmail.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesMonth = monthFilter === "all" || payroll.payroll_month === parseInt(monthFilter)
     const matchesYear = yearFilter === "all" || payroll.payroll_year === parseInt(yearFilter)
@@ -196,13 +199,13 @@ export default function OwnerPayrollPage() {
                 const data = await apiClient("/api/payroll/all")
                 return Array.isArray(data) ? data.map((p: any) => ({
                   ...p,
-                  month_name: MONTHS[p.payroll_month - 1],
-                  period: `${MONTHS[p.payroll_month - 1]} ${p.payroll_year}`,
-                  base_salary: parseFloat(p.base_salary),
-                  extra_amount: parseFloat(p.extra_amount),
-                  salary_increment: parseFloat(p.salary_increment),
-                  deduction: parseFloat(p.deduction),
-                  total_salary: parseFloat(p.total_salary)
+                  month_name: MONTHS[(p.payroll_month - 1) % 12] || "Unknown",
+                  period: `${MONTHS[(p.payroll_month - 1) % 12] || ""} ${p.payroll_year}`,
+                  base_salary: parseFloat(p.base_salary) || 0,
+                  extra_amount: parseFloat(p.extra_amount) || 0,
+                  salary_increment: parseFloat(p.salary_increment) || 0,
+                  deduction: parseFloat(p.deduction) || 0,
+                  total_salary: parseFloat(p.total_salary) || 0
                 })) : []
               }}
               columns={[
@@ -453,7 +456,7 @@ export default function OwnerPayrollPage() {
                           <h3 className="font-semibold">{payroll.employee_name}</h3>
                           <Badge variant="outline" className="text-xs">
                             <Calendar className="h-3 w-3 mr-1" />
-                            {MONTHS[payroll.payroll_month - 1]} {payroll.payroll_year}
+                            {MONTHS[(payroll.payroll_month - 1) % 12] || "Period"} {payroll.payroll_year}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">{payroll.employee_email}</p>
