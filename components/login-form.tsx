@@ -138,7 +138,13 @@ export function LoginForm() {
 
           localStorage.setItem("user", JSON.stringify(user))
           setUser(user)
-          router.push(user.role === "owner" ? "/owner" : "/employee")
+          if (user.role === "owner") {
+            router.push("/owner")
+          } else if (user.role === "hr") {
+            router.push("/hr")
+          } else {
+            router.push("/employee")
+          }
         } else {
           // If signIn returned null but didn't throw, it might have handled a redirect (suspension)
           // We only set the generic error if we are still on the page

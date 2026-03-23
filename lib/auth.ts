@@ -4,7 +4,7 @@ export interface User {
   id: string
   email: string
   name: string
-  role: "owner" | "employee" | "super_admin"
+  role: "owner" | "employee" | "super_admin" | "hr"
   avatar?: string
   phone?: string
   position?: string
@@ -20,7 +20,7 @@ export interface SignUpData {
   email: string
   password: string
   name: string
-  role: "owner" | "employee"
+  role: "owner" | "employee" | "hr"
   phone?: string
   position?: string
   department?: string

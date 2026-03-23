@@ -23,6 +23,7 @@ interface Employee {
   department?: string
   email: string
   phone: string
+  role: "owner" | "employee" | "hr"
   status: string
   is_active?: boolean
   currentJob: string | null
@@ -44,10 +45,11 @@ export default function EmployeesPage() {
   const [viewDetails, setViewDetails] = useState<Employee | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editForm, setEditForm] = useState<{ department: string; position: string; is_active: boolean }>({
+  const [editForm, setEditForm] = useState<{ department: string; position: string; is_active: boolean; role: string }>({
     department: "",
     position: "",
     is_active: true,
+    role: "employee",
   })
 
   // ─── Fetch employees ──────────────────────────────────────────────────────
@@ -75,13 +77,14 @@ export default function EmployeesPage() {
       department: employee.department || "Unassigned",
       position: employee.position || "Employee",
       is_active: employee.is_active !== false,
+      role: employee.role || "employee",
     })
   }
 
   // ─── Cancel editing ───────────────────────────────────────────────────────
   const cancelEditing = () => {
     setEditingId(null)
-    setEditForm({ department: "", position: "", is_active: true })
+    setEditForm({ department: "", position: "", is_active: true, role: "employee" })
   }
 
   // ─── Save employee updates ────────────────────────────────────────────────
@@ -362,7 +365,7 @@ export default function EmployeesPage() {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div>
+                           <div>
                             <label className="text-xs text-muted-foreground">Position</label>
                             <Select
                               value={editForm.position}
@@ -375,6 +378,21 @@ export default function EmployeesPage() {
                                 {POSITIONS.map((pos) => (
                                   <SelectItem key={pos} value={pos}>{pos}</SelectItem>
                                 ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground">User Role</label>
+                            <Select
+                              value={editForm.role}
+                              onValueChange={(value) => setEditForm({ ...editForm, role: value })}
+                            >
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="employee">Employee</SelectItem>
+                                <SelectItem value="hr">HR Manager</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>

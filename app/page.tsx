@@ -14,7 +14,13 @@ export default function HomePage() {
 
   useEffect(() => {
     if (user && !isLoading) {
-      router.push(user.role === "owner" ? "/owner" : "/employee")
+      if (user.role === "owner") {
+        router.push("/owner")
+      } else if (user.role === "hr") {
+        router.push("/hr")
+      } else {
+        router.push("/employee")
+      }
     }
   }, [user, isLoading, router])
 
