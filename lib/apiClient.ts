@@ -80,9 +80,13 @@ export function setTokens(accessToken: string, refreshToken: string, isAdmin = f
       localStorage.setItem("accessToken", accessToken)
       localStorage.setItem("refreshToken", refreshToken)
       
-      // Notify Android APK Bridge
-      if ((window as any).Android && typeof (window as any).Android.saveToken === 'function') {
-        (window as any).Android.saveToken(accessToken, refreshToken)
+      // Notify Android APK Bridge (WebView injects objects, not pure JS functions)
+      try {
+        if ((window as any).Android && (window as any).Android.saveToken) {
+          (window as any).Android.saveToken(accessToken, refreshToken)
+        }
+      } catch (err) {
+        console.warn("Android bridge saveToken skipped or failed", err)
       }
     }
   }
