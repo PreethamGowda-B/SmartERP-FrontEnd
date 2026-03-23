@@ -258,10 +258,9 @@ export default function SettingsPage() {
                 <div className="flex gap-2">
                   <Input
                     value={company.company_id}
-                    onChange={(e) => setCompany((p) => ({ ...p, company_id: e.target.value.toUpperCase().replace(/\s/g, "") }))}
+                    readOnly
                     placeholder="e.g. MYCO001"
-                    className="font-mono"
-                    maxLength={20}
+                    className="font-mono bg-muted opacity-80 cursor-not-allowed"
                   />
                   {company.company_id && (
                     <Button variant="outline" size="icon" onClick={() => copyToClipboard(company.company_id, "Company ID")}>
@@ -269,8 +268,8 @@ export default function SettingsPage() {
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Share this ID with employees so they can register under your company. Employees will see this in their Settings tab.
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">
+                  Company ID is permanent and cannot be changed.
                 </p>
               </div>
               <Button onClick={handleUpdateCompany} disabled={savingCompany}>
