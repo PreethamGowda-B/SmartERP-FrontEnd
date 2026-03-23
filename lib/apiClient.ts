@@ -79,6 +79,11 @@ export function setTokens(accessToken: string, refreshToken: string, isAdmin = f
     if (!isAdmin) {
       localStorage.setItem("accessToken", accessToken)
       localStorage.setItem("refreshToken", refreshToken)
+      
+      // Notify Android APK Bridge
+      if ((window as any).Android && typeof (window as any).Android.saveToken === 'function') {
+        (window as any).Android.saveToken(accessToken, refreshToken)
+      }
     }
   }
 }
