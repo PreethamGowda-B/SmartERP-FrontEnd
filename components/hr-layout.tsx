@@ -47,7 +47,6 @@ export function HRLayout({ children }: HRLayoutProps) {
       </div>
 
       <PageTransition />
-      <AIChatBot />
     </div>
   )
 }

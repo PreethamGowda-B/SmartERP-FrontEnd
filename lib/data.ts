@@ -22,6 +22,7 @@ export interface Job {
   createdAt?: string
   visible_to_all?: boolean
   employee_email?: string
+  deadline?: string
 }
 
 export interface Employee {
