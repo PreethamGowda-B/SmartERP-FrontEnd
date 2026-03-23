@@ -66,9 +66,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         // Handle foreground messages
         onMessage(messaging, (payload) => {
           logger.log("🔔 FCM Foreground message received:", payload);
-          // Only show local notification if app is hidden to avoid double notification in-app
-          if (document.visibilityState === 'hidden' && payload.notification) {
-            registration.showNotification(payload.notification.title || "New Notification", {
+          // REQUIREMENT: Work when app is OPEN. Show system notification in mobile bar.
+          if (payload.notification) {
+            new Notification(payload.notification.title || "New Notification", {
               body: payload.notification.body,
               icon: '/icon.png',
               badge: '/icon.png',
@@ -83,7 +83,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         });
 
         if (currentToken) {
-          logger.log("✅ FCM Token generated");
+          logger.log("✅ FCM Token generated:", currentToken);
           // Send token to the new multi-device endpoint
           await apiClient("/api/notifications/devices", {
             method: "POST",
