@@ -1,15 +1,16 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { HRLayout } from "@/components/hr-layout"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { MessageSquare, Users, Send, Search, User, Check, Clock, Filter } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { MessageSquare, Users, Send, Search, User, Check, Clock, Filter, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { apiClient } from "@/lib/apiClient"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { logger } from "@/lib/logger"
 
 interface Employee {
   id: string
@@ -20,13 +21,32 @@ interface Employee {
   role?: string
 }
 
+interface Message {
+  id: number
+  sender_id: string
+  receiver_id: string
+  message: string
+  read: boolean
+  created_at: string
+  is_mine: boolean
+}
+
 export default function HRMessagesPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loadingEmployees, setLoadingEmployees] = useState(true)
   const [selectedContact, setSelectedContact] = useState<Employee | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [message, setMessage] = useState("")
+  const [messages, setMessages] = useState<Message[]>([])
+  const [loadingMessages, setLoadingMessages] = useState(false)
+  const [sending, setSending] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  // Fetch employees
   useEffect(() => {
     async function fetchEmployees() {
       try {
@@ -36,13 +56,35 @@ export default function HRMessagesPage() {
           if (data.length > 0) setSelectedContact(data[0])
         }
       } catch (err) {
-        console.error("Failed to fetch employees:", err)
+        logger.error("Failed to fetch employees:", err)
       } finally {
-        setLoading(false)
+        setLoadingEmployees(false)
       }
     }
     fetchEmployees()
   }, [])
+
+  // Fetch messages when contact changes
+  useEffect(() => {
+    if (!selectedContact) return
+
+    async function fetchMessages() {
+      setLoadingMessages(true)
+      try {
+        const data = await apiClient(`/api/messages/conversation/${selectedContact?.id}`)
+        setMessages(data)
+        setTimeout(scrollToBottom, 100)
+      } catch (err) {
+        logger.error("Failed to fetch messages:", err)
+      } finally {
+        setLoadingMessages(false)
+      }
+    }
+
+    fetchMessages()
+    const interval = setInterval(fetchMessages, 5000)
+    return () => clearInterval(interval)
+  }, [selectedContact])
 
   const filteredEmployees = useMemo(() => {
     return employees.filter(e => 
@@ -52,11 +94,33 @@ export default function HRMessagesPage() {
     )
   }, [employees, searchTerm])
 
-  const handleSendMessage = () => {
-    if (!message.trim()) return
-    // In a real app, this would hit /api/messages/send
-    console.log(`Sending message to ${selectedContact?.email}: ${message}`)
-    setMessage("")
+  const handleSendMessage = async () => {
+    if (!message.trim() || !selectedContact || sending) return
+    
+    setSending(true)
+    try {
+      await apiClient("/api/messages", {
+        method: "POST",
+        body: JSON.stringify({
+          receiver_id: selectedContact.id,
+          message: message.trim()
+        })
+      })
+      setMessage("")
+      // Optimized: Refresh messages immediately
+      const data = await apiClient(`/api/messages/conversation/${selectedContact.id}`)
+      setMessages(data)
+      setTimeout(scrollToBottom, 100)
+    } catch (err) {
+      logger.error("Error sending message:", err)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp)
+    return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
   }
 
   return (
@@ -71,11 +135,6 @@ export default function HRMessagesPage() {
                Smart<span className="text-primary italic">Messages</span>
              </h1>
              <p className="text-muted-foreground font-medium text-sm">Real-time communication with every member of your organization.</p>
-          </div>
-          <div className="flex items-center gap-3 bg-card p-1 rounded-2xl border shadow-sm self-start md:self-center">
-             <Button variant="ghost" size="sm" className="rounded-xl font-bold h-9 bg-primary text-primary-foreground">All Channels</Button>
-             <Button variant="ghost" size="sm" className="rounded-xl font-bold h-9 opacity-50">Direct</Button>
-             <Button variant="ghost" size="sm" className="rounded-xl font-bold h-9 opacity-50">Group</Button>
           </div>
         </div>
 
@@ -99,7 +158,7 @@ export default function HRMessagesPage() {
               </div>
             </CardHeader>
             <CardContent className="p-0 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-primary/20">
-               {loading ? (
+               {loadingEmployees ? (
                  <div className="p-4 space-y-4">
                     {[1, 2, 3, 4, 5, 6].map(i => (
                       <div key={i} className="flex gap-3">
@@ -132,12 +191,8 @@ export default function HRMessagesPage() {
                         {e.name?.charAt(0) || <User className="h-4 w-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-0.5">
-                           <p className="font-bold text-sm tracking-tight truncate">{e.name}</p>
-                           <span className="text-[9px] text-muted-foreground font-bold font-mono">12:30 PM</span>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-70 mb-1">{e.position || "Staff"}</p>
-                        <p className="text-xs text-muted-foreground/60 truncate italic leading-none">Last message sent via ERP...</p>
+                        <p className="font-bold text-sm tracking-tight truncate">{e.name}</p>
+                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest opacity-70">{e.position || "Staff"}</p>
                       </div>
                     </div>
                   </div>
@@ -174,54 +229,47 @@ export default function HRMessagesPage() {
                        </div>
                     </div>
                  </div>
-                 <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all"><Clock className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-white/10 text-white/70 hover:text-white transition-all"><Filter className="h-4 w-4" /></Button>
-                 </div>
                </div>
             </CardHeader>
 
             {/* Messages Area */}
-            <CardContent className="flex-1 p-8 overflow-y-auto space-y-8 scrollbar-thin scrollbar-thumb-white/10">
+            <CardContent className="flex-1 p-8 overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-white/10">
                {selectedContact ? (
                  <>
-                   <div className="flex justify-center mb-6">
-                      <span className="bg-white/5 px-4 py-1 rounded-full text-[10px] uppercase font-bold text-white/40 tracking-widest border border-white/5">Yesterday</span>
-                   </div>
-                   
-                   <div className="flex justify-start group">
-                      <div className="flex flex-col gap-1 max-w-[75%]">
-                         <div className="bg-white/10 backdrop-blur-sm border border-white/5 px-5 py-3.5 rounded-3xl rounded-tl-sm text-sm font-medium shadow-xl">
-                            Hello HR! My payroll sheet seems to show a discrepancy in overtime for last week. Could you check?
+                   {messages.length > 0 ? (
+                     messages.map((m) => (
+                       <div key={m.id} className={cn("flex", m.is_mine ? "justify-end" : "justify-start")}>
+                         <div className={cn(
+                           "flex flex-col gap-1 max-w-[75%]",
+                           m.is_mine ? "items-end" : "items-start"
+                         )}>
+                            <div className={cn(
+                              "px-5 py-3 rounded-2xl text-sm font-medium shadow-xl",
+                              m.is_mine 
+                                ? "bg-primary text-white rounded-tr-sm" 
+                                : "bg-white/10 backdrop-blur-sm border border-white/5 text-white rounded-tl-sm"
+                            )}>
+                               {m.message}
+                            </div>
+                            <span className="text-[9px] font-bold text-white/30 px-2">
+                               {m.is_mine && <Check className="inline-block w-2.5 h-2.5 mr-1 text-primary" />}
+                               {formatTime(m.created_at)}
+                            </span>
                          </div>
-                         <span className="text-[9px] font-bold text-white/30 ml-2 mt-1">11:45 AM</span>
-                      </div>
-                   </div>
-
-                   <div className="flex justify-end">
-                      <div className="flex flex-col gap-1 max-w-[75%] items-end">
-                         <div className="bg-primary px-5 py-3.5 rounded-3xl rounded-tr-sm text-sm font-bold shadow-2xl shadow-primary/20 text-white tracking-tight">
-                            Hi {selectedContact.name?.split(' ')[0]}! Checking this right now. Please allow me 15 minutes to sync with the attendance server.
-                         </div>
-                         <div className="flex items-center gap-1.5 mt-1 mr-2 font-bold text-white/30 text-[9px]">
-                            <span>12:12 PM</span>
-                            <Check className="w-3 h-3 text-primary" />
-                         </div>
-                      </div>
-                   </div>
-
-                   <div className="flex justify-start">
-                      <div className="flex flex-col gap-1 max-w-[75%]">
-                         <div className="bg-white/10 backdrop-blur-sm border border-white/5 px-5 py-3.5 rounded-3xl rounded-tl-sm text-sm font-medium shadow-xl italic opacity-80">
-                            Thinking...
-                         </div>
-                      </div>
-                   </div>
+                       </div>
+                     ))
+                   ) : (
+                     <div className="flex flex-col h-full items-center justify-center space-y-4 opacity-40">
+                        <MessageSquare className="h-10 w-10" />
+                        <p className="font-bold text-xs uppercase tracking-widest">No conversation history</p>
+                     </div>
+                   )}
+                   <div ref={messagesEndRef} />
                  </>
                ) : (
                  <div className="flex flex-col h-full items-center justify-center space-y-4 opacity-30">
                     <MessageSquare className="h-16 w-16" />
-                    <p className="font-black uppercase tracking-[0.2em] text-sm">Open channel to start</p>
+                    <p className="font-black uppercase tracking-[0.2em] text-sm">Select a member to start</p>
                  </div>
                )}
             </CardContent>
@@ -231,23 +279,19 @@ export default function HRMessagesPage() {
                <div className="relative flex items-center gap-4 bg-zinc-900 border border-white/10 ring-1 ring-white/5 rounded-2xl p-2 px-4 shadow-2xl transition-all focus-within:ring-primary/50 focus-within:border-primary/50">
                  <Input 
                    className="bg-transparent border-none shadow-none focus-visible:ring-0 placeholder:text-white/20 text-sm font-bold h-10 flex-1" 
-                   placeholder={`Write to ${selectedContact?.name || 'team'}...`} 
+                   placeholder={selectedContact ? `Write to ${selectedContact.name}...` : 'Select a contact'} 
                    value={message}
                    onChange={(e) => setMessage(e.target.value)}
                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                   disabled={!selectedContact || sending}
                  />
                  <Button 
                    className="h-10 w-10 rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/40 group transition-all"
                    onClick={handleSendMessage}
-                   disabled={!message.trim() || !selectedContact}
+                   disabled={!message.trim() || !selectedContact || sending}
                  >
-                   <Send className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />}
                  </Button>
-               </div>
-               <div className="flex gap-4 mt-3 ml-2">
-                  <span className="text-[9px] font-black uppercase text-white/20 tracking-widest cursor-pointer hover:text-white transition-colors">Attach Logs</span>
-                  <span className="text-[9px] font-black uppercase text-white/20 tracking-widest cursor-pointer hover:text-white transition-colors">Quick Reply</span>
-                  <span className="text-[9px] font-black uppercase text-white/20 tracking-widest cursor-pointer hover:text-white transition-colors">Urgent Signal</span>
                </div>
             </div>
           </Card>
