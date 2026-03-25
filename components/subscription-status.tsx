@@ -69,7 +69,11 @@ export function SubscriptionStatus() {
 
   let planMessage = ""
   
-  if (isTrial) {
+  const isExpired = !isFree && daysRemaining <= 0
+
+  if (isExpired) {
+    planMessage = `Your ${plan.name.toUpperCase()} plan has expired. Upgrade now to restore access to premium features.`
+  } else if (isTrial) {
     planMessage = `🚀 Pro Trial Active — You are currently using the PRO plan (Trial).`
   } else if (isPro) {
     const billingCycle = (data as any).billing_cycle === 'yearly' ? 'Yearly' : 'Monthly'
