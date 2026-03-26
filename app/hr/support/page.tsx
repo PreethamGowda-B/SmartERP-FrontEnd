@@ -60,7 +60,7 @@ export default function HRSupportPage() {
       description: "Send detailed inquiries or document issues. Our response time is < 4 hours.",
       icon: Mail,
       actionLabel: "Send Email",
-      href: "mailto:thepreethu01@gmail.com?subject=SmartERP%20HR%20Support%20Request",
+      href: "mailto:prozyncinnovations@gmail.com?subject=SmartERP%20HR%20Support%20Request",
       color: "from-indigo-500/10 to-transparent",
       iconColor: "text-indigo-600 dark:text-indigo-400",
       buttonClass: "bg-indigo-600 hover:bg-indigo-700 text-white"

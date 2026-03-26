@@ -81,7 +81,7 @@ export default function SupportPage() {
       description: "Send us a message and our team will respond as soon as possible.",
       icon: Mail,
       actionLabel: "Mail Us",
-      href: "mailto:thepreethu01@gmail.com?subject=SmartERP%20Support%20Request",
+      href: "mailto:prozyncinnovations@gmail.com?subject=SmartERP%20Support%20Request",
       color: "from-indigo-500/10 to-transparent",
       iconColor: "text-indigo-600 dark:text-indigo-400",
       buttonColor: "bg-indigo-600 hover:bg-indigo-700 text-white"
