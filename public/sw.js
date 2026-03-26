@@ -1,7 +1,7 @@
 const CACHE_NAME = 'smarterp-v1';
 const OFFLINE_URL = '/offline.html';
 
-self.addEventListener('install', (event: any) => {
+self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll([OFFLINE_URL, '/favicon.ico', '/icon.png']);
@@ -9,7 +9,7 @@ self.addEventListener('install', (event: any) => {
   );
 });
 
-self.addEventListener('fetch', (event: any) => {
+self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -20,7 +20,7 @@ self.addEventListener('fetch', (event: any) => {
 });
 
 // Background Sync for Attendance
-self.addEventListener('sync', (event: any) => {
+self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-attendance') {
     event.waitUntil(syncAttendance());
   }
