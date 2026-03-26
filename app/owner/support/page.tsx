@@ -148,8 +148,14 @@ export default function SupportPage() {
                 
                 <a 
                   href={card.href}
-                  target={card.id === "whatsapp" ? "_blank" : undefined}
+                  target={card.id === "whatsapp" ? "_blank" : "_top"}
                   rel="noopener noreferrer"
+                  onClick={(e) => {
+                    if (card.id === "email") {
+                      e.preventDefault()
+                      window.location.href = card.href
+                    }
+                  }}
                   className={`inline-flex items-center justify-center px-6 py-3.5 rounded-xl font-medium transition-all duration-300 shadow-sm group-hover:shadow-md ${card.buttonColor}`}
                 >
                   {card.actionLabel}
