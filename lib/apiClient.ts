@@ -155,10 +155,9 @@ function handleLogout() {
 // Lock to prevent multiple concurrent refresh attempts
 let refreshPromise: Promise<any> | null = null
 
-export async function apiClient(path: string, options: RequestInit = {}) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-  logger.log(`[apiClient] Request: ${options.method || 'GET'} ${path}`);
-
+export async function apiClient(path: string, options: RequestInit = {}, retries = 3) {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
+  
   const isFormData = options.body instanceof FormData
   const headers: Record<string, string> = {
     ...(!isFormData && { "Content-Type": "application/json" }),
@@ -177,20 +176,38 @@ export async function apiClient(path: string, options: RequestInit = {}) {
   try {
     let res: Response
     try {
+      // Use controller to handle potential timeouts if needed
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+
       res = await fetch(`${baseUrl}${path}`, {
         ...options,
         headers,
         credentials: "include",
+        signal: controller.signal
       })
-    } catch (error) {
-      logger.error("[v0] Network error in apiClient:", error)
+      clearTimeout(timeoutId)
+    } catch (error: any) {
+      // 🚀 RESILIENCY: If it's a transient network error or cold start, retry GET requests
+      const isRetryable = (options.method === 'GET' || !options.method) && retries > 0;
+      
+      if (isRetryable && (error.name === 'TypeError' || error.name === 'TimeoutError')) {
+        const delay = (4 - retries) * 1000; // 1s, 2s, 3s backoff
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return apiClient(path, options, retries - 1);
+      }
+
+      // Handle direct cancellations (e.g. navigation) - don't log these to Sentry
+      if (error.name === 'AbortError') {
+        throw { name: 'AbortError', message: 'Request cancelled' };
+      }
+
+      logger.error(`[apiClient] Connection Error: ${path}`, { error: error.message || error });
       throw new Error("Unable to connect to the server. Please check your internet connection and try again.")
     }
 
-    // If token expired → try refresh
+    // Refresh token logic
     if (res.status === 401) {
-      logger.warn("[v0] Unauthorized — attempting refresh")
-
       if (!refreshPromise) {
         const storedRefreshToken = getRefreshToken()
         refreshPromise = fetch(`${baseUrl}/api/auth/refresh`, {
@@ -204,7 +221,6 @@ export async function apiClient(path: string, options: RequestInit = {}) {
             if (data.accessToken) {
               setTokens(data.accessToken, data.refreshToken || storedRefreshToken || "", data.isSuperAdmin)
               syncWithAndroid(data.accessToken, data.refreshToken)
-              logger.log("[v0] Token refreshed successfully", data.isSuperAdmin ? "(Admin)" : "(User)")
             }
             return data
           }
@@ -216,33 +232,24 @@ export async function apiClient(path: string, options: RequestInit = {}) {
 
       try {
         await refreshPromise
-        
-        // Retry original request with new token
         const newToken = getAccessToken()
         if (newToken) {
           headers["Authorization"] = `Bearer ${newToken}`
         }
-        
-        res = await fetch(`${baseUrl}${path}`, {
-          ...options,
-          headers,
-          credentials: "include",
-        })
+        res = await fetch(`${baseUrl}${path}`, { ...options, headers, credentials: "include" })
 
         if (res.status === 401) {
           handleLogout()
           throw new Error("Session expired after refresh")
         }
-      } catch (error) {
+      } catch (refreshErr) {
         handleLogout()
-        throw error
+        throw refreshErr
       }
     }
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: res.statusText }))
-      
-      // Feature locking logic
       if (res.status === 403 && error.upgrade_required) {
         triggerFeatureLock({
           feature: error.feature || "this premium feature",
@@ -251,16 +258,13 @@ export async function apiClient(path: string, options: RequestInit = {}) {
         })
         return new Promise(() => {})
       }
-      
-      // Attach status to error for better handling in hooks
       throw { ...error, status: res.status }
     }
 
-    const json = await res.json()
-    logger.log(`[apiClient] Success: ${path}`, { status: res.status });
-    return json
+    return await res.json()
   } catch (error: any) {
-    // Log API errors to Sentry if it's a server failure or persistent issue
+    if (error.name === 'AbortError') throw error;
+
     if (error.status >= 500 || !error.status) {
       logger.error(`[apiClient] ${error.status ? 'API Error' : 'Connection Error'}: ${path}`, {
         path,
@@ -270,16 +274,11 @@ export async function apiClient(path: string, options: RequestInit = {}) {
       });
     }
 
-    // If it's already a formatted error object from above, rethrow it
-    if (error.status || error.message === "Unable to connect to the server. Please check your internet connection and try again.") {
+    if (error.status || error.message?.includes("internet connection")) {
       throw error;
     }
     
-    // Otherwise, wrap in a user-friendly message
-    throw { 
-      message: "Something went wrong. Please try again.",
-      originalError: error
-    };
+    throw { message: "Something went wrong. Please try again.", originalError: error };
   } finally {
     markRequestEnd(requestId)
   }
