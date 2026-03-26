@@ -92,9 +92,85 @@ export default function TimeTrackingPage() {
         }
     }, [user])
 
+    const [isOnline, setIsOnline] = useState(typeof window !== 'undefined' ? navigator.onLine : true)
+    const [pendingSync, setPendingSync] = useState(false)
+
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOnline(true)
+            syncOfflineData()
+        }
+        const handleOffline = () => setIsOnline(false)
+
+        window.addEventListener('online', handleOnline)
+        window.addEventListener('offline', handleOffline)
+
+        // Initial sync check
+        syncOfflineData()
+
+        return () => {
+            window.removeEventListener('online', handleOnline)
+            window.removeEventListener('offline', handleOffline)
+        }
+    }, [])
+
+    const syncOfflineData = async () => {
+        const { getPendingAttendance, deletePendingAttendance } = await import('@/lib/db')
+        const pending = await getPendingAttendance()
+        
+        if (pending.length === 0) return
+        
+        setPendingSync(true)
+        let successCount = 0
+
+        for (const action of pending) {
+            try {
+                const endpoint = action.type === 'clock-in' ? '/api/attendance/clock-in' : '/api/attendance/clock-out'
+                const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: authHeaders(),
+                })
+
+                if (response.ok) {
+                    await deletePendingAttendance(action.id!)
+                    successCount++
+                }
+            } catch (err) {
+                console.error('Failed to sync action:', action, err)
+            }
+        }
+
+        if (successCount > 0) {
+            fetchTodayAttendance()
+            fetchHistory()
+        }
+        setPendingSync(false)
+    }
+
     const handleClockIn = async () => {
         setLoading(true)
         setError("")
+
+        if (!navigator.onLine) {
+            const { savePendingAttendance } = await import('@/lib/db')
+            await savePendingAttendance({
+                type: 'clock-in',
+                timestamp: new Date().toISOString(),
+                status: 'pending'
+            })
+            setTodayAttendance({
+                id: Date.now(),
+                date: new Date().toISOString().split('T')[0],
+                check_in_time: new Date().toISOString(),
+                check_out_time: null,
+                working_hours: null,
+                status: 'pending',
+                is_late: false
+            })
+            setLoading(false)
+            return
+        }
 
         try {
             const response = await fetch(`${BACKEND_URL}/api/attendance/clock-in`, {
@@ -121,6 +197,22 @@ export default function TimeTrackingPage() {
     const handleClockOut = async () => {
         setLoading(true)
         setError("")
+
+        if (!navigator.onLine) {
+            const { savePendingAttendance } = await import('@/lib/db')
+            await savePendingAttendance({
+                type: 'clock-out',
+                timestamp: new Date().toISOString(),
+                status: 'pending'
+            })
+            setTodayAttendance(prev => prev ? {
+                ...prev,
+                check_out_time: new Date().toISOString(),
+                status: 'pending'
+            } : null)
+            setLoading(false)
+            return
+        }
 
         try {
             const response = await fetch(`${BACKEND_URL}/api/attendance/clock-out`, {
@@ -230,6 +322,17 @@ export default function TimeTrackingPage() {
                         </div>
                     </CardContent>
                 </Card>
+
+                {!isOnline && (
+                    <Card className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800">
+                        <CardContent className="pt-6 flex items-center justify-between">
+                            <div className="flex items-center gap-3 text-amber-900 dark:text-amber-100">
+                                <AlertCircle className="h-5 w-5" />
+                                <p className="font-medium text-sm">Offline Mode: Actions will be saved locally and sync when back online.</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {error && (
                     <Card className="border-destructive">

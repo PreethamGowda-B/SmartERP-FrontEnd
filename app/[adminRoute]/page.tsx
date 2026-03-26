@@ -56,6 +56,9 @@ interface StatsType {
   activeSubscriptions: number
   trialUsers: number
   recentActivity24h: number
+  activeUsers30d: number
+  companyGrowthMoM: number
+  userGrowthMoM: number
 }
 
 interface DashboardData {
@@ -104,10 +107,24 @@ export default function AdminDashboard() {
 
   const stats = data?.stats
   const statCards = [
-    { name: "Total Companies", value: stats?.totalCompanies ?? 0, icon: Building2, color: "text-blue-600", bg: "bg-blue-50" },
-    { name: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "text-indigo-600", bg: "bg-indigo-50" },
+    { 
+      name: "Total Companies", 
+      value: stats?.totalCompanies ?? 0, 
+      icon: Building2, 
+      color: "text-blue-600", 
+      bg: "bg-blue-50",
+      growth: stats?.companyGrowthMoM 
+    },
+    { 
+      name: "Total Users", 
+      value: stats?.totalUsers ?? 0, 
+      icon: Users, 
+      color: "text-indigo-600", 
+      bg: "bg-indigo-50",
+      growth: stats?.userGrowthMoM
+    },
     { name: "Active Subscriptions", value: stats?.activeSubscriptions ?? 0, icon: CreditCard, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { name: "Trial Users", value: stats?.trialUsers ?? 0, icon: Activity, color: "text-amber-600", bg: "bg-amber-50" },
+    { name: "Retention (30d)", value: stats?.activeUsers30d ?? 0, icon: Activity, color: "text-amber-600", bg: "bg-amber-50" },
   ]
 
   return (
@@ -132,9 +149,17 @@ export default function AdminDashboard() {
                 <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color}`}>
                   <stat.icon className="h-6 w-6" />
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full bg-slate-50 text-slate-500 uppercase tracking-wider border border-slate-100">
-                  Live
-                </div>
+                {stat.growth !== undefined && (
+                  <div className={`flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full ${stat.growth >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'} uppercase tracking-wider border ${stat.growth >= 0 ? 'border-emerald-100' : 'border-red-100'}`}>
+                    {stat.growth >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                    {Math.abs(stat.growth)}%
+                  </div>
+                )}
+                {stat.growth === undefined && (
+                  <div className="flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full bg-slate-50 text-slate-500 uppercase tracking-wider border border-slate-100">
+                    Live
+                  </div>
+                )}
               </div>
               <div>
                 <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">{stat.name}</h3>

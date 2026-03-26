@@ -87,6 +87,22 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
+          {/* Service Worker Registration */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    }, function(err) {
+                      console.log('ServiceWorker registration failed: ', err);
+                    });
+                  });
+                }
+              `,
+            }}
+          />
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
