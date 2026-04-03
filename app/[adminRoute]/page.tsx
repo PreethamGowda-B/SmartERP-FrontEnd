@@ -79,16 +79,7 @@ export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Secret Route Verification
-  const adminSecret = process.env.NEXT_PUBLIC_ADMIN_ROUTE || "platform-control-secret"
-  const currentRoute = params.adminRoute
-
   useEffect(() => {
-    if (currentRoute !== adminSecret) {
-      router.push("/404")
-      return
-    }
-
     const fetchStats = async () => {
       try {
         const res = await apiClient("/api/admin/dashboard")
@@ -101,9 +92,7 @@ export default function AdminDashboard() {
     }
 
     fetchStats()
-  }, [currentRoute, adminSecret, router])
-
-  if (currentRoute !== adminSecret) return null
+  }, [])
 
   const stats = data?.stats
   const statCards = [

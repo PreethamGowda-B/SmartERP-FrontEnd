@@ -17,6 +17,14 @@ import {
 } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 
+const STAGES = [
+  "Connecting to SmartERP Hub...",
+  "Authenticating Field Data...",
+  "Synchronizing Project Assets...",
+  "Finalizing Interface...",
+  "Welcome to SmartERP."
+]
+
 export function LandingPage() {
   const router = useRouter()
   const [counters, setCounters] = useState({ users: 0, jobs: 0, teams: 0 })
@@ -27,13 +35,7 @@ export function LandingPage() {
   const [shutterOpen, setShutterOpen] = useState(false)
   const [contentVisible, setContentVisible] = useState(false)
 
-  const stages = [
-    "Connecting to SmartERP Hub...",
-    "Authenticating Field Data...",
-    "Synchronizing Project Assets...",
-    "Finalizing Interface...",
-    "Welcome to SmartERP."
-  ]
+
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -80,7 +82,7 @@ export function LandingPage() {
         const increment = (100 - currentProgress) * (Math.random() * 0.15 + 0.05)
         currentProgress += Math.max(increment, 1)
         setProgress(Math.min(currentProgress, 100))
-        setStatusIndex(Math.floor((currentProgress / 101) * stages.length))
+        setStatusIndex(Math.floor((currentProgress / 101) * STAGES.length))
       }
     }, 120)
 
@@ -126,7 +128,7 @@ export function LandingPage() {
         <div className={`flagship-loader ${shutterOpen ? "shutter-open" : ""}`}>
           <div className="loader-content">
             <div className="loader-logo">SmartERP<span>™</span></div>
-            <div className="flagship-status">{stages[statusIndex]}</div>
+            <div className="flagship-status">{STAGES[statusIndex]}</div>
             <div className="flagship-bar">
               <div className="flagship-progress" style={{ width: `${progress}%` }}></div>
             </div>

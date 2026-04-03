@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -46,7 +46,7 @@ export default function TimeTrackingPage() {
     }, [])
 
     // Fetch today's attendance
-    const fetchTodayAttendance = async () => {
+    const fetchTodayAttendance = useCallback(async () => {
         try {
             const response = await fetch(`${BACKEND_URL}/api/attendance/today`, {
                 credentials: "include",
@@ -60,10 +60,10 @@ export default function TimeTrackingPage() {
         } catch (err) {
             logger.error("Error fetching today's attendance:", err)
         }
-    }
+    }, [])
 
     // Fetch attendance history
-    const fetchHistory = async () => {
+    const fetchHistory = useCallback(async () => {
         try {
             const currentMonth = new Date().getMonth() + 1
             const currentYear = new Date().getFullYear()
@@ -83,7 +83,7 @@ export default function TimeTrackingPage() {
         } catch (err) {
             logger.error("Error fetching history:", err)
         }
-    }
+    }, [])
 
     useEffect(() => {
         if (user) {
@@ -95,26 +95,7 @@ export default function TimeTrackingPage() {
     const [isOnline, setIsOnline] = useState(typeof window !== 'undefined' ? navigator.onLine : true)
     const [pendingSync, setPendingSync] = useState(false)
 
-    useEffect(() => {
-        const handleOnline = () => {
-            setIsOnline(true)
-            syncOfflineData()
-        }
-        const handleOffline = () => setIsOnline(false)
-
-        window.addEventListener('online', handleOnline)
-        window.addEventListener('offline', handleOffline)
-
-        // Initial sync check
-        syncOfflineData()
-
-        return () => {
-            window.removeEventListener('online', handleOnline)
-            window.removeEventListener('offline', handleOffline)
-        }
-    }, [])
-
-    const syncOfflineData = async () => {
+    const syncOfflineData = useCallback(async () => {
         const { getPendingAttendance, deletePendingAttendance } = await import('@/lib/db')
         const pending = await getPendingAttendance()
         
@@ -146,7 +127,26 @@ export default function TimeTrackingPage() {
             fetchHistory()
         }
         setPendingSync(false)
-    }
+    }, [fetchTodayAttendance, fetchHistory])
+
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOnline(true)
+            syncOfflineData()
+        }
+        const handleOffline = () => setIsOnline(false)
+
+        window.addEventListener('online', handleOnline)
+        window.addEventListener('offline', handleOffline)
+
+        // Initial sync check
+        syncOfflineData()
+
+        return () => {
+            window.removeEventListener('online', handleOnline)
+            window.removeEventListener('offline', handleOffline)
+        }
+    }, [syncOfflineData])
 
     const handleClockIn = async () => {
         setLoading(true)

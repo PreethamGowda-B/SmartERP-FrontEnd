@@ -94,12 +94,13 @@ export default function EmployeeTrackingPage() {
             setMapReady(true)
         })
 
+        const markers = markersRef.current
         return () => {
             if (mapRef.current) {
                 mapRef.current.remove()
                 mapRef.current = null
                 mapInitializedRef.current = false
-                markersRef.current.clear()
+                markers.clear()
             }
         }
     }, [])

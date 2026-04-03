@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -51,7 +51,7 @@ export default function EmployeeAttendanceDetailPage() {
     const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
     const [selectedDay, setSelectedDay] = useState<AttendanceRecord | null>(null)
 
-    const fetchEmployeeAttendance = async () => {
+    const fetchEmployeeAttendance = useCallback(async () => {
         setLoading(true)
 
         try {
@@ -76,13 +76,13 @@ export default function EmployeeAttendanceDetailPage() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [userId, selectedMonth, selectedYear])
 
     useEffect(() => {
         if (user && userId) {
             fetchEmployeeAttendance()
         }
-    }, [user, userId, selectedMonth, selectedYear])
+    }, [user, userId, selectedMonth, selectedYear, fetchEmployeeAttendance])
 
     const formatTime = (timestamp: string | null) => {
         if (!timestamp) return "—"

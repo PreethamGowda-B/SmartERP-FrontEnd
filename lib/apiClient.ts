@@ -45,11 +45,8 @@ const USER_RT = "_rt"
 function getStorageKeys() {
   if (typeof window === "undefined") return { at: USER_AT, rt: USER_RT }
   
-  const adminSlug = process.env.NEXT_PUBLIC_ADMIN_ROUTE || 'platform-control-xyz'
-  
   const pathname = window.location.pathname
-  const isAdminPath = pathname.includes(`/${adminSlug}`) || 
-                      pathname.includes('/super-admin') ||
+  const isAdminPath = pathname.includes('/super-admin') ||
                       pathname.includes('[adminRoute]')
   
   // Also check if we have an active admin session in localStorage

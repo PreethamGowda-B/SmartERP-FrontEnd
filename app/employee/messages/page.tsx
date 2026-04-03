@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -54,7 +54,7 @@ export default function MessagesPage() {
   }
 
   // Fetch messages
-  const fetchMessages = async (ownerId: number) => {
+  const fetchMessages = useCallback(async (ownerId: number) => {
     try {
       const data = await apiClient(`/api/messages/conversation/${ownerId}`)
       setMessages(data)
@@ -68,7 +68,7 @@ export default function MessagesPage() {
     } catch (err) {
       logger.error("Error fetching messages:", err)
     }
-  }
+  }, [])
 
   // Send message
   const handleSendMessage = async () => {
@@ -114,6 +114,7 @@ export default function MessagesPage() {
     }
 
     init()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Set up polling for real-time updates
@@ -130,7 +131,7 @@ export default function MessagesPage() {
         clearInterval(pollingIntervalRef.current)
       }
     }
-  }, [owner])
+  }, [owner, fetchMessages])
 
   // Format timestamp
   const formatTime = (timestamp: string) => {

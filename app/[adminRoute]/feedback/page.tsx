@@ -72,25 +72,16 @@ export default function AdminFeedbackPage() {
   const [replyMessage, setReplyMessage] = useState("")
   const [replying, setReplying] = useState(false)
 
-  // Secret Route Verification
-  const adminSecret = process.env.NEXT_PUBLIC_ADMIN_ROUTE || "platform-control-secret"
-  const currentRoute = params.adminRoute
-
   useEffect(() => {
-    if (currentRoute !== adminSecret) {
-      router.push("/404")
-      return
-    }
     fetchFeedback()
-  }, [currentRoute, adminSecret, router])
+  }, [])
 
   const fetchFeedback = async () => {
     try {
-      setLoading(true)
       const data = await apiClient("/api/v1/feedback")
       setFeedback(data)
-    } catch (err) {
-      logger.error("Failed to fetch feedback:", err)
+    } catch (err: any) {
+      logger.error("Failed to fetch feedback", err)
       toast.error("Failed to load feedback")
     } finally {
       setLoading(false)
@@ -129,8 +120,6 @@ export default function AdminFeedbackPage() {
     setReplyMessage(item.admin_reply || "")
     setReplyDialogOpen(true)
   }
-
-  if (currentRoute !== adminSecret) return null
 
   // Filtering
   const filteredFeedback = feedback.filter(item => {

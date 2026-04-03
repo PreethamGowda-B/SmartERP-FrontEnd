@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+// Using native global fetch
 
 export async function getUserFromServer(cookieHeader: string | undefined, apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') {
   if (!cookieHeader) return null;

@@ -209,10 +209,8 @@ export const getCurrentUser = (): User | null => {
   if (typeof window === "undefined") return null
 
   // Priority: If on an admin path, check admin user first
-  const adminSlug = process.env.NEXT_PUBLIC_ADMIN_ROUTE || 'platform-control-xyz'
   const pathname = window.location.pathname
-  const isAdminPath = pathname.includes(`/${adminSlug}`) || 
-                      pathname.includes('/super-admin') || 
+  const isAdminPath = pathname.includes('/super-admin') || 
                       pathname.includes('[adminRoute]')
 
   if (isAdminPath) {

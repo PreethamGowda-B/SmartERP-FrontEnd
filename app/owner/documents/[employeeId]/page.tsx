@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient, getAccessToken } from "@/lib/apiClient"
@@ -218,10 +219,12 @@ export default function EmployeeDocumentsPage() {
                 <Card key={doc.id} className="overflow-hidden group hover:shadow-md transition-all">
                   <div className="aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden relative border-b border-border/50">
                     {isImage(doc.file_url) ? (
-                      <img 
+                      <Image 
                         src={getFullUrl(doc.file_url)} 
                         alt={doc.document_type} 
-                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                        fill
+                        unoptimized
+                        className="object-cover transition-transform group-hover:scale-105"
                       />
                     ) : (
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -368,7 +371,9 @@ export default function EmployeeDocumentsPage() {
             <div className="flex-1 overflow-auto flex items-center justify-center p-4">
               {previewDoc && (
                 isImage(previewDoc.file_url) ? (
-                  <img src={getFullUrl(previewDoc.file_url)} className="max-w-full max-h-full object-contain shadow-2xl" alt="Preview" />
+                  <div className="relative w-full h-full min-h-[400px]">
+                    <Image src={getFullUrl(previewDoc.file_url)} fill unoptimized className="object-contain shadow-2xl" alt="Preview" />
+                  </div>
                 ) : (
                   <iframe 
                     src={getFullUrl(previewDoc.file_url)} 

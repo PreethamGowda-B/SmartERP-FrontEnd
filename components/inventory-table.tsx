@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -62,7 +62,7 @@ export default function InventoryTable({
     "Uncategorized": "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
   }
 
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     try {
       setLoading(true)
 
@@ -86,11 +86,11 @@ export default function InventoryTable({
     } finally {
       setLoading(false)
     }
-  }
+  }, [api, onItemsChange])
 
   useEffect(() => {
     fetchItems()
-  }, [api, refreshTrigger])
+  }, [fetchItems, refreshTrigger])
 
   const handleEdit = (item: InventoryItem) => {
     onEdit?.(item)

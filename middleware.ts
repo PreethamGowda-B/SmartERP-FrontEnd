@@ -20,6 +20,26 @@ export function middleware(request: NextRequest) {
         })
     }
 
+    // Validate admin route dynamically without exposing the slug to the client
+    const adminSlug = process.env.ADMIN_ROUTE || "platform-control-xyz"
+    const pathname = request.nextUrl.pathname
+    
+    // The Next.js router matches ANY random string as [adminRoute] if it's on the top level.
+    // We check if the incoming path matches the pattern `/something` and doesn't match the valid slug (nor auth/owner/etc)
+    const activeTopLevelPaths = ["/auth", "/owner", "/employee", "/hr", "/privacy", "/terms", "/suspended", "/404", "/api", "/_next"]
+    const isTopLevelPath = /^\/[^/]+(\/.*)?$/.test(pathname)
+    
+    if (isTopLevelPath) {
+      const topLevelSegment = pathname.split('/')[1]
+      
+      // If it's trying to hit what would resolve to [adminRoute], but it's not the actual secret slug
+      if (!activeTopLevelPaths.includes(`/${topLevelSegment}`) && topLevelSegment !== adminSlug) {
+         // Not a registered generic path, and NOT the admin secret -> Deny access
+         const url = new URL("/404", request.url)
+         return NextResponse.redirect(url)
+      }
+    }
+
     return NextResponse.next()
 }
 
