@@ -48,6 +48,7 @@
     "firebase": "^12.9.0",
     "framer-motion": "^12.26.1",
     "geist": "latest",
+    "idb": "^7.1.1",
     "input-otp": "latest",
     "json2csv": "^6.0.0-alpha.2",
     "jspdf": "^2.5.2",
