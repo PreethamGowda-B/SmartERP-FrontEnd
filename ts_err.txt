@@ -1,2 +1,0 @@
-app/owner/notifications/page.tsx(52,83): error TS2339: Property 'userId' does not exist on type 'Notification'.
-app/owner/notifications/page.tsx(150,101): error TS2339: Property 'time' does not exist on type 'Notification'.
