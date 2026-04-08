@@ -199,7 +199,8 @@ export async function apiClient(path: string, options: RequestInit = {}, retries
         throw { name: 'AbortError', message: 'Request cancelled' };
       }
 
-      logger.error(`[apiClient] Connection Error: ${path}`, { error: error.message || error });
+      const safeOriginal = error instanceof Error ? error.message : String(error);
+      logger.error(`[apiClient] Connection Error: ${path}`, { error: safeOriginal });
       throw new Error("Unable to connect to the server. Please check your internet connection and try again.")
     }
 
@@ -263,11 +264,12 @@ export async function apiClient(path: string, options: RequestInit = {}, retries
     if (error.name === 'AbortError') throw error;
 
     if (error.status >= 500 || !error.status) {
+      const safeOriginal = error instanceof Error ? error.message : (typeof error === 'object' && error !== null ? JSON.stringify(error) : String(error));
       logger.error(`[apiClient] ${error.status ? 'API Error' : 'Connection Error'}: ${path}`, {
         path,
         status: error.status,
         method: options.method || 'GET',
-        error: error.message || error
+        error: safeOriginal
       });
     }
 
@@ -275,7 +277,8 @@ export async function apiClient(path: string, options: RequestInit = {}, retries
       throw error;
     }
     
-    throw { message: "Something went wrong. Please try again.", originalError: error };
+    const safeErrorForThrow = error instanceof Error ? error.message : (typeof error === 'object' && error !== null ? JSON.stringify(error).substring(0, 200) : String(error));
+    throw { message: "Something went wrong. Please try again.", originalError: safeErrorForThrow };
   } finally {
     markRequestEnd(requestId)
   }

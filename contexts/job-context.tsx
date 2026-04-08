@@ -169,7 +169,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
           logger.warn("Failed to persist job to server, saved locally", err)
         }
       })()
-    
+
     if (job.assignedEmployees && job.assignedEmployees.length > 0) {
       job.assignedEmployees.forEach((employeeId) => {
         addNotification({
@@ -280,7 +280,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
       }
     } catch (err) {
-      logger.error("[v0] Failed to refresh jobs:", err)
+      logger.error("[v0] Failed to refresh jobs:", err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err)))
     }
   }, [user])
 
