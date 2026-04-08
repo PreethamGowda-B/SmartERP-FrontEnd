@@ -82,17 +82,46 @@ export default function BillingPage() {
   const plans = [
     {
       id: 1, name: "Free", limitText: "For small teams starting out", price: 0,
-      features: ["Up to 15 employees", "Up to 30 inventory items", "Basic reporting", "Job Management"],
-      missing: ["No AI Assistant", "No Payroll Generation", "No Location Tracking", "30-day message history"]
+      features: [
+        "Up to 15 Employees",
+        "Basic Attendance Tracking",
+        "Job / Task Management",
+        "Limited Inventory Management",
+        "Basic Reports"
+      ],
+      missing: []
     },
     {
       id: 2, name: "Basic", limitText: "For growing businesses", price: isAnnual ? 9990 : 999,
-      features: ["Up to 50 employees", "Up to 200 inventory items", "Location Tracking", "Payroll Generation", "Advanced Reports & Exports", "90-day message history"],
-      missing: ["No AI Assistant", "No priority support"]
+      features: [
+        "Up to 50 Employees",
+        "Attendance Tracking",
+        "Payroll Generation (Basic)",
+        "Leave Management System",
+        "Inventory Management",
+        "Location Tracking",
+        "Basic Reports & Exports",
+        "90-day Message History"
+      ],
+      missing: []
     },
     {
       id: 3, name: "Pro", limitText: "For scale and maximum impact", price: isAnnual ? 24990 : 2499,
-      features: ["Unlimited employees", "Unlimited inventory items", "Smart AI Assistant", "Location Tracking", "Payroll Generation", "Advanced Reports & Exports", "Priority 24/7 Support", "Unlimited message history"],
+      features: [
+        "Unlimited Employees & Departments",
+        "Multi-Company Management",
+        "Advanced Payroll Automation (Auto Calculations + Deductions)",
+        "AI Chat Assistant (Ask anything about payroll, attendance & system usage)",
+        "Attendance with Offline Sync (PWA Enabled)",
+        "Real-Time Leave Approval System",
+        "Employee Document & Payslip Management",
+        "Smart Reports & Export (PDF/Excel)",
+        "Role-Based Access Control (Owner / HR / Employee)",
+        "Push Notifications (Real-Time Alerts)",
+        "Background Job Processing (Fast Payroll Generation)",
+        "SaaS Billing & Subscription Management",
+        "Priority Support"
+      ],
       missing: [],
       popular: true
     }
@@ -358,7 +387,7 @@ export default function BillingPage() {
                                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                     ) : (
                                       <>
-                                        {plan && p.id > plan.id ? "Upgrade" : "Downgrade"} <ArrowRight className="w-4 h-4 ml-2" />
+                                        {plan && p.id < plan.id ? "Downgrade" : "Upgrade"} <ArrowRight className="w-4 h-4 ml-2" />
                                       </>
                                     )}
                                 </Button>
