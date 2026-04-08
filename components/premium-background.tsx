@@ -19,10 +19,10 @@ export function PremiumBackground() {
     return () => window.removeEventListener("mousemove", handleMouseMove)
   }, [])
 
-  if (!mounted) return <div className="absolute inset-0 bg-white z-0" />
+  if (!mounted) return <div className="absolute inset-0 bg-background z-0" />
 
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden bg-white">
+    <div className="absolute inset-0 z-0 overflow-hidden bg-background">
       {/* Optimized Background Motion Layers */}
       <div className="absolute inset-0 opacity-20">
         <motion.div
@@ -33,7 +33,7 @@ export function PremiumBackground() {
           }}
           transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
           style={{ willChange: "transform" }}
-          className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-slate-200 blur-[60px]"
+          className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-slate-200 dark:bg-slate-700 blur-[60px]"
         />
         <motion.div
           animate={{
@@ -96,7 +96,7 @@ export function PremiumBackground() {
       />
       
       {/* Soft focus vignette */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(255,255,255,0.3)_100%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.05)_100%)] dark:bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)] pointer-events-none" />
     </div>
   )
 }
