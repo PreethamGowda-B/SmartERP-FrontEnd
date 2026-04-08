@@ -2,7 +2,8 @@ import type React from "react"
 import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
-import { Analytics } from "@vercel/analytics/next"
+import { ConditionalAnalytics } from "@/components/ConditionalAnalytics"
+import { CookieConsentBanner } from "@/components/CookieConsentBanner"
 import { AuthProvider } from "@/contexts/auth-context"
 import { JobProvider } from "@/contexts/job-context"
 import { NotificationProvider } from "@/contexts/notification-context"
@@ -152,7 +153,8 @@ export default function RootLayout({
               </AuthProvider>
             </LoadingProvider>
           </Suspense>
-          <Analytics />
+          <ConditionalAnalytics />
+          <CookieConsentBanner />
         </ThemeProvider>
       </body>
     </html>

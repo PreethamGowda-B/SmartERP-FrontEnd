@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Lock, FileText, Mail, Building2, ChevronRight, Eye, Database, Share2, UserCheck } from "lucide-react"
+import { CookiePreferencesButton } from "@/components/CookiePreferencesButton"
 
 export default function PrivacyPage() {
   const lastUpdated = "March 21, 2026"
@@ -52,8 +53,12 @@ export default function PrivacyPage() {
     },
     {
       id: "cookies",
-      title: "8. Cookies",
-      content: `We use HTTPOnly cookies to securely store authentication tokens (access and refresh tokens). These cookies are strictly necessary for the functioning of the Service and cannot be disabled. We do not use marketing cookies, tracking pixels, or third-party advertising cookies. No cookie consent banner is required as we only use essential cookies.`
+      title: "8. Cookies & Tracking",
+      content: `We use two categories of cookies and browser storage:\n\n` +
+        `ESSENTIAL (always active, no consent required): HTTPOnly session cookies — user_access_token, user_refresh_token, superadmin_access_token, superadmin_refresh_token — are used exclusively for authentication. These are set by our backend, cannot be read by JavaScript, and are never shared with third parties.\n\n` +
+        `FUNCTIONAL (first-party, no consent required): A sidebar_state cookie stores your UI layout preference (expanded/collapsed). It contains no personal data.\n\n` +
+        `NON-ESSENTIAL (requires your consent): With your explicit consent, we load Vercel Analytics to understand aggregate page performance (no personal profiles are built), and Sentry Session Replay to record anonymised screen recordings for debugging (inputs are always masked). Your consent choice is stored in your browser's localStorage under the key "cookie_consent" and is never sent to our servers.\n\n` +
+        `You may change or withdraw your consent at any time by clicking the "Cookie Preferences" button in the footer of any page.`
     },
     {
       id: "children",
@@ -180,6 +185,7 @@ export default function PrivacyPage() {
             <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-primary transition-colors font-medium text-emerald-600">Privacy</Link>
             <Link href="https://www.prozync.in" className="hover:text-primary transition-colors">Home</Link>
+            <CookiePreferencesButton />
           </div>
         </div>
       </div>
