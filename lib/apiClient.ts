@@ -67,19 +67,22 @@ export function setTokens(accessToken: string, refreshToken: string, isAdmin = f
   if (typeof window !== "undefined") {
     const { at, rt } = isAdmin ? { at: ADMIN_AT, rt: ADMIN_RT } : { at: USER_AT, rt: USER_RT }
     
+    // Always use sessionStorage for web (tab-scoped, not XSS-persistent)
     sessionStorage.setItem(at, accessToken)
     sessionStorage.setItem(rt, refreshToken)
-    localStorage.setItem(at, accessToken)
-    localStorage.setItem(rt, refreshToken)
-    
-    // Sync with generic keys if not admin for backward compatibility
-    if (!isAdmin) {
-      localStorage.setItem("accessToken", accessToken)
-      localStorage.setItem("refreshToken", refreshToken)
-      
-      // Notify Android APK Bridge (WebView injects objects, not pure JS functions)
+
+    // Android WebView bridge — must keep localStorage for native token handoff
+    const isAndroid = !!(window as any).Android
+    if (isAndroid) {
+      localStorage.setItem(at, accessToken)
+      localStorage.setItem(rt, refreshToken)
+      if (!isAdmin) {
+        localStorage.setItem("accessToken", accessToken)
+        localStorage.setItem("refreshToken", refreshToken)
+      }
+      // Notify Android APK Bridge
       try {
-        if ((window as any).Android && (window as any).Android.saveToken) {
+        if ((window as any).Android.saveToken) {
           (window as any).Android.saveToken(accessToken, refreshToken)
         }
       } catch (err) {

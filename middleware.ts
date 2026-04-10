@@ -25,7 +25,7 @@ export function middleware(request: NextRequest) {
 
     // The Next.js router matches ANY random string as [adminRoute] if it's on the top level.
     // We check if the incoming path matches the pattern `/something` and doesn't match the valid slug (nor auth/owner/etc)
-    const activeTopLevelPaths = ["/auth", "/owner", "/employee", "/hr", "/privacy", "/terms", "/suspended", "/not-found", "/api", "/_next"]
+    const activeTopLevelPaths = ["/auth", "/owner", "/employee", "/hr", "/privacy", "/terms", "/suspended", "/not-found", "/api", "/_next", "/monitoring", "/backend-test"]
     const isTopLevelPath = /^\/[^/]+(\/.*)?$/.test(pathname)
 
     if (isTopLevelPath) {
