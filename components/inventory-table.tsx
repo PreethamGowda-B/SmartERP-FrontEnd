@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -42,6 +42,8 @@ export default function InventoryTable({
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
   const api = process.env.NEXT_PUBLIC_API_URL || ""
+  const onItemsChangeRef = useRef(onItemsChange)
+  useEffect(() => { onItemsChangeRef.current = onItemsChange }, [onItemsChange])
 
   // Helper function to get full image URL
   const getImageUrl = (imageUrl: string | undefined) => {
@@ -79,14 +81,14 @@ export default function InventoryTable({
       const data = await response.json()
       const itemsData = Array.isArray(data) ? data : []
       setItems(itemsData)
-      onItemsChange?.(itemsData)
+      onItemsChangeRef.current?.(itemsData)
     } catch (err) {
       logger.error(err)
       setItems([])
     } finally {
       setLoading(false)
     }
-  }, [api, onItemsChange])
+  }, [api]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchItems()
