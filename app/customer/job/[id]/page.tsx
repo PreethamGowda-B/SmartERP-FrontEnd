@@ -40,36 +40,18 @@ export default function JobDetailPage() {
   const [error, setError] = useState('');
   const [trackingActive, setTrackingActive] = useState(false);
 
-  // Redirect if not authenticated
+  // Auth redirect — must be before any conditional return
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/customer/login');
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Don't render while checking auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-slate-900">
-        <CustomerNavbar />
-        <div className="max-w-5xl mx-auto px-4 py-8">
-          <LoadingSkeleton />
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render if not authenticated (redirect will happen via useEffect)
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  // Fetch job details
+  // Fetch job details — must be before any conditional return
   const fetchJob = useCallback(async () => {
     try {
       const res = await customerApi.get<Job>(`/api/customer/jobs/${jobId}`);
       setJob(res.data);
-      // Start tracking if employee has accepted
       if (res.data.employee_status === 'accepted' && res.data.status !== 'completed') {
         setTrackingActive(true);
       }
@@ -84,7 +66,7 @@ export default function JobDetailPage() {
     if (isAuthenticated) fetchJob();
   }, [isAuthenticated, fetchJob]);
 
-  // SSE handler — update job state in real time
+  // SSE event handler — must be before any conditional return
   const handleSSEEvent = useCallback((event: SSEEvent) => {
     if (event.type === 'job_accepted') {
       setJob((prev) => prev ? {
@@ -96,7 +78,6 @@ export default function JobDetailPage() {
       } : prev);
       setTrackingActive(true);
     }
-
     if (event.type === 'job_progress') {
       setJob((prev) => prev ? {
         ...prev,
@@ -104,7 +85,6 @@ export default function JobDetailPage() {
         status: event.status || prev.status,
       } : prev);
     }
-
     if (event.type === 'job_completed') {
       setJob((prev) => prev ? {
         ...prev,
@@ -116,20 +96,22 @@ export default function JobDetailPage() {
     }
   }, []);
 
-  // Connect SSE stream
+  // SSE connection — must be before any conditional return
   const { isConnected: sseConnected } = useSSE({
     jobId,
     onEvent: handleSSEEvent,
     enabled: isAuthenticated && !!job,
   });
 
-  // Poll employee location — suspended while SSE is active
+  // Location polling — must be before any conditional return
   const { tracking } = useJobTracking({
     jobId,
     active: trackingActive,
     sseConnected,
     intervalMs: 15_000,
   });
+
+  // ── Conditional renders AFTER all hooks ──────────────────────────────────────
 
   if (authLoading || isLoading) {
     return (
@@ -144,13 +126,20 @@ export default function JobDetailPage() {
     );
   }
 
+  if (!isAuthenticated) {
+    return null;
+  }
+
   if (error || !job) {
     return (
       <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-900 to-indigo-950">
         <CustomerNavbar />
         <main className="max-w-3xl mx-auto px-4 py-8 text-center">
           <p className="text-red-400">{error || 'Job not found'}</p>
-          <button onClick={() => router.push('/customer/dashboard')} className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm">
+          <button
+            onClick={() => router.push('/customer/dashboard')}
+            className="mt-4 text-indigo-400 hover:text-indigo-300 text-sm"
+          >
             ← Back to dashboard
           </button>
         </main>
@@ -198,7 +187,6 @@ export default function JobDetailPage() {
             )}
           </div>
 
-          {/* Progress bar */}
           {job.progress > 0 && (
             <div className="mt-4">
               <div className="flex items-center justify-between text-xs text-white/40 mb-1.5">

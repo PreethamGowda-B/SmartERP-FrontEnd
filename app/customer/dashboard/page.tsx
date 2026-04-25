@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { PlusCircle, Briefcase, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { PlusCircle, Briefcase, CheckCircle, Clock, Loader2 } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { JobCard } from '@/components/customer/jobs/JobCard';
 import { DashboardSkeleton } from '@/components/customer/ui/LoadingSkeleton';
@@ -26,36 +26,14 @@ export default function CustomerDashboardPage() {
   const [counts, setCounts] = useState<StatusCounts>({ open: 0, active: 0, completed: 0, cancelled: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Redirect if not authenticated (only after auth state is fully loaded)
+  // Auth redirect — must be before any conditional return
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/customer/login');
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Don't render anything while checking auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center"
-        >
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 mb-4">
-            <span className="text-white font-bold text-xl">P</span>
-          </div>
-          <p className="text-white/40 text-sm">Loading...</p>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // Don't render dashboard if not authenticated (redirect will happen via useEffect)
-  if (!isAuthenticated) {
-    return null;
-  }
-
+  // Fetch jobs — must be before any conditional return
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -81,6 +59,25 @@ export default function CustomerDashboardPage() {
       }
     })();
   }, [isAuthenticated]);
+
+  // ── Conditional renders AFTER all hooks ──────────────────────────────────────
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 mb-4">
+            <span className="text-white font-bold text-xl">P</span>
+          </div>
+          <p className="text-white/40 text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const STATS = [
     { label: 'Open', value: counts.open, icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/10' },

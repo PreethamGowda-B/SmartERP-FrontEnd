@@ -12,7 +12,7 @@ import type { CustomerProfile } from '@/lib/customerTypes';
 
 export default function CustomerProfilePage() {
   const router = useRouter();
-  const { customer, isLoading: authLoading, isAuthenticated, refreshProfile } = useCustomerAuth();
+  const { isLoading: authLoading, isAuthenticated, refreshProfile } = useCustomerAuth();
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [name, setName] = useState('');
@@ -22,26 +22,14 @@ export default function CustomerProfilePage() {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
 
+  // Auth redirect — must be before any conditional return
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/customer/login');
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Don't render while checking auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-indigo-400 animate-spin" />
-      </div>
-    );
-  }
-
-  // Don't render if not authenticated (redirect will happen via useEffect)
-  if (!isAuthenticated) {
-    return null;
-  }
-
+  // Fetch profile — must be before any conditional return
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -59,6 +47,31 @@ export default function CustomerProfilePage() {
     })();
   }, [isAuthenticated]);
 
+  // ── Conditional renders AFTER all hooks ──────────────────────────────────────
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-indigo-400 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-900 to-indigo-950">
+        <CustomerNavbar />
+        <div className="flex items-center justify-center min-h-[calc(100vh-56px)]">
+          <Loader2 className="h-8 w-8 text-indigo-400 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -71,7 +84,6 @@ export default function CustomerProfilePage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err: any) {
-      // Restore previous values on failure
       setName(profile?.name || '');
       setPhone(profile?.phone || '');
       setError(err?.response?.data?.message || 'Failed to save changes');
@@ -79,8 +91,6 @@ export default function CustomerProfilePage() {
       setIsSaving(false);
     }
   };
-
-  if (authLoading || isLoading) return null;
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-900 to-indigo-950">
@@ -95,7 +105,6 @@ export default function CustomerProfilePage() {
           <p className="text-white/40 text-sm mb-8">Manage your account details</p>
 
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-6">
-            {/* Success toast */}
             {saved && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
@@ -117,7 +126,6 @@ export default function CustomerProfilePage() {
               </motion.div>
             )}
 
-            {/* Read-only info */}
             <div className="space-y-3">
               <div className="flex items-center gap-3 p-3 rounded-xl bg-white/3 border border-white/5">
                 <Mail className="h-4 w-4 text-white/30 shrink-0" />
@@ -140,7 +148,6 @@ export default function CustomerProfilePage() {
               )}
             </div>
 
-            {/* Editable form */}
             <form onSubmit={handleSave} className="space-y-4">
               <div className="relative">
                 <input
