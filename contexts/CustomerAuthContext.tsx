@@ -32,8 +32,16 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
     try {
       const res = await customerApi.get<CustomerProfile>('/api/customer/profile');
       setCustomer(res.data);
-    } catch {
+    } catch (error: any) {
+      // If token is invalid/expired, clear customer state
+      // Do NOT trigger redirect here - let pages handle it
       setCustomer(null);
+      
+      // Clear any stale cookies on 401 errors
+      if (error?.response?.status === 401) {
+        // Cookies will be cleared by the server or axios interceptor
+        console.log('Session expired or invalid');
+      }
     }
   }, []);
 

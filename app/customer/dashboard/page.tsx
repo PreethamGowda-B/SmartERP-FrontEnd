@@ -26,12 +26,35 @@ export default function CustomerDashboardPage() {
   const [counts, setCounts] = useState<StatusCounts>({ open: 0, active: 0, completed: 0, cancelled: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (only after auth state is fully loaded)
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/customer/login');
     }
   }, [authLoading, isAuthenticated, router]);
+
+  // Don't render anything while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 mb-4">
+            <span className="text-white font-bold text-xl">P</span>
+          </div>
+          <p className="text-white/40 text-sm">Loading...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Don't render dashboard if not authenticated (redirect will happen via useEffect)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -58,8 +81,6 @@ export default function CustomerDashboardPage() {
       }
     })();
   }, [isAuthenticated]);
-
-  if (authLoading) return null;
 
   const STATS = [
     { label: 'Open', value: counts.open, icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/10' },

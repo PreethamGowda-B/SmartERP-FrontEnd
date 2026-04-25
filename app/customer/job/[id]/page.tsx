@@ -47,6 +47,23 @@ export default function JobDetailPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
+  // Don't render while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900">
+        <CustomerNavbar />
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          <LoadingSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated (redirect will happen via useEffect)
+  if (!isAuthenticated) {
+    return null;
+  }
+
   // Fetch job details
   const fetchJob = useCallback(async () => {
     try {

@@ -106,10 +106,10 @@ customerApi.interceptors.response.use(
         onRefreshed();
         return customerApi(originalRequest);
       } catch (refreshError) {
-        // Refresh failed — redirect to customer login
-        if (typeof window !== 'undefined') {
-          window.location.href = '/customer/login';
-        }
+        // Refresh failed — clear state but DON'T redirect here
+        // Let the page-level auth check handle the redirect
+        // This prevents redirect loops
+        onRefreshed(); // Clear any queued requests
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

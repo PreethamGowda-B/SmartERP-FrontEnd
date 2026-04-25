@@ -28,6 +28,20 @@ export default function CustomerProfilePage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
+  // Don't render while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-indigo-400 animate-spin" />
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated (redirect will happen via useEffect)
+  if (!isAuthenticated) {
+    return null;
+  }
+
   useEffect(() => {
     if (!isAuthenticated) return;
 
