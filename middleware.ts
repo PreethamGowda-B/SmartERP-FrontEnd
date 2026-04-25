@@ -4,19 +4,19 @@ import type { NextRequest } from "next/server"
 export function middleware(request: NextRequest) {
     const host = request.headers.get("host") || ""
 
-    // Define the target domain
-    const targetDomain = "www.prozync.in"
+    // Allowed hosts for this Next.js app:
+    //   - www.prozync.in / prozync.in  → main SmartERP frontend
+    //   - client.prozync.in            → Prozync Customer Portal
+    //   - localhost:*                  → local development
+    const allowedHosts = ["www.prozync.in", "prozync.in", "client.prozync.in"]
+    const isAllowedHost = allowedHosts.some(h => host === h) || host.startsWith("localhost")
 
-    // Check if the request is not for the target domain
-    if (host !== targetDomain && !host.startsWith("localhost")) {
+    // Redirect unknown hosts to the main domain
+    if (!isAllowedHost) {
         const url = new URL(request.url)
-        url.host = targetDomain
+        url.host = "www.prozync.in"
         url.protocol = "https:"
-
-        // Perform a 301 permanent redirect
-        return NextResponse.redirect(url, {
-            status: 301,
-        })
+        return NextResponse.redirect(url, { status: 301 })
     }
 
     // Validate admin route dynamically without exposing the slug to the client
@@ -25,7 +25,12 @@ export function middleware(request: NextRequest) {
 
     // The Next.js router matches ANY random string as [adminRoute] if it's on the top level.
     // We check if the incoming path matches the pattern `/something` and doesn't match the valid slug (nor auth/owner/etc)
-    const activeTopLevelPaths = ["/auth", "/owner", "/employee", "/hr", "/privacy", "/terms", "/suspended", "/not-found", "/api", "/_next", "/monitoring", "/backend-test"]
+    const activeTopLevelPaths = [
+      "/auth", "/owner", "/employee", "/hr",
+      "/customer",   // ← Customer Portal routes
+      "/privacy", "/terms", "/suspended", "/not-found",
+      "/api", "/_next", "/monitoring", "/backend-test",
+    ]
     const isTopLevelPath = /^\/[^/]+(\/.*)?$/.test(pathname)
 
     if (isTopLevelPath) {
