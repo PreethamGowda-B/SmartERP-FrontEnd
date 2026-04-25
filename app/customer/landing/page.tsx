@@ -36,7 +36,7 @@ export default function CustomerLandingPage() {
     {
       icon: MapPin,
       title: 'Live Location',
-      description: 'Track the assigned technician's location in real-time on an interactive map.',
+      description: 'Track the assigned technician location in real-time on an interactive map.',
     },
     {
       icon: Zap,
