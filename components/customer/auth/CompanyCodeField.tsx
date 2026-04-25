@@ -67,99 +67,95 @@ export function CompanyCodeField({
   return (
     <div className="space-y-1">
       <div className="relative">
-        {/* Floating label */}
         <div className="relative">
-          <input
-            type="text"
-            id="company_code"
-            value={value}
-            onChange={(e) => {
-              onChange(e.target.value.toUpperCase());
-              setValidationState('idle');
-              setCompanyName(null);
-            }}
-            onBlur={() => validate(value)}
-            disabled={disabled}
-            placeholder=" "
-            className={`peer w-full rounded-xl border bg-white/5 px-4 pt-5 pb-2 text-sm text-white placeholder-transparent outline-none transition-all focus:ring-2 pr-10
-              ${error || validationState === 'invalid'
-                ? 'border-red-500 focus:ring-red-500/30'
-                : validationState === 'valid'
-                ? 'border-green-500 focus:ring-green-500/30'
-                : 'border-white/20 focus:ring-indigo-500/30 focus:border-indigo-500'
-              }
-              disabled:opacity-50 disabled:cursor-not-allowed`}
-          />
-          <label
-            htmlFor="company_code"
-            className="absolute left-4 top-1 text-xs text-indigo-300 transition-all
-              peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-sm peer-placeholder-shown:text-white/40
-              peer-focus:top-1 peer-focus:text-xs peer-focus:text-indigo-300"
-          >
-            Company Code
+          <label htmlFor="company_code" className="block text-sm font-medium text-gray-700 mb-2">
+            Company code
           </label>
+          <div className="relative">
+            <input
+              type="text"
+              id="company_code"
+              value={value}
+              onChange={(e) => {
+                onChange(e.target.value.toUpperCase());
+                setValidationState('idle');
+                setCompanyName(null);
+              }}
+              onBlur={() => validate(value)}
+              disabled={disabled}
+              placeholder="e.g. ACME2024"
+              className={`w-full pr-10 pl-4 py-2.5 text-sm text-gray-900 bg-white border rounded-lg outline-none transition-all
+                focus:ring-2 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed
+                ${error || validationState === 'invalid'
+                  ? 'border-red-400 focus:ring-red-500'
+                  : validationState === 'valid'
+                  ? 'border-green-400 focus:ring-green-500'
+                  : 'border-gray-300 focus:ring-blue-500'
+                }`}
+            />
 
-          {/* Validation icon */}
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <AnimatePresence mode="wait">
-              {validationState === 'loading' && (
-                <motion.div
-                  key="loading"
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.5 }}
-                >
-                  <Loader2 className="h-4 w-4 text-indigo-400 animate-spin" />
-                </motion.div>
-              )}
-              {validationState === 'valid' && (
-                <motion.div
-                  key="valid"
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.5 }}
-                >
-                  <CheckCircle className="h-4 w-4 text-green-400" />
-                </motion.div>
-              )}
-              {validationState === 'invalid' && (
-                <motion.div
-                  key="invalid"
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.5 }}
-                >
-                  <XCircle className="h-4 w-4 text-red-400" />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Validation icon */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <AnimatePresence mode="wait">
+                {validationState === 'loading' && (
+                  <motion.div
+                    key="loading"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                  >
+                    <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                  </motion.div>
+                )}
+                {validationState === 'valid' && (
+                  <motion.div
+                    key="valid"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                  >
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  </motion.div>
+                )}
+                {validationState === 'invalid' && (
+                  <motion.div
+                    key="invalid"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                  >
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-        </div>
 
-        {/* Company name display */}
-        <AnimatePresence>
-          {validationState === 'valid' && companyName && (
-            <motion.p
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              className="mt-1 text-xs text-green-400 flex items-center gap-1"
-            >
-              <CheckCircle className="h-3 w-3" />
-              {companyName}
-            </motion.p>
-          )}
-          {(validationState === 'invalid' || error) && (
-            <motion.p
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              className="mt-1 text-xs text-red-400"
-            >
-              {error || 'Invalid company code'}
-            </motion.p>
-          )}
-        </AnimatePresence>
+          {/* Company name / error display */}
+          <AnimatePresence>
+            {validationState === 'valid' && companyName && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="mt-1.5 text-xs text-green-600 flex items-center gap-1"
+              >
+                <CheckCircle className="h-3 w-3" />
+                {companyName}
+              </motion.p>
+            )}
+            {(validationState === 'invalid' || error) && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="mt-1.5 text-xs text-red-600"
+              >
+                {error || 'Invalid company code. Please check with your service provider.'}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
