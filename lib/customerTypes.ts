@@ -72,6 +72,7 @@ export interface Job {
   // Source
   source: 'owner' | 'customer';
   customer_id: string | null;
+  scheduled_at: string | null;
 }
 
 export interface JobListResponse {
@@ -85,6 +86,54 @@ export interface CreateJobPayload {
   title: string;
   description?: string;
   priority?: JobPriority;
+  scheduled_at?: string;
+}
+
+// ── Invoice ───────────────────────────────────────────────────────────────────
+
+export interface InvoiceBreakdown {
+  labor?: { hours: number; rate: number; cost: number };
+  materials?: { cost: number };
+  service_charge?: number;
+}
+
+export interface Invoice {
+  id: string;
+  invoice_number: string;
+  labor_hours: number;
+  labor_cost: number;
+  materials_cost: number;
+  service_charge: number;
+  total_amount: number;
+  status: 'draft' | 'sent' | 'paid';
+  breakdown: InvoiceBreakdown;
+  generated_at: string;
+}
+
+// ── Materials ─────────────────────────────────────────────────────────────────
+
+export interface JobMaterial {
+  id: string;
+  item_name: string;
+  quantity_used: number;
+  unit_cost: number;
+  total_cost: number;
+  logged_at: string;
+  logged_by_name: string | null;
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+export interface CustomerNotification {
+  id: string;
+  type: string;
+  details: {
+    customer_id?: string;
+    title?: string;
+    message?: string;
+    job_id?: string;
+  };
+  created_at: string;
 }
 
 // ── Tracking ──────────────────────────────────────────────────────────────────

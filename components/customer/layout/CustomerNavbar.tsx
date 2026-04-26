@@ -10,6 +10,7 @@ import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 const NAV_ITEMS = [
   { href: '/customer/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/customer/create-job', label: 'New Request', icon: PlusCircle },
+  { href: '/customer/notifications', label: 'Notifications', icon: Bell },
   { href: '/customer/profile', label: 'Profile', icon: User },
 ];
 
