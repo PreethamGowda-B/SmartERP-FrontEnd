@@ -2,18 +2,19 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import {
   CheckCircle, Clock, MapPin, Zap, ArrowRight,
   Shield, Bell, BarChart3, ChevronRight,
 } from 'lucide-react';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
-  visible: (i = 0) => ({
-    opacity: 1, y: 0,
-    transition: { duration: 0.5, delay: i * 0.1, ease: 'easeOut' },
+  visible: (i: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, delay: i * 0.1, ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number] },
   }),
 };
 

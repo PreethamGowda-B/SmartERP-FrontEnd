@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { PlusCircle, Briefcase, CheckCircle, Clock, TrendingUp, ArrowRight } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { JobCard } from '@/components/customer/jobs/JobCard';
@@ -13,9 +13,13 @@ import type { Job, JobListResponse } from '@/lib/customerTypes';
 
 interface StatusCounts { open: number; active: number; completed: number; cancelled: number }
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 16 },
-  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.4, delay: i * 0.08, ease: 'easeOut' } }),
+  visible: (i: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, delay: i * 0.08, ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number] },
+  }),
 };
 
 export default function CustomerDashboardPage() {
