@@ -37,22 +37,39 @@ export interface AuthState {
 
 export type JobStatus = 'open' | 'pending' | 'in_progress' | 'active' | 'completed' | 'closed' | 'cancelled';
 export type JobPriority = 'low' | 'medium' | 'high' | 'urgent';
-export type EmployeeStatus = 'pending' | 'accepted' | 'declined';
+export type EmployeeStatus = 'assigned' | 'accepted' | 'arrived' | 'declined';
+export type ApprovalStatus = 'pending_approval' | 'approved' | 'rejected';
 
 export interface Job {
   id: string;
   title: string;
   description: string | null;
+  // Execution status (job_status)
   status: JobStatus;
+  // Approval workflow status (separate from execution)
+  approval_status: ApprovalStatus;
   priority: JobPriority;
+  ai_suggested_priority: JobPriority | null;
+  priority_overridden: boolean;
+  // Employee workflow status (separate from job status)
   employee_status: EmployeeStatus;
   progress: number;
   assigned_to: string | null;
   assigned_employee_name: string | null;
+  // Timeline timestamps
   created_at: string;
+  approved_at: string | null;
+  assigned_at: string | null;
+  started_at: string | null;
   accepted_at: string | null;
+  arrived_at: string | null;
   completed_at: string | null;
   declined_at: string | null;
+  rejected_at: string | null;
+  // SLA
+  sla_accept_breached: boolean;
+  sla_completion_breached: boolean;
+  // Source
   source: 'owner' | 'customer';
   customer_id: string | null;
 }
@@ -84,13 +101,18 @@ export interface TrackingData {
 
 // ── SSE Events ────────────────────────────────────────────────────────────────
 
-export type SSEEventType = 'connected' | 'job_accepted' | 'job_progress' | 'job_completed' | 'reconnect';
+export type SSEEventType = 'connected' | 'job_accepted' | 'job_progress' | 'job_completed' | 'job_approved' | 'job_rejected' | 'employee_arrived' | 'reconnect';
 
 export interface SSEEvent {
   type: SSEEventType;
+  event_id?: string;       // Section 3: unique ID for deduplication
+  timestamp?: string;      // ISO timestamp from server
   jobId?: string;
   employeeName?: string;
   acceptedAt?: string;
+  arrivedAt?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
   progress?: number;
   status?: JobStatus;
   completedAt?: string;

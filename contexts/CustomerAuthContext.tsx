@@ -39,8 +39,7 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
       
       // Clear any stale cookies on 401 errors
       if (error?.response?.status === 401) {
-        // Cookies will be cleared by the server or axios interceptor
-        console.log('Session expired or invalid');
+        // This is normal for logged-out users — suppress the console noise
       }
     }
   }, []);
