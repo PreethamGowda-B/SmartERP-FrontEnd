@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, History, CheckCircle, XCircle, Clock, TrendingUp, RefreshCw } from 'lucide-react';
+import { ArrowLeft, History, CheckCircle, TrendingUp, RefreshCw, BarChart2 } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { JobCard } from '@/components/customer/jobs/JobCard';
 import { LoadingSkeleton } from '@/components/customer/ui/LoadingSkeleton';
@@ -34,14 +34,12 @@ export default function ServiceHistoryPage() {
     if (refresh) setIsRefreshing(true);
     else setIsLoading(true);
     try {
-      // Fetch all jobs to compute stats and filter
       const res = await customerApi.get<{ success: boolean; data: JobListResponse }>(
         '/api/customer/jobs?limit=100'
       );
       const data = res.data.data ?? (res.data as any);
       const allJobs: Job[] = data.jobs ?? [];
 
-      // Compute stats
       const completed = allJobs.filter(j => j.status === 'completed').length;
       const cancelled = allJobs.filter(j => j.status === 'cancelled').length;
       const avgProgress = allJobs.length > 0
@@ -50,7 +48,6 @@ export default function ServiceHistoryPage() {
       setStats({ total: allJobs.length, completed, cancelled, avgProgress });
       setTotal(allJobs.length);
 
-      // Filter for history view
       let filtered = allJobs.filter(j =>
         statusFilter === 'all' ? true :
         statusFilter === 'completed' ? j.status === 'completed' :
@@ -76,6 +73,30 @@ export default function ServiceHistoryPage() {
 
   if (authLoading || (!isAuthenticated && !authLoading)) return null;
 
+  const summaryStats = [
+    {
+      label: 'Total Jobs',
+      value: stats.total,
+      icon: BarChart2,
+      color: 'text-gray-600',
+      bg: 'bg-gray-100',
+    },
+    {
+      label: 'Completed',
+      value: stats.completed,
+      icon: CheckCircle,
+      color: 'text-green-600',
+      bg: 'bg-green-50',
+    },
+    {
+      label: 'Avg Progress',
+      value: `${stats.avgProgress}%`,
+      icon: TrendingUp,
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <CustomerNavbar />
@@ -84,8 +105,10 @@ export default function ServiceHistoryPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/customer/dashboard')}
-              className="text-gray-500 hover:text-gray-900 transition-colors">
+            <button
+              onClick={() => router.push('/customer/dashboard')}
+              className="text-gray-500 hover:text-gray-900 transition-colors"
+            >
               <ArrowLeft className="h-4 w-4" />
             </button>
             <div>
@@ -96,21 +119,19 @@ export default function ServiceHistoryPage() {
               <p className="text-xs text-gray-500 mt-0.5">{total} total requests</p>
             </div>
           </div>
-          <button onClick={() => fetchHistory(true)} disabled={isRefreshing}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all">
+          <button
+            onClick={() => fetchHistory(true)}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all"
+          >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          {[
-            { label: 'Total', value: stats.total, icon: History, color: 'text-gray-600', bg: 'bg-gray-100' },
-            { label: 'Completed', value: stats.completed, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
-            { label: 'Cancelled', value: stats.cancelled, icon: XCircle, color: 'text-red-600', bg: 'bg-red-50' },
-            { label: 'Avg Progress', value: `${stats.avgProgress}%`, icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50' },
-          ].map(({ label, value, icon: Icon, color, bg }) => (
+        {/* Summary bar — 3 stats */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          {summaryStats.map(({ label, value, icon: Icon, color, bg }) => (
             <div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-gray-500">{label}</span>
@@ -125,8 +146,11 @@ export default function ServiceHistoryPage() {
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-5">
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          >
             <option value="all">All Statuses</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
@@ -134,26 +158,41 @@ export default function ServiceHistoryPage() {
             <option value="open">Open</option>
           </select>
           <div className="flex items-center gap-2 flex-1">
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            />
             <span className="text-gray-400 text-sm">to</span>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            />
           </div>
           {(dateFrom || dateTo || statusFilter !== 'completed') && (
-            <button onClick={() => { setDateFrom(''); setDateTo(''); setStatusFilter('completed'); }}
-              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all whitespace-nowrap">
+            <button
+              onClick={() => { setDateFrom(''); setDateTo(''); setStatusFilter('completed'); }}
+              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all whitespace-nowrap"
+            >
               Clear filters
             </button>
           )}
         </div>
 
-        {/* List */}
+        {/* Job list */}
         {isLoading ? (
-          <div className="space-y-3">{[1,2,3].map(i => <LoadingSkeleton key={i} className="h-20" />)}</div>
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => <LoadingSkeleton key={i} className="h-20" />)}
+          </div>
         ) : jobs.length === 0 ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-white rounded-xl border border-gray-200 p-12 text-center"
+          >
             <History className="h-10 w-10 text-gray-300 mx-auto mb-3" />
             <p className="font-medium text-gray-700">No history found</p>
             <p className="text-sm text-gray-500 mt-1">
@@ -163,7 +202,12 @@ export default function ServiceHistoryPage() {
         ) : (
           <div className="space-y-3">
             {jobs.map((job, i) => (
-              <motion.div key={job.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+              <motion.div
+                key={job.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+              >
                 <JobCard job={job} />
               </motion.div>
             ))}
