@@ -4,14 +4,17 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, PlusCircle, User, LogOut, Menu, X, Bell } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, User, LogOut, Menu, X, Bell, List, History, Repeat } from 'lucide-react';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 
 const NAV_ITEMS = [
-  { href: '/customer/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/customer/create-job', label: 'New Request', icon: PlusCircle },
+  { href: '/customer/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
+  { href: '/customer/jobs',          label: 'All Requests', icon: List },
+  { href: '/customer/create-job',    label: 'New Request',  icon: PlusCircle },
+  { href: '/customer/history',       label: 'History',      icon: History },
+  { href: '/customer/recurring',     label: 'Recurring',    icon: Repeat },
   { href: '/customer/notifications', label: 'Notifications', icon: Bell },
-  { href: '/customer/profile', label: 'Profile', icon: User },
+  { href: '/customer/profile',       label: 'Profile',      icon: User },
 ];
 
 export function CustomerNavbar() {
