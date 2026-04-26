@@ -22,6 +22,7 @@ import {
   Megaphone,
   Files,
   Briefcase,
+  UserCheck,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { logger } from "@/lib/logger"
@@ -29,6 +30,7 @@ import { logger } from "@/lib/logger"
 const navigation = [
   { name: "Dashboard", href: "/hr", icon: LayoutDashboard },
   { name: "Tasks", href: "/hr/tasks", icon: Briefcase },
+  { name: "Customer Jobs", href: "/hr/customer-jobs", icon: UserCheck },
   { name: "Employees", href: "/hr/employees", icon: Users },
   { name: "Attendance", href: "/hr/attendance", icon: Clock },
   { name: "Documents", href: "/hr/documents", icon: Files },

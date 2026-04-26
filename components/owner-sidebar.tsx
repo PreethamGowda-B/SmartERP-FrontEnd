@@ -28,6 +28,7 @@ import {
   Headset,
   Megaphone,
   Files,
+  UserCheck,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { logger } from "@/lib/logger"
@@ -35,6 +36,7 @@ import { logger } from "@/lib/logger"
 const navigation = [
   { name: "Dashboard", href: "/owner", icon: LayoutDashboard },
   { name: "Tasks", href: "/owner/jobs", icon: Briefcase },
+  { name: "Customer Jobs", href: "/owner/customer-jobs", icon: UserCheck },
   { name: "Employees", href: "/owner/employees", icon: Users },
   { name: "Attendance", href: "/owner/attendance", icon: Clock },
   { name: "Materials", href: "/owner/materials", icon: Package },

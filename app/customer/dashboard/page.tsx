@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, type Variants } from 'framer-motion';
-import { PlusCircle, Briefcase, CheckCircle, Clock, TrendingUp, ArrowRight } from 'lucide-react';
+import { PlusCircle, Briefcase, CheckCircle, Clock, TrendingUp, ArrowRight, AlertCircle } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { JobCard } from '@/components/customer/jobs/JobCard';
 import { DashboardSkeleton } from '@/components/customer/ui/LoadingSkeleton';
@@ -11,7 +11,7 @@ import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import customerApi from '@/lib/customerApi';
 import type { Job, JobListResponse } from '@/lib/customerTypes';
 
-interface StatusCounts { open: number; active: number; completed: number; cancelled: number }
+interface StatusCounts { open: number; active: number; completed: number; cancelled: number; pending_approval: number }
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 16 },
@@ -27,7 +27,7 @@ export default function CustomerDashboardPage() {
   const { customer, isLoading: authLoading, isAuthenticated } = useCustomerAuth();
 
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [counts, setCounts] = useState<StatusCounts>({ open: 0, active: 0, completed: 0, cancelled: 0 });
+  const [counts, setCounts] = useState<StatusCounts>({ open: 0, active: 0, completed: 0, cancelled: 0, pending_approval: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -42,9 +42,10 @@ export default function CustomerDashboardPage() {
         const res = await customerApi.get<JobListResponse>('/api/customer/jobs?limit=20');
         const allJobs = res.data.jobs;
         setJobs(allJobs.slice(0, 5));
-        const c: StatusCounts = { open: 0, active: 0, completed: 0, cancelled: 0 };
+        const c: StatusCounts = { open: 0, active: 0, completed: 0, cancelled: 0, pending_approval: 0 };
         allJobs.forEach((j) => {
-          if (j.status === 'open' || j.status === 'pending') c.open++;
+          if (j.approval_status === 'pending_approval') c.pending_approval++;
+          else if (j.status === 'open' || j.status === 'pending') c.open++;
           else if (j.status === 'active' || j.status === 'in_progress') c.active++;
           else if (j.status === 'completed') c.completed++;
           else if (j.status === 'cancelled') c.cancelled++;
@@ -74,6 +75,14 @@ export default function CustomerDashboardPage() {
   if (!isAuthenticated) return null;
 
   const STATS = [
+    ...(counts.pending_approval > 0 ? [{
+      label: 'Pending Approval',
+      value: counts.pending_approval,
+      icon: AlertCircle,
+      color: 'text-amber-600',
+      bg: 'bg-amber-50',
+      border: 'border-amber-200',
+    }] : []),
     { label: 'Open Requests', value: counts.open, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
     { label: 'In Progress', value: counts.active, icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
     { label: 'Completed', value: counts.completed, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
@@ -106,7 +115,7 @@ export default function CustomerDashboardPage() {
             {/* Stats */}
             <motion.div
               variants={fadeUp} initial="hidden" animate="visible" custom={1}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"
+              className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8"
             >
               {STATS.map(({ label, value, icon: Icon, color, bg, border }) => (
                 <div key={label} className={`bg-white rounded-xl border ${border} p-5 hover:shadow-sm transition-shadow`}>
