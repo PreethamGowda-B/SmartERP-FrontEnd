@@ -119,8 +119,8 @@ export default function HRTasksPage() {
     return matchesSearch && matchesStatus && matchesPriority
   })
 
-  const activeCount    = jobs.filter(j => j.status === "active" || j.status === "in_progress").length
-  const pendingCount   = jobs.filter(j => !j.employee_status || j.employee_status === "assigned").length
+  const activeCount    = jobs.filter(j => (j.status as string) === "active" || (j.status as string) === "in_progress").length
+  const pendingCount   = jobs.filter(j => !j.employee_status || (j.employee_status as string) === "assigned").length
   const completedCount = jobs.filter(j => j.status === "completed").length
 
   return (
