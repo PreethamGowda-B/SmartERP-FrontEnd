@@ -150,12 +150,12 @@ export interface TrackingData {
 
 // ── SSE Events ────────────────────────────────────────────────────────────────
 
-export type SSEEventType = 'connected' | 'job_accepted' | 'job_progress' | 'job_completed' | 'job_approved' | 'job_rejected' | 'employee_arrived' | 'reconnect';
+export type SSEEventType = 'connected' | 'job_accepted' | 'job_progress' | 'job_completed' | 'job_approved' | 'job_rejected' | 'employee_arrived' | 'reconnect' | 'chat_message';
 
 export interface SSEEvent {
   type: SSEEventType;
-  event_id?: string;       // Section 3: unique ID for deduplication
-  timestamp?: string;      // ISO timestamp from server
+  event_id?: string;
+  timestamp?: string;
   jobId?: string;
   employeeName?: string;
   acceptedAt?: string;
@@ -166,6 +166,18 @@ export interface SSEEvent {
   status?: JobStatus;
   completedAt?: string;
   reason?: string;
+  message?: ChatMessage;
+}
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+
+export interface ChatMessage {
+  id: string;
+  sender_type: 'customer' | 'employee';
+  sender_id: string;
+  sender_name: string;
+  message: string;
+  created_at: string;
 }
 
 // ── Company ───────────────────────────────────────────────────────────────────

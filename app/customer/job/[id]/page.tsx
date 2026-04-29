@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Activity, AlertCircle, Loader2,
   Receipt, Package, User, Clock, CheckCircle, XCircle,
-  Calendar, Download, Info,
+  Calendar, Download, Info, MessageCircle, Send,
 } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { JobStatusBadge } from '@/components/customer/ui/JobStatusBadge';
@@ -17,7 +17,7 @@ import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { useSSE } from '@/hooks/useSSE';
 import { useJobTracking } from '@/hooks/useJobTracking';
 import customerApi from '@/lib/customerApi';
-import type { Job, SSEEvent, Invoice, JobMaterial } from '@/lib/customerTypes';
+import type { Job, SSEEvent, Invoice, JobMaterial, ChatMessage } from '@/lib/customerTypes';
 
 const TrackingMap = dynamic(() => import('@/components/customer/jobs/TrackingMap'), {
   ssr: false,
@@ -64,6 +64,13 @@ export default function JobDetailPage() {
   const [error, setError] = useState('');
   const [trackingActive, setTrackingActive] = useState(false);
 
+  // Chat state
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState('');
+  const chatBottomRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.push('/customer/login');
   }, [authLoading, isAuthenticated, router]);
@@ -90,6 +97,33 @@ export default function JobDetailPage() {
     }
   }, [jobId]);
 
+  const fetchMessages = useCallback(async () => {
+    try {
+      const res = await customerApi.get<{ success: boolean; data: ChatMessage[] }>(
+        `/api/customer/jobs/${jobId}/messages`
+      );
+      setMessages(res.data.data ?? []);
+      setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    } catch {
+      setMessages([]);
+    }
+  }, [jobId]);
+
+  const sendMessage = useCallback(async () => {
+    if (!chatInput.trim()) return;
+    setChatLoading(true);
+    setChatError('');
+    try {
+      await customerApi.post(`/api/customer/jobs/${jobId}/messages`, { message: chatInput.trim() });
+      setChatInput('');
+      await fetchMessages();
+    } catch (err: any) {
+      setChatError(err?.response?.data?.error || 'Failed to send message');
+    } finally {
+      setChatLoading(false);
+    }
+  }, [jobId, chatInput, fetchMessages]);
+
   const fetchJob = useCallback(async () => {
     try {
       const res = await customerApi.get<{ success: boolean; data: Job }>(`/api/customer/jobs/${jobId}`);
@@ -103,6 +137,10 @@ export default function JobDetailPage() {
       }
       if (jobData.assigned_to) {
         fetchMaterials();
+      }
+      // Load chat history if technician has accepted
+      if (jobData.employee_status === 'accepted' || jobData.employee_status === 'arrived') {
+        fetchMessages();
       }
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Job not found');
@@ -128,6 +166,8 @@ export default function JobDetailPage() {
         assigned_employee_name: event.employeeName || prev.assigned_employee_name,
       } : prev);
       setTrackingActive(true);
+      // Chat becomes available — load history
+      fetchMessages();
     }
     if (event.type === 'employee_arrived') {
       setJob(prev => prev ? {
@@ -146,7 +186,16 @@ export default function JobDetailPage() {
       setTrackingActive(false);
       setTimeout(() => { fetchInvoice(); fetchMaterials(); }, 2000);
     }
-  }, [fetchInvoice, fetchMaterials]);
+    if (event.type === 'chat_message' && event.message) {
+      setMessages(prev => {
+        // Deduplicate by id
+        if (prev.some(m => m.id === event.message!.id)) return prev;
+        const updated = [...prev, event.message!];
+        setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+        return updated;
+      });
+    }
+  }, [fetchInvoice, fetchMaterials, fetchMessages]);
 
   const { isConnected: sseConnected } = useSSE({ jobId, onEvent: handleSSEEvent, enabled: isAuthenticated && !!job });
   const { tracking } = useJobTracking({ jobId, active: trackingActive, sseConnected, intervalMs: 15_000 });
@@ -402,6 +451,88 @@ export default function JobDetailPage() {
                     </div>
                   </div>
                 )}
+              </motion.div>
+            )}
+
+            {/* Chat panel — only when technician has accepted */}
+            {(job.employee_status === 'accepted' || job.employee_status === 'arrived') && (
+              <motion.div
+                variants={fadeUp} initial="hidden" animate="visible" custom={4}
+                className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+              >
+                {/* Chat header */}
+                <div className="flex items-center gap-2.5 p-5 border-b border-gray-100">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                    <MessageCircle className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-900">Chat with Technician</h2>
+                    <p className="text-xs text-gray-500">
+                      {job.assigned_employee_name ? `Chatting with ${job.assigned_employee_name}` : 'Direct message'}
+                    </p>
+                  </div>
+                  <span className="ml-auto flex items-center gap-1.5 text-xs text-green-600 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />Active
+                  </span>
+                </div>
+
+                {/* Message list */}
+                <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50">
+                  {messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <MessageCircle className="h-8 w-8 text-gray-300 mb-2" />
+                      <p className="text-sm text-gray-500">No messages yet</p>
+                      <p className="text-xs text-gray-400 mt-1">Start the conversation with your technician</p>
+                    </div>
+                  ) : (
+                    messages.map(msg => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${msg.sender_type === 'customer' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div className={`max-w-[75%] rounded-2xl px-3.5 py-2.5 ${
+                          msg.sender_type === 'customer'
+                            ? 'bg-indigo-600 text-white rounded-br-sm'
+                            : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm shadow-sm'
+                        }`}>
+                          {msg.sender_type === 'employee' && (
+                            <p className="text-xs font-semibold text-indigo-600 mb-0.5">{msg.sender_name}</p>
+                          )}
+                          <p className="text-sm leading-relaxed">{msg.message}</p>
+                          <p className={`text-xs mt-1 ${msg.sender_type === 'customer' ? 'text-indigo-200' : 'text-gray-400'}`}>
+                            {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <div ref={chatBottomRef} />
+                </div>
+
+                {/* Input */}
+                <div className="p-4 border-t border-gray-100 bg-white">
+                  {chatError && (
+                    <p className="text-xs text-red-600 mb-2">{chatError}</p>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                      placeholder="Type a message..."
+                      disabled={chatLoading}
+                      className="flex-1 px-3.5 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 bg-gray-50"
+                    />
+                    <button
+                      onClick={sendMessage}
+                      disabled={chatLoading || !chatInput.trim()}
+                      className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    >
+                      {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
               </motion.div>
             )}
           </div>
