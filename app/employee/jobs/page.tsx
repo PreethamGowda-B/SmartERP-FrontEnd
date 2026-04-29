@@ -251,7 +251,7 @@ export default function EmployeeJobsPage() {
               const isVisibleToAll = job.visible_to_all || false
               const assignedEmployees = job.assignedEmployees || []
 
-              const isPending = employeeStatus === "pending" || employeeStatus === "assigned"
+              const isPending = (employeeStatus as string) === "pending" || (employeeStatus as string) === "assigned"
               const isAccepted = employeeStatus === "accepted"
               const isDeclined = employeeStatus === "declined"
               const isCompleted = status?.toLowerCase() === "completed"
