@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Activity, AlertCircle, Loader2,
   Receipt, Package, User, Clock, CheckCircle, XCircle,
-  Calendar, Download, Info, MessageCircle, Send,
+  Calendar, Download, Info, MessageCircle, Send, Star,
 } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { JobStatusBadge } from '@/components/customer/ui/JobStatusBadge';
@@ -17,7 +17,7 @@ import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { useSSE } from '@/hooks/useSSE';
 import { useJobTracking } from '@/hooks/useJobTracking';
 import customerApi from '@/lib/customerApi';
-import type { Job, SSEEvent, Invoice, JobMaterial, ChatMessage } from '@/lib/customerTypes';
+import type { Job, SSEEvent, Invoice, JobMaterial, ChatMessage, JobReview } from '@/lib/customerTypes';
 
 const TrackingMap = dynamic(() => import('@/components/customer/jobs/TrackingMap'), {
   ssr: false,
@@ -70,6 +70,15 @@ export default function JobDetailPage() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  // Review state
+  const [review, setReview] = useState<JobReview | null | undefined>(undefined); // undefined = not loaded
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHover, setReviewHover] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.push('/customer/login');
@@ -124,6 +133,40 @@ export default function JobDetailPage() {
     }
   }, [jobId, chatInput, fetchMessages]);
 
+  const fetchReview = useCallback(async () => {
+    try {
+      const res = await customerApi.get<{ success: boolean; data: JobReview | null }>(
+        `/api/customer/jobs/${jobId}/review`
+      );
+      setReview(res.data.data ?? null);
+      if (res.data.data) {
+        setReviewRating(res.data.data.rating);
+        setReviewText(res.data.data.review_text || '');
+        setReviewSubmitted(true);
+      }
+    } catch {
+      setReview(null);
+    }
+  }, [jobId]);
+
+  const submitReview = useCallback(async () => {
+    if (reviewRating === 0) { setReviewError('Please select a rating'); return; }
+    setReviewLoading(true);
+    setReviewError('');
+    try {
+      await customerApi.post(`/api/customer/jobs/${jobId}/review`, {
+        rating: reviewRating,
+        review_text: reviewText.trim() || undefined,
+      });
+      setReviewSubmitted(true);
+      await fetchReview();
+    } catch (err: any) {
+      setReviewError(err?.response?.data?.error || 'Failed to submit review');
+    } finally {
+      setReviewLoading(false);
+    }
+  }, [jobId, reviewRating, reviewText, fetchReview]);
+
   const fetchJob = useCallback(async () => {
     try {
       const res = await customerApi.get<{ success: boolean; data: Job }>(`/api/customer/jobs/${jobId}`);
@@ -134,6 +177,7 @@ export default function JobDetailPage() {
       }
       if (jobData.status === 'completed') {
         fetchInvoice();
+        fetchReview();
       }
       if (jobData.assigned_to) {
         fetchMaterials();
@@ -181,10 +225,12 @@ export default function JobDetailPage() {
     }
     if (event.type === 'job_completed') {
       setJob(prev => prev ? {
-        ...prev, status: 'completed', progress: 100, completed_at: event.completedAt || new Date().toISOString(),
+        ...prev, status: 'completed', progress: 100,
+        employee_status: 'completed' as any,
+        completed_at: event.completedAt || new Date().toISOString(),
       } : prev);
       setTrackingActive(false);
-      setTimeout(() => { fetchInvoice(); fetchMaterials(); }, 2000);
+      setTimeout(() => { fetchInvoice(); fetchMaterials(); fetchReview(); }, 2000);
     }
     if (event.type === 'chat_message' && event.message) {
       setMessages(prev => {
@@ -195,7 +241,7 @@ export default function JobDetailPage() {
         return updated;
       });
     }
-  }, [fetchInvoice, fetchMaterials, fetchMessages]);
+  }, [fetchInvoice, fetchMaterials, fetchMessages, fetchReview]);
 
   const { isConnected: sseConnected } = useSSE({ jobId, onEvent: handleSSEEvent, enabled: isAuthenticated && !!job });
   const { tracking } = useJobTracking({ jobId, active: trackingActive, sseConnected, intervalMs: 15_000 });
@@ -398,23 +444,31 @@ export default function JobDetailPage() {
                   <div>
                     <p className="font-semibold text-gray-900">{job.assigned_employee_name}</p>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      {job.employee_status === 'accepted' && (
+                      {isCompleted && (
+                        <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                          <CheckCircle className="h-3 w-3" />Job Completed
+                        </span>
+                      )}
+                      {!isCompleted && job.employee_status === 'accepted' && (
                         <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
                           <CheckCircle className="h-3 w-3" />Accepted
                         </span>
                       )}
-                      {job.employee_status === 'arrived' && (
+                      {!isCompleted && job.employee_status === 'arrived' && (
                         <span className="inline-flex items-center gap-1 text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">
                           <MapPin className="h-3 w-3" />Arrived on site
                         </span>
                       )}
-                      {job.employee_status === 'assigned' && (
+                      {!isCompleted && job.employee_status === 'assigned' && (
                         <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
                           <Clock className="h-3 w-3" />Awaiting acceptance
                         </span>
                       )}
                     </div>
-                    {job.accepted_at && (
+                    {isCompleted && job.completed_at && (
+                      <p className="text-xs text-gray-400 mt-1">Completed {formatDate(job.completed_at)}</p>
+                    )}
+                    {!isCompleted && job.accepted_at && (
                       <p className="text-xs text-gray-400 mt-1">Accepted {formatDate(job.accepted_at)}</p>
                     )}
                   </div>
@@ -698,6 +752,103 @@ export default function JobDetailPage() {
                     </div>
                   ))}
                 </div>
+              </motion.div>
+            )}
+
+            {/* ── Review card — only after completion ──────────────────────── */}
+            {isCompleted && (
+              <motion.div
+                variants={fadeUp} initial="hidden" animate="visible" custom={4}
+                className="bg-white rounded-xl border border-gray-200 shadow-sm p-5"
+              >
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-yellow-50 flex items-center justify-center">
+                    <Star className="h-4 w-4 text-yellow-500" />
+                  </div>
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    {reviewSubmitted ? 'Your Review' : 'Rate this Service'}
+                  </h2>
+                </div>
+
+                {reviewSubmitted ? (
+                  /* Submitted state */
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-1">
+                      {[1,2,3,4,5].map(s => (
+                        <Star
+                          key={s}
+                          className={`h-5 w-5 ${s <= reviewRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200 fill-gray-200'}`}
+                        />
+                      ))}
+                      <span className="ml-2 text-sm font-semibold text-gray-700">{reviewRating}/5</span>
+                    </div>
+                    {reviewText && (
+                      <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 leading-relaxed">{reviewText}</p>
+                    )}
+                    <div className="flex items-center gap-1.5 text-xs text-green-600">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      Review submitted — thank you!
+                    </div>
+                  </div>
+                ) : (
+                  /* Input state */
+                  <div className="space-y-4">
+                    {/* Star selector */}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-2">How would you rate this service?</p>
+                      <div className="flex items-center gap-1">
+                        {[1,2,3,4,5].map(s => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setReviewRating(s)}
+                            onMouseEnter={() => setReviewHover(s)}
+                            onMouseLeave={() => setReviewHover(0)}
+                            className="transition-transform hover:scale-110"
+                          >
+                            <Star
+                              className={`h-7 w-7 transition-colors ${
+                                s <= (reviewHover || reviewRating)
+                                  ? 'text-yellow-400 fill-yellow-400'
+                                  : 'text-gray-200 fill-gray-200'
+                              }`}
+                            />
+                          </button>
+                        ))}
+                        {reviewRating > 0 && (
+                          <span className="ml-2 text-sm text-gray-500">
+                            {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][reviewRating]}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Text input */}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1.5">Leave a comment (optional)</p>
+                      <textarea
+                        value={reviewText}
+                        onChange={e => setReviewText(e.target.value)}
+                        placeholder="Tell us about your experience..."
+                        rows={3}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none bg-gray-50"
+                      />
+                    </div>
+
+                    {reviewError && (
+                      <p className="text-xs text-red-600">{reviewError}</p>
+                    )}
+
+                    <button
+                      onClick={submitReview}
+                      disabled={reviewLoading || reviewRating === 0}
+                      className="w-full py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {reviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
+                      {reviewLoading ? 'Submitting...' : 'Submit Review'}
+                    </button>
+                  </div>
+                )}
               </motion.div>
             )}
           </div>

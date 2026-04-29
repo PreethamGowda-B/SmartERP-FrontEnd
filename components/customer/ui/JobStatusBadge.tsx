@@ -14,6 +14,7 @@ const EMPLOYEE_STATUS_CONFIG: Record<string, { label: string; className: string;
   accepted:   { label: 'Technician Assigned',  className: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200', dot: 'bg-indigo-500' },
   arrived:    { label: 'Technician Arrived',   className: 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',       dot: 'bg-teal-500' },
   declined:   { label: 'Reassigning...',       className: 'bg-orange-50 text-orange-700 ring-1 ring-orange-200', dot: 'bg-orange-400 animate-pulse' },
+  completed:  { label: 'Job Completed',        className: 'bg-green-50 text-green-700 ring-1 ring-green-200',    dot: 'bg-green-500' },
 };
 
 // job execution status values

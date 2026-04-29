@@ -37,7 +37,7 @@ export interface AuthState {
 
 export type JobStatus = 'open' | 'pending' | 'in_progress' | 'active' | 'completed' | 'closed' | 'cancelled';
 export type JobPriority = 'low' | 'medium' | 'high' | 'urgent';
-export type EmployeeStatus = 'assigned' | 'accepted' | 'arrived' | 'declined';
+export type EmployeeStatus = 'assigned' | 'accepted' | 'arrived' | 'declined' | 'completed';
 export type ApprovalStatus = 'pending_approval' | 'approved' | 'rejected';
 
 export interface Job {
@@ -177,6 +177,18 @@ export interface ChatMessage {
   sender_id: string;
   sender_name: string;
   message: string;
+  created_at: string;
+}
+
+// ── Review ────────────────────────────────────────────────────────────────────
+
+export interface JobReview {
+  id: string;
+  job_id: string;
+  customer_id: string;
+  employee_id: string | null;
+  rating: number;
+  review_text: string | null;
   created_at: string;
 }
 
