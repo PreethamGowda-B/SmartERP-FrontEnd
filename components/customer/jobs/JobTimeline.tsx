@@ -73,7 +73,7 @@ export function JobTimeline({ job }: { job: Job }) {
   // 3. Technician assignment state
   const empStatus = job.employee_status;
 
-  if (!empStatus || empStatus === 'assigned' || empStatus === 'pending') {
+  if (!empStatus || (empStatus as string) === 'assigned' || (empStatus as string) === 'pending') {
     // Approved but not yet accepted — show "Assigning technician" as pending
     events.push({
       label: 'Assigning technician',
