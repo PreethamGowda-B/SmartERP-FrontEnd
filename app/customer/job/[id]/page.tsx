@@ -222,7 +222,7 @@ export default function JobDetailPage() {
           <div className="flex items-start justify-between gap-4 mb-4">
             <h1 className="text-xl font-bold text-gray-900 leading-tight">{job.title}</h1>
             <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-              <JobStatusBadge status={job.status} approvalStatus={job.approval_status} />
+              <JobStatusBadge status={job.status} approvalStatus={job.approval_status} employeeStatus={job.employee_status} />
               {sseConnected && (
                 <span className="flex items-center gap-1.5 text-xs text-green-600 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Live

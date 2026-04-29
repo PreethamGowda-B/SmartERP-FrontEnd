@@ -36,7 +36,7 @@ export function JobCard({ job }: { job: Job }) {
               <p className="text-gray-500 text-xs mt-0.5 line-clamp-1">{job.description}</p>
             )}
           </div>
-          <JobStatusBadge status={job.status} approvalStatus={job.approval_status} />
+          <JobStatusBadge status={job.status} approvalStatus={job.approval_status} employeeStatus={job.employee_status} />
         </div>
 
         {/* Badges row */}

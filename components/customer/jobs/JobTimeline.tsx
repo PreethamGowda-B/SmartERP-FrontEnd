@@ -1,5 +1,5 @@
 import { format, formatDistanceToNow } from 'date-fns';
-import { CheckCircle, Clock, UserCheck, Play, XCircle, FileText, ShieldCheck, ShieldX, MapPin } from 'lucide-react';
+import { CheckCircle, Clock, UserCheck, Play, XCircle, FileText, ShieldCheck, ShieldX, MapPin, Search } from 'lucide-react';
 import type { Job } from '@/lib/customerTypes';
 
 interface TimelineEvent {
@@ -8,7 +8,6 @@ interface TimelineEvent {
   timestamp: string | null;
   icon: React.ElementType;
   iconClass: string;
-  lineClass?: string;
   isNegative?: boolean;
 }
 
@@ -34,7 +33,11 @@ export function JobTimeline({ job }: { job: Job }) {
       iconClass: 'text-red-600',
       isNegative: true,
     });
-  } else if (job.approval_status === 'approved' && job.approved_at) {
+    // Stop here — no further steps for rejected jobs
+    return renderTimeline(events);
+  }
+
+  if (job.approval_status === 'approved' && job.approved_at) {
     events.push({
       label: 'Request approved',
       description: 'Your request has been approved by the service team',
@@ -43,7 +46,6 @@ export function JobTimeline({ job }: { job: Job }) {
       iconClass: 'text-green-600',
     });
   } else if (job.approval_status === 'pending_approval') {
-    // Show pending as a future step (no timestamp)
     events.push({
       label: 'Awaiting approval',
       description: 'The service team is reviewing your request',
@@ -51,31 +53,81 @@ export function JobTimeline({ job }: { job: Job }) {
       icon: Clock,
       iconClass: 'text-amber-500',
     });
+    // Show future steps as dimmed
+    events.push({
+      label: 'Assigning technician',
+      description: 'A technician will be assigned once approved',
+      timestamp: null,
+      icon: Search,
+      iconClass: 'text-purple-500',
+    });
+    events.push({
+      label: 'Technician on the way',
+      timestamp: null,
+      icon: UserCheck,
+      iconClass: 'text-indigo-500',
+    });
+    return renderTimeline(events);
   }
 
-  // 3. Employee assigned / accepted
+  // 3. Technician assignment state
+  const empStatus = job.employee_status;
+
+  if (!empStatus || empStatus === 'assigned' || empStatus === 'pending') {
+    // Approved but not yet accepted — show "Assigning technician" as pending
+    events.push({
+      label: 'Assigning technician',
+      description: 'We are finding the best available technician for your request',
+      timestamp: job.assigned_at || null,
+      icon: Search,
+      iconClass: 'text-purple-600',
+    });
+    // Future steps dimmed
+    events.push({
+      label: 'Technician on the way',
+      timestamp: null,
+      icon: UserCheck,
+      iconClass: 'text-indigo-500',
+    });
+    return renderTimeline(events);
+  }
+
+  // 4. Employee accepted
   if (job.accepted_at || job.assigned_at) {
     events.push({
       label: 'Technician assigned',
-      description: job.assigned_employee_name ? `Assigned to ${job.assigned_employee_name}` : 'A technician has been assigned',
+      description: job.assigned_employee_name
+        ? `${job.assigned_employee_name} has accepted your request`
+        : 'A technician has accepted your request',
       timestamp: job.accepted_at || job.assigned_at,
       icon: UserCheck,
       iconClass: 'text-indigo-600',
     });
   }
 
-  // 4. Employee arrived
+  // 5. Employee arrived
   if (job.arrived_at) {
     events.push({
       label: 'Technician arrived',
-      description: job.assigned_employee_name ? `${job.assigned_employee_name} has arrived at your location` : 'Technician has arrived',
+      description: job.assigned_employee_name
+        ? `${job.assigned_employee_name} has arrived at your location`
+        : 'Technician has arrived',
       timestamp: job.arrived_at,
       icon: MapPin,
       iconClass: 'text-purple-600',
     });
+  } else if (empStatus === 'accepted' && job.status !== 'completed') {
+    // Accepted but not yet arrived — show as pending future step
+    events.push({
+      label: 'Technician on the way',
+      description: 'Your technician is heading to your location',
+      timestamp: null,
+      icon: MapPin,
+      iconClass: 'text-purple-500',
+    });
   }
 
-  // 5. Work in progress
+  // 6. Work in progress
   if (job.progress > 0 && job.status !== 'completed') {
     events.push({
       label: 'Work in progress',
@@ -86,8 +138,8 @@ export function JobTimeline({ job }: { job: Job }) {
     });
   }
 
-  // 6. Completed
-  if (job.completed_at) {
+  // 7. Completed
+  if (job.completed_at || job.status === 'completed') {
     events.push({
       label: 'Request completed',
       description: 'Service has been successfully completed',
@@ -95,9 +147,18 @@ export function JobTimeline({ job }: { job: Job }) {
       icon: CheckCircle,
       iconClass: 'text-green-600',
     });
+  } else if (empStatus === 'accepted' || empStatus === 'arrived') {
+    // Show completion as a future step
+    events.push({
+      label: 'Job completion',
+      description: 'Service will be marked complete when finished',
+      timestamp: null,
+      icon: CheckCircle,
+      iconClass: 'text-green-500',
+    });
   }
 
-  // 7. Cancelled
+  // 8. Cancelled
   if (job.status === 'cancelled' && !job.completed_at) {
     events.push({
       label: 'Request cancelled',
@@ -108,6 +169,10 @@ export function JobTimeline({ job }: { job: Job }) {
     });
   }
 
+  return renderTimeline(events);
+}
+
+function renderTimeline(events: ReturnType<typeof buildEvents>) {
   const completedEvents = events.filter(e => e.timestamp);
   const pendingEvents   = events.filter(e => !e.timestamp);
 
@@ -130,8 +195,7 @@ export function JobTimeline({ job }: { job: Job }) {
         const isPending = !event.timestamp;
 
         return (
-          <div key={i} className={`flex gap-4 ${isPending ? 'opacity-50' : ''}`}>
-            {/* Timeline line + icon */}
+          <div key={i} className={`flex gap-4 ${isPending ? 'opacity-40' : ''}`}>
             <div className="flex flex-col items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                 isPending
@@ -145,9 +209,10 @@ export function JobTimeline({ job }: { job: Job }) {
               {!isLast && <div className="w-0.5 flex-1 bg-gray-200 my-1 min-h-[16px]" />}
             </div>
 
-            {/* Content */}
             <div className={`flex-1 ${!isLast ? 'pb-5' : ''}`}>
-              <p className={`text-sm font-medium ${isPending ? 'text-gray-400' : event.isNegative ? 'text-red-700' : 'text-gray-900'}`}>
+              <p className={`text-sm font-medium ${
+                isPending ? 'text-gray-400' : event.isNegative ? 'text-red-700' : 'text-gray-900'
+              }`}>
                 {event.label}
               </p>
               {event.description && (
@@ -160,7 +225,7 @@ export function JobTimeline({ job }: { job: Job }) {
                   {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
                 </p>
               ) : (
-                <p className="text-xs text-gray-400 mt-1 italic">Pending</p>
+                <p className="text-xs text-gray-400 mt-1 italic">Upcoming</p>
               )}
             </div>
           </div>
@@ -169,3 +234,6 @@ export function JobTimeline({ job }: { job: Job }) {
     </div>
   );
 }
+
+// Type helper — not actually called, just for the return type inference
+function buildEvents(): TimelineEvent[] { return []; }
