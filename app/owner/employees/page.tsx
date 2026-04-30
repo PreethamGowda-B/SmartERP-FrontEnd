@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Users, Search, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye, Save, X, UserCheck } from "lucide-react"
+import { Users, Search, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye, Save, X, UserCheck, Star } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
@@ -34,6 +34,8 @@ interface Employee {
   hoursThisWeek: number
   location: string
   created_at?: string
+  rating: number | null
+  review_count: number
 }
 
 const DEPARTMENTS = ["Engineering", "Sales", "Operations", "HR", "Finance", "Other", "Unassigned"]
@@ -379,6 +381,46 @@ export default function EmployeesPage() {
                             )}
                           </div>
 
+                          {/* Customer Rating */}
+                          <div className="flex items-center justify-between pt-1 pb-1 border-t border-border/50">
+                            <div className="flex items-center gap-1.5">
+                              {employee.rating !== null ? (
+                                <>
+                                  <div className="flex items-center gap-0.5">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={cn(
+                                          "h-3.5 w-3.5",
+                                          star <= Math.round(employee.rating!)
+                                            ? "fill-amber-400 text-amber-400"
+                                            : "fill-muted text-muted-foreground/30"
+                                        )}
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="text-sm font-semibold text-amber-600">
+                                    {employee.rating.toFixed(1)}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-0.5">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star key={star} className="h-3.5 w-3.5 fill-muted text-muted-foreground/20" />
+                                    ))}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">No ratings yet</span>
+                                </>
+                              )}
+                            </div>
+                            {employee.review_count > 0 && (
+                              <span className="text-[11px] text-muted-foreground">
+                                {employee.review_count} {employee.review_count === 1 ? "review" : "reviews"}
+                              </span>
+                            )}
+                          </div>
+
                           <div className="flex gap-2 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button variant="secondary" size="sm" className="flex-1 btn-premium h-8" onClick={() => startEditing(employee)}>
                               Edit Profile
@@ -523,6 +565,37 @@ export default function EmployeesPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Customer Rating in modal */}
+                  <div className="flex items-start gap-3 pt-2 border-t">
+                    <Star className="h-5 w-5 text-amber-400 mt-0.5" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Customer Rating</p>
+                      {viewDetails.rating !== null ? (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={cn(
+                                  "h-4 w-4",
+                                  star <= Math.round(viewDetails.rating!)
+                                    ? "fill-amber-400 text-amber-400"
+                                    : "fill-muted text-muted-foreground/20"
+                                )}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm font-semibold">{viewDetails.rating.toFixed(1)} / 5</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({viewDetails.review_count} {viewDetails.review_count === 1 ? "review" : "reviews"})
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground mt-0.5">No customer reviews yet</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex gap-2 pt-4">
