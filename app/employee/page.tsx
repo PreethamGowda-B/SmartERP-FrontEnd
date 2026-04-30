@@ -217,13 +217,14 @@ export default function EmployeeDashboard() {
         {/* ────────────────────────────────────────────────────────────── */}
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-2">
+        <div className="flex flex-col md:flex-row items-start justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-              Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}, <span className="text-primary">{user?.name?.split(" ")[0]}</span>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              Good {new Date().getHours() < 12 ? "Morning" : new Date().getHours() < 18 ? "Afternoon" : "Evening"},{" "}
+              <span className="text-primary">{user?.name?.split(" ")[0]}</span>
             </h1>
-            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
-              {todayAttendance?.is_late 
+            <p className="text-sm text-muted-foreground mt-1 font-normal">
+              {todayAttendance?.is_late
                 ? "Shift started with a late check-in. Let's focus on productivity today."
                 : "Your performance metrics and shift schedules are up to date."}
             </p>
@@ -252,8 +253,7 @@ export default function EmployeeDashboard() {
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          ))}        </div>
 
         {/* Clock In/Out and My Active Jobs */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

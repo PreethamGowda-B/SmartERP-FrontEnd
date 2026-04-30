@@ -3,8 +3,6 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import { useCustomerAuth } from "./CustomerAuthContext"
-import { toast } from "sonner"
-import { useRouter } from "next/navigation"
 import customerApi from "@/lib/customerApi"
 import { logger } from "@/lib/logger"
 
@@ -32,12 +30,10 @@ const CustomerNotificationContext = createContext<CustomerNotificationContextTyp
 export function CustomerNotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const { customer, isLoading } = useCustomerAuth()
-  const router = useRouter()
-  const [sseConnection, setSSEConnection] = useState<EventSource | null>(null)
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const res = await customerApi.get<Notification[]>("/api/notifications")
+      const res = await customerApi.get<Notification[]>("/api/customer/notifications")
       setNotifications(res.data || [])
     } catch (error) {
       logger.error("Error fetching customer notifications:", error)
@@ -47,6 +43,7 @@ export function CustomerNotificationProvider({ children }: { children: React.Rea
   useEffect(() => {
     if (isLoading) return
     if (!customer) {
+      // Close any open SSE connection when customer logs out
       if (sseConnection) {
         sseConnection.close()
         setSSEConnection(null)
@@ -54,59 +51,27 @@ export function CustomerNotificationProvider({ children }: { children: React.Rea
       return
     }
 
+    // Fetch notifications on mount and poll every 30s
+    // (Customer portal uses per-job SSE via /api/customer/jobs/:id/events,
+    //  not a global SSE stream — so we poll here instead)
     fetchNotifications()
+    const pollInterval = setInterval(fetchNotifications, 30_000)
 
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://smarterp-backendend.onrender.com"
-    // For customers, we might need to handle token differently if they don't use getAccessToken()
-    // Looking at CustomerAuthContext, it uses cookies mostly.
-    const sseUrl = `${BACKEND_URL}/api/notifications/sse`
-    const eventSource = new EventSource(sseUrl, { withCredentials: true })
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (data.type === "notification") {
-          const notification = data.data
-          setNotifications((prev) => [notification, ...prev])
-
-          // Play sound
-          new Audio("/notification.mp3").play().catch(() => {})
-
-          // Show toast
-          toast(notification.title, {
-            description: notification.message,
-            action: {
-              label: "View",
-              onClick: () => {
-                let path = "/customer/notifications"
-                if (notification.type === "chat_message" && notification.data?.job_id) {
-                  path = `/customer/job/${notification.data.job_id}`
-                }
-                router.push(path)
-                markAsRead(notification.id)
-              }
-            }
-          })
-        }
-      } catch (error) {
-        logger.error("Error parsing customer SSE:", error)
-      }
+    return () => {
+      clearInterval(pollInterval)
     }
-
-    setSSEConnection(eventSource)
-    return () => eventSource.close()
-  }, [customer, isLoading, fetchNotifications, router])
+  }, [customer, isLoading, fetchNotifications])
 
   const markAsRead = async (id: string) => {
     try {
-      await customerApi.patch(`/api/notifications/${id}/read`)
+      await customerApi.patch(`/api/customer/notifications/${id}/read`)
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
     } catch {}
   }
 
   const markAllAsRead = async () => {
     try {
-      await customerApi.patch("/api/notifications/mark-all-read")
+      await customerApi.patch("/api/customer/notifications/mark-all-read")
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
     } catch {}
   }
