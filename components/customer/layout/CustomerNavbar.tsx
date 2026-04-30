@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, PlusCircle, User, LogOut, Menu, X, Bell, List, History, Repeat } from 'lucide-react';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
+import { useCustomerNotifications } from '@/contexts/CustomerNotificationContext';
 
 const NAV_ITEMS = [
   { href: '/customer/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
@@ -20,7 +21,10 @@ const NAV_ITEMS = [
 export function CustomerNavbar() {
   const pathname = usePathname();
   const { customer, logout } = useCustomerAuth();
+  const { getUnreadCount } = useCustomerNotifications();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const unreadCount = getUnreadCount();
 
   const initials = customer?.name
     ? customer.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -53,7 +57,12 @@ export function CustomerNavbar() {
                   }`}
                 >
                   <Icon className="h-4 w-4" />
-                  {label}
+                  <span>{label}</span>
+                  {label === 'Notifications' && unreadCount > 0 && (
+                    <span className="ml-auto sm:ml-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                      {unreadCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -114,19 +123,24 @@ export function CustomerNavbar() {
                 </div>
               )}
               {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    pathname === href
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Link>
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      pathname === href
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{label}</span>
+                    {label === 'Notifications' && unreadCount > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </Link>
               ))}
               <button
                 onClick={() => logout()}

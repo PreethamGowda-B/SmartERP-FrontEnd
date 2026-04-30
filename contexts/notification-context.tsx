@@ -10,7 +10,7 @@ import { logger } from "@/lib/logger"
 
 export interface Notification {
   id: string
-  type: "job" | "material_request" | "payroll" | "message"
+  type: "job" | "material_request" | "payroll" | "message" | "chat_message"
   title: string
   message: string
   created_at: string
@@ -148,9 +148,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           audio.play().catch((e) => logger.log("🔇 Audio play blocked by browser", e))
 
           // 2. Show toast notification
+          const isChatMessage = notification.type === "chat_message"
           toast(notification.title, {
             description: notification.message,
-            duration: 5000,
+            duration: isChatMessage ? 8000 : 5000,
             action: {
               label: "View",
               onClick: () => {
@@ -161,6 +162,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                   else if (notification.type === "material_request") redirectPath = "/owner/materials"
                 } else {
                   if (notification.type === "job") redirectPath = "/employee/jobs"
+                  else if (notification.type === "chat_message") redirectPath = "/employee/jobs"
                   else if (notification.type === "message") redirectPath = "/employee/messages"
                 }
                 router.push(redirectPath)

@@ -21,8 +21,10 @@ import { EmployeeLayout } from "@/components/employee-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { Send, MessageSquare, Loader2, ChevronLeft, Clock } from "lucide-react"
+import { Send, MessageSquare, Loader2, ChevronLeft, Clock, Bell } from "lucide-react"
 import { getAccessToken } from "@/lib/apiClient"
+import { useNotifications } from "@/contexts/notification-context"
+import { toast } from "sonner"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
@@ -79,6 +81,48 @@ export default function EmployeeMessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sseRef = useRef<EventSource | null>(null)
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { notifications } = useNotifications()
+
+  // ── Sync with global notifications ────────────────────────────────────────
+  useEffect(() => {
+    const latestNotif = notifications[0]
+    if (latestNotif?.type === "chat_message" && latestNotif.data?.job_id) {
+      const jobId = latestNotif.data.job_id
+      
+      // Update conversation list in real-time
+      setConversations(prev => {
+        const exists = prev.some(c => c.job_id === jobId)
+        if (!exists) {
+          fetchConversations() // Fetch new list if job not in list
+          return prev
+        }
+        return prev.map(c => 
+          c.job_id === jobId 
+            ? { 
+                ...c, 
+                last_message: latestNotif.message, 
+                last_message_time: latestNotif.created_at,
+                unread_count: selectedJob?.job_id === jobId ? 0 : (c.unread_count || 0) + 1
+              }
+            : c
+        ).sort((a, b) => {
+          if (a.job_id === jobId) return -1
+          if (b.job_id === jobId) return 1
+          return 0
+        })
+      })
+
+      // If this is the currently open chat, the separate SSE will handle message insertion
+      // But we should still clear the unread count in the DB for this job
+      if (selectedJob?.job_id === jobId) {
+        fetch(`${API_URL}/api/messages/job/${jobId}`, {
+          method: "GET", // This endpoint marks as read in backend
+          credentials: "include", 
+          headers: authHeaders(),
+        }).catch(() => {})
+      }
+    }
+  }, [notifications])
 
   // ── Fetch Conversations ────────────────────────────────────────────────────
   const fetchConversations = useCallback(async () => {
@@ -245,7 +289,11 @@ export default function EmployeeMessagesPage() {
                   onClick={() => selectJob(conv)}
                   className={cn(
                     "w-full text-left p-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors",
-                    selectedJob?.job_id === conv.job_id && "bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-l-indigo-500"
+                    selectedJob?.job_id === conv.job_id 
+                      ? "bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-l-indigo-500"
+                      : (conv.unread_count && conv.unread_count > 0) 
+                        ? "bg-red-50/50 dark:bg-red-900/5 border-l-4 border-l-red-500" 
+                        : ""
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -255,7 +303,7 @@ export default function EmployeeMessagesPage() {
                           {conv.customer_name || "Customer"}
                         </span>
                         {conv.unread_count && conv.unread_count > 0 ? (
-                          <span className="bg-indigo-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center animate-pulse">
                             {conv.unread_count}
                           </span>
                         ) : null}

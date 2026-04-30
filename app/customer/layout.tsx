@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { CustomerAuthProvider } from '@/contexts/CustomerAuthContext';
+import { CustomerNotificationProvider } from '@/contexts/CustomerNotificationContext';
 
 export const metadata: Metadata = {
   title: 'Prozync Client Portal',
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   return (
     <CustomerAuthProvider>
-      {children}
+      <CustomerNotificationProvider>
+        {children}
+      </CustomerNotificationProvider>
     </CustomerAuthProvider>
   );
 }
