@@ -116,6 +116,11 @@ export default function EmployeeJobsPage() {
         setLastUpdated(new Date())
       } else {
         const body = await res.json().catch(() => ({}))
+        // On 409, refresh immediately so stale job state is cleared
+        if (res.status === 409) {
+          await refreshJobs()
+          setLastUpdated(new Date())
+        }
         showNotification("error", body?.message || "Failed to accept job. Please try again.")
       }
     } catch {
