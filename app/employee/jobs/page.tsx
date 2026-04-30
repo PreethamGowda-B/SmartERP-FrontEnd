@@ -43,8 +43,10 @@ interface Job {
   assigned_to?: string
   customer_id?: string
   created_at?: string
+  createdAt?: string
   accepted_at?: string
   completed_at?: string
+  visible_to_all?: boolean
 }
 
 // ── Strict Status Priority Engine (GLOBAL RULE) ───────────────────────────────
@@ -307,122 +309,132 @@ export default function EmployeeJobsPage() {
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {jobs.map((job) => {
-                const { label: statusLabel, color: statusColor } = getDisplayStatus(job)
+                const status = job.status || "pending"
+                const employeeStatus = job.employee_status || "pending"
                 const progress = progressValues[job.id] ?? (job.progress || 0)
-                const isCompleted = job.status === "completed"
-                const isAccepted = job.employee_status === "accepted" && !isCompleted
-                const canAccept = job.employee_status === "assigned" && !isCompleted
-                const isDeclined = job.employee_status === "declined"
+                const createdDate = job.created_at || job.createdAt
+                const isVisibleToAll = job.visible_to_all || false
+                const assignedEmployees = [] // Ignored for now
 
-                const colorClasses = {
-                  green: "from-green-50/80 to-emerald-50/80 shadow-green-200/50",
-                  blue: "from-blue-50/80 to-indigo-50/80 shadow-blue-200/50",
-                  yellow: "bg-white/80",
-                  red: "from-red-50/60 to-pink-50/60 opacity-70",
-                  gray: "from-gray-50/80 to-slate-50/80",
-                }
-
-                const barClasses = {
-                  green: "from-green-400 via-green-500 to-emerald-500",
-                  blue: "from-blue-400 via-indigo-500 to-purple-500",
-                  yellow: "from-yellow-400 via-orange-400 to-amber-500",
-                  red: "from-red-400 via-pink-500 to-rose-500",
-                  gray: "from-gray-300 to-gray-400",
-                }
+                const isPending = employeeStatus === "pending" || employeeStatus === "assigned"
+                const isAccepted = employeeStatus === "accepted" && status !== "completed"
+                const isDeclined = employeeStatus === "declined"
+                const isCompleted = status === "completed"
 
                 return (
                   <Card
                     key={job.id}
                     className={cn(
-                      "group relative overflow-hidden border-0 bg-gradient-to-br backdrop-blur-xl shadow-xl transition-all duration-500 hover:scale-[1.02]",
-                      colorClasses[statusColor]
+                      "group relative overflow-hidden border-0 transition-all duration-500 hover:scale-[1.02]",
+                      isAccepted && "bg-gradient-to-br from-blue-50/80 to-indigo-50/80 backdrop-blur-xl shadow-xl shadow-blue-200/50",
+                      isDeclined && "opacity-60 bg-gradient-to-br from-red-50/60 to-pink-50/60 backdrop-blur-xl",
+                      isPending && "bg-white/80 backdrop-blur-xl shadow-lg hover:shadow-2xl hover:shadow-purple-200/50",
+                      isCompleted && "bg-gradient-to-br from-green-50/80 to-emerald-50/80 backdrop-blur-xl shadow-xl shadow-green-200/50"
                     )}
                   >
                     {/* Top color bar */}
-                    <div className={cn("h-1.5 w-full bg-gradient-to-r", barClasses[statusColor])} />
+                    <div className={cn(
+                      "h-2 w-full relative",
+                      isCompleted && "bg-gradient-to-r from-green-400 via-green-500 to-emerald-500 shadow-lg shadow-green-500/50",
+                      isAccepted && !isCompleted && "bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 shadow-lg shadow-blue-500/50",
+                      isPending && "bg-gradient-to-r from-yellow-400 via-orange-400 to-amber-500 shadow-lg shadow-yellow-500/50",
+                      isDeclined && "bg-gradient-to-r from-red-400 via-pink-500 to-rose-500 shadow-lg shadow-red-500/50"
+                    )}>
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                    </div>
 
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-2">
+                    <CardHeader className="space-y-3 pb-4">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 space-y-2">
-                          <Badge
-                            className={cn(
-                              "text-xs font-semibold",
-                              statusColor === "green" && "bg-green-100 text-green-700 border-green-200",
-                              statusColor === "blue" && "bg-blue-100 text-blue-700 border-blue-200",
-                              statusColor === "yellow" && "bg-yellow-100 text-yellow-700 border-yellow-200",
-                              statusColor === "red" && "bg-red-100 text-red-700 border-red-200",
-                              statusColor === "gray" && "bg-gray-100 text-gray-600 border-gray-200",
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant={status === "completed" ? "default" : "outline"} className="font-semibold">
+                              {status === "completed" && <CheckCircle2 className="w-3 h-3 mr-1 inline" />}
+                              {status !== "completed" && <Clock className="w-3 h-3 mr-1 inline" />}
+                              {status}
+                            </Badge>
+                            {isAccepted && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                <ThumbsUp className="w-3 h-3 mr-1" />Accepted
+                              </Badge>
                             )}
-                            variant="outline"
-                          >
-                            {statusColor === "green" && <CheckCircle2 className="w-3 h-3 mr-1" />}
-                            {statusColor === "blue" && <Clock className="w-3 h-3 mr-1" />}
-                            {statusColor === "yellow" && <AlertCircle className="w-3 h-3 mr-1" />}
-                            {statusColor === "red" && <XCircle className="w-3 h-3 mr-1" />}
-                            {statusLabel}
-                          </Badge>
-                          <CardTitle className="text-lg leading-tight line-clamp-2">
+                            {isDeclined && (
+                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                <XCircle className="w-3 h-3 mr-1" />Declined
+                              </Badge>
+                            )}
+                          </div>
+                          <CardTitle className="text-xl leading-tight line-clamp-2 group-hover:text-indigo-600 transition-colors">
                             {job.title}
                           </CardTitle>
                         </div>
                       </div>
-                      {job.description && (
-                        <CardDescription className="text-sm line-clamp-2">{job.description}</CardDescription>
-                      )}
+                      <CardDescription className="text-sm line-clamp-3 leading-relaxed">
+                        {job.description || "No description provided"}
+                      </CardDescription>
                     </CardHeader>
 
                     <CardContent className="space-y-4">
-                      {/* Progress — only for accepted in-progress jobs */}
+                      {/* Progress — accepted jobs only */}
                       {isAccepted && (
                         <div className="space-y-3">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground font-medium">Progress</span>
-                            <span className="font-bold">{progress}%</span>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium text-muted-foreground">Progress</span>
+                            <span className="font-bold text-foreground">{progress}%</span>
                           </div>
-                          <Progress value={progress} className="h-2.5" />
-                          <div className="space-y-2 pt-1">
+                          <Progress value={progress} className="h-2.5 bg-secondary" />
+                          <div className="space-y-2 pt-2">
+                            <label className="text-xs font-medium text-muted-foreground">Update Progress</label>
                             <Slider
                               value={[progress]}
-                              onValueChange={(v) => setProgressValues(prev => ({ ...prev, [job.id]: v[0] }))}
-                              max={100} step={10}
+                              onValueChange={(v) => setProgressValues({ ...progressValues, [job.id]: v[0] })}
+                              max={100}
+                              step={10}
+                              className="cursor-pointer"
                               disabled={updatingJobId === job.id}
                             />
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>0%</span><span>50%</span><span>100%</span>
+                            </div>
                             {progress !== (job.progress || 0) && (
                               <Button
-                                size="sm" className="w-full"
+                                size="sm"
                                 onClick={() => updateProgress(job.id, progress)}
                                 disabled={updatingJobId === job.id}
+                                className="w-full mt-2"
                               >
-                                {updatingJobId === job.id ? (
-                                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
-                                ) : `Save ${progress}%`}
+                                {updatingJobId === job.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Save Progress"}
                               </Button>
                             )}
                           </div>
                         </div>
                       )}
 
-                      {/* Date */}
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="w-4 h-4" />
-                        <span>{formatDate(job.created_at)}</span>
+                      {/* Job Details */}
+                      <div className="space-y-3 pt-2">
+                        <div className="flex items-start gap-3">
+                          <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-muted-foreground">Created</p>
+                            <p className="text-sm">{formatDate(createdDate)}</p>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Accept / Decline buttons (only when employee_status = 'assigned') */}
-                      {canAccept && (
-                        <div className="flex gap-2 pt-2">
+                      {/* Accept / Decline */}
+                      {isPending && !isCompleted && (
+                        <div className="flex gap-2 mt-4">
                           <Button
+                            variant="default"
                             className="flex-1 bg-green-600 hover:bg-green-700"
                             onClick={() => acceptJob(job.id)}
                             disabled={updatingJobId === job.id}
                           >
-                            {updatingJobId === job.id
-                              ? <Loader2 className="w-4 h-4 animate-spin" />
-                              : <><ThumbsUp className="w-4 h-4 mr-2" />Accept</>
-                            }
+                            {updatingJobId === job.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ThumbsUp className="w-4 h-4 mr-2" />}
+                            Accept
                           </Button>
                           <Button
-                            variant="outline" className="flex-1 text-red-600 hover:bg-red-50 border-red-200"
+                            variant="outline"
+                            className="flex-1 text-red-600 hover:bg-red-50 border-red-200"
                             onClick={() => declineJob(job.id)}
                             disabled={updatingJobId === job.id}
                           >
@@ -431,19 +443,21 @@ export default function EmployeeJobsPage() {
                         </div>
                       )}
 
-                      {/* Completed banner */}
                       {isCompleted && (
-                        <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-3 text-green-700">
-                          <CheckCircle2 className="w-5 h-5" />
-                          <span className="text-sm font-medium">Job completed successfully</span>
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-4">
+                          <div className="flex items-center gap-2 text-green-700">
+                            <CheckCircle2 className="w-5 h-5" />
+                            <span className="text-sm font-medium">Job Completed!</span>
+                          </div>
                         </div>
                       )}
 
-                      {/* Declined banner */}
                       {isDeclined && !isCompleted && (
-                        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3 text-red-700">
-                          <XCircle className="w-5 h-5" />
-                          <span className="text-sm font-medium">You declined this job</span>
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
+                          <div className="flex items-center gap-2 text-red-700">
+                            <XCircle className="w-5 h-5" />
+                            <span className="text-sm font-medium">You declined this job</span>
+                          </div>
                         </div>
                       )}
                     </CardContent>
