@@ -35,8 +35,13 @@ export function FeedbackFAB({ className }: { className?: string }) {
   const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
-    // Standardize token retrieval from AuthContext and handle mounting check
-    const storedToken = localStorage.getItem("_at") || localStorage.getItem("accessToken")
+    // Check sessionStorage first (web), then localStorage (Android bridge fallback)
+    const storedToken =
+      sessionStorage.getItem("_at") ||
+      sessionStorage.getItem("_admin_at") ||
+      localStorage.getItem("_at") ||
+      localStorage.getItem("_admin_at") ||
+      localStorage.getItem("accessToken")
     setToken(storedToken)
   }, [])
 
