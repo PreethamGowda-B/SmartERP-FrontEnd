@@ -1,15 +1,5 @@
 "use client"
 
-/**
- * /app/employee/jobs/page.tsx
- *
- * Original UI restored. Fixes applied:
- * 1. Uses job-context (refreshJobs) so all accepted/completed jobs show correctly.
- * 2. GPS interval increased to 60s to avoid 429 rate-limit on /api/location/update.
- * 3. GPS only starts when employee has an accepted, non-completed job.
- * 4. After accept/decline/progress, jobs list is immediately refreshed from API.
- */
-
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useJobs } from "@/contexts/job-context"
 import { Badge } from "@/components/ui/badge"
@@ -19,17 +9,15 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import {
   Calendar, Users, Briefcase, Clock, CheckCircle2, AlertCircle,
-  XCircle, ThumbsUp, ThumbsDown, RefreshCw, MapPin,
+  XCircle, ThumbsUp, ThumbsDown, RefreshCw,
 } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { cn } from "@/lib/utils"
-import { getAccessToken } from "@/lib/apiClient"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 const AUTO_REFRESH_MS = 30_000
-// 60 seconds — keeps location fresh without hitting the 300 req/15min rate limit
-const GPS_INTERVAL_MS = 60_000
 
+import { getAccessToken } from "@/lib/apiClient"
 function jobAuthHeaders(): Record<string, string> {
   const token = getAccessToken()
   const h: Record<string, string> = { "Content-Type": "application/json" }
@@ -41,7 +29,6 @@ function getStatusIcon(status?: string) {
   switch (status?.toLowerCase() || "pending") {
     case "completed": return <CheckCircle2 className="w-4 h-4 text-green-600" />
     case "active":
-    case "in_progress":
     case "in progress": return <Clock className="w-4 h-4 text-blue-600" />
     case "pending": return <AlertCircle className="w-4 h-4 text-yellow-600" />
     default: return null
@@ -64,70 +51,15 @@ function formatLastUpdated(date: Date | null) {
   return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
 }
 
-// ── GPS Tracking Hook ─────────────────────────────────────────────────────────
-function useGPSTracking(hasAcceptedJob: boolean) {
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const [gpsError, setGpsError] = useState<string | null>(null)
-
-  const sendLocation = useCallback(async (lat: number, lng: number) => {
-    try {
-      await fetch(`${API_URL}/api/location/update`, {
-        method: "POST",
-        credentials: "include",
-        headers: jobAuthHeaders(),
-        body: JSON.stringify({ latitude: lat, longitude: lng }),
-      })
-    } catch {
-      // silent — GPS failures should not disrupt UI
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!hasAcceptedJob) {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-      intervalRef.current = null
-      return
-    }
-
-    if (!navigator.geolocation) {
-      setGpsError("Location not supported by your browser")
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      () => setGpsError(null),
-      () => setGpsError("Location permission denied — please enable GPS to share your location with the customer")
-    )
-
-    intervalRef.current = setInterval(() => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => sendLocation(pos.coords.latitude, pos.coords.longitude),
-        () => { }
-      )
-    }, GPS_INTERVAL_MS)
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [hasAcceptedJob, sendLocation])
-
-  return { gpsError }
-}
-
 export default function EmployeeJobsPage() {
   const { jobs, refreshJobs } = useJobs()
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null)
   const [progressValues, setProgressValues] = useState<Record<string, number>>({})
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null)
+
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const isRefreshingRef = useRef(false)
-
-  // GPS: only active when employee has an accepted, non-completed job
-  const hasAcceptedJob = jobs.some(
-    j => j.employee_status === "accepted" && j.status !== "completed" && j.status !== "cancelled"
-  )
-  const { gpsError } = useGPSTracking(hasAcceptedJob)
 
   const showNotification = (type: "success" | "error", message: string) => {
     setNotification({ type, message })
@@ -147,11 +79,28 @@ export default function EmployeeJobsPage() {
     }
   }, [refreshJobs])
 
+  // Initial fetch + 30-second auto-refresh
   useEffect(() => {
     handleRefresh()
     const intervalId = setInterval(handleRefresh, AUTO_REFRESH_MS)
     return () => clearInterval(intervalId)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Refresh immediately when a push notification arrives (new job assigned)
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      try {
+        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data
+        if (data?.type === "job" || data?.type === "job_assigned" || data?.type === "new_job") {
+          handleRefresh()
+        }
+      } catch { /* ignore */ }
+    }
+    if (typeof navigator !== "undefined" && navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener("message", handler)
+      return () => navigator.serviceWorker.removeEventListener("message", handler)
+    }
+  }, [handleRefresh])
 
   const handleAcceptJob = async (jobId: string) => {
     setUpdatingJobId(jobId)
@@ -209,7 +158,7 @@ export default function EmployeeJobsPage() {
         body: JSON.stringify({ progress }),
       })
       if (res.ok) {
-        showNotification("success", progress === 100 ? "Job marked as complete!" : `Progress updated to ${progress}%`)
+        showNotification("success", `Progress updated to ${progress}%`)
         await refreshJobs()
         setLastUpdated(new Date())
       } else {
@@ -259,30 +208,16 @@ export default function EmployeeJobsPage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
         <div className="p-8 max-w-7xl mx-auto">
 
-          {/* GPS Permission Warning */}
-          {gpsError && (
-            <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-3 text-amber-800">
-              <MapPin className="w-5 h-5 shrink-0" />
-              <p className="text-sm">{gpsError}</p>
-            </div>
-          )}
-
-          {/* GPS Active indicator */}
-          {hasAcceptedJob && !gpsError && (
-            <div className="mb-4 p-3 rounded-xl bg-green-50 border border-green-200 flex items-center gap-3 text-green-800">
-              <MapPin className="w-4 h-4 shrink-0 animate-pulse" />
-              <p className="text-sm font-medium">Live GPS tracking is active — customer can see your location</p>
-            </div>
-          )}
-
           {/* Toast Notification */}
           {notification && (
-            <div className={cn(
-              "fixed top-4 right-4 z-50 p-4 rounded-xl shadow-2xl backdrop-blur-sm animate-in slide-in-from-right duration-300",
-              notification.type === "success"
-                ? "bg-green-500/90 text-white border border-green-400"
-                : "bg-red-500/90 text-white border border-red-400"
-            )}>
+            <div
+              className={cn(
+                "fixed top-4 right-4 z-50 p-4 rounded-xl shadow-2xl backdrop-blur-sm animate-in slide-in-from-right duration-300",
+                notification.type === "success"
+                  ? "bg-green-500/90 text-white border border-green-400"
+                  : "bg-red-500/90 text-white border border-red-400"
+              )}
+            >
               {notification.message}
             </div>
           )}
@@ -453,7 +388,7 @@ export default function EmployeeJobsPage() {
                     </div>
 
                     {/* Accept / Decline */}
-                    {isPending && !isCompleted && (
+                    {isPending && (
                       <div className="flex gap-2 mt-4">
                         <Button
                           variant="default"
@@ -483,7 +418,7 @@ export default function EmployeeJobsPage() {
                       </div>
                     )}
 
-                    {isDeclined && !isCompleted && (
+                    {isDeclined && (
                       <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
                         <div className="flex items-center gap-2 text-red-700">
                           <XCircle className="w-5 h-5" />
