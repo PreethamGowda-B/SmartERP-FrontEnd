@@ -86,7 +86,7 @@ export function TimeTracker() {
   const handleStopTracking = () => {
     if (currentSession) {
       // Here you would save the time entry to the database
-      const totalHours = elapsedTime / (1000 * 60 * 60)
+      const totalHours = Number(elapsedTime || 0) / (1000 * 60 * 60)
       logger.log(`Time entry saved: ${totalHours.toFixed(2)} hours for job ${currentSession.jobId}`)
     }
 

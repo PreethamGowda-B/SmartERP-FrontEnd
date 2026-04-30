@@ -16,6 +16,7 @@ import { Suspense } from "react"
 import { LoadingProvider } from "@/contexts/loading-context"
 import PremiumLoader from "@/components/premium-loader"
 import { FloatingActionHub } from "@/components/floating-action-hub"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -142,7 +143,11 @@ export default function RootLayout({
             <LoadingProvider>
               <AuthProvider>
                 <NotificationProvider>
-                  <JobProvider>{children}</JobProvider>
+                  <JobProvider>
+                    <ErrorBoundary>
+                      {children}
+                    </ErrorBoundary>
+                  </JobProvider>
                   <Toaster richColors closeButton position="top-right" />
                   <LockedFeaturePrompt />
                   <SlowNetworkNotice />

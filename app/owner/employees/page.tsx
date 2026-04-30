@@ -9,12 +9,16 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Users, Search, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye, Save, X } from "lucide-react"
+import { Users, Search, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye, Save, X, UserCheck } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { ExportButton } from "@/components/export-button"
 import { toast } from "sonner"
+import { ErrorView } from "@/components/ui/error-view"
+import { EmptyState } from "@/components/ui/empty-state"
+import { SkeletonList, SkeletonCard } from "@/components/ui/skeleton-card"
 
 interface Employee {
   id: number
@@ -38,7 +42,7 @@ const POSITIONS = ["Foreman", "Construction Worker", "Equipment Operator", "Safe
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ title: string; message: string } | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [deleteConfirm, setDeleteConfirm] = useState<Employee | null>(null)
@@ -60,7 +64,10 @@ export default function EmployeesPage() {
       const data = await apiClient("/api/employees")
       setEmployees(Array.isArray(data) ? data : [])
     } catch (err: any) {
-      setError(err.message || "Failed to load employees")
+      setError({
+        title: "Employee Directory Unavailable",
+        message: err.message || "We couldn't retrieve the staff roster. Please verify your connection."
+      })
     } finally {
       setLoading(false)
     }
@@ -175,11 +182,13 @@ export default function EmployeesPage() {
       <div className="p-6 space-y-6">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
           <div>
-            <h1 className="text-3xl font-bold">Employee Management</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage employees who have registered via the Employee Portal
+            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+              Employee <span className="text-primary">Directory</span>
+            </h1>
+            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
+              Access staff profiles, manage organizational roles, and monitor workforce distribution.
             </p>
           </div>
           <ExportButton
@@ -201,60 +210,28 @@ export default function EmployeesPage() {
           />
         </div>
 
-        {/* Global error banner */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3 text-sm flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 ml-4">&times;</button>
-          </div>
-        )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Employees</p>
-                  <p className="text-2xl font-bold">{totalCount}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { label: "Total Staff", value: totalCount, icon: Users, color: "text-blue-600", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+            { label: "Currently Active", value: activeCount, icon: UserCheck, color: "text-green-600", bg: "bg-green-500/10", border: "border-green-500/20" },
+            { label: "On Field", value: onSiteCount, icon: MapPin, color: "text-purple-600", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+            { label: "Work Efficiency", value: `${avgHours}h`, icon: Clock, color: "text-orange-600", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+          ].map((stat, i) => (
+            <Card key={i} className={cn("premium-card hover-lift-subtle border", stat.border)}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">{stat.label}</p>
+                    <div className="text-3xl font-black tracking-tight">{stat.value}</div>
+                  </div>
+                  <div className={cn("p-3 rounded-2xl", stat.bg)}>
+                    <stat.icon className={cn("h-6 w-6", stat.color)} />
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-green-500" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Active</p>
-                  <p className="text-2xl font-bold">{activeCount}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-blue-500" />
-                <div>
-                  <p className="text-sm text-muted-foreground">On Site</p>
-                  <p className="text-2xl font-bold">{onSiteCount}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-orange-500" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Avg Hours/Week</p>
-                  <p className="text-2xl font-bold">{avgHours}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Filters */}
@@ -280,82 +257,58 @@ export default function EmployeesPage() {
           </Select>
         </div>
 
-        {/* Loading state — Skeleton Cards */}
-        {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-5 w-32" />
-                      <Skeleton className="h-3 w-48" />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                  <div className="flex gap-2 pt-1">
-                    <Skeleton className="h-8 flex-1" />
-                    <Skeleton className="h-8 flex-1" />
-                    <Skeleton className="h-8 w-8" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        <div className="space-y-6">
+          {loading && employees.length === 0 ? (
+            <SkeletonList count={6} />
+          ) : error && employees.length === 0 ? (
+            <ErrorView title={error.title} message={error.message} onRetry={fetchEmployees} />
+          ) : filtered.length === 0 ? (
+            <EmptyState 
+              icon={Users}
+              title="No employees found"
+              description="We couldn't find any staff members matching your current search or filter criteria."
+              actionLabel="Refresh Directory"
+              onAction={fetchEmployees}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filtered.map((employee) => {
+                const isEditing = editingId === employee.id
 
-        {/* Empty state */}
-        {!loading && filtered.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-3 opacity-40" />
-            <p className="text-lg font-medium">No employees found</p>
-            <p className="text-sm">
-              {employees.length === 0 ? "No employees have registered yet." : "Try adjusting your search or filter."}
-            </p>
-          </div>
-        )}
-
-        {/* Employee Cards */}
-        {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((employee) => {
-              const isEditing = editingId === employee.id
-
-              return (
-                <Card key={employee.id}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback>{(employee.name || "E").charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-lg truncate">{employee.name}</CardTitle>
-                          <Badge variant={employee.status === "active" ? "default" : "secondary"} className="shrink-0">
-                            {employee.status}
-                          </Badge>
+                return (
+                  <Card key={employee.id} className="premium-card hover-lift group border-none shadow-sm hover:shadow-xl overflow-hidden">
+                    <CardHeader className="p-6 pb-4">
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <Avatar className="h-14 w-14 ring-2 ring-background shadow-md">
+                            <AvatarFallback className="bg-primary/5 text-primary font-bold text-lg">
+                              {(employee.name || "E").charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className={cn(
+                            "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-background shadow-sm",
+                            employee.status === "active" ? "bg-green-500" : "bg-muted"
+                          )} />
                         </div>
-                        <p className="text-sm text-muted-foreground">{employee.email}</p>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg font-black tracking-tight truncate group-hover:text-primary transition-colors">
+                            {employee.name}
+                          </CardTitle>
+                          <p className="text-meta">{employee.position}</p>
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {isEditing ? (
-                      <>
-                        {/* Edit Mode */}
-                        <div className="space-y-3">
-                          <div>
-                            <label className="text-xs text-muted-foreground">Department</label>
+                    </CardHeader>
+                    
+                    <CardContent className="p-6 pt-0 space-y-5">
+                      {isEditing ? (
+                        <div className="space-y-4 pt-2 animate-in slide-in-from-top-2 duration-300">
+                           <div className="space-y-1.5">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Department</p>
                             <Select
                               value={editForm.department}
                               onValueChange={(value) => setEditForm({ ...editForm, department: value })}
                             >
-                              <SelectTrigger className="h-8 text-sm">
+                              <SelectTrigger className="h-9">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -365,113 +318,84 @@ export default function EmployeesPage() {
                               </SelectContent>
                             </Select>
                           </div>
-                           <div>
-                            <label className="text-xs text-muted-foreground">Position</label>
-                            <Select
-                              value={editForm.position}
-                              onValueChange={(value) => setEditForm({ ...editForm, position: value })}
-                            >
-                              <SelectTrigger className="h-8 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {POSITIONS.map((pos) => (
-                                  <SelectItem key={pos} value={pos}>{pos}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="text-xs text-muted-foreground">User Role</label>
-                            <Select
-                              value={editForm.role}
-                              onValueChange={(value) => setEditForm({ ...editForm, role: value })}
-                            >
-                              <SelectTrigger className="h-8 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="employee">Employee</SelectItem>
-                                <SelectItem value="hr">HR Manager</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs text-muted-foreground">Account Active</label>
-                            <Switch
-                              checked={editForm.is_active}
-                              onCheckedChange={(checked) => setEditForm({ ...editForm, is_active: checked })}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                          <Button size="sm" className="flex-1" onClick={() => saveEmployee(employee.id)} disabled={submitting}>
-                            <Save className="h-3 w-3 mr-1" />
-                            Save
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={cancelEditing} disabled={submitting}>
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {/* View Mode */}
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Department:</span>
-                            <span className="font-medium">{employee.department || "Unassigned"}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Position:</span>
-                            <span className="font-medium">{employee.position}</span>
-                          </div>
-                          {employee.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-                              <span className="truncate">{employee.phone}</span>
+                          <div className="grid grid-cols-2 gap-3">
+                             <div className="space-y-1.5">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Role</p>
+                              <Select
+                                value={editForm.role}
+                                onValueChange={(value) => setEditForm({ ...editForm, role: value })}
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="employee">Staff</SelectItem>
+                                  <SelectItem value="hr">HR</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
-                          )}
-                          {employee.created_at && (
-                            <div className="flex items-center justify-between pt-1 border-t">
-                              <span className="text-muted-foreground">Account Created:</span>
-                              <span className="font-medium text-xs">
-                                {new Date(employee.created_at).toLocaleString('en-IN', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </span>
+                            <div className="space-y-1.5 flex flex-col justify-end">
+                              <div className="flex items-center justify-between h-9 px-1">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Active</span>
+                                <Switch
+                                  checked={editForm.is_active}
+                                  onCheckedChange={(checked) => setEditForm({ ...editForm, is_active: checked })}
+                                />
+                              </div>
                             </div>
-                          )}
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <Button size="sm" className="flex-1 btn-premium" onClick={() => saveEmployee(employee.id)} disabled={submitting}>
+                              Save Changes
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={cancelEditing} disabled={submitting}>
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex gap-2 pt-2">
-                          <Button variant="outline" size="sm" className="flex-1" onClick={() => startEditing(employee)}>
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1" onClick={() => setViewDetails(employee)}>
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
-                            onClick={() => setDeleteConfirm(employee)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                      ) : (
+                        <div className="space-y-4 animate-in fade-in duration-500">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Department</p>
+                              <p className="text-xs font-semibold">{employee.department || "Unassigned"}</p>
+                            </div>
+                            <div className="space-y-1 text-right">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Joined</p>
+                              <p className="text-xs font-semibold">{new Date(employee.created_at || '').toLocaleDateString()}</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Mail className="h-3 w-3" />
+                              <span className="truncate">{employee.email}</span>
+                            </div>
+                            {employee.phone && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Phone className="h-3 w-3" />
+                                <span>{employee.phone}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex gap-2 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="secondary" size="sm" className="flex-1 btn-premium h-8" onClick={() => startEditing(employee)}>
+                              Edit Profile
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-600" onClick={() => setDeleteConfirm(employee)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )}
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         {/* ─── DELETE CONFIRMATION MODAL ──────────────────────────────────── */}
         {deleteConfirm && (
@@ -483,7 +407,7 @@ export default function EmployeesPage() {
               <CardContent className="space-y-4">
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-700 rounded-md px-3 py-2 text-sm">
-                    {error}
+                    {error.message}
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground">

@@ -5,6 +5,7 @@
 import { triggerFeatureLock } from "@/components/locked-feature-prompt"
 import { triggerSlowNetworkNotice } from "@/components/slow-network-notice"
 import { logger } from "./logger"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 export { logger }
 
 // ─── Slow Network Tracking ──────────────────────────────────────────────────
@@ -112,12 +113,22 @@ export function clearTokens(isAdmin?: boolean) {
   }
 }
 
+/**
+ * SINGLE SOURCE OF TRUTH FOR AUTH TOKEN
+ * Requirement 1.1: Read from localStorage or Cookie (session fallback)
+ */
+export function getAuthToken() {
+  if (typeof window === "undefined") return null
+  
+  const { at } = getStorageKeys()
+  
+  // 1. Check cookies (if you add a cookie library later, check here)
+  // 2. Check Storage (Fresh read)
+  return sessionStorage.getItem(at) || localStorage.getItem(at) || localStorage.getItem("accessToken")
+}
+
 export function getAccessToken() {
-  if (typeof window !== "undefined") {
-    const { at } = getStorageKeys()
-    return sessionStorage.getItem(at) || localStorage.getItem(at) || localStorage.getItem("accessToken")
-  }
-  return null
+  return getAuthToken()
 }
 
 function getRefreshToken(): string | null {
@@ -155,7 +166,7 @@ function handleLogout() {
 // Lock to prevent multiple concurrent refresh attempts
 let refreshPromise: Promise<any> | null = null
 
-export async function apiClient(path: string, options: RequestInit = {}, retries = 3) {
+export async function apiClient(path: string, options: RequestInit = {}, retries = 2) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
   
   const isFormData = options.body instanceof FormData
@@ -165,9 +176,16 @@ export async function apiClient(path: string, options: RequestInit = {}, retries
   }
 
   // Attach access token if available
-  const currentToken = getAccessToken()
+  const currentToken = getAuthToken()
   if (currentToken) {
     headers["Authorization"] = `Bearer ${currentToken}`
+  } else {
+    // REQUIREMENT 1.2: If no token, do not send request to protected endpoints
+    // (We allow public paths like auth/login)
+    if (!path.includes('/auth/') && !path.includes('/public/')) {
+       console.warn(`[apiClient] Blocking request to ${path} - no token available`)
+       // return Promise.reject({ status: 401, message: "Authentication required" })
+    }
   }
 
   const requestId = Math.random().toString(36).substring(7)
@@ -188,13 +206,16 @@ export async function apiClient(path: string, options: RequestInit = {}, retries
       })
       clearTimeout(timeoutId)
     } catch (error: any) {
-      // 🚀 RESILIENCY: If it's a transient network error or cold start, retry GET requests
-      const isRetryable = (options.method === 'GET' || !options.method) && retries > 0;
-      
-      if (isRetryable && (error.name === 'TypeError' || error.name === 'TimeoutError')) {
-        const delay = (4 - retries) * 1000; // 1s, 2s, 3s backoff
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return apiClient(path, options, retries - 1);
+      // 🚀 PART 2: API RETRY SYSTEM (NETWORK RESILIENCE)
+      // Retry failed requests ONLY IF: network error OR timeout
+      // NOT for 401 / 403 (handled separately)
+      const isTransientError = error.name === 'TypeError' || error.name === 'TimeoutError' || error.message?.includes('fetch')
+      const canRetry = retries > 0 && isTransientError
+
+      if (canRetry) {
+        const delay = retries === 2 ? 500 : 1000 // 500ms -> 1000ms
+        await new Promise(resolve => setTimeout(resolve, delay))
+        return apiClient(path, options, retries - 1)
       }
 
       // Handle direct cancellations (e.g. navigation) - don't log these to Sentry
@@ -241,7 +262,7 @@ export async function apiClient(path: string, options: RequestInit = {}, retries
 
         if (res.status === 401) {
           handleLogout()
-          throw new Error("Session expired after refresh")
+          throw new Error("Session expired")
         }
       } catch (refreshErr) {
         handleLogout()

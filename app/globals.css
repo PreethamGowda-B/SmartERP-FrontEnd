@@ -157,63 +157,49 @@
   }
 
   .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.12), 0 12px 18px -8px rgba(0, 0, 0, 0.06);
+  }
+
+  .hover-lift-subtle {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .hover-lift-subtle:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
   }
 
-  .hover-scale {
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Card Consistency */
+  .premium-card {
+    @apply bg-card text-card-foreground rounded-xl border border-border/50 shadow-sm transition-all duration-300;
+  }
+  
+  .premium-card:hover {
+    @apply shadow-md border-primary/20;
   }
 
-  .hover-scale:hover {
-    transform: scale(1.02);
+  /* Typography Polish */
+  .text-meta {
+    @apply text-muted-foreground text-xs font-medium tracking-tight;
   }
 
-  /* Stagger animation delays */
-  .stagger-1 {
-    animation-delay: 0.1s;
+  .text-title {
+    @apply font-bold tracking-tight text-foreground;
   }
 
-  .stagger-2 {
-    animation-delay: 0.2s;
+  /* Spacing improvements */
+  .premium-table th, .premium-table td {
+    @apply px-6 py-4;
   }
 
-  .stagger-3 {
-    animation-delay: 0.3s;
+  /* Interaction states */
+  .btn-premium {
+    @apply transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
   }
 
-  .stagger-4 {
-    animation-delay: 0.4s;
-  }
-
-  .stagger-5 {
-    animation-delay: 0.5s;
-  }
-
-  .stagger-6 {
-    animation-delay: 0.6s;
-  }
-
-  /* Loading animations */
-  .animate-pulse-soft {
-    animation: pulseSoft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-
-  /* Interactive feedback */
-  .animate-press {
-    transition: transform 0.1s ease-in-out;
-  }
-
-  .animate-press:active {
-    transform: scale(0.98);
-  }
-
-  .animate-bounce-subtle {
-    animation: bounceSubtle 2s ease-in-out infinite;
+  .hover-bg-soft {
+    @apply transition-colors duration-200 hover:bg-secondary/80;
   }
 }
 

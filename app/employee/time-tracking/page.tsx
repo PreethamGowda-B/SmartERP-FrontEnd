@@ -10,11 +10,11 @@ import { useAuth } from "@/contexts/auth-context"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
-import { getAccessToken } from "@/lib/apiClient"
+import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 
 function authHeaders(): Record<string, string> {
-  const token = getAccessToken()
+  const token = getAuthToken()
   const headers: Record<string, string> = { "Content-Type": "application/json" }
   if (token) headers["Authorization"] = `Bearer ${token}`
   return headers
@@ -48,15 +48,8 @@ export default function TimeTrackingPage() {
     // Fetch today's attendance
     const fetchTodayAttendance = useCallback(async () => {
         try {
-            const response = await fetch(`${BACKEND_URL}/api/attendance/today`, {
-                credentials: "include",
-                headers: authHeaders(),
-            })
-
-            if (response.ok) {
-                const data = await response.json()
-                setTodayAttendance(data)
-            }
+            const data = await apiClient("/api/attendance/today")
+            setTodayAttendance(data)
         } catch (err) {
             logger.error("Error fetching today's attendance:", err)
         }
@@ -68,18 +61,8 @@ export default function TimeTrackingPage() {
             const currentMonth = new Date().getMonth() + 1
             const currentYear = new Date().getFullYear()
 
-            const response = await fetch(
-                `${BACKEND_URL}/api/attendance/history?month=${currentMonth}&year=${currentYear}`,
-                {
-                    credentials: "include",
-                    headers: authHeaders(),
-                }
-            )
-
-            if (response.ok) {
-                const data = await response.json()
-                setHistory(data)
-            }
+            const data = await apiClient(`/api/attendance/history?month=${currentMonth}&year=${currentYear}`)
+            setHistory(Array.isArray(data) ? data : [])
         } catch (err) {
             logger.error("Error fetching history:", err)
         }
@@ -107,16 +90,9 @@ export default function TimeTrackingPage() {
         for (const action of pending) {
             try {
                 const endpoint = action.type === 'clock-in' ? '/api/attendance/clock-in' : '/api/attendance/clock-out'
-                const response = await fetch(`${BACKEND_URL}${endpoint}`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: authHeaders(),
-                })
-
-                if (response.ok) {
-                    await deletePendingAttendance(action.id!)
-                    successCount++
-                }
+                await apiClient(endpoint, { method: 'POST' })
+                await deletePendingAttendance(action.id!)
+                successCount++
             } catch (err) {
                 console.error('Failed to sync action:', action, err)
             }
@@ -173,22 +149,11 @@ export default function TimeTrackingPage() {
         }
 
         try {
-            const response = await fetch(`${BACKEND_URL}/api/attendance/clock-in`, {
-                method: "POST",
-                credentials: "include",
-                headers: authHeaders(),
-            })
-
-            const data = await response.json()
-
-            if (response.ok) {
-                setTodayAttendance(data)
-                fetchHistory()
-            } else {
-                setError(data.message || "Failed to clock in")
-            }
-        } catch (err) {
-            setError("Network error. Please try again.")
+            const data = await apiClient("/api/attendance/clock-in", { method: "POST" })
+            setTodayAttendance(data)
+            fetchHistory()
+        } catch (err: any) {
+            setError(err.message || "Failed to clock in")
         } finally {
             setLoading(false)
         }
@@ -215,22 +180,11 @@ export default function TimeTrackingPage() {
         }
 
         try {
-            const response = await fetch(`${BACKEND_URL}/api/attendance/clock-out`, {
-                method: "POST",
-                credentials: "include",
-                headers: authHeaders(),
-            })
-
-            const data = await response.json()
-
-            if (response.ok) {
-                setTodayAttendance(data)
-                fetchHistory()
-            } else {
-                setError(data.message || "Failed to clock out")
-            }
-        } catch (err) {
-            setError("Network error. Please try again.")
+            const data = await apiClient("/api/attendance/clock-out", { method: "POST" })
+            setTodayAttendance(data)
+            fetchHistory()
+        } catch (err: any) {
+            setError(err.message || "Failed to clock out")
         } finally {
             setLoading(false)
         }
@@ -418,7 +372,7 @@ export default function TimeTrackingPage() {
                             <p className="text-center text-muted-foreground py-8">No attendance records for this month</p>
                         ) : (
                             <div className="space-y-2">
-                                {history.map((record) => (
+                                {Array.isArray(history) && history.map((record) => (
                                     <div
                                         key={record.id}
                                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"

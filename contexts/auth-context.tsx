@@ -54,9 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (refreshRes.ok && isMounted) {
               const data = await refreshRes.json()
               if (data.accessToken) {
-                // Determine admin status from the new access token's stored user data
-                // (refresh response doesn't include isSuperAdmin, so we derive it from
-                // the current user state which was already loaded from localStorage)
                 const isAdmin = currentUser?.role === 'super_admin'
                 setTokens(data.accessToken, data.refreshToken || rt || "", isAdmin)
                 
@@ -72,13 +69,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem("company_code", freshUser.company_code)
                   }
                   logger.log("[v0] ✅ Profile synced with latest DB state")
+                } else {
+                  // 🔴 PART 1: SESSION VALIDATION
+                  // IF token exists BUT request fails -> logout immediately
+                  logger.warn("[v0] Profile sync failed - forcing logout")
+                  signOut().then(() => {
+                    window.location.href = "/auth/login"
+                  })
                 }
               }
             } else if (!refreshRes.ok) {
-              logger.warn("[v0] Proactive token refresh failed (background)")
+              logger.warn("[v0] Proactive token refresh failed (background) - forcing logout")
+              signOut().then(() => {
+                window.location.href = "/auth/login"
+              })
             }
           }).catch(err => {
             logger.warn("[v0] Proactive token refresh error (background):", err)
+            // Only force logout if it's a 401/403, not a network error
+            if (err.status === 401 || err.status === 403) {
+              signOut().then(() => {
+                window.location.href = "/auth/login"
+              })
+            }
           })
         }
     } catch (err) {

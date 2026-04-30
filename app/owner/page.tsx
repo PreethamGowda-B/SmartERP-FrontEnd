@@ -17,10 +17,14 @@ import { Button } from "@/components/ui/button"
 import { DateTimeWeather } from "@/components/date-time-weather"
 import { DashboardTrialBanner } from "@/components/dashboard-trial-banner"
 import { SubscriptionStatus } from "@/components/subscription-status"
+import { ErrorView } from "@/components/ui/error-view"
+import { EmptyState } from "@/components/ui/empty-state"
+import { SkeletonList, SkeletonCard } from "@/components/ui/skeleton-card"
 
 import { apiClient } from "@/lib/apiClient"
 import { useAuth } from "@/contexts/auth-context"
 import { logger } from "@/lib/logger"
+import { cn } from "@/lib/utils"
 
 type DashboardMetrics = {
   activeJobs: number
@@ -58,7 +62,7 @@ export default function OwnerDashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ title: string; message: string } | null>(null)
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -73,7 +77,10 @@ export default function OwnerDashboard() {
       setRecentActivity(Array.isArray(activityData) ? activityData : [])
     } catch (err: any) {
       logger.error("Error fetching dashboard data:", err)
-      setError(err.message)
+      setError({
+        title: "Dashboard update failed",
+        message: err.message || "We couldn't synchronize your business metrics. Please check your network."
+      })
     } finally {
       setLoading(false)
     }
@@ -97,62 +104,36 @@ export default function OwnerDashboard() {
     { label: "View Reports", icon: Calendar, href: "/owner/reports" },
   ]
 
-  if (loading) {
+  if (loading && !metrics) {
     return (
       <OwnerLayout>
-        <div className="space-y-8 animate-in fade-in duration-500">
-          {/* Header skeleton */}
+        <div className="space-y-10 animate-pulse">
           <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-9 w-64" />
-              <Skeleton className="h-4 w-80" />
+            <div className="space-y-3">
+              <div className="h-10 w-64 bg-muted/20 rounded-lg" />
+              <div className="h-4 w-96 bg-muted/10 rounded-lg" />
             </div>
-            <Skeleton className="h-9 w-32" />
+            <div className="h-10 w-48 bg-muted/20 rounded-lg" />
           </div>
-          {/* Stats skeleton */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i}>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-4 w-4 rounded-full" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-8 w-16 mb-1" />
-                  <Skeleton className="h-3 w-24" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          {/* Cards skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {[1, 2].map((i) => (
-              <Card key={i}>
-                <CardHeader><Skeleton className="h-6 w-40" /></CardHeader>
-                <CardContent className="space-y-3">
-                  {[1, 2, 3].map((j) => (
-                    <div key={j} className="space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-2 w-full" />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))}
+          <SkeletonList count={4} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <SkeletonCard className="h-[400px]" />
+            <SkeletonCard className="h-[400px]" />
           </div>
         </div>
       </OwnerLayout>
     )
   }
 
-  if (error) {
+  if (error && !metrics) {
     return (
       <OwnerLayout>
-        <div className="flex flex-col items-center justify-center h-96 gap-4">
-          <p className="text-destructive">{error}</p>
-          <Button onClick={fetchDashboardData} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" /> Retry
-          </Button>
+        <div className="max-w-2xl mx-auto py-20">
+          <ErrorView 
+            title={error.title} 
+            message={error.message} 
+            onRetry={fetchDashboardData} 
+          />
         </div>
       </OwnerLayout>
     )
@@ -182,34 +163,38 @@ export default function OwnerDashboard() {
         <SubscriptionStatus />
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             {
-              label: "Active Jobs", value: activeJobs, sub: "Currently in progress",
-              icon: Building2, color: "text-blue-600", iconColor: "group-hover:text-blue-500",
+              label: "Active Jobs", value: activeJobs, sub: "Revenue generating",
+              icon: Building2, color: "text-blue-600", bg: "bg-blue-500/10", border: "border-blue-500/20"
             },
             {
-              label: "Total Employees", value: totalEmployees, sub: "Active team members",
-              icon: Users, color: "text-green-600", iconColor: "group-hover:text-green-500",
+              label: "Total Employees", value: totalEmployees, sub: "Workforce strength",
+              icon: Users, color: "text-green-600", bg: "bg-green-500/10", border: "border-green-500/20"
             },
             {
-              label: "Today's Attendance", value: todayAttendance, sub: "Employees present",
-              icon: Clock, color: "text-purple-600", iconColor: "group-hover:text-purple-500",
+              label: "Today's Attendance", value: todayAttendance, sub: "Shift completion",
+              icon: Clock, color: "text-purple-600", bg: "bg-purple-500/10", border: "border-purple-500/20"
             },
             {
               label: "Budget Utilization", value: `${budgetUtil.toFixed(1)}%`,
-              sub: `₹${totalSpent.toLocaleString()} of ₹${totalBudget.toLocaleString()}`,
-              icon: DollarSign, color: "text-yellow-600", iconColor: "group-hover:text-yellow-500",
+              sub: `₹${totalSpent.toLocaleString()} utilized`,
+              icon: DollarSign, color: "text-yellow-600", bg: "bg-yellow-500/10", border: "border-yellow-500/20"
             },
-          ].map(({ label, value, sub, icon: Icon, color, iconColor }) => (
-            <Card key={label} className="hover:scale-105 hover:shadow-xl transition-all duration-300 group">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{label}</CardTitle>
-                <Icon className={`h-4 w-4 text-muted-foreground ${iconColor} transition-all duration-300`} />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${color}`}>{value}</div>
-                <p className="text-xs text-muted-foreground">{sub}</p>
+          ].map((stat) => (
+            <Card key={stat.label} className={cn("premium-card hover-lift-subtle border", stat.border)}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">{stat.label}</p>
+                    <div className={cn("text-3xl font-black tracking-tighter", stat.color)}>{stat.value}</div>
+                    <p className="text-[10px] font-medium text-muted-foreground mt-1">{stat.sub}</p>
+                  </div>
+                  <div className={cn("p-3 rounded-2xl", stat.bg)}>
+                    <stat.icon className={cn("h-6 w-6", stat.color)} />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -305,27 +290,26 @@ export default function OwnerDashboard() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks and shortcuts</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {quickActions.map(({ label, icon: Icon, href }) => (
-                <button
-                  key={label}
-                  onClick={() => router.push(href)}
-                  className="p-4 rounded-lg border border-border hover:border-primary hover:bg-accent transition-all duration-300 text-center group"
-                >
-                  <Icon className="h-6 w-6 mx-auto mb-2 text-primary group-hover:scale-110 transition-transform" />
-                  <p className="text-sm font-medium">{label}</p>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold tracking-tight">System Controls</h2>
+            <span className="text-meta">Common workflows</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {quickActions.map(({ label, icon: Icon, href }) => (
+              <button
+                key={label}
+                onClick={() => router.push(href)}
+                className="premium-card p-6 flex flex-col items-center justify-center gap-4 group cursor-pointer border hover:border-primary/40 active:scale-95 transition-all"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                  <Icon className="h-6 w-6" />
+                </div>
+                <p className="text-sm font-bold tracking-tight group-hover:text-primary transition-colors">{label}</p>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </OwnerLayout>
   )

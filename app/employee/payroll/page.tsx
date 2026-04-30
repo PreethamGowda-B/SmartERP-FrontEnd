@@ -108,27 +108,27 @@ export default function EmployeePayrollPage() {
 
     // Base Salary
     doc.text("Base Salary:", 30, yPos)
-    doc.text(`₹ ${payroll.base_salary.toFixed(2)}`, 150, yPos, { align: "right" })
+    doc.text(`₹ ${Number(payroll.base_salary || 0).toFixed(2)}`, 150, yPos, { align: "right" })
     yPos += 10
 
     // Extra Amount (if > 0)
     if (payroll.extra_amount > 0) {
       doc.text("Extra Amount:", 30, yPos)
-      doc.text(`₹ ${payroll.extra_amount.toFixed(2)}`, 150, yPos, { align: "right" })
+      doc.text(`₹ ${Number(payroll.extra_amount || 0).toFixed(2)}`, 150, yPos, { align: "right" })
       yPos += 10
     }
 
     // Salary Increment (if > 0)
     if (payroll.salary_increment > 0) {
       doc.text("Salary Increment:", 30, yPos)
-      doc.text(`₹ ${payroll.salary_increment.toFixed(2)}`, 150, yPos, { align: "right" })
+      doc.text(`₹ ${Number(payroll.salary_increment || 0).toFixed(2)}`, 150, yPos, { align: "right" })
       yPos += 10
     }
 
     // Deduction (if > 0)
     if (payroll.deduction > 0) {
       doc.text("Deduction:", 30, yPos)
-      doc.text(`- ₹ ${payroll.deduction.toFixed(2)}`, 150, yPos, { align: "right" })
+      doc.text(`- ₹ ${Number(payroll.deduction || 0).toFixed(2)}`, 150, yPos, { align: "right" })
       yPos += 10
     }
 
@@ -141,7 +141,7 @@ export default function EmployeePayrollPage() {
     doc.setFont("helvetica", "bold")
     doc.setFontSize(13)
     doc.text("TOTAL SALARY:", 30, yPos)
-    doc.text(`₹ ${payroll.total_salary.toFixed(2)}`, 150, yPos, { align: "right" })
+    doc.text(`₹ ${Number(payroll.total_salary || 0).toFixed(2)}`, 150, yPos, { align: "right" })
 
     // Remarks (if any)
     if (payroll.remarks) {
@@ -227,7 +227,7 @@ export default function EmployeePayrollPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </CardContent>
             </Card>
-          ) : filteredPayrolls.length === 0 ? (
+          ) : !Array.isArray(filteredPayrolls) || filteredPayrolls.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -265,14 +265,14 @@ export default function EmployeePayrollPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Base Salary</p>
-                        <p className="text-lg font-semibold">₹{payroll.base_salary.toFixed(2)}</p>
+                        <p className="text-lg font-semibold">₹{Number(payroll.base_salary || 0).toFixed(2)}</p>
                       </div>
 
                       {payroll.extra_amount > 0 && (
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">Extra Amount</p>
                           <p className="text-lg font-semibold text-green-600">
-                            +₹{payroll.extra_amount.toFixed(2)}
+                            +₹{Number(payroll.extra_amount || 0).toFixed(2)}
                           </p>
                         </div>
                       )}
@@ -281,7 +281,7 @@ export default function EmployeePayrollPage() {
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">Salary Increment</p>
                           <p className="text-lg font-semibold text-green-600">
-                            +₹{payroll.salary_increment.toFixed(2)}
+                            +₹{Number(payroll.salary_increment || 0).toFixed(2)}
                           </p>
                         </div>
                       )}
@@ -290,7 +290,7 @@ export default function EmployeePayrollPage() {
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">Deduction</p>
                           <p className="text-lg font-semibold text-red-600">
-                            -₹{payroll.deduction.toFixed(2)}
+                            -₹{Number(payroll.deduction || 0).toFixed(2)}
                           </p>
                         </div>
                       )}
@@ -301,7 +301,7 @@ export default function EmployeePayrollPage() {
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-semibold">Total Salary</span>
                         <span className="text-3xl font-bold text-primary">
-                          ₹{payroll.total_salary.toFixed(2)}
+                          ₹{Number(payroll.total_salary || 0).toFixed(2)}
                         </span>
                       </div>
                     </div>

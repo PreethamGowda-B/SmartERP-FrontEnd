@@ -311,7 +311,7 @@ export default function EmployeeDocumentsPage() {
                     <div className="flex flex-col items-center gap-2">
                       <FileCheck className="h-10 w-10 text-primary" />
                       <p className="text-sm font-medium truncate max-w-xs">{file.name}</p>
-                      <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                      <p className="text-xs text-muted-foreground">{Number(file.size / 1024 / 1024 || 0).toFixed(2)} MB</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2 group-hover:scale-105 transition-transform">

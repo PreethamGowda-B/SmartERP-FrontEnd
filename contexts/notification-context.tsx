@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { useAuth } from "./auth-context"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { apiClient, getAccessToken } from "@/lib/apiClient"
+import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 
 export interface Notification {
@@ -26,6 +26,7 @@ interface NotificationContextType {
   markAllAsRead: () => Promise<void>
   getUnreadCount: () => number
   refreshNotifications: () => Promise<void>
+  isConnected: boolean
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
@@ -37,6 +38,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const { user, isLoading } = useAuth()
   const router = useRouter()
   const [sseConnection, setSSEConnection] = useState<EventSource | null>(null)
+  const [reconnectTrigger, setReconnectTrigger] = useState(0)
+  const [isConnected, setIsConnected] = useState(false)
 
   // Fetch notifications from backend
   const fetchNotifications = useCallback(async () => {
@@ -119,7 +122,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     // SSE requires token as query param since EventSource doesn't support custom headers
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://smarterp-backendend.onrender.com"
-    const token = getAccessToken()
+    const token = getAuthToken()
     const sseUrl = token
       ? `${BACKEND_URL}/api/notifications/sse?token=${encodeURIComponent(token)}`
       : `${BACKEND_URL}/api/notifications/sse`
@@ -129,6 +132,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     eventSource.onopen = () => {
       logger.log("📡 SSE connection established")
+      setIsConnected(true)
     }
 
     eventSource.onmessage = (event) => {
@@ -178,14 +182,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     eventSource.onerror = (error) => {
       logger.error('❌ SSE connection error:', error)
+      setIsConnected(false)
       eventSource.close()
-      // Medium FIX: Auto-reconnect after 3 seconds instead of losing connection permanently
+      
+      // REQUIREMENT 1.5: Auto-reconnect after 3 seconds
       if (user) {
         setTimeout(() => {
           logger.log('🔄 Reconnecting SSE...')
-          // The useEffect dependency on `user` will re-run and recreate the EventSource
-          // We trigger a re-render by refreshing notifications
-          fetchNotifications()
+          setReconnectTrigger(prev => prev + 1)
         }, 3000)
       }
     }
@@ -194,9 +198,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     return () => {
       eventSource.close()
+      setIsConnected(false)
       logger.log("📡 SSE connection closed")
     }
-  }, [user, fetchNotifications, router])
+  }, [user, isLoading, fetchNotifications, router, reconnectTrigger])
 
   const addNotification = (notificationData: Omit<Notification, "id" | "created_at" | "read">) => {
     // This is for local notifications only (not used in production)
@@ -250,9 +255,24 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         markAllAsRead,
         getUnreadCount,
         refreshNotifications: fetchNotifications,
+        isConnected
       }}
     >
       {children}
+      
+      {/* 🔴 PART 9: SSE UX POLISH (Live Indicator) */}
+      <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 pointer-events-none select-none">
+        <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 backdrop-blur-md border transition-all duration-500 ${
+          isConnected 
+            ? "bg-green-500/10 text-green-600 border-green-500/20" 
+            : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20 animate-pulse"
+        }`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${
+            isConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-yellow-500"
+          }`} />
+          {isConnected ? "Live" : "Reconnecting..."}
+        </div>
+      </div>
     </NotificationContext.Provider>
   )
 }

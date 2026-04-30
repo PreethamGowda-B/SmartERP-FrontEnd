@@ -26,6 +26,7 @@ import {
   Loader2,
   Calendar,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface AttendanceToday {
   check_in_time: string | null
@@ -213,84 +214,42 @@ export default function EmployeeDashboard() {
         {/* ────────────────────────────────────────────────────────────── */}
 
         {/* Header */}
-        <div className="animate-fade-in-down stagger-1 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-2">
           <div>
-            <h1 className="text-3xl font-bold text-balance bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-              Welcome back, {user?.name?.split(" ")[0]}!
+            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+              Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}, <span className="text-primary">{user?.name?.split(" ")[0]}</span>
             </h1>
-            <p className="text-muted-foreground animate-fade-in-up stagger-2">
-              Here&apos;s your work overview for today.
-              {todayAttendance?.is_late && (
-                <span className="ml-2 text-yellow-600 font-medium text-xs">⚠ Late check-in</span>
-              )}
+            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
+              {todayAttendance?.is_late 
+                ? "Shift started with a late check-in. Let's focus on productivity today."
+                : "Your performance metrics and shift schedules are up to date."}
             </p>
           </div>
           <DateTimeWeather />
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Active Jobs */}
-          <Card className="animate-fade-in-left stagger-1 hover-lift hover-scale group">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Jobs</CardTitle>
-              <Briefcase className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors duration-300" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-accent">{activeJobs.length}</div>
-              <p className="text-xs text-muted-foreground">Currently assigned</p>
-            </CardContent>
-          </Card>
-
-          {/* Hours This Week */}
-          <Card className="animate-fade-in-left stagger-2 hover-lift hover-scale group">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Hours This Week</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground group-hover:text-blue-500 transition-colors duration-300" />
-            </CardHeader>
-            <CardContent>
-              {loadingStats ? (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              ) : (
-                <>
-                  <div className="text-2xl font-bold text-blue-600">{hoursThisWeek}h</div>
-                  <p className="text-xs text-muted-foreground">
-                    {hoursRemaining > 0 ? `${hoursRemaining}h remaining to 40h` : "Full week completed 🎉"}
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Pending Material Requests */}
-          <Card className="animate-fade-in-right stagger-3 hover-lift hover-scale group">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground group-hover:text-orange-500 transition-colors duration-300" />
-            </CardHeader>
-            <CardContent>
-              {loadingStats ? (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              ) : (
-                <>
-                  <div className="text-2xl font-bold text-orange-600">{pendingRequests}</div>
-                  <p className="text-xs text-muted-foreground">Material requests</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Unread Notifications */}
-          <Card className="animate-fade-in-right stagger-4 hover-lift hover-scale group cursor-pointer" onClick={() => router.push("/employee/notifications")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Notifications</CardTitle>
-              <Bell className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{unreadNotifs}</div>
-              <p className="text-xs text-muted-foreground">Unread messages</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { label: "Active Assignments", value: activeJobs.length, icon: Briefcase, color: "text-blue-600", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+            { label: "Hours Logged", value: `${hoursThisWeek}h`, icon: Clock, color: "text-green-600", bg: "bg-green-500/10", border: "border-green-500/20" },
+            { label: "Supply Requests", value: pendingRequests, icon: Package, color: "text-orange-600", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+            { label: "New Alerts", value: unreadNotifs, icon: Bell, color: "text-primary", bg: "bg-primary/10", border: "border-primary/20" },
+          ].map((stat, i) => (
+            <Card key={i} className={cn("premium-card hover-lift-subtle border", stat.border)}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">{stat.label}</p>
+                    <div className="text-3xl font-black tracking-tight">{stat.value}</div>
+                  </div>
+                  <div className={cn("p-3 rounded-2xl", stat.bg)}>
+                    <stat.icon className={cn("h-6 w-6", stat.color)} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Clock In/Out and My Active Jobs */}
@@ -304,50 +263,49 @@ export default function EmployeeDashboard() {
             />
           </div>
 
-          <Card className="animate-fade-in-right stagger-6 hover-lift">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-accent" />
-                My Active Jobs
-              </CardTitle>
-              <CardDescription>Projects you're currently working on</CardDescription>
+          <Card className="premium-card hover-lift border-none shadow-sm overflow-hidden">
+            <CardHeader className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">Active Assignments</CardTitle>
+                  <CardDescription>Directly assigned project responsibilities</CardDescription>
+                </div>
+                <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                  <Briefcase className="h-5 w-5" />
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-6 pt-0 space-y-4">
               {activeJobs.length > 0 ? (
-                activeJobs.slice(0, 3).map((job: any, index: number) => (
+                activeJobs.slice(0, 3).map((job: any) => (
                   <div
                     key={job.id}
-                    className="space-y-2 p-3 rounded-lg border border-border/50 hover:border-accent/30 hover:bg-accent/5 transition-all duration-300"
+                    className="p-4 rounded-2xl bg-secondary/30 border border-transparent hover:border-primary/20 hover:bg-secondary/50 transition-all cursor-pointer group/item"
+                    onClick={() => router.push("/employee/jobs")}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">{job.title}</h4>
-                        {job.location && (
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            {job.location}
-                          </div>
-                        )}
-                      </div>
-                      <Badge variant={job.priority === "high" ? "destructive" : "secondary"}>
-                        {job.priority || "normal"}
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-bold text-sm group-hover/item:text-primary transition-colors">{job.title}</h4>
+                      <Badge variant="secondary" className="text-[10px] uppercase font-bold px-1.5 py-0">
+                        {job.priority || "Normal"}
                       </Badge>
                     </div>
-                    {job.progress !== undefined && (
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span>Progress</span>
-                          <span className="font-medium">{job.progress}%</span>
-                        </div>
-                        <Progress value={job.progress} className="h-2" />
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        <span>Work Progress</span>
+                        <span className="text-primary">{job.progress || 0}%</span>
                       </div>
-                    )}
+                      <Progress value={job.progress || 0} className="h-1.5" />
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-3 text-xs font-semibold text-muted-foreground">
+                      <MapPin className="h-3 w-3 text-primary" />
+                      {job.location || "On-site Assignment"}
+                    </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-6 text-muted-foreground">
-                  <Briefcase className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">No active jobs assigned</p>
+                <div className="text-center py-12">
+                  <Briefcase className="h-12 w-12 mx-auto mb-3 text-muted-foreground/20" />
+                  <p className="text-sm font-bold text-muted-foreground">No active assignments</p>
                 </div>
               )}
             </CardContent>
@@ -414,56 +372,33 @@ export default function EmployeeDashboard() {
           </Card>
 
           {/* Quick Actions */}
-          <Card className="animate-fade-in-up stagger-2 hover-lift">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-accent" />
-                Quick Actions
-              </CardTitle>
-              <CardDescription>Common tasks and shortcuts</CardDescription>
+          <Card className="premium-card hover-lift border-none shadow-sm">
+            <CardHeader className="p-6">
+              <CardTitle className="text-xl font-black tracking-tight">Workstream Controls</CardTitle>
+              <CardDescription>Frequently accessed employee tools</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6 pt-0">
               <div className="grid grid-cols-2 gap-4">
-                <Button
-                  variant="outline"
-                  className="h-auto p-4 flex flex-col items-center gap-2 bg-transparent hover:bg-accent/10 transition-all duration-300 group"
-                  onClick={() => router.push("/employee/materials")}
-                >
-                  <Package className="h-6 w-6 text-accent group-hover:scale-110 transition-transform duration-300" />
-                  <span className="text-sm group-hover:text-accent transition-colors duration-200">
-                    Request Materials
-                  </span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto p-4 flex flex-col items-center gap-2 bg-transparent hover:bg-primary/10 transition-all duration-300 group"
-                  onClick={() => router.push("/employee/messages")}
-                >
-                  <MessageSquare className="h-6 w-6 text-primary group-hover:scale-110 transition-transform duration-300" />
-                  <span className="text-sm group-hover:text-primary transition-colors duration-200">
-                    Messages
-                  </span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto p-4 flex flex-col items-center gap-2 bg-transparent hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-300 group"
-                  onClick={() => router.push("/employee/attendance")}
-                >
-                  <Clock className="h-6 w-6 text-green-600 group-hover:scale-110 transition-transform duration-300" />
-                  <span className="text-sm group-hover:text-green-600 transition-colors duration-200">
-                    Attendance
-                  </span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto p-4 flex flex-col items-center gap-2 bg-transparent hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-300 group"
-                  onClick={() => router.push("/employee/payroll")}
-                >
-                  <DollarSign className="h-6 w-6 text-blue-600 group-hover:scale-110 transition-transform duration-300" />
-                  <span className="text-sm group-hover:text-blue-600 transition-colors duration-200">
-                    Check Payroll
-                  </span>
-                </Button>
+                {[
+                  { label: "Request Materials", icon: Package, href: "/employee/materials", color: "text-orange-500", bg: "hover:bg-orange-50 dark:hover:bg-orange-950/20" },
+                  { label: "Message Hub", icon: MessageSquare, href: "/employee/messages", color: "text-primary", bg: "hover:bg-primary/5" },
+                  { label: "Log Attendance", icon: Clock, href: "/employee/attendance", color: "text-green-500", bg: "hover:bg-green-50 dark:hover:bg-green-950/20" },
+                  { label: "Access Payroll", icon: DollarSign, href: "/employee/payroll", color: "text-blue-500", bg: "hover:bg-blue-50 dark:hover:bg-blue-950/20" },
+                ].map((action) => (
+                  <button
+                    key={action.label}
+                    onClick={() => router.push(action.href)}
+                    className={cn(
+                      "p-5 rounded-2xl border border-border/50 transition-all active:scale-95 flex flex-col items-center gap-3 group",
+                      action.bg
+                    )}
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center text-muted-foreground group-hover:scale-110 group-hover:text-inherit transition-all">
+                      <action.icon className={cn("h-6 w-6", action.color)} />
+                    </div>
+                    <span className="text-xs font-bold tracking-tight text-center">{action.label}</span>
+                  </button>
+                ))}
               </div>
             </CardContent>
           </Card>

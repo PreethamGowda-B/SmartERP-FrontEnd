@@ -16,9 +16,12 @@ import { ExportButton } from "@/components/export-button"
 import { apiClient } from "@/lib/apiClient"
 import {
   Plus, Search, Filter, Calendar, Users, CheckCircle2, Clock,
-  XCircle, AlertCircle, TrendingUp, Edit, Trash2, RefreshCw,
+  XCircle, AlertCircle, TrendingUp, Edit, Trash2, RefreshCw, Briefcase,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ErrorView } from "@/components/ui/error-view"
+import { EmptyState } from "@/components/ui/empty-state"
+import { SkeletonList } from "@/components/ui/skeleton-card"
 
 const AUTO_REFRESH_MS = 30_000
 
@@ -72,6 +75,7 @@ export default function OwnerJobsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingJob, setEditingJob] = useState<Job | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<{ title: string; message: string } | null>(null)
 
   // ── Refresh state ─────────────────────────────────────────────────────────
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -83,8 +87,14 @@ export default function OwnerJobsPage() {
     isRefreshingRef.current = true
     setIsRefreshing(true)
     try {
+      setError(null)
       await refreshJobs()
       setLastUpdated(new Date())
+    } catch (err: any) {
+      setError({
+        title: "Could not load jobs",
+        message: err.message || "Something went wrong while fetching the projects. Please check your connection."
+      })
     } finally {
       setIsRefreshing(false)
       isRefreshingRef.current = false
@@ -140,59 +150,37 @@ export default function OwnerJobsPage() {
     <OwnerLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
           <div>
-            <h1 className="text-3xl font-bold bg-linear-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Job Management
+            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+              Job <span className="text-primary">Management</span>
             </h1>
-            <p className="text-muted-foreground mt-1">Manage projects and track employee responses</p>
+            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
+              Monitor project lifecycles, track employee availability, and drive operational excellence.
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Last Updated */}
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              <span>Updated: {formatLastUpdated(lastUpdated)}</span>
+            <div className="hidden sm:flex flex-col items-end gap-0.5 text-right mr-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">Auto-refresh Active</span>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {formatLastUpdated(lastUpdated)}
+              </span>
             </div>
 
-            {/* Manual Refresh Button */}
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="gap-2"
-              title="Refresh jobs"
+              className="gap-2 h-10 px-4 btn-premium"
             >
               <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-              {isRefreshing ? "Refreshing…" : "Refresh"}
+              {isRefreshing ? "Refreshing" : "Refresh"}
             </Button>
 
-            <ExportButton
-              filename="Jobs_Status_Report"
-              title="Project Jobs Report"
-              subtitle={`Detailed Project Execution Analysis`}
-              onExport={async () => {
-                const data = await apiClient("/api/jobs")
-                return Array.isArray(data) ? data.map((j: any) => ({
-                  ...j,
-                  progress_text: `${j.progress || 0}%`
-                })) : []
-              }}
-              columns={[
-                { header: "Job Title", dataKey: "title" },
-                { header: "Status", dataKey: "status" },
-                { header: "Client", dataKey: "client" },
-                { header: "Location", dataKey: "location" },
-                { header: "Assigned To", dataKey: "employee_email" },
-                { header: "Employee Resp.", dataKey: "employee_status" },
-                { header: "Progress", dataKey: "progress_text", type: "number" },
-                { header: "Deadline", dataKey: "deadline", type: "date" },
-                { header: "Created Date", dataKey: "created_at", type: "date" }
-              ]}
-            />
-
-            <Button onClick={handleCreateJob} size="lg">
+            <Button onClick={handleCreateJob} size="lg" className="h-10 px-6 shadow-lg shadow-primary/20 btn-premium">
               <Plus className="h-4 w-4 mr-2" />
               New Job
             </Button>
@@ -206,51 +194,27 @@ export default function OwnerJobsPage() {
         </p>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-green-200 bg-green-50/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-green-700">{acceptedJobs}</div>
-                  <div className="text-xs text-green-600 font-medium">Accepted by Employees</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { label: "Accepted", value: acceptedJobs, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-500/10", border: "border-green-500/20" },
+            { label: "Pending", value: pendingJobs, icon: Clock, color: "text-yellow-600", bg: "bg-yellow-500/10", border: "border-yellow-500/20" },
+            { label: "Completed", value: completedJobs, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+            { label: "Declined", value: declinedJobs, icon: XCircle, color: "text-red-600", bg: "bg-red-500/10", border: "border-red-500/20" },
+          ].map((stat, i) => (
+            <Card key={i} className={cn("premium-card hover-lift-subtle border", stat.border)}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">{stat.label}</p>
+                    <div className="text-3xl font-bold tracking-tight">{stat.value}</div>
+                  </div>
+                  <div className={cn("p-3 rounded-2xl", stat.bg)}>
+                    <stat.icon className={cn("h-6 w-6", stat.color)} />
+                  </div>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-yellow-200 bg-yellow-50/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-yellow-700">{pendingJobs}</div>
-                  <div className="text-xs text-yellow-600 font-medium">Awaiting Response</div>
-                </div>
-                <Clock className="h-8 w-8 text-yellow-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-blue-200 bg-blue-50/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-blue-700">{completedJobs}</div>
-                  <div className="text-xs text-blue-600 font-medium">Completed Jobs</div>
-                </div>
-                <TrendingUp className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-red-200 bg-red-50/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-red-700">{declinedJobs}</div>
-                  <div className="text-xs text-red-600 font-medium">Declined by Employees</div>
-                </div>
-                <XCircle className="h-8 w-8 text-red-500" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Filters */}
@@ -289,145 +253,103 @@ export default function OwnerJobsPage() {
           </Select>
         </div>
 
-        {/* Jobs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredJobs.map((job) => {
-            const employeeStatus = job.employee_status || "pending"
-            const empStatusStr = String(employeeStatus)
-            const isCompleted = job.status?.toLowerCase() === "completed"
-            const isInProgress = job.status?.toLowerCase() === "in_progress"
-            
-            // Part 6 — Progress Bar Fix: Strict status-based rules
-            const displayProgress = 
-              isCompleted ? 100 :
-              isInProgress ? (job.progress || 0) :
-              job.status === 'open' ? 0 :
-              (job.progress || 0);
+        <div className="space-y-6">
+          {isRefreshing && jobs.length === 0 ? (
+            <SkeletonList count={6} />
+          ) : error && jobs.length === 0 ? (
+            <ErrorView title={error.title} message={error.message} onRetry={handleRefresh} />
+          ) : filteredJobs.length === 0 ? (
+            <EmptyState 
+              icon={Briefcase}
+              title="No jobs found"
+              description="We couldn't find any jobs matching your current filters. Try adjusting them or create a new project."
+              actionLabel="Create New Job"
+              onAction={handleCreateJob}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredJobs.map((job) => {
+                const employeeStatus = job.employee_status || "pending"
+                const empStatusStr = String(employeeStatus)
+                const isCompleted = job.status?.toLowerCase() === "completed"
+                const isInProgress = job.status?.toLowerCase() === "in_progress"
+                const displayProgress = isCompleted ? 100 : (job.progress || 0)
 
-            return (
-              <Card
-                key={job.id}
-                className={cn(
-                  "group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-2",
-                  empStatusStr === "accepted" && "border-green-100",
-                  empStatusStr === "declined" && "border-red-100 opacity-75",
-                  (empStatusStr === "pending" || empStatusStr === "assigned" || !empStatusStr) && "border-yellow-100"
-                )}
-              >
-                <div
-                  className={cn(
-                    "h-2 w-full",
-                    isCompleted && "bg-green-500",
-                    !isCompleted && empStatusStr === "accepted" && "bg-blue-500",
-                    (empStatusStr === "pending" || empStatusStr === "assigned" || !empStatusStr) && "bg-yellow-500",
-                    empStatusStr === "declined" && "bg-red-500"
-                  )}
-                />
-                <CardHeader className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg line-clamp-2 flex-1">{job.title}</CardTitle>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEditJob(job)} className="h-8 w-8">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost" size="icon" onClick={() => handleDeleteJob(job)}
-                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <Badge variant={job.status === "completed" ? "default" : "outline"}>
-                      {job.status || "pending"}
-                    </Badge>
-                    {getEmployeeStatusBadge(employeeStatus)}
-                  </div>
-                  <CardDescription className="line-clamp-2">
-                    {job.description || "No description"}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {(empStatusStr === "accepted" || isCompleted || isInProgress) && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">Progress</span>
-                        <span className="font-bold">{displayProgress}%</span>
-                      </div>
-                      <Progress value={displayProgress} className="h-2.5" />
-                      {isCompleted && (
-                        <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 p-2 rounded">
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>Completed on {formatDate(job.completed_at)}</span>
+                return (
+                  <Card
+                    key={job.id}
+                    className="premium-card hover-lift group overflow-hidden border-none shadow-sm hover:shadow-xl"
+                  >
+                    <div className={cn(
+                      "h-1.5 w-full",
+                      isCompleted ? "bg-green-500" : 
+                      empStatusStr === "accepted" ? "bg-primary" : 
+                      empStatusStr === "declined" ? "bg-red-500" : "bg-yellow-500"
+                    )} />
+                    
+                    <CardHeader className="p-6 pb-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0">
+                          {job.status || "Pending"}
+                        </Badge>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditJob(job)} className="h-7 w-7 rounded-full hover:bg-primary/10 hover:text-primary">
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteJob(job)} className="h-7 w-7 rounded-full hover:bg-red-50 hover:text-red-600">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="space-y-2 text-xs text-muted-foreground">
-                    {!job.assigned_to ? (
-                      <div className="flex items-center gap-2">
-                        <Users className="w-3 h-3" />
-                        <span>
-                          {empStatusStr === 'assigned' ? 'Waiting for technician' : 'Not Assigned Yet'}
-                        </span>
                       </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <Users className="w-3 h-3" />
-                          <span>Assigned to: <span className="font-semibold text-foreground">{(job as any).employee_name || job.employee_email}</span></span>
+                      <CardTitle className="text-xl font-bold leading-tight group-hover:text-primary transition-colors cursor-pointer" onClick={() => handleEditJob(job)}>
+                        {job.title}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-3">
+                        {getEmployeeStatusBadge(employeeStatus)}
+                        <span className="text-meta">ID: {job.id.substring(0, 8)}</span>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="p-6 pt-0 space-y-6">
+                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                        {job.description || "Project parameters and execution details have been formalized for this assignment."}
+                      </p>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-end">
+                          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Execution Progress</span>
+                          <span className="text-sm font-black text-primary">{displayProgress}%</span>
                         </div>
-                        {job.employee_email && (job as any).employee_name && (
-                          <div className="flex items-center gap-2 pl-5">
-                            <span className="text-muted-foreground/70">{job.employee_email}</span>
+                        <Progress value={displayProgress} className="h-2 bg-secondary rounded-full overflow-hidden" />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/40">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Technician</p>
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold">
+                              {(job as any).employee_name?.[0] || job.employee_email?.[0] || "?"}
+                            </div>
+                            <p className="text-xs font-semibold truncate max-w-[100px]">
+                              {(job as any).employee_name || job.employee_email || "Unassigned"}
+                            </p>
                           </div>
-                        )}
-                      </>
-                    )}
-                    {job.accepted_at && (
-                      <div className="flex items-center gap-2 text-green-700">
-                        <CheckCircle2 className="w-3 h-3" />
-                        <span>Accepted: {formatDate(job.accepted_at)}</span>
+                        </div>
+                        <div className="space-y-1 text-right">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Timeline</p>
+                          <div className="flex items-center justify-end gap-1.5 text-xs font-semibold">
+                            <Calendar className="h-3 w-3 text-primary" />
+                            {formatDate(job.deadline).split(',')[0]}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    {job.declined_at && (
-                      <div className="flex items-center gap-2 text-red-700">
-                        <XCircle className="w-3 h-3" />
-                        <span>Declined: {formatDate(job.declined_at)}</span>
-                      </div>
-                    )}
-                    {!job.accepted_at && !job.declined_at && employeeStatus === "pending" && (
-                      <div className="flex items-center gap-2 text-yellow-700">
-                        <AlertCircle className="w-3 h-3" />
-                        <span>Waiting for employee response</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
-                    <Calendar className="w-3 h-3" />
-                    <span>Created: {formatDate(job.created_at)}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
         </div>
-
-        {filteredJobs.length === 0 && (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <AlertCircle className="w-16 h-16 text-muted-foreground/40 mb-4" />
-              <p className="text-lg font-medium text-muted-foreground">No jobs found</p>
-              <p className="text-sm text-muted-foreground/70 mt-2">
-                Try adjusting your filters or create a new job
-              </p>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Job Form Dialog */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>

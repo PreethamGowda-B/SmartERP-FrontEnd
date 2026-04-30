@@ -14,13 +14,17 @@ import {
 } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { cn } from "@/lib/utils"
+import { ErrorView } from "@/components/ui/error-view"
+import { EmptyState } from "@/components/ui/empty-state"
+import { SkeletonList } from "@/components/ui/skeleton-card"
+import { toast } from "sonner"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 const AUTO_REFRESH_MS = 30_000
 
-import { getAccessToken } from "@/lib/apiClient"
+import { getAuthToken, apiClient } from "@/lib/apiClient"
 function jobAuthHeaders(): Record<string, string> {
-  const token = getAccessToken()
+  const token = getAuthToken()
   const h: Record<string, string> = { "Content-Type": "application/json" }
   if (token) h["Authorization"] = `Bearer ${token}`
   return h
@@ -57,6 +61,7 @@ export default function EmployeeJobsPage() {
   const { user: currentUser } = useAuth()
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null)
   const [progressValues, setProgressValues] = useState<Record<string, number>>({})
+  const [error, setError] = useState<{ title: string; message: string } | null>(null)
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null)
 
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -73,8 +78,14 @@ export default function EmployeeJobsPage() {
     isRefreshingRef.current = true
     setIsRefreshing(true)
     try {
+      setError(null)
       await refreshJobs()
       setLastUpdated(new Date())
+    } catch (err: any) {
+      setError({
+        title: "Could not load jobs",
+        message: err.message || "There was a problem connecting to the server. Please try again."
+      })
     } finally {
       setIsRefreshing(false)
       isRefreshingRef.current = false
@@ -107,26 +118,17 @@ export default function EmployeeJobsPage() {
   const handleAcceptJob = async (jobId: string) => {
     setUpdatingJobId(jobId)
     try {
-      const res = await fetch(`${API_URL}/api/jobs/${jobId}/accept`, {
-        method: "POST",
-        credentials: "include",
-        headers: jobAuthHeaders(),
-      })
-      if (res.ok) {
-        showNotification("success", "Job accepted successfully!")
+      await apiClient(`/api/jobs/${jobId}/accept`, { method: "POST" })
+      showNotification("success", "Job accepted successfully!")
+      await refreshJobs()
+      setLastUpdated(new Date())
+    } catch (err: any) {
+      // On 409, refresh immediately so stale job state is cleared
+      if (err.status === 409) {
         await refreshJobs()
         setLastUpdated(new Date())
-      } else {
-        const body = await res.json().catch(() => ({}))
-        // On 409, refresh immediately so stale job state is cleared
-        if (res.status === 409) {
-          await refreshJobs()
-          setLastUpdated(new Date())
-        }
-        showNotification("error", body?.message || "Failed to accept job. Please try again.")
       }
-    } catch {
-      showNotification("error", "Failed to accept job. Please try again.")
+      showNotification("error", err.message || "Failed to accept job. Please try again.")
     } finally {
       setUpdatingJobId(null)
     }
@@ -135,21 +137,12 @@ export default function EmployeeJobsPage() {
   const handleDeclineJob = async (jobId: string) => {
     setUpdatingJobId(jobId)
     try {
-      const res = await fetch(`${API_URL}/api/jobs/${jobId}/decline`, {
-        method: "POST",
-        credentials: "include",
-        headers: jobAuthHeaders(),
-      })
-      if (res.ok) {
-        showNotification("success", "Job declined.")
-        await refreshJobs()
-        setLastUpdated(new Date())
-      } else {
-        const body = await res.json().catch(() => ({}))
-        showNotification("error", body?.message || "Failed to decline job. Please try again.")
-      }
-    } catch {
-      showNotification("error", "Failed to decline job. Please try again.")
+      await apiClient(`/api/jobs/${jobId}/decline`, { method: "POST" })
+      showNotification("success", "Job declined.")
+      await refreshJobs()
+      setLastUpdated(new Date())
+    } catch (err: any) {
+      showNotification("error", err.message || "Failed to decline job. Please try again.")
     } finally {
       setUpdatingJobId(null)
     }
@@ -158,301 +151,248 @@ export default function EmployeeJobsPage() {
   const handleProgressUpdate = async (jobId: string, progress: number) => {
     setUpdatingJobId(jobId)
     try {
-      const res = await fetch(`${API_URL}/api/jobs/${jobId}/progress`, {
+      await apiClient(`/api/jobs/${jobId}/progress`, {
         method: "POST",
-        credentials: "include",
-        headers: jobAuthHeaders(),
         body: JSON.stringify({ progress }),
       })
-      if (res.ok) {
-        showNotification("success", `Progress updated to ${progress}%`)
-        await refreshJobs()
-        setLastUpdated(new Date())
-      } else {
-        const body = await res.json().catch(() => ({}))
-        showNotification("error", body?.message || "Failed to update progress. Please try again.")
-      }
-    } catch {
-      showNotification("error", "Failed to update progress. Please try again.")
+      showNotification("success", `Progress updated to ${progress}%`)
+      await refreshJobs()
+      setLastUpdated(new Date())
+    } catch (err: any) {
+      showNotification("error", err.message || "Failed to update progress. Please try again.")
     } finally {
       setUpdatingJobId(null)
     }
   }
 
-  if (jobs.length === 0) {
+  if (isRefreshing && jobs.length === 0) {
     return (
       <EmployeeLayout>
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
-          <div className="p-8 max-w-7xl mx-auto">
-            <div className="mb-10 flex items-center justify-between">
-              <div>
-                <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
-                  Available Jobs
-                </h1>
-                <p className="text-lg text-gray-600 dark:text-gray-300">Browse and manage your assigned construction projects</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="gap-2">
-                <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-                {isRefreshing ? "Refreshing…" : "Refresh"}
-              </Button>
-            </div>
-            <Card className="border-0 bg-white/60 backdrop-blur-xl shadow-2xl">
-              <CardContent className="flex flex-col items-center justify-center py-20">
-                <Briefcase className="w-20 h-20 text-indigo-400 mb-6" />
-                <p className="text-2xl font-semibold text-gray-700">No jobs available yet</p>
-                <p className="text-base text-gray-500 mt-3">New projects will appear here when assigned</p>
-                <p className="text-xs text-muted-foreground mt-4">Last updated: {formatLastUpdated(lastUpdated)}</p>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="p-8 max-w-7xl mx-auto space-y-10">
+          <div className="h-24 w-1/2 bg-muted/20 animate-pulse rounded-xl" />
+          <SkeletonList count={6} />
         </div>
       </EmployeeLayout>
     )
   }
 
+  if (error && jobs.length === 0) {
+    return (
+      <EmployeeLayout>
+        <div className="p-8 max-w-7xl mx-auto">
+          <ErrorView 
+            title={error.title} 
+            message={error.message} 
+            onRetry={handleRefresh} 
+          />
+        </div>
+      </EmployeeLayout>
+    )
+  }
+
+  if (jobs.length === 0) {
+    return (
+      <EmployeeLayout>
+      <div className="p-8 max-w-7xl mx-auto space-y-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+              Available <span className="text-primary">Assignments</span>
+            </h1>
+            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
+              Review and manage your project load. Only accepted assignments will appear in your active workstream.
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="gap-2 btn-premium h-10 px-4">
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              Sync Directory
+            </Button>
+            {lastUpdated && (
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 flex items-center gap-1.5">
+                <Clock className="h-3 w-3" />
+                Updated {formatLastUpdated(lastUpdated)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <EmptyState 
+          icon={Briefcase}
+          title="No jobs available yet"
+          description="New projects will appear here when they are assigned to you by the owner."
+          actionLabel="Refresh Directory"
+          onAction={handleRefresh}
+        />
+      </div>
+    </EmployeeLayout>
+    )
+  }
+
   return (
     <EmployeeLayout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
-        <div className="p-8 max-w-7xl mx-auto">
-
-          {/* Toast Notification */}
-          {notification && (
-            <div
-              className={cn(
-                "fixed top-4 right-4 z-50 p-4 rounded-xl shadow-2xl backdrop-blur-sm animate-in slide-in-from-right duration-300",
-                notification.type === "success"
-                  ? "bg-green-500/90 text-white border border-green-400"
-                  : "bg-red-500/90 text-white border border-red-400"
-              )}
-            >
-              {notification.message}
-            </div>
-          )}
-
-          {/* Header */}
-          <div className="mb-10 relative">
-            <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-2xl" />
-            <div className="absolute -top-8 right-20 w-32 h-32 bg-gradient-to-br from-indigo-400/20 to-pink-400/20 rounded-full blur-3xl" />
-
-            <div className="relative flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
-                  Available Jobs
-                </h1>
-                <p className="text-lg text-gray-600 dark:text-gray-300">
-                  Browse and manage your assigned construction projects
-                </p>
-              </div>
-
-              <div className="flex flex-col items-end gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="gap-2 bg-white/70 backdrop-blur-sm"
-                >
-                  <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-                  {isRefreshing ? "Refreshing…" : "Refresh"}
-                </Button>
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  Updated: {formatLastUpdated(lastUpdated)}
-                </span>
-              </div>
-            </div>
+      <div className="p-8 max-w-7xl mx-auto space-y-12">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+              Available <span className="text-primary">Assignments</span>
+            </h1>
+            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
+              Review and manage your project load. Only accepted assignments will appear in your active workstream.
+            </p>
           </div>
+          <div className="flex flex-col items-end gap-2">
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="gap-2 btn-premium h-10 px-4">
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              Sync Directory
+            </Button>
+            {lastUpdated && (
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 flex items-center gap-1.5">
+                <Clock className="h-3 w-3" />
+                Updated {formatLastUpdated(lastUpdated)}
+              </span>
+            )}
+          </div>
+        </div>
 
-          {/* Jobs Grid */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {jobs.map((job) => {
-              const status = job.status || "pending"
-              const employeeStatus = job.employee_status || "pending"
-              const progress = progressValues[job.id] ?? (job.progress || 0)
-              const createdDate = job.created_at || job.createdAt
-              const isVisibleToAll = job.visible_to_all || false
-              const assignedEmployees = job.assignedEmployees || []
+        {/* Jobs Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {jobs.map((job) => {
+            const status = job.status || "pending"
+            const employeeStatus = job.employee_status || "pending"
+            const progress = progressValues[job.id] ?? (job.progress || 0)
+            const createdDate = job.created_at || job.createdAt
+            
+            const isPending = (employeeStatus as string) === "pending" || (employeeStatus as string) === "assigned"
+            const isAccepted = employeeStatus === "accepted"
+            const isDeclined = employeeStatus === "declined"
+            const isCompleted = status?.toLowerCase() === "completed"
+            const acceptedByOther = isAccepted && (job as any).assigned_to && String((job as any).assigned_to) !== String(currentUser?.id)
+            const assignedEmployeeName = (job as any).assigned_employee_name
 
-              const isPending = (employeeStatus as string) === "pending" || (employeeStatus as string) === "assigned"
-              const isAccepted = employeeStatus === "accepted"
-              const isDeclined = employeeStatus === "declined"
-              const isCompleted = status?.toLowerCase() === "completed"
-              const assignedEmployeeName = (job as any).assigned_employee_name
-              // Job accepted by someone else — show their name, hide Accept/Decline
-              const acceptedByOther = isAccepted && (job as any).assigned_to && String((job as any).assigned_to) !== String(currentUser?.id)
+            return (
+              <Card
+                key={job.id}
+                className={cn(
+                  "premium-card hover-lift group border-none shadow-sm hover:shadow-xl overflow-hidden",
+                  isDeclined && "opacity-60 grayscale-[0.5]"
+                )}
+              >
+                <div className={cn(
+                  "h-1.5 w-full transition-colors",
+                  isCompleted ? "bg-green-500" : isAccepted ? "bg-primary" : "bg-orange-500"
+                )} />
+                
+                <CardHeader className="p-6 pb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest px-2 py-0">
+                      {status}
+                    </Badge>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                      ID: #{job.id.toString().slice(-4)}
+                    </span>
+                  </div>
+                  <CardTitle className="text-xl font-black tracking-tight group-hover:text-primary transition-colors leading-tight">
+                    {job.title}
+                  </CardTitle>
+                </CardHeader>
 
-              return (
-                <Card
-                  key={job.id}
-                  className={cn(
-                    "group relative overflow-hidden border-0 transition-all duration-500 hover:scale-[1.02]",
-                    isAccepted && "bg-gradient-to-br from-blue-50/80 to-indigo-50/80 backdrop-blur-xl shadow-xl shadow-blue-200/50",
-                    isDeclined && "opacity-60 bg-gradient-to-br from-red-50/60 to-pink-50/60 backdrop-blur-xl",
-                    isPending && "bg-white/80 backdrop-blur-xl shadow-lg hover:shadow-2xl hover:shadow-purple-200/50",
-                    isCompleted && "bg-gradient-to-br from-green-50/80 to-emerald-50/80 backdrop-blur-xl shadow-xl shadow-green-200/50"
+                <CardContent className="p-6 pt-0 space-y-6">
+                  <p className="text-meta line-clamp-2 min-h-[40px]">
+                    {job.description || "Project parameters and execution guidelines not specified."}
+                  </p>
+
+                  {isAccepted && (
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Execution Progress</span>
+                        <span className="text-sm font-black text-primary">{progress}%</span>
+                      </div>
+                      <Progress value={progress} className="h-2" />
+                      {!isCompleted && (
+                        <div className="space-y-4 pt-2">
+                          <Slider
+                            value={[progress]}
+                            onValueChange={(v) => setProgressValues({ ...progressValues, [job.id]: v[0] })}
+                            max={100}
+                            step={5}
+                            disabled={updatingJobId === job.id}
+                          />
+                          {progress !== (job.progress || 0) && (
+                            <Button
+                              size="sm"
+                              className="w-full btn-premium h-9 font-bold"
+                              onClick={() => handleProgressUpdate(job.id, progress)}
+                              disabled={updatingJobId === job.id}
+                            >
+                              Update Status
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
-                >
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-transparent pointer-events-none" />
 
-                  {/* Top color bar */}
-                  <div className={cn(
-                    "h-2 w-full relative",
-                    isCompleted && "bg-gradient-to-r from-green-400 via-green-500 to-emerald-500 shadow-lg shadow-green-500/50",
-                    isAccepted && !isCompleted && "bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 shadow-lg shadow-blue-500/50",
-                    isPending && "bg-gradient-to-r from-yellow-400 via-orange-400 to-amber-500 shadow-lg shadow-yellow-500/50",
-                    isDeclined && "bg-gradient-to-r from-red-400 via-pink-500 to-rose-500 shadow-lg shadow-red-500/50"
-                  )}>
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                  <div className="space-y-3 pt-2 border-t border-dashed border-border/60">
+                    <div className="flex items-center gap-2.5 text-xs font-bold text-muted-foreground/70 uppercase tracking-widest">
+                      <Users className="h-3.5 w-3.5 text-primary" />
+                      {job.visible_to_all ? "Broadcast Group" : "Personal Assignment"}
+                    </div>
+                    <div className="flex items-center gap-2.5 text-xs font-bold text-muted-foreground/70 uppercase tracking-widest">
+                      <Calendar className="h-3.5 w-3.5 text-primary" />
+                      Issued {formatDate(createdDate)}
+                    </div>
                   </div>
 
-                  <CardHeader className="space-y-3 pb-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {getStatusIcon(status)}
-                          <Badge variant={status === "completed" ? "default" : "outline"} className="font-semibold">
-                            {status}
-                          </Badge>
-                          {isAccepted && (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              <ThumbsUp className="w-3 h-3 mr-1" />Accepted
-                            </Badge>
-                          )}
-                          {isDeclined && (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                              <XCircle className="w-3 h-3 mr-1" />Declined
-                            </Badge>
-                          )}
-                        </div>
-                        <CardTitle className="text-xl leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                          {job.title}
-                        </CardTitle>
-                      </div>
+                  {isPending && !acceptedByOther && (
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        className="flex-1 btn-premium h-11 font-black tracking-tight"
+                        onClick={() => handleAcceptJob(job.id)}
+                        disabled={updatingJobId === job.id}
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex-1 h-11 font-bold text-muted-foreground hover:text-red-500 hover:bg-red-50"
+                        onClick={() => handleDeclineJob(job.id)}
+                        disabled={updatingJobId === job.id}
+                      >
+                        Decline
+                      </Button>
                     </div>
-                    <CardDescription className="text-sm line-clamp-3 leading-relaxed">
-                      {job.description || "No description provided"}
-                    </CardDescription>
-                  </CardHeader>
+                  )}
 
-                  <CardContent className="space-y-4">
-                    {/* Progress — accepted jobs only */}
-                    {isAccepted && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium text-muted-foreground">Progress</span>
-                          <span className="font-bold text-foreground">{progress}%</span>
-                        </div>
-                        <Progress value={progress} className="h-2.5 bg-secondary" />
-                        {!isCompleted && (
-                          <div className="space-y-2 pt-2">
-                            <label className="text-xs font-medium text-muted-foreground">Update Progress</label>
-                            <Slider
-                              value={[progress]}
-                              onValueChange={(v) => setProgressValues({ ...progressValues, [job.id]: v[0] })}
-                              max={100}
-                              step={10}
-                              className="cursor-pointer"
-                              disabled={updatingJobId === job.id}
-                            />
-                            <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>0%</span><span>50%</span><span>100%</span>
-                            </div>
-                            {progress !== (job.progress || 0) && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleProgressUpdate(job.id, progress)}
-                                disabled={updatingJobId === job.id}
-                                className="w-full mt-2"
-                              >
-                                {updatingJobId === job.id ? "Updating…" : "Save Progress"}
-                              </Button>
-                            )}
-                          </div>
-                        )}
+                  {acceptedByOther && !isCompleted && (
+                    <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                        {assignedEmployeeName?.[0] || "O"}
                       </div>
-                    )}
-
-                    {/* Job Details */}
-                    <div className="space-y-3 pt-2">
-                      <div className="flex items-start gap-3">
-                        <Users className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-muted-foreground">Team</p>
-                          <p className="text-sm truncate">
-                            {isVisibleToAll
-                              ? "Available to all employees"
-                              : assignedEmployees.length > 0
-                                ? `${assignedEmployees.length} employee${assignedEmployees.length > 1 ? "s" : ""} assigned`
-                                : "Unassigned"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <Calendar className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-muted-foreground">Created</p>
-                          <p className="text-sm">{formatDate(createdDate)}</p>
-                        </div>
-                      </div>
+                      <span className="text-xs font-bold text-primary tracking-tight">
+                        Secured by {assignedEmployeeName || "Team Member"}
+                      </span>
                     </div>
+                  )}
 
-                    {/* Accept / Decline — only show if job is pending AND not taken by someone else */}
-                    {isPending && !acceptedByOther && (
-                      <div className="flex gap-2 mt-4">
-                        <Button
-                          variant="default"
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                          onClick={() => handleAcceptJob(job.id)}
-                          disabled={updatingJobId === job.id}
-                        >
-                          <ThumbsUp className="w-4 h-4 mr-2" />Accept
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="flex-1 text-red-600 hover:bg-red-50 border-red-200"
-                          onClick={() => handleDeclineJob(job.id)}
-                          disabled={updatingJobId === job.id}
-                        >
-                          <ThumbsDown className="w-4 h-4 mr-2" />Decline
-                        </Button>
-                      </div>
-                    )}
+                  {isCompleted && (
+                    <div className="p-4 rounded-2xl bg-green-500/5 border border-green-500/10 flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <span className="text-xs font-bold text-green-600 tracking-tight uppercase tracking-widest">Project Finalized</span>
+                    </div>
+                  )}
 
-                    {/* Accepted by another employee */}
-                    {acceptedByOther && !isCompleted && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-                        <div className="flex items-center gap-2 text-blue-700">
-                          <CheckCircle2 className="w-5 h-5 shrink-0" />
-                          <span className="text-sm font-medium">
-                            Accepted by {assignedEmployeeName || "another employee"}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {isCompleted && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-4">
-                        <div className="flex items-center gap-2 text-green-700">
-                          <CheckCircle2 className="w-5 h-5" />
-                          <span className="text-sm font-medium">Job Completed!</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {isDeclined && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
-                        <div className="flex items-center gap-2 text-red-700">
-                          <XCircle className="w-5 h-5" />
-                          <span className="text-sm font-medium">You declined this job</span>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+                  {isDeclined && (
+                    <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 flex items-center gap-3">
+                      <XCircle className="h-5 w-5 text-red-500" />
+                      <span className="text-xs font-bold text-red-600 tracking-tight uppercase tracking-widest">Assignment Declined</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       </div>
     </EmployeeLayout>
