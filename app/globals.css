@@ -200,9 +200,13 @@
     border-color: color-mix(in oklch, var(--primary) 25%, var(--border));
   }
 
-  /* Metric card accent top border */
+  /* Metric card accent top border — inline expansion of premium-card */
   .metric-card {
-    @apply premium-card relative overflow-hidden;
+    @apply bg-card text-card-foreground rounded-xl border border-border shadow-sm transition-all duration-200 relative overflow-hidden;
+  }
+  .metric-card:hover {
+    @apply shadow-md;
+    border-color: color-mix(in oklch, var(--primary) 25%, var(--border));
   }
   .metric-card::before {
     content: '';
