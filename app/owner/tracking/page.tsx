@@ -173,7 +173,8 @@ export default function EmployeeTrackingPage() {
     // ─── Fetch & update ─────────────────────────────────────────────────────────
     const fetchLocations = useCallback(async () => {
         try {
-            const data: EmployeeLocation[] = await apiClient("/api/location/all")
+            const res = await apiClient("/api/location/all")
+            const data: EmployeeLocation[] = Array.isArray(res) ? res : (res?.data ?? [])
             setEmployees(data)
             setLastRefresh(new Date())
 
