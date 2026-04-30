@@ -54,7 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (refreshRes.ok && isMounted) {
               const data = await refreshRes.json()
               if (data.accessToken) {
-                setTokens(data.accessToken, data.refreshToken || rt || "")
+                // Determine admin status from the new access token's stored user data
+                // (refresh response doesn't include isSuperAdmin, so we derive it from
+                // the current user state which was already loaded from localStorage)
+                const isAdmin = currentUser?.role === 'super_admin'
+                setTokens(data.accessToken, data.refreshToken || rt || "", isAdmin)
                 
                 // Now fetch the fresh user profile to sync company code
                 const meRes = await fetch(`${apiUrl}/api/auth/me`, {

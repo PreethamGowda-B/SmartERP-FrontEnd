@@ -78,7 +78,7 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Signup failed" }))
       logger.error("[v0] Backend signup error:", error)
-      // Return a special object so the caller can show the real error message
+      // Always throw real backend errors — never fall through to mock auth
       throw new Error(error.message || "Signup failed")
     }
 
@@ -93,12 +93,22 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
 
     return userWithMeta
   } catch (error) {
+    // Re-throw any error that has a meaningful message (backend errors, network errors)
+    // Only fall back to mock auth for genuine connection failures (TypeError = network error)
+    const isNetworkError = error instanceof TypeError && 
+      (error.message.includes("fetch") || error.message.includes("network") || error.message.includes("Failed to fetch"))
+
+    if (!isNetworkError) {
+      // This is a real backend error (4xx, validation, etc.) — propagate it
+      throw error
+    }
+
     logger.log(
-      "[v0] Backend unavailable, falling back to mock auth:",
+      "[v0] Backend unreachable, falling back to mock auth:",
       error instanceof Error ? error.message : String(error),
     )
 
-    // Fallback to mock auth if backend is unavailable
+    // Fallback to mock auth only when backend is genuinely unreachable
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     const allMockUsers = getMockUsers()
