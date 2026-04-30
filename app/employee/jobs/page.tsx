@@ -279,7 +279,7 @@ export default function EmployeeJobsPage() {
               const isCompleted = status?.toLowerCase() === "completed"
               const assignedEmployeeName = (job as any).assigned_employee_name
               // Job accepted by someone else — show their name, hide Accept/Decline
-              const acceptedByOther = isAccepted && job.assigned_to && String(job.assigned_to) !== String(currentUser?.id)
+              const acceptedByOther = isAccepted && (job as any).assigned_to && String((job as any).assigned_to) !== String(currentUser?.id)
 
               return (
                 <Card
