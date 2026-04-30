@@ -26,6 +26,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       try {
         const savedJobs = localStorage.getItem("smarterp-jobs")
+        const savedRole = localStorage.getItem("smarterp-jobs-role")
         if (savedJobs) {
           const parsed = JSON.parse(savedJobs)
           // Detect and discard mock/demo data (mock IDs are simple integers like "1","2","3")
@@ -59,6 +60,15 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       if (!user) return
       try {
         logger.log("[v0] Fetching jobs from backend...")
+
+        // Clear cached jobs if the role has changed (e.g. owner cache seen by employee)
+        const cachedRole = localStorage.getItem("smarterp-jobs-role")
+        if (cachedRole && cachedRole !== user.role) {
+          localStorage.removeItem("smarterp-jobs")
+          localStorage.removeItem("smarterp-jobs-role")
+          setJobs([])
+        }
+
         const serverJobs = await apiClient("/api/jobs", { method: "GET" })
         logger.log("[v0] Successfully fetched jobs:", serverJobs)
         if (mounted && Array.isArray(serverJobs)) {
@@ -92,11 +102,13 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
             if (current !== incoming) {
               setJobs(normalized)
               localStorage.setItem("smarterp-jobs", incoming)
+              localStorage.setItem("smarterp-jobs-role", user.role)
             }
           } catch (err) {
             // fallback: set jobs if serialization fails
             setJobs(normalized)
             localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
+            localStorage.setItem("smarterp-jobs-role", user.role)
           }
         }
       } catch (err) {
@@ -278,6 +290,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
         setJobs(normalized)
         localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
+        if (user.role) localStorage.setItem("smarterp-jobs-role", user.role)
       }
     } catch (err) {
       logger.error("[v0] Failed to refresh jobs:", err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err)))

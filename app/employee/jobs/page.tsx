@@ -57,8 +57,26 @@ function formatLastUpdated(date: Date | null) {
 }
 
 export default function EmployeeJobsPage() {
-  const { jobs, refreshJobs } = useJobs()
+  const { jobs: allJobs, refreshJobs } = useJobs()
   const { user: currentUser } = useAuth()
+
+  // Secondary guard: employees should only see jobs assigned to them or visible to all.
+  // The backend already filters this, but stale localStorage cache from an owner session
+  // could leak all-company jobs. This ensures the employee view is always scoped correctly.
+  const jobs = currentUser?.role === 'employee'
+    ? allJobs.filter((job: any) => {
+        const userId = String(currentUser.id || "")
+        const assignedTo = job.assigned_to ? String(job.assigned_to) : null
+        const assignedEmployees = Array.isArray(job.assignedEmployees)
+          ? job.assignedEmployees.map(String)
+          : []
+        return (
+          job.visible_to_all === true ||
+          assignedTo === userId ||
+          assignedEmployees.includes(userId)
+        )
+      })
+    : allJobs
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null)
   const [progressValues, setProgressValues] = useState<Record<string, number>>({})
   const [error, setError] = useState<{ title: string; message: string } | null>(null)

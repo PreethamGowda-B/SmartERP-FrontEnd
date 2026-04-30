@@ -42,14 +42,7 @@ export function CustomerNotificationProvider({ children }: { children: React.Rea
 
   useEffect(() => {
     if (isLoading) return
-    if (!customer) {
-      // Close any open SSE connection when customer logs out
-      if (sseConnection) {
-        sseConnection.close()
-        setSSEConnection(null)
-      }
-      return
-    }
+    if (!customer) return
 
     // Fetch notifications on mount and poll every 30s
     // (Customer portal uses per-job SSE via /api/customer/jobs/:id/events,
