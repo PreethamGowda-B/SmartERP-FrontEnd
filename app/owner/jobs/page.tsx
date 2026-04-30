@@ -295,24 +295,26 @@ export default function OwnerJobsPage() {
             const employeeStatus = job.employee_status || "pending"
             const progress = job.progress || 0
             const isCompleted = job.status?.toLowerCase() === "completed"
+            // Cast to string to handle all possible employee_status values from DB
+            const empStatusStr = String(employeeStatus)
 
             return (
               <Card
                 key={job.id}
                 className={cn(
                   "group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-2",
-                  employeeStatus === "accepted" && "border-green-100",
-                  employeeStatus === "declined" && "border-red-100 opacity-75",
-                  (employeeStatus === "pending" || employeeStatus === "assigned" || !employeeStatus) && "border-yellow-100"
+                  empStatusStr === "accepted" && "border-green-100",
+                  empStatusStr === "declined" && "border-red-100 opacity-75",
+                  (empStatusStr === "pending" || empStatusStr === "assigned" || !empStatusStr) && "border-yellow-100"
                 )}
               >
                 <div
                   className={cn(
                     "h-2 w-full",
                     isCompleted && "bg-green-500",
-                    !isCompleted && employeeStatus === "accepted" && "bg-blue-500",
-                    (employeeStatus === "pending" || employeeStatus === "assigned" || !employeeStatus) && "bg-yellow-500",
-                    employeeStatus === "declined" && "bg-red-500"
+                    !isCompleted && empStatusStr === "accepted" && "bg-blue-500",
+                    (empStatusStr === "pending" || empStatusStr === "assigned" || !empStatusStr) && "bg-yellow-500",
+                    empStatusStr === "declined" && "bg-red-500"
                   )}
                 />
                 <CardHeader className="space-y-3">
