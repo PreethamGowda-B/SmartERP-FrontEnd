@@ -359,7 +359,7 @@ export default function OwnerJobsPage() {
                   )}
 
                   <div className="space-y-2 text-xs text-muted-foreground">
-                    {(job.employee_name || job.employee_email) && (
+                    {((job as any).employee_name || job.employee_email) && (
                       <div className="flex items-center gap-2">
                         <Users className="w-3 h-3" />
                         <span>Assigned to: <span className="font-semibold text-foreground">{(job as any).employee_name || job.employee_email}</span></span>

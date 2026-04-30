@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useJobs } from "@/contexts/job-context"
+import { useAuth } from "@/contexts/auth-context"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -53,6 +54,7 @@ function formatLastUpdated(date: Date | null) {
 
 export default function EmployeeJobsPage() {
   const { jobs, refreshJobs } = useJobs()
+  const { user: currentUser } = useAuth()
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null)
   const [progressValues, setProgressValues] = useState<Record<string, number>>({})
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null)
@@ -275,6 +277,9 @@ export default function EmployeeJobsPage() {
               const isAccepted = employeeStatus === "accepted"
               const isDeclined = employeeStatus === "declined"
               const isCompleted = status?.toLowerCase() === "completed"
+              const assignedEmployeeName = (job as any).assigned_employee_name
+              // Job accepted by someone else — show their name, hide Accept/Decline
+              const acceptedByOther = isAccepted && job.assigned_to && String(job.assigned_to) !== String(currentUser?.id)
 
               return (
                 <Card
@@ -392,8 +397,8 @@ export default function EmployeeJobsPage() {
                       </div>
                     </div>
 
-                    {/* Accept / Decline */}
-                    {isPending && (
+                    {/* Accept / Decline — only show if job is pending AND not taken by someone else */}
+                    {isPending && !acceptedByOther && (
                       <div className="flex gap-2 mt-4">
                         <Button
                           variant="default"
@@ -411,6 +416,18 @@ export default function EmployeeJobsPage() {
                         >
                           <ThumbsDown className="w-4 h-4 mr-2" />Decline
                         </Button>
+                      </div>
+                    )}
+
+                    {/* Accepted by another employee */}
+                    {acceptedByOther && !isCompleted && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+                        <div className="flex items-center gap-2 text-blue-700">
+                          <CheckCircle2 className="w-5 h-5 shrink-0" />
+                          <span className="text-sm font-medium">
+                            Accepted by {assignedEmployeeName || "another employee"}
+                          </span>
+                        </div>
                       </div>
                     )}
 
