@@ -342,7 +342,7 @@ export default function OwnerPayrollPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="deduction" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-red-500">Deduction</Label>
+                        <Label htmlFor="deduction" className="text-[10px] font-bold uppercase tracking-widest text-red-500">Deduction</Label>
                         <Input
                           id="deduction"
                           type="number"

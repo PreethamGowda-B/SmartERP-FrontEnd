@@ -360,8 +360,7 @@ export default function EmployeeJobsPage() {
                     <div className="flex items-center gap-2.5 text-xs font-bold text-muted-foreground/70 uppercase tracking-widest">
                       <Calendar className="h-3.5 w-3.5 text-primary" />
                       Issued {formatDate(createdDate)}
-                    </div>
-                  </div>
+                    </div>                  </div>
 
                   {isPending && !acceptedByOther && (
                     <div className="flex gap-2 pt-2">
@@ -397,14 +396,14 @@ export default function EmployeeJobsPage() {
                   {isCompleted && (
                     <div className="p-4 rounded-2xl bg-green-500/5 border border-green-500/10 flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      <span className="text-xs font-bold text-green-600 tracking-tight uppercase tracking-widest">Project Finalized</span>
+                      <span className="text-xs font-bold text-green-600 uppercase tracking-widest">Project Finalized</span>
                     </div>
                   )}
 
                   {isDeclined && (
                     <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 flex items-center gap-3">
                       <XCircle className="h-5 w-5 text-red-500" />
-                      <span className="text-xs font-bold text-red-600 tracking-tight uppercase tracking-widest">Assignment Declined</span>
+                      <span className="text-xs font-bold text-red-600 uppercase tracking-widest">Assignment Declined</span>
                     </div>
                   )}
                 </CardContent>

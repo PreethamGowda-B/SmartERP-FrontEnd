@@ -330,7 +330,7 @@ export default function EmployeeDashboard() {
               {/* Always show today's attendance status */}
               {todayAttendance?.check_in_time && (
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <div className="p-2 bg-green-500 rounded-full flex-shrink-0">
+                  <div className="p-2 bg-green-500 rounded-full shrink-0">
                     <CheckCircle className="h-4 w-4 text-white" />
                   </div>
                   <div>
@@ -355,7 +355,7 @@ export default function EmployeeDashboard() {
                     className={`flex items-start gap-3 p-3 rounded-lg transition-all duration-300 hover-lift ${notif.read ? "opacity-70" : "bg-accent/5 border-l-2 border-primary"
                       }`}
                   >
-                    <div className={`p-2 rounded-full flex-shrink-0 ${getActivityBg(notif.type)} shadow-sm`}>
+                    <div className={`p-2 rounded-full shrink-0 ${getActivityBg(notif.type)} shadow-sm`}>
                       {getActivityIcon(notif.type)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -364,7 +364,7 @@ export default function EmployeeDashboard() {
                       <p className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground/50 mt-1.5">{formatTimeAgo(notif.created_at)}</p>
                     </div>
                     {!notif.read && (
-                      <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5 shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
+                      <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5 shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
                     )}
                   </div>
                 ))
@@ -426,7 +426,7 @@ export default function EmployeeDashboard() {
                   key={notif.id}
                   className="flex items-start gap-3 p-3 bg-accent/10 rounded-lg hover:bg-accent/20 transition-all duration-300"
                 >
-                  <AlertCircle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="h-4 w-4 text-accent mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{notif.title}</p>
                     <p className="text-xs text-muted-foreground">{notif.message}</p>

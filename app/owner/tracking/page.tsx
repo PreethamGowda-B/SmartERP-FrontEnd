@@ -222,7 +222,7 @@ export default function EmployeeTrackingPage() {
                 {/* ── Header ─────────────────────────────────────────────────────── */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent flex items-center gap-2">
+                        <h1 className="text-3xl font-bold bg-linear-to-r from-primary to-accent bg-clip-text text-transparent flex items-center gap-2">
                             <MapPin className="h-7 w-7 text-primary" />
                             Employee Tracking
                         </h1>
@@ -351,7 +351,7 @@ export default function EmployeeTrackingPage() {
                     <Card className="flex-1 overflow-hidden relative">
                         {/* Empty state overlay */}
                         {!loading && withLocation.length === 0 && (
-                            <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-xl gap-3">
+                            <div className="absolute inset-0 z-500 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-xl gap-3">
                                 <MapPin className="h-12 w-12 text-muted-foreground/30" />
                                 <p className="text-sm text-muted-foreground font-medium">No location data yet</p>
                                 <p className="text-xs text-muted-foreground/70 text-center max-w-xs">
