@@ -152,10 +152,10 @@ export default function OwnerJobsPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
               Job <span className="text-primary">Management</span>
             </h1>
-            <p className="text-sm text-muted-foreground mt-1 font-normal">
+            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
               Monitor project lifecycles, track employee availability, and drive operational excellence.
             </p>
           </div>
@@ -267,103 +267,84 @@ export default function OwnerJobsPage() {
               onAction={handleCreateJob}
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredJobs.map((job) => {
                 const employeeStatus = job.employee_status || "pending"
                 const empStatusStr = String(employeeStatus)
                 const isCompleted = job.status?.toLowerCase() === "completed"
+                const isInProgress = job.status?.toLowerCase() === "in_progress"
                 const displayProgress = isCompleted ? 100 : (job.progress || 0)
 
-                const accentColor = isCompleted
-                  ? "bg-emerald-500"
-                  : empStatusStr === "accepted" ? "bg-primary"
-                  : empStatusStr === "declined" ? "bg-red-400"
-                  : "bg-amber-400"
-
                 return (
-                  <div
+                  <Card
                     key={job.id}
-                    className="group relative bg-card rounded-xl border border-border hover:border-primary/25 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col"
+                    className="premium-card hover-lift group overflow-hidden border-none shadow-sm hover:shadow-xl"
                   >
-                    {/* Accent bar */}
-                    <div className={cn("h-[3px] w-full shrink-0", accentColor)} />
-
-                    <div className="p-5 flex flex-col flex-1 gap-4">
-                      {/* Top row: status badge + actions */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className={cn(
-                            "inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-wide",
-                            isCompleted
-                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
-                              : job.status === "active" || job.status === "in_progress"
-                              ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                              : "bg-muted text-muted-foreground"
-                          )}>
-                            {job.status || "pending"}
-                          </span>
-                          {job.priority && (
-                            <span className={cn(
-                              "inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium capitalize",
-                              job.priority === "high" ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-                              : job.priority === "medium" ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
-                              : "bg-muted text-muted-foreground"
-                            )}>
-                              {job.priority}
-                            </span>
-                          )}
-                        </div>
+                    <div className={cn(
+                      "h-1.5 w-full",
+                      isCompleted ? "bg-green-500" : 
+                      empStatusStr === "accepted" ? "bg-primary" : 
+                      empStatusStr === "declined" ? "bg-red-500" : "bg-yellow-500"
+                    )} />
+                    
+                    <CardHeader className="p-6 pb-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0">
+                          {job.status || "Pending"}
+                        </Badge>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditJob(job)} className="h-7 w-7 rounded-lg hover:bg-primary/8 hover:text-primary">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditJob(job)} className="h-7 w-7 rounded-full hover:bg-primary/10 hover:text-primary">
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteJob(job)} className="h-7 w-7 rounded-lg hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20">
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteJob(job)} className="h-7 w-7 rounded-full hover:bg-red-50 hover:text-red-600">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
-
-                      {/* Title + description */}
-                      <div>
-                        <h3
-                          className="text-sm font-semibold leading-snug text-foreground group-hover:text-primary transition-colors cursor-pointer line-clamp-1"
-                          onClick={() => handleEditJob(job)}
-                        >
-                          {job.title}
-                        </h3>
-                        {job.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed font-normal">
-                            {job.description}
-                          </p>
-                        )}
+                      <CardTitle className="text-xl font-bold leading-tight group-hover:text-primary transition-colors cursor-pointer" onClick={() => handleEditJob(job)}>
+                        {job.title}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-3">
+                        {getEmployeeStatusBadge(employeeStatus)}
+                        <span className="text-meta">ID: {job.id.substring(0, 8)}</span>
                       </div>
+                    </CardHeader>
 
-                      {/* Progress */}
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-medium tracking-wide uppercase text-muted-foreground/50">Progress</span>
-                          <span className="text-xs font-semibold text-primary">{displayProgress}%</span>
+                    <CardContent className="p-6 pt-0 space-y-6">
+                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                        {job.description || "Project parameters and execution details have been formalized for this assignment."}
+                      </p>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-end">
+                          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Execution Progress</span>
+                          <span className="text-sm font-black text-primary">{displayProgress}%</span>
                         </div>
-                        <Progress value={displayProgress} className="h-1.5 rounded-full" />
+                        <Progress value={displayProgress} className="h-2 bg-secondary rounded-full overflow-hidden" />
                       </div>
 
-                      {/* Footer: assignee + deadline */}
-                      <div className="flex items-center justify-between pt-3 border-t border-border/50 mt-auto">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-semibold text-primary shrink-0">
-                            {(job as any).employee_name?.[0]?.toUpperCase() || job.employee_email?.[0]?.toUpperCase() || "?"}
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/40">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Technician</p>
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold">
+                              {(job as any).employee_name?.[0] || job.employee_email?.[0] || "?"}
+                            </div>
+                            <p className="text-xs font-semibold truncate max-w-[100px]">
+                              {(job as any).employee_name || job.employee_email || "Unassigned"}
+                            </p>
                           </div>
-                          <span className="text-xs text-muted-foreground truncate max-w-[110px] font-normal">
-                            {(job as any).employee_name || job.employee_email || "Unassigned"}
-                          </span>
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground font-normal shrink-0">
-                          <Calendar className="h-3 w-3" />
-                          {formatDate(job.deadline).split(',')[0]}
+                        <div className="space-y-1 text-right">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Timeline</p>
+                          <div className="flex items-center justify-end gap-1.5 text-xs font-semibold">
+                            <Calendar className="h-3 w-3 text-primary" />
+                            {formatDate(job.deadline).split(',')[0]}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 )
               })}
             </div>

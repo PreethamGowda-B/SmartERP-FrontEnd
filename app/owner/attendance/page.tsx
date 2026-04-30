@@ -168,41 +168,41 @@ export default function OwnerAttendancePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
           <Card className="premium-card hover-lift-subtle border border-blue-500/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-widest text-muted-foreground/60">Total Staff</CardTitle>
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Total Staff</CardTitle>
               <Users className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold tracking-tight">{Number(summary.total || 0)}</div>
+              <div className="text-3xl font-black tracking-tight">{Number(summary.total || 0)}</div>
             </CardContent>
           </Card>
 
           <Card className="premium-card hover-lift-subtle border border-green-500/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-widest text-muted-foreground/60">Present</CardTitle>
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Present</CardTitle>
               <UserCheck className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold tracking-tight text-green-600">{Number(summary.present || 0)}</div>
+              <div className="text-3xl font-black tracking-tight text-green-600">{Number(summary.present || 0)}</div>
             </CardContent>
           </Card>
 
           <Card className="premium-card hover-lift-subtle border border-red-500/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-widest text-muted-foreground/60">Absent</CardTitle>
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Absent</CardTitle>
               <UserX className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold tracking-tight text-red-600">{Number(summary.absent || 0)}</div>
+              <div className="text-3xl font-black tracking-tight text-red-600">{Number(summary.absent || 0)}</div>
             </CardContent>
           </Card>
 
           <Card className="premium-card hover-lift-subtle border border-orange-500/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium uppercase tracking-widest text-muted-foreground/60">Late Arrivals</CardTitle>
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Late Arrivals</CardTitle>
               <Clock className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold tracking-tight text-orange-600">{Number(summary.late || 0)}</div>
+              <div className="text-3xl font-black tracking-tight text-orange-600">{Number(summary.late || 0)}</div>
             </CardContent>
           </Card>
         </div>
@@ -210,7 +210,7 @@ export default function OwnerAttendancePage() {
         {/* Employee Attendance List */}
         <Card className="premium-card border-none shadow-lg">
           <CardHeader className="pb-4">
-            <CardTitle className="text-sm font-semibold">Today's Attendance Stream</CardTitle>
+            <CardTitle className="text-xl font-black tracking-tight">Today's Attendance Stream</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -232,28 +232,28 @@ export default function OwnerAttendancePage() {
                   >
                     <div className="flex items-center gap-4 mb-4 sm:mb-0">
                       <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
-                        <span className="text-xl font-semibold text-primary">
+                        <span className="text-xl font-black text-primary">
                           {(employee.employee_name || "E").charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-foreground group-hover:text-primary transition-colors leading-none mb-1">{employee.employee_name}</p>
+                        <p className="font-black text-foreground group-hover:text-primary transition-colors leading-none mb-1">{employee.employee_name}</p>
                         <p className="text-xs font-medium text-muted-foreground/70 truncate max-w-[150px]">{employee.employee_email}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-4 sm:gap-8 justify-between sm:justify-end">
                       <div className="text-right">
-                        <p className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground/60 mb-0.5">In</p>
-                        <p className="text-sm font-medium tracking-tight">{formatTime(employee.check_in_time)}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0.5">In</p>
+                        <p className="font-bold text-sm tracking-tight">{formatTime(employee.check_in_time)}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground/60 mb-0.5">Out</p>
-                        <p className="text-sm font-medium tracking-tight">{formatTime(employee.check_out_time)}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0.5">Out</p>
+                        <p className="font-bold text-sm tracking-tight">{formatTime(employee.check_out_time)}</p>
                       </div>
                       <div className="text-right min-w-[60px]">
-                        <p className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground/60 mb-0.5">Total</p>
-                        <p className="text-sm font-medium">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0.5">Total</p>
+                        <p className="font-black text-sm tracking-tighter">
                           {employee.working_hours ? `${Number(employee.working_hours || 0).toFixed(1)}h` : "—"}
                         </p>
                       </div>
