@@ -152,10 +152,10 @@ export default function OwnerJobsPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+            <h1 className="text-2xl font-semibold tracking-tight">
               Job <span className="text-primary">Management</span>
             </h1>
-            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
+            <p className="text-sm text-muted-foreground mt-1 font-normal">
               Monitor project lifecycles, track employee availability, and drive operational excellence.
             </p>
           </div>
@@ -289,7 +289,7 @@ export default function OwnerJobsPage() {
                     
                     <CardHeader className="p-6 pb-4">
                       <div className="flex items-start justify-between mb-2">
-                        <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0">
+                        <Badge variant="secondary" className="text-[10px] font-medium uppercase tracking-wide px-2 py-0">
                           {job.status || "Pending"}
                         </Badge>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -301,7 +301,7 @@ export default function OwnerJobsPage() {
                           </Button>
                         </div>
                       </div>
-                      <CardTitle className="text-xl font-bold leading-tight group-hover:text-primary transition-colors cursor-pointer" onClick={() => handleEditJob(job)}>
+                      <CardTitle className="text-base font-semibold leading-snug group-hover:text-primary transition-colors cursor-pointer" onClick={() => handleEditJob(job)}>
                         {job.title}
                       </CardTitle>
                       <div className="flex items-center gap-2 mt-3">
@@ -317,15 +317,15 @@ export default function OwnerJobsPage() {
 
                       <div className="space-y-3">
                         <div className="flex justify-between items-end">
-                          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Execution Progress</span>
-                          <span className="text-sm font-black text-primary">{displayProgress}%</span>
+                          <span className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground/50">Execution Progress</span>
+                          <span className="text-sm font-semibold text-primary">{displayProgress}%</span>
                         </div>
                         <Progress value={displayProgress} className="h-2 bg-secondary rounded-full overflow-hidden" />
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/40">
                         <div className="space-y-1">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Technician</p>
+                          <p className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground/50">Technician</p>
                           <div className="flex items-center gap-2">
                             <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold">
                               {(job as any).employee_name?.[0] || job.employee_email?.[0] || "?"}
@@ -336,7 +336,7 @@ export default function OwnerJobsPage() {
                           </div>
                         </div>
                         <div className="space-y-1 text-right">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Timeline</p>
+                          <p className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground/50">Timeline</p>
                           <div className="flex items-center justify-end gap-1.5 text-xs font-semibold">
                             <Calendar className="h-3 w-3 text-primary" />
                             {formatDate(job.deadline).split(',')[0]}

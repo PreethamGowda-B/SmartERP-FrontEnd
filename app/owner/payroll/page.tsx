@@ -195,10 +195,10 @@ export default function OwnerPayrollPage() {
       <div className="p-6 space-y-6">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+            <h1 className="text-2xl font-semibold tracking-tight">
               Payroll <span className="text-primary">Console</span>
             </h1>
-            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
+            <p className="text-sm text-muted-foreground mt-1 font-normal">
               Manage financial disbursements, track employee compensation, and maintain historical payroll records.
             </p>
           </div>
@@ -243,7 +243,7 @@ export default function OwnerPayrollPage() {
               <DialogContent className="sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl">
                 <div className="bg-primary p-8 text-white">
                   <DialogHeader>
-                    <DialogTitle className="text-2xl font-black tracking-tight text-white">Create Disbursement</DialogTitle>
+                    <DialogTitle className="text-xl font-semibold text-white">Create Disbursement</DialogTitle>
                     <DialogDescription className="text-primary-foreground/80 font-medium">
                       Authorize a new salary payment for your staff member.
                     </DialogDescription>
@@ -253,7 +253,7 @@ export default function OwnerPayrollPage() {
                 <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-background">
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label htmlFor="employee_email" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Staff Member Email</Label>
+                      <Label htmlFor="employee_email" className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground">Staff Member Email</Label>
                       <Input
                         id="employee_email"
                         type="email"
@@ -267,7 +267,7 @@ export default function OwnerPayrollPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="payroll_month" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Month</Label>
+                        <Label htmlFor="payroll_month" className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground">Month</Label>
                         <Select
                           value={formData.payroll_month.toString()}
                           onValueChange={(value) => setFormData({ ...formData, payroll_month: parseInt(value) })}
@@ -287,7 +287,7 @@ export default function OwnerPayrollPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="payroll_year" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Year</Label>
+                        <Label htmlFor="payroll_year" className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground">Year</Label>
                         <Input
                           id="payroll_year"
                           type="number"
@@ -300,7 +300,7 @@ export default function OwnerPayrollPage() {
                     </div>
 
                     <div className="space-y-1.5 pt-2">
-                      <Label htmlFor="base_salary" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Base Salary (INR)</Label>
+                      <Label htmlFor="base_salary" className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground">Base Salary (INR)</Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">₹</span>
                         <Input
@@ -309,7 +309,7 @@ export default function OwnerPayrollPage() {
                           step="0.01"
                           value={formData.base_salary}
                           onChange={(e) => setFormData({ ...formData, base_salary: e.target.value })}
-                          className="h-12 pl-8 text-lg font-black tracking-tight"
+                          className="h-12 pl-8 text-base font-medium"
                           placeholder="0.00"
                           required
                         />
@@ -318,7 +318,7 @@ export default function OwnerPayrollPage() {
 
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="extra_amount" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Extra</Label>
+                        <Label htmlFor="extra_amount" className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground">Extra</Label>
                         <Input
                           id="extra_amount"
                           type="number"
@@ -330,7 +330,7 @@ export default function OwnerPayrollPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="salary_increment" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Increment</Label>
+                        <Label htmlFor="salary_increment" className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground">Increment</Label>
                         <Input
                           id="salary_increment"
                           type="number"
@@ -342,7 +342,7 @@ export default function OwnerPayrollPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="deduction" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-red-500">Deduction</Label>
+                        <Label htmlFor="deduction" className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground text-red-500">Deduction</Label>
                         <Input
                           id="deduction"
                           type="number"
@@ -357,15 +357,15 @@ export default function OwnerPayrollPage() {
 
                     <div className="p-6 bg-slate-50 dark:bg-zinc-900 rounded-3xl border border-dashed border-border/60">
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Net Disbursement</span>
-                        <span className="text-3xl font-black text-primary tracking-tighter">
+                        <span className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground">Net Disbursement</span>
+                        <span className="text-2xl font-semibold text-primary">
                           ₹{Number(calculateTotal() || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="remarks" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Internal Notes</Label>
+                      <Label htmlFor="remarks" className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground">Internal Notes</Label>
                       <Textarea
                         id="remarks"
                         value={formData.remarks}
@@ -436,7 +436,7 @@ export default function OwnerPayrollPage() {
 
         <div className="space-y-6">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
+            <h2 className="text-base font-semibold flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-primary" />
               Historical Records <span className="text-sm font-bold text-muted-foreground/60 ml-2">({filteredPayrolls.length})</span>
             </h2>
@@ -472,7 +472,7 @@ export default function OwnerPayrollPage() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-xl font-black tracking-tight group-hover:text-primary transition-colors">{payroll.employee_name}</h3>
+                              <h3 className="text-base font-semibold group-hover:text-primary transition-colors">{payroll.employee_name}</h3>
                               <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest px-2 py-0">
                                 {MONTHS[(payroll.payroll_month - 1) % 12]} {payroll.payroll_year}
                               </Badge>
@@ -483,28 +483,28 @@ export default function OwnerPayrollPage() {
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-4">
                           <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Base Salary</p>
-                            <p className="text-sm font-black tracking-tight">₹{Number(payroll.base_salary || 0).toLocaleString('en-IN')}</p>
+                            <p className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground/50">Base Salary</p>
+                            <p className="text-sm font-medium">₹{Number(payroll.base_salary || 0).toLocaleString('en-IN')}</p>
                           </div>
                           <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-green-600/60">Increments</p>
-                            <p className="text-sm font-black tracking-tight text-green-600">+₹{Number((payroll.extra_amount || 0) + (payroll.salary_increment || 0)).toLocaleString('en-IN')}</p>
+                            <p className="text-[10px] font-medium tracking-wider uppercase text-green-600/60">Increments</p>
+                            <p className="text-sm font-medium text-green-600">+₹{Number((payroll.extra_amount || 0) + (payroll.salary_increment || 0)).toLocaleString('en-IN')}</p>
                           </div>
                           <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-red-600/60">Deductions</p>
-                            <p className="text-sm font-black tracking-tight text-red-600">-₹{Number(payroll.deduction || 0).toLocaleString('en-IN')}</p>
+                            <p className="text-[10px] font-medium tracking-wider uppercase text-red-600/60">Deductions</p>
+                            <p className="text-sm font-medium text-red-600">-₹{Number(payroll.deduction || 0).toLocaleString('en-IN')}</p>
                           </div>
                           <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Generated</p>
+                            <p className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground/50">Generated</p>
                             <p className="text-sm font-semibold text-muted-foreground">{new Date(payroll.created_at).toLocaleDateString()}</p>
                           </div>
                         </div>
                       </div>
 
                       <div className="lg:w-64 flex flex-col justify-center items-end border-t lg:border-t-0 lg:border-l border-border/40 pt-6 lg:pt-0 lg:pl-8">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-primary/60 mb-1">Net Disbursement</p>
-                        <div className="text-4xl font-black tracking-tighter text-primary">₹{Number(payroll.total_salary || 0).toLocaleString('en-IN')}</div>
-                        <Button variant="ghost" size="sm" className="mt-4 h-8 text-xs font-bold gap-2 hover:bg-primary/5 hover:text-primary">
+                        <p className="text-[10px] font-medium tracking-widest uppercase text-primary/60 mb-1">Net Disbursement</p>
+                        <div className="text-2xl font-semibold text-primary">₹{Number(payroll.total_salary || 0).toLocaleString('en-IN')}</div>
+                        <Button variant="ghost" size="sm" className="mt-4 h-8 text-xs font-medium gap-2 hover:bg-primary/5 hover:text-primary">
                           <FileText className="h-3.5 w-3.5" />
                           Download Slip
                         </Button>
@@ -513,7 +513,7 @@ export default function OwnerPayrollPage() {
 
                     {payroll.remarks && (
                       <div className="mt-6 p-4 rounded-2xl bg-secondary/30 text-xs font-medium text-muted-foreground leading-relaxed">
-                        <span className="font-black uppercase tracking-widest text-[9px] mr-2 text-muted-foreground/50">Notes:</span> 
+                        <span className="font-medium uppercase tracking-widest text-[9px] mr-2 text-muted-foreground/50">Notes:</span> 
                         {payroll.remarks}
                       </div>
                     )}

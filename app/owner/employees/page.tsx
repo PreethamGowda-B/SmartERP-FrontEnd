@@ -186,10 +186,10 @@ export default function EmployeesPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+            <h1 className="text-2xl font-semibold tracking-tight">
               Employee <span className="text-primary">Directory</span>
             </h1>
-            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
+            <p className="text-sm text-muted-foreground mt-1 font-normal">
               Access staff profiles, manage organizational roles, and monitor workforce distribution.
             </p>
           </div>
@@ -224,8 +224,8 @@ export default function EmployeesPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">{stat.label}</p>
-                    <div className="text-3xl font-black tracking-tight">{stat.value}</div>
+                    <p className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground/50 mb-1">{stat.label}</p>
+                    <div className="text-2xl font-semibold">{stat.value}</div>
                   </div>
                   <div className={cn("p-3 rounded-2xl", stat.bg)}>
                     <stat.icon className={cn("h-6 w-6", stat.color)} />
@@ -293,7 +293,7 @@ export default function EmployeesPage() {
                           )} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <CardTitle className="text-lg font-black tracking-tight truncate group-hover:text-primary transition-colors">
+                          <CardTitle className="text-base font-semibold tracking-tight truncate group-hover:text-primary transition-colors">
                             {employee.name}
                           </CardTitle>
                           <p className="text-meta">{employee.position}</p>
@@ -305,7 +305,7 @@ export default function EmployeesPage() {
                       {isEditing ? (
                         <div className="space-y-4 pt-2 animate-in slide-in-from-top-2 duration-300">
                            <div className="space-y-1.5">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Department</p>
+                            <p className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground/50">Department</p>
                             <Select
                               value={editForm.department}
                               onValueChange={(value) => setEditForm({ ...editForm, department: value })}
@@ -322,7 +322,7 @@ export default function EmployeesPage() {
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                              <div className="space-y-1.5">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Role</p>
+                              <p className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground/50">Role</p>
                               <Select
                                 value={editForm.role}
                                 onValueChange={(value) => setEditForm({ ...editForm, role: value })}
@@ -338,7 +338,7 @@ export default function EmployeesPage() {
                             </div>
                             <div className="space-y-1.5 flex flex-col justify-end">
                               <div className="flex items-center justify-between h-9 px-1">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Active</span>
+                                <span className="text-[10px] font-medium tracking-widest uppercase text-muted-foreground/50">Active</span>
                                 <Switch
                                   checked={editForm.is_active}
                                   onCheckedChange={(checked) => setEditForm({ ...editForm, is_active: checked })}
@@ -359,11 +359,11 @@ export default function EmployeesPage() {
                         <div className="space-y-4 animate-in fade-in duration-500">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Department</p>
+                              <p className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground/50">Department</p>
                               <p className="text-xs font-semibold">{employee.department || "Unassigned"}</p>
                             </div>
                             <div className="space-y-1 text-right">
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Joined</p>
+                              <p className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground/50">Joined</p>
                               <p className="text-xs font-semibold">{employee.created_at ? new Date(employee.created_at).toLocaleDateString('en-IN') : '—'}</p>
                             </div>
                           </div>
