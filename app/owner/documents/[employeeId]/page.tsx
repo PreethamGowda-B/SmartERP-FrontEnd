@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
 import { OwnerLayout } from "@/components/owner-layout"
@@ -78,28 +78,26 @@ export default function EmployeeDocumentsPage() {
   // Preview State
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      // Fetch employee info
-      const employees = await apiClient("/api/documents")
-      const found = employees.find((e: Employee) => e.id === employeeId)
-      if (found) setEmployee(found)
-
-      // Fetch documents
-      const docs = await apiClient(`/api/documents/employee/${employeeId}`)
+      const [docs, emp] = await Promise.all([
+        apiClient(`/api/documents/${employeeId}`),
+        apiClient(`/api/users/${employeeId}`)
+      ])
       setDocuments(Array.isArray(docs) ? docs : [])
-    } catch (err) {
+      setEmployee(emp)
+    } catch (err: any) {
       logger.error("Failed to fetch documents:", err)
       toast.error("Could not load documents")
     } finally {
       setLoading(false)
     }
-  }
+  }, [employeeId])
 
   useEffect(() => {
     fetchData()
-  }, [employeeId])
+  }, [fetchData])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

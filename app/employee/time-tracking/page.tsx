@@ -77,7 +77,7 @@ export default function TimeTrackingPage() {
             fetchTodayAttendance()
             fetchHistory()
         }
-    }, [user])
+    }, [user, fetchTodayAttendance, fetchHistory])
 
     const [isOnline, setIsOnline] = useState(typeof window !== 'undefined' ? navigator.onLine : true)
     const [pendingSync, setPendingSync] = useState(false)

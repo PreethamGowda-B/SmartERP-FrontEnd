@@ -191,7 +191,7 @@ export default function JobDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [jobId, fetchInvoice, fetchMaterials]);
+  }, [jobId, fetchInvoice, fetchMaterials, fetchMessages, fetchReview]);
 
   useEffect(() => {
     if (isAuthenticated) fetchJob();

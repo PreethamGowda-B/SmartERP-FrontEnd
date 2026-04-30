@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, type Variants } from 'framer-motion';
 import {
@@ -53,6 +53,7 @@ export default function CustomerDashboardPage() {
     pending_approval: 0, active: 0, in_progress: 0, completed: 0, sla_breaches: 0, total: 0,
   });
   const [error, setError] = useState<{ title: string; message: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchDashboardData = useCallback(async () => {
     if (!isAuthenticated) return;

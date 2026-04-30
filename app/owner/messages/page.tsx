@@ -135,7 +135,7 @@ export default function OwnerMessagesPage() {
         }
 
         init()
-    }, [])
+    }, [fetchConversations])
 
     // Set up polling for real-time updates
     useEffect(() => {
