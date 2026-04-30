@@ -86,7 +86,7 @@ export function HRSidebar() {
         )}
       >
         {/* Header */}
-        <div className="p-6 border-b border-border flex flex-col gap-4 flex-shrink-0">
+        <div className="p-6 border-b border-border flex flex-col gap-4 shrink-0">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-primary rounded-lg">
               <Building2 className="h-6 w-6 text-primary-foreground" />
@@ -128,7 +128,7 @@ export function HRSidebar() {
         </div>
 
         {/* Footer - user info */}
-        <div className="p-4 border-t border-border flex-shrink-0">
+        <div className="p-4 border-t border-border shrink-0">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
               <span className="text-sm font-medium text-primary-foreground">{user?.name?.charAt(0)}</span>
@@ -152,3 +152,4 @@ export function HRSidebar() {
     </>
   )
 }
+

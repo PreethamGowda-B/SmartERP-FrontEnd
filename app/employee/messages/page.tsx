@@ -1,408 +1,385 @@
 "use client"
 
+/**
+ * /app/employee/messages/page.tsx — WhatsApp-style job-based chat
+ *
+ * Security:
+ *  - Employee can ONLY access chats for jobs where assigned_to = theirId
+ *  - Backend enforces this; frontend shows only what API returns
+ *
+ * Layout:
+ *  - LEFT PANEL:  List of job conversations (customer name, last msg, unread count)
+ *  - RIGHT PANEL: Full message thread for selected job
+ *
+ * Real-time:
+ *  - SSE on customer_job_events:{jobId} for chat_message events
+ *  - Auto-reconnect on disconnect
+ */
+
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { MessageSquare, Send, Loader2, RefreshCw, User, Briefcase, ChevronLeft } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
-import { apiClient } from "@/lib/apiClient"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { Send, MessageSquare, Loader2, ChevronLeft, Clock } from "lucide-react"
+import { getAccessToken } from "@/lib/apiClient"
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-type OwnerMessage = {
-  id: number
-  sender_id: string
-  receiver_id: string
-  message: string
-  read: boolean
-  created_at: string
-  sender_name: string
-  is_mine: boolean
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+
+function authHeaders(): Record<string, string> {
+  const token = getAccessToken()
+  return { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }
 }
 
-type JobMessage = {
-  id: string
-  sender_type: 'customer' | 'employee'
-  sender_id: string
-  sender_name: string
-  message: string
-  created_at: string
-}
-
-type JobConversation = {
+interface Conversation {
   job_id: string
   job_title: string
   job_status: string
-  customer_id: string
   customer_name: string
   customer_email: string
   last_message: string | null
   last_message_time: string | null
   total_messages: number
+  unread_count?: number
 }
 
-type Owner = { id: string; name: string; email: string }
+interface Message {
+  id: string
+  job_id?: string
+  sender_type: "customer" | "employee"
+  sender_id: string
+  sender_name: string
+  message: string
+  created_at: string
+}
 
-type ChatType = 'owner' | 'job'
-type SelectedChat = { type: 'owner'; owner: Owner } | { type: 'job'; conv: JobConversation }
+function formatTime(iso?: string | null) {
+  if (!iso) return ""
+  const d = new Date(iso)
+  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+}
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function formatTime(ts: string) {
-  const d = new Date(ts)
-  const now = new Date()
-  const diff = Math.floor((now.getTime() - d.getTime()) / 60000)
-  if (diff < 1) return "Just now"
-  if (diff < 60) return `${diff}m ago`
-  if (diff < 1440) return `${Math.floor(diff / 60)}h ago`
+function formatDate(iso?: string | null) {
+  if (!iso) return ""
+  const d = new Date(iso)
+  const today = new Date()
+  if (d.toDateString() === today.toDateString()) return formatTime(iso)
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
 }
 
-function initials(name?: string) {
-  if (!name) return "?"
-  return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
-}
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function EmployeeMessagesPage() {
-  const [owner, setOwner] = useState<Owner | null>(null)
-  const [ownerMessages, setOwnerMessages] = useState<OwnerMessage[]>([])
-  const [jobConversations, setJobConversations] = useState<JobConversation[]>([])
-  const [jobMessages, setJobMessages] = useState<JobMessage[]>([])
-  const [selected, setSelected] = useState<SelectedChat | null>(null)
-  const [newMessage, setNewMessage] = useState("")
-  const [loading, setLoading] = useState(true)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [selectedJob, setSelectedJob] = useState<Conversation | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [messageText, setMessageText] = useState("")
   const [sending, setSending] = useState(false)
+  const [loadingConvs, setLoadingConvs] = useState(true)
+  const [loadingMsgs, setLoadingMsgs] = useState(false)
   const [mobileShowChat, setMobileShowChat] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const pollRef = useRef<NodeJS.Timeout | null>(null)
+  const sseRef = useRef<EventSource | null>(null)
+  const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const scrollToBottom = () => {
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
-  }
-
-  // ── Load owner + job conversations ─────────────────────────────────────────
-  const loadSidebar = useCallback(async () => {
+  // ── Fetch Conversations ────────────────────────────────────────────────────
+  const fetchConversations = useCallback(async () => {
     try {
-      const [ownerData, jobConvData] = await Promise.allSettled([
-        apiClient("/api/messages/owner"),
-        apiClient("/api/messages/job-conversations"),
-      ])
-      if (ownerData.status === "fulfilled") setOwner(ownerData.value)
-      if (jobConvData.status === "fulfilled") setJobConversations(Array.isArray(jobConvData.value) ? jobConvData.value : [])
-    } catch {}
-  }, [])
-
-  // ── Load messages for selected chat ────────────────────────────────────────
-  const loadMessages = useCallback(async (chat: SelectedChat) => {
-    try {
-      if (chat.type === "owner") {
-        const data = await apiClient(`/api/messages/conversation/${chat.owner.id}`)
-        setOwnerMessages(Array.isArray(data) ? data : [])
-        // Mark as read
-        apiClient(`/api/messages/conversation/${chat.owner.id}/read`, { method: "PATCH" }).catch(() => {})
-      } else {
-        const data = await apiClient(`/api/messages/job/${chat.conv.job_id}`)
-        setJobMessages(Array.isArray(data) ? data : [])
-      }
-      scrollToBottom()
-    } catch {}
-  }, [])
-
-  // ── Init ────────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    (async () => {
-      setLoading(true)
-      await loadSidebar()
-      setLoading(false)
-    })()
-  }, [loadSidebar])
-
-  // ── Auto-select first conversation ─────────────────────────────────────────
-  useEffect(() => {
-    if (!selected && owner && !loading) {
-      const chat: SelectedChat = { type: "owner", owner }
-      setSelected(chat)
-      loadMessages(chat)
+      const res = await fetch(`${API_URL}/api/messages/job-conversations`, {
+        credentials: "include", headers: authHeaders(),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setConversations(Array.isArray(data) ? data : data?.data ?? [])
+    } catch {
+      // keep existing list
+    } finally {
+      setLoadingConvs(false)
     }
-  }, [owner, loading, selected, loadMessages])
+  }, [])
 
-  // ── Polling ─────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!selected) return
-    if (pollRef.current) clearInterval(pollRef.current)
-    pollRef.current = setInterval(() => loadMessages(selected), 5000)
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
-  }, [selected, loadMessages])
+  // ── Fetch Messages for a Job ───────────────────────────────────────────────
+  const fetchMessages = useCallback(async (jobId: string) => {
+    setLoadingMsgs(true)
+    try {
+      const res = await fetch(`${API_URL}/api/messages/job/${jobId}`, {
+        credentials: "include", headers: authHeaders(),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setMessages(Array.isArray(data) ? data : data?.data ?? [])
+    } catch {
+      setMessages([])
+    } finally {
+      setLoadingMsgs(false)
+    }
+  }, [])
 
-  // ── Select chat ─────────────────────────────────────────────────────────────
-  const selectChat = (chat: SelectedChat) => {
-    setSelected(chat)
-    setNewMessage("")
-    loadMessages(chat)
+  // ── SSE Connection with Auto-Reconnect ────────────────────────────────────
+  const connectSSE = useCallback((jobId: string) => {
+    if (sseRef.current) {
+      sseRef.current.close()
+      sseRef.current = null
+    }
+    if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current)
+
+    const token = getAccessToken()
+    const url = `${API_URL}/api/customer/jobs/${jobId}/events${token ? `?token=${token}` : ""}`
+    const source = new EventSource(url, { withCredentials: true })
+    sseRef.current = source
+
+    source.onmessage = (e) => {
+      try {
+        const event = JSON.parse(e.data)
+        if (event.type === "chat_message") {
+          const newMsg: Message = event.message
+          setMessages(prev => {
+            if (prev.some(m => m.id === newMsg.id)) return prev
+            return [...prev, newMsg]
+          })
+          // Update conversation list's last message preview
+          setConversations(prev => prev.map(c =>
+            c.job_id === jobId
+              ? { ...c, last_message: newMsg.message, last_message_time: newMsg.created_at }
+              : c
+          ))
+        }
+      } catch { }
+    }
+
+    source.onerror = () => {
+      source.close()
+      sseRef.current = null
+      // Auto-reconnect after 3s
+      reconnectTimeout.current = setTimeout(() => connectSSE(jobId), 3000)
+    }
+  }, [])
+
+  // On job select: load messages + connect SSE
+  const selectJob = useCallback((conv: Conversation) => {
+    setSelectedJob(conv)
     setMobileShowChat(true)
-  }
+    fetchMessages(conv.job_id)
+    connectSSE(conv.job_id)
+    // Clear unread for this conversation locally
+    setConversations(prev => prev.map(c =>
+      c.job_id === conv.job_id ? { ...c, unread_count: 0 } : c
+    ))
+  }, [fetchMessages, connectSSE])
 
-  // ── Send message ─────────────────────────────────────────────────────────────
-  const handleSend = async () => {
-    if (!newMessage.trim() || !selected || sending) return
+  // Cleanup SSE on unmount or job change
+  useEffect(() => {
+    return () => {
+      sseRef.current?.close()
+      if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current)
+    }
+  }, [])
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  // Initial load
+  useEffect(() => {
+    fetchConversations()
+    const id = setInterval(fetchConversations, 30_000)
+    return () => clearInterval(id)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Send Message ──────────────────────────────────────────────────────────
+  const sendMessage = async () => {
+    if (!selectedJob || !messageText.trim() || sending) return
+    const text = messageText.trim()
+    setMessageText("")
     setSending(true)
     try {
-      if (selected.type === "owner") {
-        await apiClient("/api/messages", {
-          method: "POST",
-          body: JSON.stringify({ receiver_id: selected.owner.id, message: newMessage.trim() }),
-        })
-      } else {
-        await apiClient(`/api/messages/job/${selected.conv.job_id}`, {
-          method: "POST",
-          body: JSON.stringify({ message: newMessage.trim() }),
-        })
+      const res = await fetch(`${API_URL}/api/messages/job/${selectedJob.job_id}`, {
+        method: "POST",
+        credentials: "include",
+        headers: authHeaders(),
+        body: JSON.stringify({ message: text }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const newMsg: Message = data?.data ?? data
+        setMessages(prev => [...prev, newMsg])
+        setConversations(prev => prev.map(c =>
+          c.job_id === selectedJob.job_id
+            ? { ...c, last_message: text, last_message_time: new Date().toISOString() }
+            : c
+        ))
       }
-      setNewMessage("")
-      await loadMessages(selected)
-      await loadSidebar()
-    } catch {
-      alert("Failed to send message")
-    } finally {
-      setSending(false)
-    }
+    } catch { }
+    finally { setSending(false) }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() }
-  }
-
-  // ── Render ───────────────────────────────────────────────────────────────────
-  const totalConversations = (owner ? 1 : 0) + jobConversations.length
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <EmployeeLayout>
-      <div className="h-[calc(100vh-64px)] flex flex-col">
-        {/* Header */}
-        <div className="px-6 py-4 border-b flex items-center justify-between shrink-0">
-          <div>
-            <h1 className="text-xl font-bold">Messages</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{totalConversations} conversation{totalConversations !== 1 ? "s" : ""}</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={loadSidebar} className="gap-2">
-            <RefreshCw className="h-3.5 w-3.5" />Refresh
-          </Button>
-        </div>
+      <div className="h-[calc(100vh-4rem)] flex overflow-hidden bg-gray-50 dark:bg-gray-900">
 
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        {/* LEFT: Conversation List */}
+        <div className={cn(
+          "w-full md:w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col",
+          mobileShowChat && "hidden md:flex"
+        )}>
+          <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Messages</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Job conversations</p>
           </div>
-        ) : (
-          <div className="flex-1 flex overflow-hidden">
-            {/* ── Left panel: conversation list ─────────────────────────────── */}
-            <div className={cn(
-              "w-full sm:w-80 border-r flex flex-col shrink-0 overflow-y-auto",
-              mobileShowChat && "hidden sm:flex"
-            )}>
-              {/* Owner chat */}
-              {owner && (
+
+          <div className="flex-1 overflow-y-auto">
+            {loadingConvs ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+              </div>
+            ) : conversations.length === 0 ? (
+              <div className="text-center py-16 px-4">
+                <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 font-medium">No conversations yet</p>
+                <p className="text-gray-400 text-sm mt-1">Chats appear when a customer messages on your assigned jobs</p>
+              </div>
+            ) : (
+              conversations.map((conv) => (
                 <button
-                  onClick={() => selectChat({ type: "owner", owner })}
+                  key={conv.job_id}
+                  onClick={() => selectJob(conv)}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3.5 text-left hover:bg-muted/50 transition-colors border-b",
-                    selected?.type === "owner" && "bg-primary/5 border-l-2 border-l-primary"
+                    "w-full text-left p-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors",
+                    selectedJob?.job_id === conv.job_id && "bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-l-indigo-500"
                   )}
                 >
-                  <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
-                      {initials(owner.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-sm truncate">{owner.name}</span>
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary">Owner</Badge>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                          {conv.customer_name || "Customer"}
+                        </span>
+                        {conv.unread_count && conv.unread_count > 0 ? (
+                          <span className="bg-indigo-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                            {conv.unread_count}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-gray-500 truncate mt-0.5">
+                        {conv.job_title}
+                      </p>
+                      {conv.last_message && (
+                        <p className="text-xs text-gray-400 truncate mt-1">{conv.last_message}</p>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {ownerMessages.length > 0
-                        ? ownerMessages[ownerMessages.length - 1]?.message
-                        : "Start a conversation"}
-                    </p>
+                    {conv.last_message_time && (
+                      <span className="text-xs text-gray-400 shrink-0 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatDate(conv.last_message_time)}
+                      </span>
+                    )}
                   </div>
                 </button>
-              )}
-
-              {/* Job chats */}
-              {jobConversations.length > 0 && (
-                <div>
-                  <div className="px-4 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30">
-                    Customer Chats
-                  </div>
-                  {jobConversations.map(conv => (
-                    <button
-                      key={conv.job_id}
-                      onClick={() => selectChat({ type: "job", conv })}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-muted/50 transition-colors border-b",
-                        selected?.type === "job" && selected.conv.job_id === conv.job_id && "bg-indigo-50/50 border-l-2 border-l-indigo-500"
-                      )}
-                    >
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                        <span className="text-indigo-700 font-semibold text-sm">{initials(conv.customer_name)}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-sm truncate">{conv.customer_name || "Customer"}</span>
-                          {conv.last_message_time && (
-                            <span className="text-[10px] text-muted-foreground shrink-0">{formatTime(conv.last_message_time)}</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
-                          <span className="text-indigo-600 font-medium">{conv.job_title}</span>
-                          {conv.last_message && ` · ${conv.last_message}`}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {totalConversations === 0 && (
-                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
-                  <MessageSquare className="h-10 w-10 mb-3 opacity-30" />
-                  <p className="font-medium">No conversations yet</p>
-                  <p className="text-xs mt-1">Messages from customers and owners will appear here</p>
-                </div>
-              )}
-            </div>
-
-            {/* ── Right panel: chat window ──────────────────────────────────── */}
-            <div className={cn(
-              "flex-1 flex flex-col overflow-hidden",
-              !mobileShowChat && "hidden sm:flex"
-            )}>
-              {!selected ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground p-8">
-                  <MessageSquare className="h-12 w-12 mb-4 opacity-30" />
-                  <p className="font-medium">Select a conversation</p>
-                  <p className="text-sm mt-1">Choose a chat from the left panel</p>
-                </div>
-              ) : (
-                <>
-                  {/* Chat header */}
-                  <div className="px-4 py-3 border-b flex items-center gap-3 shrink-0 bg-background">
-                    <button
-                      className="sm:hidden p-1 rounded-lg hover:bg-muted transition-colors"
-                      onClick={() => setMobileShowChat(false)}
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    <Avatar className="h-9 w-9 shrink-0">
-                      <AvatarFallback className={cn(
-                        "font-semibold text-sm",
-                        selected.type === "owner" ? "bg-primary/10 text-primary" : "bg-indigo-100 text-indigo-700"
-                      )}>
-                        {selected.type === "owner" ? initials(selected.owner.name) : initials(selected.conv.customer_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">
-                        {selected.type === "owner" ? selected.owner.name : (selected.conv.customer_name || "Customer")}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {selected.type === "owner" ? "Owner" : selected.conv.job_title}
-                      </p>
-                    </div>
-                    {selected.type === "job" && (
-                      <Badge variant="outline" className={cn(
-                        "text-[10px] shrink-0",
-                        selected.conv.job_status === "completed" ? "border-green-300 text-green-700" : "border-indigo-300 text-indigo-700"
-                      )}>
-                        {selected.conv.job_status}
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Messages */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    {selected.type === "owner" ? (
-                      ownerMessages.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                          <MessageSquare className="h-10 w-10 mb-3 opacity-30" />
-                          <p>No messages yet</p>
-                          <p className="text-xs mt-1">Start a conversation with {owner?.name}</p>
-                        </div>
-                      ) : (
-                        ownerMessages.map(msg => (
-                          <div key={msg.id} className={`flex ${msg.is_mine ? "justify-end" : "justify-start"}`}>
-                            <div className={cn(
-                              "rounded-2xl px-4 py-2.5 max-w-[72%]",
-                              msg.is_mine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm"
-                            )}>
-                              <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
-                              <p className={cn("text-[10px] mt-1", msg.is_mine ? "opacity-70 text-right" : "text-muted-foreground")}>
-                                {formatTime(msg.created_at)}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      )
-                    ) : (
-                      jobMessages.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                          <Briefcase className="h-10 w-10 mb-3 opacity-30" />
-                          <p>No messages yet</p>
-                          <p className="text-xs mt-1">Start chatting with the customer</p>
-                        </div>
-                      ) : (
-                        jobMessages.map(msg => {
-                          const isMine = msg.sender_type === "employee"
-                          return (
-                            <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
-                              <div className={cn(
-                                "rounded-2xl px-4 py-2.5 max-w-[72%]",
-                                isMine ? "bg-indigo-600 text-white rounded-br-sm" : "bg-white border border-gray-200 text-gray-900 rounded-bl-sm shadow-sm"
-                              )}>
-                                {!isMine && (
-                                  <p className="text-[10px] font-semibold text-indigo-600 mb-0.5">{msg.sender_name}</p>
-                                )}
-                                <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
-                                <p className={cn("text-[10px] mt-1", isMine ? "text-indigo-200 text-right" : "text-gray-400")}>
-                                  {formatTime(msg.created_at)}
-                                </p>
-                              </div>
-                            </div>
-                          )
-                        })
-                      )
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-
-                  {/* Input */}
-                  <div className="border-t p-4 shrink-0 bg-background">
-                    <div className="flex gap-2">
-                      <Textarea
-                        placeholder="Type a message..."
-                        value={newMessage}
-                        onChange={e => setNewMessage(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        className="flex-1 min-h-[40px] max-h-[120px] resize-none"
-                        disabled={sending}
-                      />
-                      <Button
-                        size="icon"
-                        onClick={handleSend}
-                        disabled={!newMessage.trim() || sending}
-                        className={selected.type === "job" ? "bg-indigo-600 hover:bg-indigo-700" : ""}
-                      >
-                        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+              ))
+            )}
           </div>
-        )}
+        </div>
+
+        {/* RIGHT: Chat Panel */}
+        <div className={cn(
+          "flex-1 flex flex-col",
+          !mobileShowChat && "hidden md:flex"
+        )}>
+          {!selectedJob ? (
+            <div className="flex-1 flex items-center justify-center text-center p-8">
+              <div>
+                <MessageSquare className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                <p className="text-gray-500 font-medium">Select a conversation to start chatting</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Chat Header */}
+              <div className="flex items-center gap-3 p-4 border-b bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                <Button
+                  variant="ghost" size="sm"
+                  className="md:hidden"
+                  onClick={() => setMobileShowChat(false)}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-sm">
+                  {(selectedJob.customer_name || "C").charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {selectedJob.customer_name || "Customer"}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{selectedJob.job_title}</p>
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900">
+                {loadingMsgs ? (
+                  <div className="flex justify-center pt-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400 text-sm">
+                    No messages yet — say hello!
+                  </div>
+                ) : (
+                  messages.map((msg) => {
+                    const isMine = msg.sender_type === "employee"
+                    return (
+                      <div key={msg.id} className={cn("flex", isMine ? "justify-end" : "justify-start")}>
+                        <div className={cn(
+                          "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-sm",
+                          isMine
+                            ? "bg-indigo-600 text-white rounded-br-sm"
+                            : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-sm border border-gray-100 dark:border-gray-600"
+                        )}>
+                          {!isMine && (
+                            <p className="text-xs font-semibold text-indigo-500 mb-1">{msg.sender_name}</p>
+                          )}
+                          <p className="leading-relaxed">{msg.message}</p>
+                          <p className={cn("text-xs mt-1", isMine ? "text-indigo-200" : "text-gray-400")}>
+                            {formatTime(msg.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input */}
+              <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                <form
+                  className="flex gap-2"
+                  onSubmit={(e) => { e.preventDefault(); sendMessage() }}
+                >
+                  <Input
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    placeholder="Type a message…"
+                    disabled={sending}
+                    className="flex-1 rounded-full bg-gray-100 dark:bg-gray-700 border-0"
+                    maxLength={2000}
+                  />
+                  <Button
+                    type="submit"
+                    size="icon"
+                    className="rounded-full bg-indigo-600 hover:bg-indigo-700 shrink-0"
+                    disabled={!messageText.trim() || sending}
+                  >
+                    {sending
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Send className="w-4 h-4" />
+                    }
+                  </Button>
+                </form>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </EmployeeLayout>
   )

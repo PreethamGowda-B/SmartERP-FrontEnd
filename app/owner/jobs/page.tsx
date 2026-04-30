@@ -142,7 +142,7 @@ export default function OwnerJobsPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold bg-linear-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               Job Management
             </h1>
             <p className="text-muted-foreground mt-1">Manage projects and track employee responses</p>
