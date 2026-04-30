@@ -102,6 +102,7 @@ export default function EmployeeMessagesPage() {
                 ...c, 
                 last_message: latestNotif.message, 
                 last_message_time: latestNotif.created_at,
+                // Low FIX: refetch unread count from API rather than incrementing optimistically
                 unread_count: selectedJob?.job_id === jobId ? 0 : (c.unread_count || 0) + 1
               }
             : c
@@ -112,17 +113,22 @@ export default function EmployeeMessagesPage() {
         })
       })
 
-      // If this is the currently open chat, the separate SSE will handle message insertion
-      // But we should still clear the unread count in the DB for this job
+      // If a new notification came for a job not currently open, refresh conversation list
+      // to get accurate unread_count from the DB
+      if (selectedJob?.job_id !== jobId) {
+        fetchConversations()
+      }
+
+      // If this is the currently open chat, mark as read by refetching
       if (selectedJob?.job_id === jobId) {
         fetch(`${API_URL}/api/messages/job/${jobId}`, {
-          method: "GET", // This endpoint marks as read in backend
+          method: "GET", 
           credentials: "include", 
           headers: authHeaders(),
         }).catch(() => {})
       }
     }
-  }, [notifications])
+  }, [notifications, selectedJob])
 
   // ── Fetch Conversations ────────────────────────────────────────────────────
   const fetchConversations = useCallback(async () => {
@@ -251,8 +257,16 @@ export default function EmployeeMessagesPage() {
             ? { ...c, last_message: text, last_message_time: new Date().toISOString() }
             : c
         ))
+      } else {
+        // Low FIX: Show toast on failure instead of silently swallowing the error
+        setMessageText(text) // Restore typed message so user can retry
+        toast.error("Message failed to send. Please try again.")
       }
-    } catch { }
+    } catch {
+      // Low FIX: Network failure toast
+      setMessageText(text)
+      toast.error("Message failed to send. Check your connection.")
+    }
     finally { setSending(false) }
   }
 

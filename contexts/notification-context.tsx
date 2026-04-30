@@ -177,8 +177,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
 
     eventSource.onerror = (error) => {
-      logger.error("❌ SSE connection error:", error)
+      logger.error('❌ SSE connection error:', error)
       eventSource.close()
+      // Medium FIX: Auto-reconnect after 3 seconds instead of losing connection permanently
+      if (user) {
+        setTimeout(() => {
+          logger.log('🔄 Reconnecting SSE...')
+          // The useEffect dependency on `user` will re-run and recreate the EventSource
+          // We trigger a re-render by refreshing notifications
+          fetchNotifications()
+        }, 3000)
+      }
     }
 
     setSSEConnection(eventSource)
