@@ -293,10 +293,16 @@ export default function OwnerJobsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredJobs.map((job) => {
             const employeeStatus = job.employee_status || "pending"
-            const progress = job.progress || 0
-            const isCompleted = job.status?.toLowerCase() === "completed"
-            // Cast to string to handle all possible employee_status values from DB
             const empStatusStr = String(employeeStatus)
+            const isCompleted = job.status?.toLowerCase() === "completed"
+            const isInProgress = job.status?.toLowerCase() === "in_progress"
+            
+            // Part 6 — Progress Bar Fix: Strict status-based rules
+            const displayProgress = 
+              isCompleted ? 100 :
+              isInProgress ? (job.progress || 0) :
+              job.status === 'open' ? 0 :
+              (job.progress || 0);
 
             return (
               <Card
@@ -344,13 +350,13 @@ export default function OwnerJobsPage() {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  {employeeStatus === "accepted" && (
+                  {(empStatusStr === "accepted" || isCompleted || isInProgress) && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="font-medium">Progress</span>
-                        <span className="font-bold">{progress}%</span>
+                        <span className="font-bold">{displayProgress}%</span>
                       </div>
-                      <Progress value={progress} className="h-2.5" />
+                      <Progress value={displayProgress} className="h-2.5" />
                       {isCompleted && (
                         <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 p-2 rounded">
                           <CheckCircle2 className="w-4 h-4" />
@@ -361,16 +367,25 @@ export default function OwnerJobsPage() {
                   )}
 
                   <div className="space-y-2 text-xs text-muted-foreground">
-                    {((job as any).employee_name || job.employee_email) && (
+                    {!job.assigned_to ? (
                       <div className="flex items-center gap-2">
                         <Users className="w-3 h-3" />
-                        <span>Assigned to: <span className="font-semibold text-foreground">{(job as any).employee_name || job.employee_email}</span></span>
+                        <span>
+                          {empStatusStr === 'assigned' ? 'Waiting for technician' : 'Not Assigned Yet'}
+                        </span>
                       </div>
-                    )}
-                    {job.employee_email && (job as any).employee_name && (
-                      <div className="flex items-center gap-2 pl-5">
-                        <span className="text-muted-foreground/70">{job.employee_email}</span>
-                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Users className="w-3 h-3" />
+                          <span>Assigned to: <span className="font-semibold text-foreground">{(job as any).employee_name || job.employee_email}</span></span>
+                        </div>
+                        {job.employee_email && (job as any).employee_name && (
+                          <div className="flex items-center gap-2 pl-5">
+                            <span className="text-muted-foreground/70">{job.employee_email}</span>
+                          </div>
+                        )}
+                      </>
                     )}
                     {job.accepted_at && (
                       <div className="flex items-center gap-2 text-green-700">

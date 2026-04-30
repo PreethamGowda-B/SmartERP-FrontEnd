@@ -4,16 +4,16 @@ export interface Job {
   title: string
   client: string
   location: string
-  status: "active" | "completed" | "pending" | "cancelled"
+  status: "active" | "completed" | "pending" | "cancelled" | "open" | "in_progress" | "closed"
   startDate: string
   endDate: string
   budget: number
   spent: number
   assignedEmployees: string[]
   description: string
-  priority: "low" | "medium" | "high"
+  priority: "low" | "medium" | "high" | "urgent"
   // New employee tracking fields
-  employee_status?: "pending" | "accepted" | "declined"
+  employee_status?: "pending" | "accepted" | "declined" | "assigned" | "arrived" | "completed"
   progress?: number
   accepted_at?: string
   declined_at?: string
@@ -23,6 +23,9 @@ export interface Job {
   visible_to_all?: boolean
   employee_email?: string
   deadline?: string
+  assigned_to?: string | null
+  source?: string
+  approval_status?: string
 }
 
 export interface Employee {
