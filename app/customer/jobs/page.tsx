@@ -10,6 +10,8 @@ import { LoadingSkeleton } from '@/components/customer/ui/LoadingSkeleton';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import customerApi from '@/lib/customerApi';
 import type { Job, JobListResponse, ApprovalStatus, JobStatus } from '@/lib/customerTypes';
+import { ErrorView } from "@/components/ui/error-view"
+import { SkeletonList } from "@/components/ui/skeleton-card"
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'all',              label: 'All Statuses' },
@@ -40,6 +42,7 @@ export default function AllJobsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [error, setError] = useState<{ title: string; message: string } | null>(null);
 
   const LIMIT = 20;
 
@@ -50,16 +53,21 @@ export default function AllJobsPage() {
   const fetchJobs = useCallback(async (p = 1, refresh = false) => {
     if (refresh) setIsRefreshing(true);
     else setIsLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams({ page: String(p), limit: String(LIMIT) });
       const res = await customerApi.get<{ success: boolean; data: JobListResponse }>(
         `/api/customer/jobs?${params}`
       );
       const data = res.data.data ?? (res.data as any);
-      setJobs(data.jobs ?? []);
-      setTotal(data.total ?? 0);
+      setJobs(Array.isArray(data.jobs) ? data.jobs : []);
+      setTotal(Number(data.total || 0));
       setPage(p);
-    } catch {
+    } catch (err: any) {
+      setError({
+        title: "Something went wrong",
+        message: err.message || "Failed to load your service requests. Please check your connection."
+      });
       setJobs([]);
     } finally {
       setIsLoading(false);
@@ -75,9 +83,9 @@ export default function AllJobsPage() {
   if (!isAuthenticated) return null;
 
   // Client-side filter (backend returns all, we filter locally for instant UX)
-  const filtered = jobs.filter(j => {
+  const filtered = (Array.isArray(jobs) ? jobs : []).filter(j => {
     const q = search.toLowerCase();
-    const matchSearch = !q || j.title.toLowerCase().includes(q) || (j.description || '').toLowerCase().includes(q);
+    const matchSearch = !q || (j.title || '').toLowerCase().includes(q) || (j.description || '').toLowerCase().includes(q);
     const matchStatus = statusFilter === 'all' ||
       (statusFilter === 'pending_approval' ? j.approval_status === 'pending_approval' : j.status === statusFilter);
     const matchPriority = priorityFilter === 'all' || j.priority === priorityFilter;
@@ -133,9 +141,13 @@ export default function AllJobsPage() {
         </div>
 
         {/* List */}
-        {isLoading ? (
-          <div className="space-y-3">
-            {[1,2,3,4,5].map(i => <LoadingSkeleton key={i} className="h-20" />)}
+        {error && jobs.length === 0 ? (
+          <div className="py-12">
+            <ErrorView title={error.title} message={error.message} onRetry={() => fetchJobs(1)} />
+          </div>
+        ) : isLoading ? (
+          <div className="space-y-4">
+            <SkeletonList count={5} />
           </div>
         ) : filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -156,7 +168,7 @@ export default function AllJobsPage() {
           </motion.div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((job, i) => (
+            {Array.isArray(filtered) && filtered.map((job, i) => (
               <motion.div key={job.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
                 <JobCard job={job} />
               </motion.div>

@@ -178,8 +178,8 @@ export default function OwnerDashboard() {
               icon: Clock, color: "text-purple-600", bg: "bg-purple-500/10", border: "border-purple-500/20"
             },
             {
-              label: "Budget Utilization", value: `${budgetUtil.toFixed(1)}%`,
-              sub: `₹${totalSpent.toLocaleString()} utilized`,
+              label: "Budget Utilization", value: `${Number(budgetUtil || 0).toFixed(1)}%`,
+              sub: `₹${Number(totalSpent || 0).toLocaleString() } utilized`,
               icon: DollarSign, color: "text-yellow-600", bg: "bg-yellow-500/10", border: "border-yellow-500/20"
             },
           ].map((stat) => (
@@ -212,7 +212,7 @@ export default function OwnerDashboard() {
               <CardDescription>Jobs currently in progress or accepted</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {metrics?.activeProjects && metrics.activeProjects.length > 0 ? (
+              {Array.isArray(metrics?.activeProjects) && metrics.activeProjects.length > 0 ? (
                 metrics.activeProjects.map((job) => (
                   <div
                     key={job.id}
@@ -220,15 +220,15 @@ export default function OwnerDashboard() {
                     onClick={() => router.push("/owner/jobs")}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium truncate mr-2">{job.title}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${statusColor(job.employee_status !== 'pending' ? job.employee_status : job.status)}`}>
+                      <span className="font-medium truncate mr-2">{job.title || "Untitled Project"}</span>
+                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest", statusColor(job.employee_status !== 'pending' ? job.employee_status : job.status))}>
                         {job.employee_status !== 'pending' ? job.employee_status : job.status}
                       </span>
                     </div>
-                    <Progress value={job.progress || 0} className="h-2" />
+                    <Progress value={Number(job.progress || 0)} className="h-2" />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{job.progress || 0}% complete</span>
-                      <span className={`capitalize px-1.5 py-0.5 rounded text-[10px] ${statusColor(job.priority)}`}>
+                      <span>{Number(job.progress || 0)}% complete</span>
+                      <span className={cn("capitalize px-1.5 py-0.5 rounded text-[10px] font-bold", statusColor(job.priority))}>
                         {job.priority || "medium"} priority
                       </span>
                     </div>
@@ -256,7 +256,7 @@ export default function OwnerDashboard() {
               <CardDescription>Latest updates and notifications</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {recentActivity.length > 0 ? (
+              {Array.isArray(recentActivity) && recentActivity.length > 0 ? (
                 recentActivity.slice(0, 8).map((activity) => (
                   <div
                     key={activity.id}
@@ -270,9 +270,9 @@ export default function OwnerDashboard() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0 space-y-0.5">
-                      <p className="text-sm font-medium truncate">{activity.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{activity.message}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm font-black truncate tracking-tight">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground truncate leading-relaxed">{activity.message}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground/40">
                         {new Date(activity.created_at).toLocaleString("en-IN", {
                           dateStyle: "short", timeStyle: "short"
                         })}

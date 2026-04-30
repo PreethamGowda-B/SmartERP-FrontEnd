@@ -10,8 +10,10 @@ import { ArrowLeft, Calendar, Clock, CheckCircle2, XCircle, AlertCircle, List, C
 import { OwnerLayout } from "@/components/owner-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { AttendanceCalendar, DayDetail } from "@/components/attendance-calendar"
-import { getAccessToken } from "@/lib/apiClient"
+import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
+import { SkeletonList } from "@/components/ui/skeleton-card"
+import { cn } from "@/lib/utils"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
@@ -53,25 +55,11 @@ export default function EmployeeAttendanceDetailPage() {
 
     const fetchEmployeeAttendance = useCallback(async () => {
         setLoading(true)
-
         try {
-            const token = getAccessToken()
-            const response = await fetch(
-                `${BACKEND_URL}/api/attendance/employee/${userId}?month=${selectedMonth}&year=${selectedYear}`,
-                {
-                    headers: {
-                        "Authorization": `Bearer ${token}`
-                    },
-                    credentials: "include", // Send HttpOnly cookies
-                }
-            )
-
-            if (response.ok) {
-                const data = await response.json()
-                setRecords(data.records || [])
-                setSummary(data.summary || null)
-            }
-        } catch (err) {
+            const data = await apiClient(`/api/attendance/employee/${userId}?month=${selectedMonth}&year=${selectedYear}`)
+            setRecords(Array.isArray(data.records) ? data.records : [])
+            setSummary(data.summary || null)
+        } catch (err: any) {
             logger.error("Error fetching employee attendance:", err)
         } finally {
             setLoading(false)
@@ -86,14 +74,14 @@ export default function EmployeeAttendanceDetailPage() {
 
     const formatTime = (timestamp: string | null) => {
         if (!timestamp) return "—"
-        return new Date(timestamp).toLocaleTimeString("en-US", {
+        return new Date(timestamp).toLocaleTimeString("en-IN", {
             hour: "2-digit",
             minute: "2-digit",
         })
     }
 
     const formatDate = (date: string) => {
-        return new Date(date).toLocaleDateString("en-US", {
+        return new Date(date).toLocaleDateString("en-IN", {
             weekday: "short",
             month: "short",
             day: "numeric",
@@ -230,7 +218,7 @@ export default function EmployeeAttendanceDetailPage() {
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Hours</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{summary.total_hours.toFixed(1)}</div>
+                                <div className="text-2xl font-black tracking-tight">{Number(summary.total_hours || 0).toFixed(1)}</div>
                             </CardContent>
                         </Card>
 
@@ -275,7 +263,7 @@ export default function EmployeeAttendanceDetailPage() {
                     </CardHeader>
                     <CardContent>
                         {loading ? (
-                            <p className="text-center text-muted-foreground py-8">Loading...</p>
+                            <SkeletonList count={5} />
                         ) : viewMode === 'calendar' ? (
                             <AttendanceCalendar
                                 records={records}
@@ -283,27 +271,28 @@ export default function EmployeeAttendanceDetailPage() {
                                 year={selectedYear}
                                 onDayClick={(day) => setSelectedDay(day)}
                             />
-                        ) : records.length === 0 ? (
-                            <p className="text-center text-muted-foreground py-8">
-                                No attendance records for this period
-                            </p>
+                        ) : (Array.isArray(records) && records.length === 0) ? (
+                            <div className="text-center py-16 bg-gray-50/50 rounded-xl border border-dashed">
+                                <CalendarDays className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                                <p className="text-sm font-bold text-muted-foreground">No attendance records for this period</p>
+                            </div>
                         ) : (
-                            <div className="space-y-2">
-                                {records.map((record) => (
+                            <div className="space-y-3">
+                                {Array.isArray(records) && records.map((record) => (
                                     <div
                                         key={record.id}
-                                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                                        className="flex items-center justify-between p-4 border border-border/50 rounded-xl hover:bg-accent/50 transition-all duration-300"
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="text-center min-w-[60px]">
-                                                <p className="text-2xl font-bold">{new Date(record.date).getDate()}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {new Date(record.date).toLocaleDateString("en-US", { weekday: "short" })}
+                                                <p className="text-2xl font-black tracking-tighter">{new Date(record.date).getDate()}</p>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                                                    {new Date(record.date).toLocaleDateString("en-IN", { weekday: "short" })}
                                                 </p>
                                             </div>
                                             <div>
-                                                <p className="font-medium">{formatDate(record.date)}</p>
-                                                <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+                                                <p className="font-bold text-sm">{formatDate(record.date)}</p>
+                                                <div className="flex gap-4 text-xs font-medium text-muted-foreground/70 mt-1">
                                                     <span className="flex items-center gap-1">
                                                         <Clock className="h-3 w-3" />
                                                         In: {formatTime(record.check_in_time)}
@@ -314,33 +303,35 @@ export default function EmployeeAttendanceDetailPage() {
                                                     </span>
                                                 </div>
                                                 {record.is_auto_clocked_out && (
-                                                    <p className="text-xs text-muted-foreground mt-1">Auto clocked out at 7 PM</p>
+                                                    <p className="text-[10px] font-bold text-orange-600/70 mt-1 uppercase tracking-tighter">Auto clocked out @ 7 PM</p>
                                                 )}
                                                 {record.notes && (
-                                                    <p className="text-xs text-muted-foreground mt-1">Note: {record.notes}</p>
+                                                    <p className="text-[10px] font-bold text-muted-foreground/50 mt-1">Note: {record.notes}</p>
                                                 )}
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-6">
                                             <div className="text-right">
-                                                <p className="text-sm text-muted-foreground">Hours</p>
-                                                <p className="font-semibold">
-                                                    {record.working_hours ? `${record.working_hours} hrs` : "—"}
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Hours</p>
+                                                <p className="font-black tracking-tighter text-lg">
+                                                    {record.working_hours ? `${Number(record.working_hours || 0).toFixed(1)}h` : "—"}
                                                 </p>
                                             </div>
-                                            <div className="flex flex-col gap-1">
+                                            <div className="flex flex-col gap-1 items-end">
                                                 {getStatusBadge(record.status)}
-                                                {record.is_late && (
-                                                    <Badge variant="outline" className="text-orange-500 border-orange-500 text-xs">
-                                                        Late
-                                                    </Badge>
-                                                )}
-                                                {record.is_manual && (
-                                                    <Badge variant="outline" className="text-blue-500 border-blue-500 text-xs">
-                                                        Manual
-                                                    </Badge>
-                                                )}
+                                                <div className="flex gap-1 flex-wrap justify-end">
+                                                    {record.is_late && (
+                                                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-tighter text-orange-500 border-orange-500/30">
+                                                            Late
+                                                        </Badge>
+                                                    )}
+                                                    {record.is_manual && (
+                                                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-tighter text-blue-500 border-blue-500/30">
+                                                            Manual
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

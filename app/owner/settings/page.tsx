@@ -15,13 +15,13 @@ import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader
 import { OwnerLayout } from "@/components/owner-layout"
 import Link from "next/link"
 
-import { getAccessToken } from "@/lib/apiClient"
+import { getAuthToken, apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
 function authHeaders(): Record<string, string> {
-  const token = getAccessToken()
+  const token = getAuthToken()
   const headers: Record<string, string> = { "Content-Type": "application/json" }
   if (token) headers["Authorization"] = `Bearer ${token}`
   return headers
@@ -71,21 +71,19 @@ export default function SettingsPage() {
   // ── Load profile + company on mount ──────────────────────────────────────
   const loadData = useCallback(async () => {
     try {
-      const [profileRes, companyRes] = await Promise.all([
-        fetch(`${API}/api/settings/profile`, { credentials: "include", headers: authHeaders() }),
-        fetch(`${API}/api/settings/company`, { credentials: "include", headers: authHeaders() }),
+      const [p, c] = await Promise.all([
+        apiClient("/api/settings/profile"),
+        apiClient("/api/settings/company"),
       ])
 
-      if (profileRes.ok) {
-        const p = await profileRes.json()
+      if (p) {
         setProfile({ name: p.name || "", phone: p.phone || "" })
         if (p.notification_prefs && Object.keys(p.notification_prefs).length) {
           setNotifPrefs((prev) => ({ ...prev, ...p.notification_prefs }))
         }
       }
 
-      if (companyRes.ok) {
-        const c = await companyRes.json()
+      if (c) {
         const cid = c.company_id || ""
         setCompany({
           name: c.name || "",
@@ -115,12 +113,10 @@ export default function SettingsPage() {
   const handleUpdateProfile = async () => {
     setSavingProfile(true)
     try {
-      const res = await fetch(`${API}/api/settings/profile`, {
-        method: "PUT", credentials: "include", headers: authHeaders(),
+      await apiClient("/api/settings/profile", {
+        method: "PUT",
         body: JSON.stringify({ name: profile.name, phone: profile.phone }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message)
       toast({ title: "Profile updated", description: "Your profile has been saved." })
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to update profile", variant: "destructive" })
@@ -133,14 +129,12 @@ export default function SettingsPage() {
     }
     setSavingCompany(true)
     try {
-      const res = await fetch(`${API}/api/settings/company`, {
-        method: "PUT", credentials: "include", headers: authHeaders(),
+      const data = await apiClient("/api/settings/company", {
+        method: "PUT",
         body: JSON.stringify({ ...company, settings: bizSettings }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || "Server error")
       // Update local state with what the server returned (includes short company_id)
-      if (data.company) {
+      if (data && data.company) {
         setCompany((prev) => ({
           ...prev,
           name: data.company.name || prev.name,
@@ -160,8 +154,8 @@ export default function SettingsPage() {
   const handleSaveNotifPrefs = async (newPrefs: typeof notifPrefs) => {
     setSavingNotif(true)
     try {
-      await fetch(`${API}/api/settings/notification-prefs`, {
-        method: "PUT", credentials: "include", headers: authHeaders(),
+      await apiClient("/api/settings/notification-prefs", {
+        method: "PUT",
         body: JSON.stringify(newPrefs),
       })
     } catch (e) { /* silent */ } finally { setSavingNotif(false) }
@@ -182,12 +176,10 @@ export default function SettingsPage() {
     }
     setSavingPw(true)
     try {
-      const res = await fetch(`${API}/api/settings/change-password`, {
-        method: "PUT", credentials: "include", headers: authHeaders(),
+      await apiClient("/api/settings/change-password", {
+        method: "PUT",
         body: JSON.stringify({ currentPassword: passwords.current, newPassword: passwords.newPw }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message)
       toast({ title: "Password changed", description: "Your password has been updated." })
       setPasswords({ current: "", newPw: "", confirm: "" })
     } catch (e: any) {
@@ -198,11 +190,10 @@ export default function SettingsPage() {
   const handleGenerateInviteLink = async () => {
     setLoadingInvite(true)
     try {
-      const res = await fetch(`${API}/api/auth/company/generate-invite`, {
-        method: "POST", credentials: "include", headers: authHeaders(),
+      const data = await apiClient("/api/auth/company/generate-invite", {
+        method: "POST",
       })
-      if (res.ok) {
-        const data = await res.json()
+      if (data && data.invite_link) {
         setInviteLink(data.invite_link)
         toast({ title: "Invite link generated" })
       }

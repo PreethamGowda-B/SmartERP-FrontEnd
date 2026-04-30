@@ -12,13 +12,13 @@ import { useAuth } from "@/contexts/auth-context"
 import { User, Bell, Shield, Loader2, Eye, EyeOff, Building2, Copy, CheckCheck } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 
-import { getAccessToken } from "@/lib/apiClient"
+import { getAuthToken, apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
 function authHeaders(): Record<string, string> {
-  const token = getAccessToken()
+  const token = getAuthToken()
   const headers: Record<string, string> = { "Content-Type": "application/json" }
   if (token) headers["Authorization"] = `Bearer ${token}`
   return headers
@@ -56,9 +56,8 @@ export default function EmployeeSettingsPage() {
   // ── Load profile on mount ─────────────────────────────────────────────────
   const loadProfile = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/settings/profile`, { credentials: "include", headers: authHeaders() })
-      if (res.ok) {
-        const p = await res.json()
+      const p = await apiClient("/api/settings/profile")
+      if (p) {
         setProfile({ name: p.name || "", phone: p.phone || "" })
         if (p.notification_prefs && Object.keys(p.notification_prefs).length) {
           setNotifPrefs((prev) => ({ ...prev, ...p.notification_prefs }))
@@ -72,9 +71,8 @@ export default function EmployeeSettingsPage() {
   const loadCompanyInfo = useCallback(async () => {
     setLoadingCompany(true)
     try {
-      const res = await fetch(`${API}/api/settings/company-info`, { credentials: "include", headers: authHeaders() })
-      if (res.ok) {
-        const data = await res.json()
+      const data = await apiClient("/api/settings/company-info")
+      if (data) {
         setCompanyInfo(data)
       }
     } catch (e) {
@@ -98,12 +96,10 @@ export default function EmployeeSettingsPage() {
   const handleUpdateProfile = async () => {
     setSavingProfile(true)
     try {
-      const res = await fetch(`${API}/api/settings/profile`, {
-        method: "PUT", credentials: "include", headers: authHeaders(),
+      await apiClient("/api/settings/profile", {
+        method: "PUT",
         body: JSON.stringify({ name: profile.name, phone: profile.phone }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message)
       toast({ title: "Profile updated", description: "Your profile has been saved." })
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to update profile", variant: "destructive" })
@@ -113,8 +109,8 @@ export default function EmployeeSettingsPage() {
   const handleSaveNotifPrefs = async (newPrefs: typeof notifPrefs) => {
     setSavingNotif(true)
     try {
-      await fetch(`${API}/api/settings/notification-prefs`, {
-        method: "PUT", credentials: "include", headers: authHeaders(),
+      await apiClient("/api/settings/notification-prefs", {
+        method: "PUT",
         body: JSON.stringify(newPrefs),
       })
     } catch { /* silent */ } finally { setSavingNotif(false) }
@@ -135,12 +131,10 @@ export default function EmployeeSettingsPage() {
     }
     setSavingPw(true)
     try {
-      const res = await fetch(`${API}/api/settings/change-password`, {
-        method: "PUT", credentials: "include", headers: authHeaders(),
+      await apiClient("/api/settings/change-password", {
+        method: "PUT",
         body: JSON.stringify({ currentPassword: passwords.current, newPassword: passwords.newPw }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message)
       toast({ title: "Password changed", description: "Your password has been updated." })
       setPasswords({ current: "", newPw: "", confirm: "" })
     } catch (e: any) {

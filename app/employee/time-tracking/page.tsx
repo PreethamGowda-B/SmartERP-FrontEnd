@@ -12,6 +12,9 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBL
 
 import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
+import { ErrorView } from "@/components/ui/error-view"
+import { SkeletonList } from "@/components/ui/skeleton-card"
+import { cn } from "@/lib/utils"
 
 function authHeaders(): Record<string, string> {
   const token = getAuthToken()
@@ -50,7 +53,7 @@ export default function TimeTrackingPage() {
         try {
             const data = await apiClient("/api/attendance/today")
             setTodayAttendance(data)
-        } catch (err) {
+        } catch (err: any) {
             logger.error("Error fetching today's attendance:", err)
         }
     }, [])
@@ -63,8 +66,9 @@ export default function TimeTrackingPage() {
 
             const data = await apiClient(`/api/attendance/history?month=${currentMonth}&year=${currentYear}`)
             setHistory(Array.isArray(data) ? data : [])
-        } catch (err) {
+        } catch (err: any) {
             logger.error("Error fetching history:", err)
+            setError("Failed to load attendance records")
         }
     }, [])
 
@@ -368,8 +372,12 @@ export default function TimeTrackingPage() {
                         <CardTitle>This Month's Attendance</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {history.length === 0 ? (
-                            <p className="text-center text-muted-foreground py-8">No attendance records for this month</p>
+                        {loading && history.length === 0 ? (
+                            <SkeletonList count={4} />
+                        ) : error && history.length === 0 ? (
+                            <ErrorView title="Records Unavailable" message={error} onRetry={fetchHistory} />
+                        ) : (Array.isArray(history) && history.length === 0) ? (
+                            <p className="text-center text-muted-foreground py-8 font-medium">No attendance records for this month</p>
                         ) : (
                             <div className="space-y-2">
                                 {Array.isArray(history) && history.map((record) => (
@@ -378,30 +386,30 @@ export default function TimeTrackingPage() {
                                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className="text-center">
-                                                <p className="text-2xl font-bold">{new Date(record.date).getDate()}</p>
-                                                <p className="text-xs text-muted-foreground">
+                                            <div className="text-center w-12">
+                                                <p className="text-2xl font-black tracking-tight">{new Date(record.date).getDate()}</p>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                                                     {new Date(record.date).toLocaleDateString("en-US", { month: "short" })}
                                                 </p>
                                             </div>
                                             <div>
-                                                <p className="font-medium">{formatDate(record.date)}</p>
-                                                <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+                                                <p className="font-bold text-sm">{formatDate(record.date)}</p>
+                                                <div className="flex gap-4 text-xs font-medium text-muted-foreground/70 mt-1">
                                                     <span>In: {formatTime(record.check_in_time)}</span>
                                                     <span>Out: {formatTime(record.check_out_time)}</span>
                                                 </div>
                                                 {record.is_auto_clocked_out && (
-                                                    <p className="text-xs text-muted-foreground mt-1">Auto clocked out at 7 PM</p>
+                                                    <p className="text-[10px] font-bold text-orange-600/70 mt-1 uppercase tracking-tighter">Auto clocked out @ 7 PM</p>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-6">
                                             <div className="text-right">
-                                                <p className="font-semibold">
-                                                    {record.working_hours ? `${record.working_hours} hrs` : "—"}
+                                                <p className="font-black tracking-tighter text-lg">
+                                                    {record.working_hours ? `${Number(record.working_hours || 0).toFixed(1)}h` : "—"}
                                                 </p>
                                                 {record.is_late && (
-                                                    <p className="text-xs text-destructive">Late</p>
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">Late</p>
                                                 )}
                                             </div>
                                             {getStatusBadge(record.status)}

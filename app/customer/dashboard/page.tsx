@@ -15,6 +15,9 @@ import { DashboardSkeleton } from '@/components/customer/ui/LoadingSkeleton';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import customerApi from '@/lib/customerApi';
 import type { Job, JobListResponse } from '@/lib/customerTypes';
+import { ErrorView } from "@/components/ui/error-view"
+import { SkeletonList } from "@/components/ui/skeleton-card"
+import { cn } from "@/lib/utils"
 
 interface StatusCounts {
   pending_approval: number;
@@ -49,42 +52,45 @@ export default function CustomerDashboardPage() {
   const [counts, setCounts] = useState<StatusCounts>({
     pending_approval: 0, active: 0, in_progress: 0, completed: 0, sla_breaches: 0, total: 0,
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<{ title: string; message: string } | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push('/customer/login');
-  }, [authLoading, isAuthenticated, router]);
-
-  useEffect(() => {
+  const fetchDashboardData = useCallback(async () => {
     if (!isAuthenticated) return;
-    (async () => {
-      setIsLoading(true);
-      try {
-        const res = await customerApi.get<{ success: boolean; data: JobListResponse; error: string | null }>(
-          '/api/customer/jobs?limit=50'
-        );
-        const allJobs: Job[] = res.data.data?.jobs ?? [];
-        setJobs(allJobs);
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await customerApi.get<{ success: boolean; data: JobListResponse; error: string | null }>(
+        '/api/customer/jobs?limit=50'
+      );
+      const allJobs: Job[] = Array.isArray(res.data.data?.jobs) ? res.data.data.jobs : [];
+      setJobs(allJobs);
 
-        const c: StatusCounts = {
-          pending_approval: 0, active: 0, in_progress: 0, completed: 0, sla_breaches: 0,
-          total: allJobs.length,
-        };
-        allJobs.forEach((j) => {
-          if (j.approval_status === 'pending_approval') c.pending_approval++;
-          if (j.status === 'open' || j.status === 'pending') c.active++;
-          if (j.status === 'active' || j.status === 'in_progress') c.in_progress++;
-          if (j.status === 'completed') c.completed++;
-          if (j.sla_accept_breached || j.sla_completion_breached) c.sla_breaches++;
-        });
-        setCounts(c);
-      } catch (err) {
-        console.error('Failed to load jobs:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
+      const c: StatusCounts = {
+        pending_approval: 0, active: 0, in_progress: 0, completed: 0, sla_breaches: 0,
+        total: allJobs.length,
+      };
+      allJobs.forEach((j) => {
+        if (j.approval_status === 'pending_approval') c.pending_approval++;
+        if (j.status === 'open' || j.status === 'pending') c.active++;
+        if (j.status === 'active' || j.status === 'in_progress') c.in_progress++;
+        if (j.status === 'completed') c.completed++;
+        if (j.sla_accept_breached || j.sla_completion_breached) c.sla_breaches++;
+      });
+      setCounts(c);
+    } catch (err: any) {
+      setError({
+        title: "Could not load dashboard",
+        message: err.message || "There was a problem connecting to the service. Please try again."
+      });
+      console.error('Failed to load jobs:', err);
+    } finally {
+      setIsLoading(false);
+    }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   if (authLoading) {
     return (
@@ -223,8 +229,17 @@ export default function CustomerDashboardPage() {
           </div>
         </motion.div>
 
-        {isLoading ? (
-          <DashboardSkeleton />
+        {error && jobs.length === 0 ? (
+          <div className="py-12">
+            <ErrorView title={error.title} message={error.message} onRetry={fetchDashboardData} />
+          </div>
+        ) : isLoading ? (
+          <div className="space-y-10">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {[1,2,3,4,5].map(i => <div key={i} className="h-32 bg-white rounded-xl animate-pulse border border-border/50" />)}
+            </div>
+            <SkeletonList count={4} />
+          </div>
         ) : (
           <>
             {/* ── Stats row ───────────────────────────────────────────────── */}
@@ -232,19 +247,22 @@ export default function CustomerDashboardPage() {
               variants={fadeUp} initial="hidden" animate="visible" custom={1}
               className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8"
             >
-              {STATS.map(({ label, value, icon: Icon, color, bg, border }) => (
+              {Array.isArray(STATS) && STATS.map(({ label, value, icon: Icon, color, bg, border }) => (
                 <button
                   key={label}
                   onClick={() => router.push('/customer/jobs')}
-                  className={`bg-white rounded-xl border ${border} p-5 hover:shadow-md transition-all text-left hover:border-blue-300 group`}
+                  className={cn(
+                    "bg-white rounded-xl border p-5 hover:shadow-md transition-all text-left hover:border-blue-300 group",
+                    border
+                  )}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
-                      <Icon className={`h-4 w-4 ${color}`} />
+                    <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", bg)}>
+                      <Icon className={cn("h-4 w-4", color)} />
                     </div>
                   </div>
-                  <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
-                  <div className="text-xs font-medium text-gray-500">{label}</div>
+                  <div className="text-3xl font-black tracking-tight text-gray-900 mb-1">{Number(value || 0)}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{label}</div>
                 </button>
               ))}
             </motion.div>
@@ -290,7 +308,7 @@ export default function CustomerDashboardPage() {
                 </button>
               </div>
 
-              {activeJobs.length === 0 ? (
+              {Array.isArray(activeJobs) && activeJobs.length === 0 ? (
                 <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
                   <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
                     <Briefcase className="h-7 w-7 text-gray-400" />
@@ -309,7 +327,7 @@ export default function CustomerDashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {activeJobs.map((job, i) => {
+                  {Array.isArray(activeJobs) && activeJobs.map((job, i) => {
                     const priority = PRIORITY_CONFIG[job.priority] || PRIORITY_CONFIG.medium;
                     const hasSLABreach = job.sla_accept_breached || job.sla_completion_breached;
                     return (
@@ -327,7 +345,7 @@ export default function CustomerDashboardPage() {
                               )}
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${priority.className}`}>
+                              <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md", priority.className)}>
                                 {priority.label}
                               </span>
                               <JobStatusBadge status={job.status} approvalStatus={job.approval_status} />
@@ -342,16 +360,16 @@ export default function CustomerDashboardPage() {
                           </div>
                         )}
 
-                        {job.progress > 0 && (
+                        {Number(job.progress || 0) > 0 && (
                           <div className="mb-3">
                             <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                               <span>Progress</span>
-                              <span className="font-medium text-blue-600">{job.progress}%</span>
+                              <span className="font-medium text-blue-600">{Number(job.progress || 0)}%</span>
                             </div>
                             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                                style={{ width: `${job.progress}%` }}
+                                style={{ width: `${Number(job.progress || 0)}%` }}
                               />
                             </div>
                           </div>

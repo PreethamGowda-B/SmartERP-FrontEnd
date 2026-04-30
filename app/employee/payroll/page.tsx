@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/select"
 import { DollarSign, Download, Loader2, Calendar, FileText } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
-import { apiClient } from "@/lib/apiClient"
+import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
+import { SkeletonList } from "@/components/ui/skeleton-card"
+import { cn } from "@/lib/utils"
 import jsPDF from "jspdf"
 
 interface PayrollRecord {
@@ -51,11 +53,11 @@ export default function EmployeePayrollPage() {
       // Convert string numbers to actual numbers for proper display
       const parsedData = Array.isArray(data) ? data.map((payroll: any) => ({
         ...payroll,
-        base_salary: parseFloat(payroll.base_salary),
-        extra_amount: parseFloat(payroll.extra_amount),
-        salary_increment: parseFloat(payroll.salary_increment),
-        deduction: parseFloat(payroll.deduction),
-        total_salary: parseFloat(payroll.total_salary)
+        base_salary: Number(payroll.base_salary || 0),
+        extra_amount: Number(payroll.extra_amount || 0),
+        salary_increment: Number(payroll.salary_increment || 0),
+        deduction: Number(payroll.deduction || 0),
+        total_salary: Number(payroll.total_salary || 0)
       })) : []
       setPayrolls(parsedData)
     } catch (err: any) {
@@ -174,7 +176,7 @@ export default function EmployeePayrollPage() {
   })
 
   // Get unique years from payrolls
-  const uniqueYears = Array.from(new Set(payrolls.map(p => p.payroll_year))).sort((a, b) => b - a)
+  const uniqueYears = Array.from(new Set((Array.isArray(payrolls) ? payrolls : []).map(p => p.payroll_year))).sort((a, b) => b - a)
 
   return (
     <EmployeeLayout>
@@ -222,11 +224,7 @@ export default function EmployeePayrollPage() {
         {/* Payroll Records */}
         <div className="space-y-4">
           {loading ? (
-            <Card>
-              <CardContent className="flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </CardContent>
-            </Card>
+            <SkeletonList count={3} />
           ) : !Array.isArray(filteredPayrolls) || filteredPayrolls.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12 text-muted-foreground">
@@ -236,72 +234,73 @@ export default function EmployeePayrollPage() {
               </CardContent>
             </Card>
           ) : (
-            filteredPayrolls.map((payroll) => (
-              <Card key={payroll.id} className="hover:shadow-md transition-shadow">
+            Array.isArray(filteredPayrolls) && filteredPayrolls.map((payroll) => (
+              <Card key={payroll.id} className="premium-card hover-lift-subtle border shadow-sm">
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
+                      <CardTitle className="flex items-center gap-2 text-lg font-black tracking-tight">
+                        <Calendar className="h-5 w-5 text-primary" />
                         {MONTHS[payroll.payroll_month - 1]} {payroll.payroll_year}
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Salary Report
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
+                        Salary Disbursement
                       </p>
                     </div>
                     <Button
                       onClick={() => generatePDF(payroll)}
                       variant="outline"
                       size="sm"
+                      className="h-8 rounded-lg border-primary/20 hover:border-primary hover:bg-primary/5 text-primary font-bold"
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      Export PDF
+                      <Download className="h-3.5 w-3.5 mr-2" />
+                      PDF Report
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {/* Salary Breakdown */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                       <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Base Salary</p>
-                        <p className="text-lg font-semibold">₹{Number(payroll.base_salary || 0).toFixed(2)}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Base Salary</p>
+                        <p className="text-xl font-black tracking-tighter text-foreground">₹{Number(payroll.base_salary || 0).toLocaleString('en-IN')}</p>
                       </div>
 
-                      {payroll.extra_amount > 0 && (
+                      {Number(payroll.extra_amount || 0) > 0 && (
                         <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Extra Amount</p>
-                          <p className="text-lg font-semibold text-green-600">
-                            +₹{Number(payroll.extra_amount || 0).toFixed(2)}
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Extra Amount</p>
+                          <p className="text-xl font-black tracking-tighter text-green-600">
+                            +₹{Number(payroll.extra_amount || 0).toLocaleString('en-IN')}
                           </p>
                         </div>
                       )}
 
-                      {payroll.salary_increment > 0 && (
+                      {Number(payroll.salary_increment || 0) > 0 && (
                         <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Salary Increment</p>
-                          <p className="text-lg font-semibold text-green-600">
-                            +₹{Number(payroll.salary_increment || 0).toFixed(2)}
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Increment</p>
+                          <p className="text-xl font-black tracking-tighter text-green-600">
+                            +₹{Number(payroll.salary_increment || 0).toLocaleString('en-IN')}
                           </p>
                         </div>
                       )}
 
-                      {payroll.deduction > 0 && (
+                      {Number(payroll.deduction || 0) > 0 && (
                         <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Deduction</p>
-                          <p className="text-lg font-semibold text-red-600">
-                            -₹{Number(payroll.deduction || 0).toFixed(2)}
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Deduction</p>
+                          <p className="text-xl font-black tracking-tighter text-red-600">
+                            -₹{Number(payroll.deduction || 0).toLocaleString('en-IN')}
                           </p>
                         </div>
                       )}
                     </div>
 
                     {/* Total Salary */}
-                    <div className="pt-4 border-t">
+                    <div className="pt-4 border-t border-dashed">
                       <div className="flex justify-between items-center">
-                        <span className="text-lg font-semibold">Total Salary</span>
-                        <span className="text-3xl font-bold text-primary">
-                          ₹{Number(payroll.total_salary || 0).toFixed(2)}
+                        <span className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Total Salary</span>
+                        <span className="text-4xl font-black tracking-tighter text-primary">
+                          ₹{Number(payroll.total_salary || 0).toLocaleString('en-IN')}
                         </span>
                       </div>
                     </div>
@@ -309,8 +308,10 @@ export default function EmployeePayrollPage() {
                     {/* Remarks */}
                     {payroll.remarks && (
                       <div className="pt-3 border-t">
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Remarks:</p>
-                        <p className="text-sm">{payroll.remarks}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">Remarks:</p>
+                        <div className="bg-accent/30 p-3 rounded-lg text-sm italic text-muted-foreground leading-relaxed">
+                          "{payroll.remarks}"
+                        </div>
                       </div>
                     )}
                   </div>

@@ -22,14 +22,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { Send, MessageSquare, Loader2, ChevronLeft, Clock, Bell } from "lucide-react"
-import { getAccessToken } from "@/lib/apiClient"
+import { apiClient, getAuthToken } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
 import { useNotifications } from "@/contexts/notification-context"
 import { toast } from "sonner"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
 
 function authHeaders(): Record<string, string> {
-  const token = getAccessToken()
+  const token = getAuthToken()
   return { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }
 }
 
@@ -58,15 +59,17 @@ interface Message {
 function formatTime(iso?: string | null) {
   if (!iso) return ""
   const d = new Date(iso)
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+  if (isNaN(d.getTime())) return ""
+  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
 }
 
 function formatDate(iso?: string | null) {
   if (!iso) return ""
   const d = new Date(iso)
+  if (isNaN(d.getTime())) return ""
   const today = new Date()
   if (d.toDateString() === today.toDateString()) return formatTime(iso)
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+  return d.toLocaleDateString("en-IN", { month: "short", day: "numeric" })
 }
 
 export default function EmployeeMessagesPage() {
@@ -82,6 +85,18 @@ export default function EmployeeMessagesPage() {
   const sseRef = useRef<EventSource | null>(null)
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { notifications } = useNotifications()
+
+  // ── Fetch Conversations ────────────────────────────────────────────────────
+  const fetchConversations = useCallback(async () => {
+    try {
+      const data = await apiClient("/api/messages/job-conversations")
+      setConversations(Array.isArray(data) ? data : [])
+    } catch (err: any) {
+      logger.error("Error fetching conversations:", err)
+    } finally {
+      setLoadingConvs(false)
+    }
+  }, [])
 
   // ── Sync with global notifications ────────────────────────────────────────
   useEffect(() => {
@@ -121,42 +136,19 @@ export default function EmployeeMessagesPage() {
 
       // If this is the currently open chat, mark as read by refetching
       if (selectedJob?.job_id === jobId) {
-        fetch(`${API_URL}/api/messages/job/${jobId}`, {
-          method: "GET", 
-          credentials: "include", 
-          headers: authHeaders(),
-        }).catch(() => {})
+        apiClient(`/api/messages/job/${jobId}`).catch(() => {})
       }
     }
-  }, [notifications, selectedJob])
-
-  // ── Fetch Conversations ────────────────────────────────────────────────────
-  const fetchConversations = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/messages/job-conversations`, {
-        credentials: "include", headers: authHeaders(),
-      })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setConversations(Array.isArray(data) ? data : data?.data ?? [])
-    } catch {
-      // keep existing list
-    } finally {
-      setLoadingConvs(false)
-    }
-  }, [])
+  }, [notifications, selectedJob, fetchConversations])
 
   // ── Fetch Messages for a Job ───────────────────────────────────────────────
   const fetchMessages = useCallback(async (jobId: string) => {
     setLoadingMsgs(true)
     try {
-      const res = await fetch(`${API_URL}/api/messages/job/${jobId}`, {
-        credentials: "include", headers: authHeaders(),
-      })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setMessages(Array.isArray(data) ? data : data?.data ?? [])
-    } catch {
+      const data = await apiClient(`/api/messages/job/${jobId}`)
+      setMessages(Array.isArray(data) ? data : [])
+    } catch (err: any) {
+      logger.error("Error fetching messages:", err)
       setMessages([])
     } finally {
       setLoadingMsgs(false)
@@ -171,8 +163,9 @@ export default function EmployeeMessagesPage() {
     }
     if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current)
 
-    const token = getAccessToken()
-    const url = `${API_URL}/api/customer/jobs/${jobId}/events${token ? `?token=${token}` : ""}`
+    const token = getAuthToken()
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://smarterp-backendend.onrender.com"
+    const url = `${BACKEND_URL}/api/customer/jobs/${jobId}/events${token ? `?token=${token}` : ""}`
     const source = new EventSource(url, { withCredentials: true })
     sseRef.current = source
 
@@ -242,30 +235,23 @@ export default function EmployeeMessagesPage() {
     setMessageText("")
     setSending(true)
     try {
-      const res = await fetch(`${API_URL}/api/messages/job/${selectedJob.job_id}`, {
+      const data = await apiClient(`/api/messages/job/${selectedJob.job_id}`, {
         method: "POST",
-        credentials: "include",
-        headers: authHeaders(),
         body: JSON.stringify({ message: text }),
       })
-      if (res.ok) {
-        const data = await res.json()
-        const newMsg: Message = data?.data ?? data
-        setMessages(prev => [...prev, newMsg])
-        setConversations(prev => prev.map(c =>
-          c.job_id === selectedJob.job_id
-            ? { ...c, last_message: text, last_message_time: new Date().toISOString() }
-            : c
-        ))
-      } else {
-        // Low FIX: Show toast on failure instead of silently swallowing the error
-        setMessageText(text) // Restore typed message so user can retry
-        toast.error("Message failed to send. Please try again.")
-      }
-    } catch {
-      // Low FIX: Network failure toast
-      setMessageText(text)
-      toast.error("Message failed to send. Check your connection.")
+      const newMsg: Message = data?.data ?? data
+      setMessages(prev => {
+        if (prev.some(m => m.id === newMsg.id)) return prev
+        return [...prev, newMsg]
+      })
+      setConversations(prev => prev.map(c =>
+        c.job_id === selectedJob.job_id
+          ? { ...c, last_message: text, last_message_time: new Date().toISOString() }
+          : c
+      ))
+    } catch (err: any) {
+      setMessageText(text) // Restore typed message
+      toast.error(err.message || "Message failed to send. Please try again.")
     }
     finally { setSending(false) }
   }
@@ -297,7 +283,7 @@ export default function EmployeeMessagesPage() {
                 <p className="text-gray-400 text-sm mt-1">Chats appear when a customer messages on your assigned jobs</p>
               </div>
             ) : (
-              conversations.map((conv) => (
+              Array.isArray(conversations) && conversations.map((conv) => (
                 <button
                   key={conv.job_id}
                   onClick={() => selectJob(conv)}
@@ -316,9 +302,9 @@ export default function EmployeeMessagesPage() {
                         <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">
                           {conv.customer_name || "Customer"}
                         </span>
-                        {conv.unread_count && conv.unread_count > 0 ? (
+                        {Number(conv.unread_count || 0) > 0 ? (
                           <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center animate-pulse">
-                            {conv.unread_count}
+                            {Number(conv.unread_count || 0)}
                           </span>
                         ) : null}
                       </div>
@@ -387,7 +373,7 @@ export default function EmployeeMessagesPage() {
                     No messages yet — say hello!
                   </div>
                 ) : (
-                  messages.map((msg) => {
+                  Array.isArray(messages) && messages.map((msg) => {
                     const isMine = msg.sender_type === "employee"
                     return (
                       <div key={msg.id} className={cn("flex", isMine ? "justify-end" : "justify-start")}>
@@ -398,10 +384,10 @@ export default function EmployeeMessagesPage() {
                             : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-sm border border-gray-100 dark:border-gray-600"
                         )}>
                           {!isMine && (
-                            <p className="text-xs font-semibold text-indigo-500 mb-1">{msg.sender_name}</p>
+                            <p className="text-xs font-black text-indigo-500 mb-1">{msg.sender_name}</p>
                           )}
                           <p className="leading-relaxed">{msg.message}</p>
-                          <p className={cn("text-xs mt-1", isMine ? "text-indigo-200" : "text-gray-400")}>
+                          <p className={cn("text-[10px] font-bold uppercase tracking-tighter mt-1.5", isMine ? "text-indigo-200" : "text-gray-400")}>
                             {formatTime(msg.created_at)}
                           </p>
                         </div>

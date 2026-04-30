@@ -53,8 +53,8 @@ export default function OwnerMessagesPage() {
     const fetchConversations = useCallback(async () => {
         try {
             const data = await apiClient("/api/messages/conversations")
-            setConversations(data)
-        } catch (err) {
+            setConversations(Array.isArray(data) ? data : [])
+        } catch (err: any) {
             logger.error("Error fetching conversations:", err)
         }
     }, [])
@@ -63,7 +63,17 @@ export default function OwnerMessagesPage() {
     const fetchMessages = useCallback(async (userId: number) => {
         try {
             const data = await apiClient(`/api/messages/conversation/${userId}`)
-            setMessages(data)
+            const newMessages = Array.isArray(data) ? data : []
+            
+            setMessages(prev => {
+                // Deduplicate by ID
+                const existingIds = new Set(prev.map(m => m.id))
+                const uniqueNew = newMessages.filter(m => !existingIds.has(m.id))
+                if (uniqueNew.length === 0) return prev
+                return [...prev, ...uniqueNew].sort((a, b) => 
+                    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                )
+            })
 
             // Mark messages as read
             await apiClient(`/api/messages/conversation/${userId}/read`, {
@@ -72,9 +82,8 @@ export default function OwnerMessagesPage() {
 
             // Refresh conversations to update unread count
             await fetchConversations()
-
             setTimeout(scrollToBottom, 100)
-        } catch (err) {
+        } catch (err: any) {
             logger.error("Error fetching messages:", err)
         }
     }, [fetchConversations])
@@ -164,7 +173,7 @@ export default function OwnerMessagesPage() {
     }
 
     // Filter conversations
-    const filteredConversations = conversations.filter((conv) =>
+    const filteredConversations = (Array.isArray(conversations) ? conversations : []).filter((conv) =>
         conv.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         conv.user_email.toLowerCase().includes(searchTerm.toLowerCase())
     )
@@ -208,45 +217,45 @@ export default function OwnerMessagesPage() {
 
                         <div className="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto">
                             {filteredConversations.length === 0 ? (
-                                <Card>
+                                <Card className="border-dashed">
                                     <CardContent className="p-8 text-center">
                                         <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-40" />
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-sm font-medium text-muted-foreground">
                                             {searchTerm ? "No conversations found" : "No messages yet"}
                                         </p>
                                     </CardContent>
                                 </Card>
                             ) : (
-                                filteredConversations.map((conversation) => (
+                                Array.isArray(filteredConversations) && filteredConversations.map((conversation) => (
                                     <Card
                                         key={conversation.user_id}
-                                        className={`cursor-pointer transition-colors hover:bg-accent ${selectedUserId === conversation.user_id ? "border-primary bg-accent" : ""
-                                            } ${conversation.unread_count > 0 ? "border-primary/50" : ""}`}
+                                        className={`cursor-pointer transition-all hover:bg-accent border shadow-sm ${selectedUserId === conversation.user_id ? "border-primary ring-1 ring-primary/20 bg-accent" : "border-border/50"
+                                            } ${conversation.unread_count > 0 ? "bg-primary/5 border-primary/20" : ""}`}
                                         onClick={() => handleSelectConversation(conversation.user_id)}
                                     >
                                         <CardContent className="p-4">
                                             <div className="flex items-start gap-3">
-                                                <Avatar className="h-10 w-10">
-                                                    <AvatarFallback>
+                                                <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                                                    <AvatarFallback className="font-black text-xs">
                                                         {conversation.user_name.charAt(0).toUpperCase()}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <p className="text-sm font-medium truncate">
+                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                                        <p className="text-sm font-black truncate">
                                                             {conversation.user_name}
                                                         </p>
                                                         {conversation.unread_count > 0 && (
-                                                            <Badge variant="destructive" className="text-xs h-5 min-w-5 px-1">
+                                                            <Badge variant="destructive" className="text-[10px] font-black h-5 min-w-5 px-1 rounded-full animate-pulse">
                                                                 {conversation.unread_count}
                                                             </Badge>
                                                         )}
                                                     </div>
-                                                    <p className="text-sm text-muted-foreground truncate">
-                                                        {conversation.is_last_message_mine && "You: "}
+                                                    <p className="text-xs text-muted-foreground truncate leading-tight">
+                                                        {conversation.is_last_message_mine && <span className="font-bold text-primary/70">You: </span>}
                                                         {conversation.last_message}
                                                     </p>
-                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                    <p className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground/50 mt-1.5">
                                                         {formatTime(conversation.last_message_time)}
                                                     </p>
                                                 </div>

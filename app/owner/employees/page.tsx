@@ -169,11 +169,11 @@ export default function EmployeesPage() {
   })
 
   // ─── Stats ────────────────────────────────────────────────────────────────
-  const totalCount = employees.length
-  const activeCount = employees.filter((e) => e.status === "active").length
-  const onSiteCount = employees.filter((e) => e.location && e.location !== "Unassigned").length
+  const totalCount = Array.isArray(employees) ? employees.length : 0
+  const activeCount = Array.isArray(employees) ? employees.filter((e) => e.status === "active").length : 0
+  const onSiteCount = Array.isArray(employees) ? employees.filter((e) => e.location && e.location !== "Unassigned").length : 0
   const avgHours = totalCount > 0
-    ? Math.round(employees.reduce((sum, e) => sum + (e.hoursThisWeek || 0), 0) / totalCount)
+    ? Math.round((Array.isArray(employees) ? employees : []).reduce((sum, e) => sum + Number(e.hoursThisWeek || 0), 0) / totalCount)
     : 0
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -272,7 +272,7 @@ export default function EmployeesPage() {
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filtered.map((employee) => {
+              {Array.isArray(filtered) && filtered.map((employee) => {
                 const isEditing = editingId === employee.id
 
                 return (
@@ -312,7 +312,7 @@ export default function EmployeesPage() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {DEPARTMENTS.map((dept) => (
+                                {Array.isArray(DEPARTMENTS) && DEPARTMENTS.map((dept) => (
                                   <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                                 ))}
                               </SelectContent>
@@ -362,7 +362,7 @@ export default function EmployeesPage() {
                             </div>
                             <div className="space-y-1 text-right">
                               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Joined</p>
-                              <p className="text-xs font-semibold">{new Date(employee.created_at || '').toLocaleDateString()}</p>
+                              <p className="text-xs font-semibold">{employee.created_at ? new Date(employee.created_at).toLocaleDateString('en-IN') : '—'}</p>
                             </div>
                           </div>
 

@@ -48,7 +48,7 @@ function formatDate(d?: string | null) {
 }
 
 function formatCurrency(n: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(n || 0));
 }
 
 export default function JobDetailPage() {
@@ -387,17 +387,17 @@ export default function JobDetailPage() {
           )}
 
           {/* Progress bar */}
-          {job.progress > 0 && (
+          {Number(job.progress || 0) > 0 && (
             <div className="pt-4 border-t border-gray-100">
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className="font-medium text-gray-700">Progress</span>
-                <span className="font-semibold text-blue-600">{job.progress}%</span>
+                <span className="font-semibold text-blue-600">{Number(job.progress || 0).toFixed(1)}%</span>
               </div>
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <motion.div
                   className="h-full bg-blue-500 rounded-full"
                   initial={{ width: 0 }}
-                  animate={{ width: `${job.progress}%` }}
+                  animate={{ width: `${Number(job.progress || 0)}%` }}
                   transition={{ duration: 0.8, ease: 'easeOut' }}
                 />
               </div>
@@ -532,14 +532,14 @@ export default function JobDetailPage() {
 
                 {/* Message list */}
                 <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50">
-                  {messages.length === 0 ? (
+                  {Array.isArray(messages) && messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
                       <MessageCircle className="h-8 w-8 text-gray-300 mb-2" />
                       <p className="text-sm text-gray-500">No messages yet</p>
                       <p className="text-xs text-gray-400 mt-1">Start the conversation with your technician</p>
                     </div>
                   ) : (
-                    messages.map(msg => (
+                    Array.isArray(messages) && messages.map(msg => (
                       <div
                         key={msg.id}
                         className={`flex ${msg.sender_type === 'customer' ? 'justify-end' : 'justify-start'}`}
@@ -669,7 +669,7 @@ export default function JobDetailPage() {
                     {/* Cost breakdown table */}
                     <div className="bg-gray-50 rounded-lg p-3 space-y-2">
                       <div className="flex justify-between text-xs">
-                        <span className="text-gray-600">Labor ({invoice.labor_hours.toFixed(1)}h)</span>
+                        <span className="text-gray-600">Labor ({Number(invoice.labor_hours || 0).toFixed(1)}h)</span>
                         <span className="font-medium text-gray-900">{formatCurrency(invoice.labor_cost)}</span>
                       </div>
                       {invoice.materials_cost > 0 && (
@@ -733,17 +733,17 @@ export default function JobDetailPage() {
                     <span className="text-right">Qty</span>
                     <span className="text-right">Total</span>
                   </div>
-                  {materials.map((m) => (
+                  {Array.isArray(materials) && materials.map((m) => (
                     <div key={m.id} className="grid grid-cols-4 gap-2 py-2 border-b border-gray-50 last:border-0">
                       <div className="col-span-2">
                         <p className="text-xs font-medium text-gray-900 truncate">{m.item_name}</p>
-                        {m.unit_cost > 0 && (
+                        {Number(m.unit_cost || 0) > 0 && (
                           <p className="text-xs text-gray-400">{formatCurrency(m.unit_cost)}/unit</p>
                         )}
                       </div>
                       <span className="text-xs text-gray-600 text-right self-center">{m.quantity_used}</span>
                       <span className="text-xs font-medium text-gray-900 text-right self-center">
-                        {m.total_cost > 0 ? formatCurrency(m.total_cost) : '—'}
+                        {Number(m.total_cost || 0) > 0 ? formatCurrency(m.total_cost) : '—'}
                       </span>
                     </div>
                   ))}
