@@ -303,7 +303,7 @@ export default function OwnerJobsPage() {
                   "group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-2",
                   employeeStatus === "accepted" && "border-green-100",
                   employeeStatus === "declined" && "border-red-100 opacity-75",
-                  employeeStatus === "pending" && "border-yellow-100"
+                  (employeeStatus === "pending" || employeeStatus === "assigned" || !employeeStatus) && "border-yellow-100"
                 )}
               >
                 <div
@@ -311,7 +311,7 @@ export default function OwnerJobsPage() {
                     "h-2 w-full",
                     isCompleted && "bg-green-500",
                     !isCompleted && employeeStatus === "accepted" && "bg-blue-500",
-                    employeeStatus === "pending" && "bg-yellow-500",
+                    (employeeStatus === "pending" || employeeStatus === "assigned" || !employeeStatus) && "bg-yellow-500",
                     employeeStatus === "declined" && "bg-red-500"
                   )}
                 />
