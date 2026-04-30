@@ -22,7 +22,7 @@ export function FloatingActionHub() {
   const showAIAssistant = !!user
 
   return (
-    <div className="fixed bottom-6 right-6 flex flex-col items-center gap-4 z-[9999] pointer-events-none">
+    <div className="fixed bottom-6 right-6 flex flex-col items-center gap-4 z-9999 pointer-events-none">
       {/* Feedback Trigger - Wrapped to allow pointer events for the button but not empty space */}
       <div className="pointer-events-auto">
         <FeedbackFAB />

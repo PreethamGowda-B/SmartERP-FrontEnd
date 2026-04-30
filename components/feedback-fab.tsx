@@ -115,19 +115,19 @@ export function FeedbackFAB({ className }: { className?: string }) {
                 <SelectContent>
                   <SelectItem value="general">
                     <div className="flex items-center gap-2">
-                      <MessageSquare className="h-4 h-4 text-blue-500" />
+                      <MessageSquare className="h-4 text-blue-500" />
                       <span>General Feedback</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="bug">
                     <div className="flex items-center gap-2">
-                      <Bug className="h-4 h-4 text-red-500" />
+                      <Bug className="h-4 text-red-500" />
                       <span>Report a Bug</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="feature_request">
                     <div className="flex items-center gap-2">
-                      <Lightbulb className="h-4 h-4 text-amber-500" />
+                      <Lightbulb className="h-4 text-amber-500" />
                       <span>Feature Request</span>
                     </div>
                   </SelectItem>
