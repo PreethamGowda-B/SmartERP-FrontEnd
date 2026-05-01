@@ -73,8 +73,8 @@ export default function CustomerDashboardPage() {
       allJobs.forEach((j) => {
         if (j.approval_status === 'pending_approval') c.pending_approval++;
         if (j.status === 'open' || j.status === 'pending') c.active++;
-        if (j.status === 'active' || j.status === 'in_progress') c.in_progress++;
-        if (j.status === 'completed') c.completed++;
+        if ((j.status === 'active' || j.status === 'in_progress') && Number(j.progress || 0) < 100) c.in_progress++;
+        if (j.status === 'completed' || Number(j.progress || 0) === 100) c.completed++;
         if (j.sla_accept_breached || j.sla_completion_breached) c.sla_breaches++;
       });
       setCounts(c);
@@ -189,8 +189,9 @@ export default function CustomerDashboardPage() {
   ];
 
   // Active jobs: not completed, not cancelled
+  // Also treat jobs with 100% progress as completed even if status hasn't updated yet
   const activeJobs = jobs.filter(
-    (j) => j.status !== 'completed' && j.status !== 'cancelled'
+    (j) => j.status !== 'completed' && j.status !== 'cancelled' && Number(j.progress || 0) < 100
   );
 
   // Recent completed: last 3

@@ -285,7 +285,9 @@ export default function EmployeeJobsPage() {
             const isPending = (employeeStatus as string) === "pending" || (employeeStatus as string) === "assigned"
             const isAccepted = employeeStatus === "accepted"
             const isDeclined = employeeStatus === "declined"
-            const isCompleted = status?.toLowerCase() === "completed"
+            // Treat as completed if status is completed OR progress is 100
+            const isCompleted = status?.toLowerCase() === "completed" || progress === 100
+            const displayStatus = isCompleted ? "completed" : status
             const acceptedByOther = isAccepted && (job as any).assigned_to && String((job as any).assigned_to) !== String(currentUser?.id)
             const assignedEmployeeName = (job as any).assigned_employee_name
 
@@ -305,7 +307,7 @@ export default function EmployeeJobsPage() {
                 <CardHeader className="p-6 pb-4">
                   <div className="flex items-center justify-between mb-2">
                     <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest px-2 py-0">
-                      {status}
+                      {displayStatus}
                     </Badge>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
                       ID: #{job.id.toString().slice(-4)}
