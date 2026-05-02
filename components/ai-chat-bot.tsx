@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bot, Send, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { apiClient } from "@/lib/apiClient"
 
 /* ---------------- TYPES ---------------- */
 
@@ -25,28 +26,19 @@ const API_URL =
 /* ---------------- BACKEND CALL ---------------- */
 
 async function askBackendAI(message: string, onFeatureLocked: (data: any) => void) {
-  const token = localStorage.getItem("_at") || localStorage.getItem("accessToken");
-
-  const res = await fetch(`${API_URL}/api/ai/chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: token ? `Bearer ${token}` : "",
-    },
-    body: JSON.stringify({ message }),
-  })
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    if (res.status === 403 && errorData.upgrade_required) {
-      onFeatureLocked(errorData);
-      throw new Error("PLAN_LOCKED");
+  try {
+    const data = await apiClient("/api/ai/chat", {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    })
+    return data.reply || "No response from AI."
+  } catch (err: any) {
+    if (err.status === 403 && err.upgrade_required) {
+      onFeatureLocked(err)
+      throw new Error("PLAN_LOCKED")
     }
-    throw new Error(errorData.error || errorData.message || "AI request failed");
+    throw err
   }
-
-  const data = await res.json()
-  return data.reply || "No response from AI."
 }
 
 /* ---------------- COMPONENT ---------------- */
