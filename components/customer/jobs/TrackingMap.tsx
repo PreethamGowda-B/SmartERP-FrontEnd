@@ -8,7 +8,7 @@
  * to prevent Next.js SSR errors (Leaflet requires window).
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import type { TrackingData } from '@/lib/customerTypes';
 
@@ -19,7 +19,7 @@ interface TrackingMapProps {
   tracking: TrackingData;
 }
 
-export default function TrackingMap({ tracking }: TrackingMapProps) {
+const TrackingMap = memo(function TrackingMap({ tracking }: TrackingMapProps) {
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -109,4 +109,6 @@ export default function TrackingMap({ tracking }: TrackingMapProps) {
       )}
     </div>
   );
-}
+});
+
+export default TrackingMap;

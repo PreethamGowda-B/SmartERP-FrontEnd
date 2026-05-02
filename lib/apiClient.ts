@@ -210,7 +210,8 @@ export async function apiClient(path: string, options: RequestInit = {}, retries
       // Retry failed requests ONLY IF: network error OR timeout
       // NOT for 401 / 403 (handled separately)
       const isTransientError = error.name === 'TypeError' || error.name === 'TimeoutError' || error.message?.includes('fetch')
-      const canRetry = retries > 0 && isTransientError
+      const isGetRequest = !options.method || options.method.toUpperCase() === 'GET'
+      const canRetry = retries > 0 && isTransientError && isGetRequest
 
       if (canRetry) {
         const delay = retries === 2 ? 500 : 1000 // 500ms -> 1000ms

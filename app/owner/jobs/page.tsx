@@ -269,7 +269,7 @@ export default function OwnerJobsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredJobs.map((job) => {
-                const employeeStatus = job.employee_status || "pending"
+                const employeeStatus = job.employee_status
                 const empStatusStr = String(employeeStatus)
                 const isCompleted = job.status?.toLowerCase() === "completed"
                 const isInProgress = job.status?.toLowerCase() === "in_progress"
@@ -290,7 +290,7 @@ export default function OwnerJobsPage() {
                     <CardHeader className="p-6 pb-4">
                       <div className="flex items-start justify-between mb-2">
                         <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0">
-                          {job.status || "Pending"}
+                          {job.status}
                         </Badge>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="icon" onClick={() => handleEditJob(job)} className="h-7 w-7 rounded-full hover:bg-primary/10 hover:text-primary">

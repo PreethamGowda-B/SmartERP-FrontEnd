@@ -43,7 +43,7 @@ export default function CustomerNotificationsPage() {
     if (refresh) setIsRefreshing(true);
     try {
       const res = await customerApi.get<{ success: boolean; data: CustomerNotification[] }>(
-        '/api/customer/jobs/notifications?limit=50'
+        '/api/customer/notifications?limit=50'
       );
       const primary = res.data.data ?? [];
 

@@ -33,8 +33,8 @@ export function CustomerNotificationProvider({ children }: { children: React.Rea
 
   const fetchNotifications = useCallback(async () => {
     try {
-      // Customer notifications live at /api/customer/jobs/notifications
-      const res = await customerApi.get<{ success: boolean; data: Notification[] }>("/api/customer/jobs/notifications")
+      // Customer notifications live at /api/customer/notifications
+      const res = await customerApi.get<{ success: boolean; data: Notification[] }>("/api/customer/notifications")
       const data = res.data?.data ?? (res.data as any)
       setNotifications(Array.isArray(data) ? data : [])
     } catch (error) {

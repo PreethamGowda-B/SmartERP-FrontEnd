@@ -1,6 +1,8 @@
 import * as Sentry from "@sentry/nextjs";
 import { getConsent, onConsentChange } from "@/lib/consent";
 
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+
 // ─── Core Sentry Init ────────────────────────────────────────────────────────
 // Error tracking and performance monitoring are initialized unconditionally.
 // These are considered "legitimate interest" — they don't track user behaviour,

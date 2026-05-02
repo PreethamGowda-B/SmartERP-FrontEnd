@@ -277,8 +277,8 @@ export default function EmployeeJobsPage() {
         {/* Jobs Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {jobs.map((job) => {
-            const status = job.status || "pending"
-            const employeeStatus = job.employee_status || "pending"
+            const status = job.status
+            const employeeStatus = job.employee_status
             const progress = progressValues[job.id] ?? (job.progress || 0)
             const createdDate = job.created_at || job.createdAt
             

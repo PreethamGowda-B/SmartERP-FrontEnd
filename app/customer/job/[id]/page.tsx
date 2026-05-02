@@ -84,6 +84,19 @@ export default function JobDetailPage() {
     if (!authLoading && !isAuthenticated) router.push('/customer/login');
   }, [authLoading, isAuthenticated, router]);
 
+  // FIX 4: NAVIGATION RESET
+  useEffect(() => {
+    setJob(null);
+    setInvoice(undefined);
+    setMaterials([]);
+    setIsLoading(true);
+    setError('');
+    setTrackingActive(false);
+    setMessages([]);
+    setReview(undefined);
+    setReviewSubmitted(false);
+  }, [jobId]);
+
   const fetchInvoice = useCallback(async () => {
     try {
       const res = await customerApi.get<{ success: boolean; data: Invoice | null }>(
@@ -167,9 +180,9 @@ export default function JobDetailPage() {
     }
   }, [jobId, reviewRating, reviewText, fetchReview]);
 
-  const fetchJob = useCallback(async () => {
+  const fetchJob = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await customerApi.get<{ success: boolean; data: Job }>(`/api/customer/jobs/${jobId}`);
+      const res = await customerApi.get<{ success: boolean; data: Job }>(`/api/customer/jobs/${jobId}`, { signal });
       const jobData = res.data.data ?? (res.data as any);
       setJob(jobData);
       if (jobData.employee_status === 'accepted' && jobData.status !== 'completed') {
@@ -194,29 +207,22 @@ export default function JobDetailPage() {
   }, [jobId, fetchInvoice, fetchMaterials, fetchMessages, fetchReview]);
 
   useEffect(() => {
-    if (isAuthenticated) fetchJob();
+    const controller = new AbortController();
+    if (isAuthenticated) fetchJob(controller.signal);
+    return () => controller.abort();
   }, [isAuthenticated, fetchJob]);
 
   const handleSSEEvent = useCallback((event: SSEEvent) => {
     if (event.type === 'job_approved') {
-      setJob(prev => prev ? {
-        ...prev, approval_status: 'approved', approved_at: event.approvedAt || new Date().toISOString(),
-      } : prev);
+      fetchJob();
     }
     if (event.type === 'job_accepted') {
-      setJob(prev => prev ? {
-        ...prev, employee_status: 'accepted', status: 'in_progress',
-        accepted_at: event.acceptedAt || new Date().toISOString(),
-        assigned_employee_name: event.employeeName || prev.assigned_employee_name,
-      } : prev);
+      fetchJob();
       setTrackingActive(true);
-      // Chat becomes available — load history
       fetchMessages();
     }
     if (event.type === 'employee_arrived') {
-      setJob(prev => prev ? {
-        ...prev, employee_status: 'arrived', arrived_at: event.arrivedAt || new Date().toISOString(),
-      } : prev);
+      fetchJob();
     }
     if (event.type === 'job_progress') {
       setJob(prev => prev ? {
@@ -224,11 +230,7 @@ export default function JobDetailPage() {
       } : prev);
     }
     if (event.type === 'job_completed') {
-      setJob(prev => prev ? {
-        ...prev, status: 'completed', progress: 100,
-        employee_status: 'completed' as any,
-        completed_at: event.completedAt || new Date().toISOString(),
-      } : prev);
+      fetchJob();
       setTrackingActive(false);
       setTimeout(() => { fetchInvoice(); fetchMaterials(); fetchReview(); }, 2000);
     }
@@ -241,7 +243,7 @@ export default function JobDetailPage() {
         return updated;
       });
     }
-  }, [fetchInvoice, fetchMaterials, fetchMessages, fetchReview]);
+  }, [fetchJob, fetchInvoice, fetchMaterials, fetchMessages, fetchReview]);
 
   const { isConnected: sseConnected } = useSSE({ jobId, onEvent: handleSSEEvent, enabled: isAuthenticated && !!job });
   const { tracking } = useJobTracking({ jobId, active: trackingActive, sseConnected, intervalMs: 15_000 });

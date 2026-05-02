@@ -194,8 +194,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     setSSEConnection(eventSource)
 
+    // FIX 5: NOTIFICATION SYNC (Fallback polling every 60s)
+    const pollInterval = setInterval(() => {
+      if (user) fetchNotifications()
+    }, 60000)
+
     return () => {
       eventSource.close()
+      clearInterval(pollInterval)
       setIsConnected(false)
       logger.log("📡 SSE connection closed")
     }
