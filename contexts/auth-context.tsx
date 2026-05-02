@@ -23,6 +23,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
 
     async function initAuth() {
+      // 🚨 CRITICAL: Skip SmartERP Owner/Employee auth logic if we are in the Customer Portal
+      if (typeof window !== "undefined" && window.location.pathname.startsWith("/customer")) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const currentUser = getCurrentUser()
         
