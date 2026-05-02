@@ -180,15 +180,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
     }
 
-    eventSource.onerror = (error) => {
-      logger.error('❌ SSE connection error:', error)
+    eventSource.onerror = () => {
       setIsConnected(false)
       eventSource.close()
       
-      // REQUIREMENT 1.5: Auto-reconnect after 3 seconds
+      // Auto-reconnect after 3 seconds with fresh token
       if (user) {
         setTimeout(() => {
-          logger.log('🔄 Reconnecting SSE...')
           setReconnectTrigger(prev => prev + 1)
         }, 3000)
       }
