@@ -82,9 +82,15 @@ const formatExportValue = (value: any, type?: string): string => {
     case "currency": return fmtCurrency(value)
     case "number":   return Number(value).toLocaleString("en-IN")
     case "date":     return fmtDate(String(value))
-    // status / priority rendered as plain text in Excel; colour applied in PDF only
+    // status / priority rendered as plain text with readable formatting
     case "status":
-    case "priority":
+    case "priority": {
+      const s = String(value).toLowerCase()
+      if (!s || s === "null" || s === "undefined") return "—"
+      if (s === "in_progress" || s === "inprogress") return "In Progress"
+      if (s === "pending_approval") return "Pending Approval"
+      return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ")
+    }
     default:
       return String(value)
   }
@@ -236,7 +242,7 @@ function drawSummary(
   })
 
   const rows = Math.ceil(summary.length / cols)
-  y += rows * (cellH + 2) + 4
+  y += rows * (cellH + 2) + 6 // Added extra spacing after summary
 
   // Bottom separator
   doc.setDrawColor(...BRAND.divider)
@@ -311,10 +317,26 @@ export const exportToPDF = ({
   // ── Determine column alignments & colour hooks ────────────────────────────
   const colStyles: Record<number, any> = {}
   columns.forEach((col, i) => {
+    colStyles[i] = {}
+    
     if (col.type === "number" || col.type === "currency") {
-      colStyles[i] = { halign: "right" }
+      colStyles[i].halign = "right"
     } else if (col.type === "status" || col.type === "priority") {
-      colStyles[i] = { halign: "left", fontStyle: "bold" }
+      colStyles[i].halign = "left"
+      colStyles[i].fontStyle = "bold"
+      colStyles[i].cellWidth = 18 // small
+    }
+    
+    // Auto column widths based on headers for Jobs Report rules
+    const headerStr = col.header.toLowerCase()
+    if (headerStr.includes("title")) {
+      colStyles[i].cellWidth = 50 // wide (30-35%)
+    } else if (headerStr === "status" || headerStr === "priority" || headerStr === "progress") {
+      colStyles[i].cellWidth = 18 // small
+    } else if (headerStr.includes("assigned to") || headerStr.includes("client") || headerStr.includes("location") || headerStr.includes("employee")) {
+      colStyles[i].cellWidth = 25 // medium
+    } else if (headerStr.includes("date") || headerStr.includes("created")) {
+      colStyles[i].cellWidth = 22 // compact
     }
   })
 
@@ -328,19 +350,20 @@ export const exportToPDF = ({
 
     // ── Head styles ──────────────────────────────────────────────────────────
     headStyles: {
-      fillColor: BRAND.navy,
-      textColor: BRAND.white,
+      fillColor: BRAND.headerBg, // slight background color
+      textColor: BRAND.navy,
       fontSize: 8.5,
       fontStyle: "bold",
       halign: "left",
-      cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
+      cellPadding: { top: 6, bottom: 6, left: 4, right: 4 }, // proper padding
+      minCellWidth: "wrap", // Headers NEVER break into multiple lines
     },
 
     // ── Body styles ──────────────────────────────────────────────────────────
     bodyStyles: {
       fontSize: 8,
       textColor: BRAND.body,
-      cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 },
+      cellPadding: { top: 5, bottom: 5, left: 4, right: 4 }, // Increase row height/padding
       lineColor: BRAND.divider,
       lineWidth: 0.1,
     },
