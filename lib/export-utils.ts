@@ -327,16 +327,44 @@ export const exportToPDF = ({
       colStyles[i].cellWidth = 18 // small
     }
     
-    // Auto column widths based on headers for Jobs Report rules
+    const contentW = pageW - 28 // left/right margins are 14
     const headerStr = col.header.toLowerCase()
-    if (headerStr.includes("title")) {
-      colStyles[i].minCellWidth = 40 // wide (30-35%)
-    } else if (headerStr === "status" || headerStr === "priority" || headerStr === "progress") {
-      // no forced small width, let it auto-size to prevent wrapping
-    } else if (headerStr.includes("assigned to") || headerStr.includes("client") || headerStr.includes("location") || headerStr.includes("employee")) {
-      colStyles[i].minCellWidth = 20 // medium
-    } else if (headerStr.includes("date") || headerStr.includes("created")) {
-      colStyles[i].minCellWidth = 16 // compact
+
+    // SaaS Jobs Report exact mapping
+    if (headerStr === "job title") {
+      colStyles[i].cellWidth = contentW * 0.30
+      colStyles[i].fontStyle = "bold"
+      colStyles[i].textColor = [17, 24, 39] // gray-900
+    } else if (headerStr === "status") {
+      colStyles[i].cellWidth = contentW * 0.12
+      colStyles[i].fontStyle = "bold"
+    } else if (headerStr === "priority") {
+      colStyles[i].cellWidth = contentW * 0.10
+      colStyles[i].fontStyle = "bold"
+    } else if (headerStr === "progress") {
+      colStyles[i].cellWidth = contentW * 0.10
+    } else if (headerStr === "assigned to") {
+      colStyles[i].cellWidth = contentW * 0.15
+      colStyles[i].textColor = [107, 114, 128] // muted gray
+    } else if (headerStr === "client/location") {
+      colStyles[i].cellWidth = contentW * 0.15
+      colStyles[i].textColor = [107, 114, 128] // muted gray
+    } else if (headerStr === "dates") {
+      colStyles[i].cellWidth = contentW * 0.08 // 8%
+      colStyles[i].textColor = [107, 114, 128] // muted gray
+    } else {
+      // Fallbacks for other reports
+      if (headerStr.includes("title")) {
+        colStyles[i].minCellWidth = 40
+      } else if (headerStr === "status" || headerStr === "priority" || headerStr === "progress") {
+        // auto
+      } else if (headerStr.includes("assigned to") || headerStr.includes("client") || headerStr.includes("location") || headerStr.includes("employee")) {
+        colStyles[i].minCellWidth = 20
+        colStyles[i].textColor = [107, 114, 128]
+      } else if (headerStr.includes("date") || headerStr.includes("created")) {
+        colStyles[i].minCellWidth = 16
+        colStyles[i].textColor = [107, 114, 128]
+      }
     }
   })
 
@@ -350,20 +378,20 @@ export const exportToPDF = ({
 
     // ── Head styles ──────────────────────────────────────────────────────────
     headStyles: {
-      fillColor: BRAND.headerBg, // slight background color
-      textColor: BRAND.navy,
+      fillColor: [248, 250, 252], // slate-50 (SaaS premium light gray)
+      textColor: [51, 65, 85], // slate-700
       fontSize: 8.5,
       fontStyle: "bold",
       halign: "left",
-      cellPadding: { top: 6, bottom: 6, left: 4, right: 4 }, // proper padding
+      cellPadding: { top: 8, bottom: 8, left: 6, right: 6 }, // SaaS premium padding
     },
 
     // ── Body styles ──────────────────────────────────────────────────────────
     bodyStyles: {
-      fontSize: 8,
+      fontSize: 8.5,
       textColor: BRAND.body,
-      cellPadding: { top: 5, bottom: 5, left: 4, right: 4 }, // Increase row height/padding
-      lineColor: BRAND.divider,
+      cellPadding: { top: 7, bottom: 7, left: 6, right: 6 }, // Increased row height/padding
+      lineColor: [226, 232, 240], // slate-200
       lineWidth: 0.1,
     },
 
@@ -382,7 +410,10 @@ export const exportToPDF = ({
       // Prevent header text wrapping by enforcing a minimum width based on char count
       if (hookData.section === "head") {
         const textLen = hookData.cell.text[0]?.length || 10
-        hookData.cell.styles.minCellWidth = textLen * 1.6 + 8
+        // Increase multiplier to guarantee no wrap
+        if (!hookData.cell.styles.minCellWidth) {
+          hookData.cell.styles.minCellWidth = textLen * 1.8 + 10
+        }
         return
       }
 

@@ -188,27 +188,38 @@ export default function OwnerJobsPage() {
               subtitle="Operational Job Lifecycle Overview"
               onExport={async () => {
                 const data = await apiClient("/api/jobs")
+                
+                const formatCompactDate = (dateString: string | undefined | null) => {
+                  if (!dateString) return "N/A"
+                  const d = new Date(dateString)
+                  if (isNaN(d.getTime())) return "N/A"
+                  const day = d.toLocaleDateString("en-GB", { day: "2-digit" })
+                  const month = d.toLocaleDateString("en-GB", { month: "short" })
+                  const year = d.toLocaleDateString("en-GB", { year: "2-digit" })
+                  return `${day} ${month} '${year}`
+                }
+
                 return Array.isArray(data)
                   ? data.map((j: any) => ({
                       ...j,
+                      title_fmt: j.title || "Untitled",
                       employee: (j as any).employee_name || j.employee_email || "Unassigned",
-                      deadline_fmt: j.deadline
-                        ? new Date(j.deadline).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
-                        : "Not set",
+                      client_location: `${j.client || 'N/A'}\n${j.location || 'N/A'}`,
+                      dates_fmt: `Due: ${formatCompactDate(j.deadline)}\nCreated: ${formatCompactDate(j.created_at)}`,
+                      status_fmt: (j.status || "pending").replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+                      priority_fmt: (j.priority || "medium").replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
                       progress_pct: `${j.progress || 0}%`,
                     }))
                   : []
               }}
               columns={[
-                { header: "Job Title",      dataKey: "title" },
-                { header: "Status",         dataKey: "status",        type: "status" },
-                { header: "Priority",       dataKey: "priority",      type: "priority" },
+                { header: "Job Title",      dataKey: "title_fmt" },
+                { header: "Status",         dataKey: "status_fmt",        type: "status" },
+                { header: "Priority",       dataKey: "priority_fmt",      type: "priority" },
                 { header: "Progress",       dataKey: "progress_pct" },
                 { header: "Assigned To",    dataKey: "employee" },
-                { header: "Client",         dataKey: "client" },
-                { header: "Location",       dataKey: "location" },
-                { header: "Due Date",       dataKey: "deadline_fmt" },
-                { header: "Created",        dataKey: "created_at",    type: "date" },
+                { header: "Client/Location",dataKey: "client_location" },
+                { header: "Dates",          dataKey: "dates_fmt" },
               ]}
             />
 
