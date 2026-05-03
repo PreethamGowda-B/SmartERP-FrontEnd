@@ -330,39 +330,38 @@ export const exportToPDF = ({
     const contentW = pageW - 28 // left/right margins are 14
     const headerStr = col.header.toLowerCase()
 
-    // SaaS Jobs Report exact mapping
+    // SaaS Jobs Report column rules - Use minCellWidth instead of fixed cellWidth
+    // to allow dynamic distribution and prevent extreme text wrapping.
     if (headerStr === "job title") {
-      colStyles[i].cellWidth = contentW * 0.30
+      colStyles[i].minCellWidth = 50 
       colStyles[i].fontStyle = "bold"
       colStyles[i].textColor = [17, 24, 39] // gray-900
     } else if (headerStr === "status") {
-      colStyles[i].cellWidth = contentW * 0.12
+      colStyles[i].minCellWidth = 22
       colStyles[i].fontStyle = "bold"
     } else if (headerStr === "priority") {
-      colStyles[i].cellWidth = contentW * 0.10
+      colStyles[i].minCellWidth = 18
       colStyles[i].fontStyle = "bold"
     } else if (headerStr === "progress") {
-      colStyles[i].cellWidth = contentW * 0.10
+      colStyles[i].minCellWidth = 18
     } else if (headerStr === "assigned to") {
-      colStyles[i].cellWidth = contentW * 0.15
+      colStyles[i].minCellWidth = 25
       colStyles[i].textColor = [107, 114, 128] // muted gray
     } else if (headerStr === "client/location") {
-      colStyles[i].cellWidth = contentW * 0.15
+      colStyles[i].minCellWidth = 25
       colStyles[i].textColor = [107, 114, 128] // muted gray
     } else if (headerStr === "dates") {
-      colStyles[i].cellWidth = contentW * 0.08 // 8%
+      colStyles[i].minCellWidth = 28 // Give enough room for compact dates
       colStyles[i].textColor = [107, 114, 128] // muted gray
     } else {
       // Fallbacks for other reports
       if (headerStr.includes("title")) {
         colStyles[i].minCellWidth = 40
-      } else if (headerStr === "status" || headerStr === "priority" || headerStr === "progress") {
-        // auto
       } else if (headerStr.includes("assigned to") || headerStr.includes("client") || headerStr.includes("location") || headerStr.includes("employee")) {
         colStyles[i].minCellWidth = 20
         colStyles[i].textColor = [107, 114, 128]
       } else if (headerStr.includes("date") || headerStr.includes("created")) {
-        colStyles[i].minCellWidth = 16
+        colStyles[i].minCellWidth = 20
         colStyles[i].textColor = [107, 114, 128]
       }
     }

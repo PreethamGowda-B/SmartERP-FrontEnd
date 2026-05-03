@@ -285,8 +285,8 @@ export default function EmployeeJobsPage() {
             const isPending = (employeeStatus as string) === "pending" || (employeeStatus as string) === "assigned"
             const isAccepted = employeeStatus === "accepted"
             const isDeclined = employeeStatus === "declined"
-            // Treat as completed if status is completed OR progress is 100
-            const isCompleted = status?.toLowerCase() === "completed" || progress === 100
+            // Treat as completed if status is completed OR SAVED progress is 100
+            const isCompleted = status?.toLowerCase() === "completed" || (job.progress || 0) === 100
             const displayStatus = isCompleted ? "completed" : status
             const acceptedByOther = isAccepted && (job as any).assigned_to && String((job as any).assigned_to) !== String(currentUser?.id)
             const assignedEmployeeName = (job as any).assigned_employee_name
