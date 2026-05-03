@@ -86,6 +86,13 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
     }
     // Refresh CSRF token after login (token rotation)
     await fetchCsrfToken();
+    
+    // Pass tokens to Android App for Push Notifications
+    if (typeof window !== 'undefined' && (window as any).Android?.saveToken) {
+      // In cookie-based auth, we don't have direct access to tokens here.
+      // But we can trigger the Android bridge to at least register FCM.
+      (window as any).Android.saveToken("customer_session_active", null);
+    }
   }, [refreshProfile]);
 
   const logout = useCallback(async () => {
@@ -95,6 +102,12 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
       // Ignore errors — clear state regardless
     }
     setCustomer(null);
+    
+    // Clear Android App session
+    if (typeof window !== 'undefined' && (window as any).Android?.logout) {
+      (window as any).Android.logout();
+    }
+    
     if (typeof window !== 'undefined') {
       window.location.href = '/customer/login';
     }
