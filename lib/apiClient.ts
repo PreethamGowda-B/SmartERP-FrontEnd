@@ -157,7 +157,7 @@ function handleLogout() {
 
     if ((window as any).Android?.logout) {
       (window as any).Android.logout()
-    } else {
+    } else if (typeof window !== "undefined" && !window.location.pathname.includes("/auth/login")) {
       window.location.href = "/auth/login"
     }
   }

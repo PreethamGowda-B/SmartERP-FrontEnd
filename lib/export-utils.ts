@@ -337,13 +337,13 @@ export const exportToPDF = ({
       colStyles[i].fontStyle = "bold"
       colStyles[i].textColor = [17, 24, 39] // gray-900
     } else if (headerStr === "status") {
-      colStyles[i].minCellWidth = 22
+      colStyles[i].minCellWidth = 35
       colStyles[i].fontStyle = "bold"
     } else if (headerStr === "priority") {
-      colStyles[i].minCellWidth = 18
+      colStyles[i].minCellWidth = 30
       colStyles[i].fontStyle = "bold"
     } else if (headerStr === "progress") {
-      colStyles[i].minCellWidth = 18
+      colStyles[i].minCellWidth = 20
     } else if (headerStr === "assigned to") {
       colStyles[i].minCellWidth = 25
       colStyles[i].textColor = [107, 114, 128] // muted gray
@@ -389,7 +389,7 @@ export const exportToPDF = ({
     bodyStyles: {
       fontSize: 8.5,
       textColor: BRAND.body,
-      cellPadding: { top: 7, bottom: 7, left: 6, right: 6 }, // Increased row height/padding
+      cellPadding: { top: 6, bottom: 6, left: 4, right: 4 }, // Optimized padding for horizontal space
       lineColor: [226, 232, 240], // slate-200
       lineWidth: 0.1,
     },
