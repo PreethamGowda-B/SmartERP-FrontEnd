@@ -44,7 +44,7 @@ function formatLastUpdated(date: Date | null) {
   return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
 }
 
-function getEmployeeStatusBadge(employeeStatus?: string) {
+function getEmployeeStatusBadge(employeeStatus?: string | null) {
   const status = employeeStatus?.toLowerCase() || "pending"
   switch (status) {
     case "accepted":

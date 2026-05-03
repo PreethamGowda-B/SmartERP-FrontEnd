@@ -330,13 +330,13 @@ export const exportToPDF = ({
     // Auto column widths based on headers for Jobs Report rules
     const headerStr = col.header.toLowerCase()
     if (headerStr.includes("title")) {
-      colStyles[i].cellWidth = 50 // wide (30-35%)
+      colStyles[i].minCellWidth = 40 // wide (30-35%)
     } else if (headerStr === "status" || headerStr === "priority" || headerStr === "progress") {
-      colStyles[i].cellWidth = 18 // small
+      // no forced small width, let it auto-size to prevent wrapping
     } else if (headerStr.includes("assigned to") || headerStr.includes("client") || headerStr.includes("location") || headerStr.includes("employee")) {
-      colStyles[i].cellWidth = 25 // medium
+      colStyles[i].minCellWidth = 20 // medium
     } else if (headerStr.includes("date") || headerStr.includes("created")) {
-      colStyles[i].cellWidth = 22 // compact
+      colStyles[i].minCellWidth = 16 // compact
     }
   })
 
@@ -356,7 +356,6 @@ export const exportToPDF = ({
       fontStyle: "bold",
       halign: "left",
       cellPadding: { top: 6, bottom: 6, left: 4, right: 4 }, // proper padding
-      minCellWidth: "wrap", // Headers NEVER break into multiple lines
     },
 
     // ── Body styles ──────────────────────────────────────────────────────────
@@ -378,8 +377,15 @@ export const exportToPDF = ({
     tableLineColor: BRAND.divider,
     tableLineWidth: 0.1,
 
-    // ── Per-cell colour overrides for status / priority ──────────────────────
+    // ── Per-cell colour overrides for status / priority and header widths ────
     didParseCell: (hookData) => {
+      // Prevent header text wrapping by enforcing a minimum width based on char count
+      if (hookData.section === "head") {
+        const textLen = hookData.cell.text[0]?.length || 10
+        hookData.cell.styles.minCellWidth = textLen * 1.6 + 8
+        return
+      }
+
       if (hookData.section !== "body") return
       const colIndex = hookData.column.index
       const col = columns[colIndex]

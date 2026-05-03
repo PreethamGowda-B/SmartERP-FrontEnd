@@ -50,7 +50,7 @@ export function MaterialRequestForm({ request, onSubmit, onCancel, isLoading }: 
   const availableJobs =
     user?.role === "owner"
       ? mockJobs
-      : mockJobs.filter((job) => job.assignedEmployees.includes(user?.id || "") && job.status === "active")
+      : mockJobs.filter((job) => (job.assignedEmployees || []).includes(user?.id || "") && job.status === "active")
 
   const filteredMaterials = materialsCatalog.filter((material) =>
     material.name.toLowerCase().includes(searchTerm.toLowerCase()),

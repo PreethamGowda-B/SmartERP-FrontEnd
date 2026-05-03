@@ -47,7 +47,7 @@ function getStatusBadge(status?: string) {
   }
 }
 
-function getEmployeeStatusBadge(employeeStatus?: string) {
+function getEmployeeStatusBadge(employeeStatus?: string | null) {
   const s = (employeeStatus || "").toLowerCase()
   if (s === "accepted") return (
     <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100 gap-1">
