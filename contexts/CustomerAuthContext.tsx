@@ -23,6 +23,9 @@ interface CustomerAuthContextValue extends AuthState {
 
 const CustomerAuthContext = createContext<CustomerAuthContextValue | null>(null);
 
+let profileCache: { timestamp: number; data: CustomerProfile | null } | null = null;
+let profilePromise: Promise<{ data: CustomerProfile }> | null = null;
+
 export function CustomerAuthProvider({ children }: { children: React.ReactNode }) {
   const [customer, setCustomer] = useState<CustomerProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,16 +33,30 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
   // Fetch profile to hydrate auth state (checks if session cookie is valid)
   const refreshProfile = useCallback(async () => {
     try {
-      const res = await customerApi.get<CustomerProfile>('/api/customer/profile');
+      const now = Date.now();
+      // Use cache if it's fresh (less than 30s old)
+      if (profileCache && now - profileCache.timestamp < 30000) {
+        setCustomer(profileCache.data);
+        return;
+      }
+
+      // De-duplicate concurrent requests
+      if (!profilePromise) {
+        profilePromise = customerApi.get<CustomerProfile>('/api/customer/profile');
+      }
+      
+      const res = await profilePromise;
+      profilePromise = null; // Clear promise once resolved
+      
+      profileCache = { timestamp: Date.now(), data: res.data };
       setCustomer(res.data);
     } catch (error: any) {
-      // If token is invalid/expired, clear customer state
-      // Do NOT trigger redirect here - let pages handle it
+      profilePromise = null;
+      profileCache = { timestamp: Date.now(), data: null };
       setCustomer(null);
       
-      // Clear any stale cookies on 401 errors
       if (error?.response?.status === 401) {
-        // This is normal for logged-out users — suppress the console noise
+        // Normal for logged-out users
       }
     }
   }, []);

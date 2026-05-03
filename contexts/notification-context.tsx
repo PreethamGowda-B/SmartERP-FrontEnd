@@ -39,6 +39,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const router = useRouter()
   const [sseConnection, setSSEConnection] = useState<EventSource | null>(null)
   const [reconnectTrigger, setReconnectTrigger] = useState(0)
+  const [reconnectAttempts, setReconnectAttempts] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
 
   // Fetch notifications from backend
@@ -133,6 +134,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     eventSource.onopen = () => {
       logger.log("📡 SSE connection established")
       setIsConnected(true)
+      setReconnectAttempts(0)
     }
 
     eventSource.onmessage = (event) => {
@@ -184,11 +186,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setIsConnected(false)
       eventSource.close()
       
-      // Auto-reconnect after 3 seconds with fresh token
+      // Auto-reconnect with exponential backoff (max 30s)
       if (user) {
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000)
+        setReconnectAttempts(prev => prev + 1)
         setTimeout(() => {
           setReconnectTrigger(prev => prev + 1)
-        }, 3000)
+        }, delay)
       }
     }
 
