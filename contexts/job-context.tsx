@@ -4,7 +4,7 @@ import type React from "react"
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react"
 import { type Job } from "@/lib/data"
 import { useAuth } from "@/contexts/auth-context"
-import { apiClient } from "@/lib/apiClient"
+import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { useNotifications } from "@/contexts/notification-context"
 import { logger } from "@/lib/logger"
 
@@ -121,8 +121,12 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
     if (!isLoading) {
       if (!hasSyncedRef.current) {
-        loadJobs()
-        hasSyncedRef.current = true
+        // Only load if a token is actually available — avoids "no token" warnings
+        // that fire when the context mounts before auth is restored from storage.
+        if (getAuthToken()) {
+          loadJobs()
+          hasSyncedRef.current = true
+        }
       }
       // Poll every 30 seconds — 1500ms was hammering the backend with ~40 calls/min
       intervalId = setInterval(loadJobs, 30000)

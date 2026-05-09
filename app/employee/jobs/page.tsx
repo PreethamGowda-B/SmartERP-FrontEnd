@@ -85,6 +85,9 @@ export default function EmployeeJobsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const isRefreshingRef = useRef(false)
+  // Tracks in-flight accept calls to prevent duplicate submissions (e.g. double-click or
+  // service worker message triggering a re-render while accept is in flight)
+  const acceptingJobIds = useRef<Set<string>>(new Set())
 
   const showNotification = (type: "success" | "error", message: string) => {
     setNotification({ type, message })
@@ -134,6 +137,9 @@ export default function EmployeeJobsPage() {
   }, [handleRefresh])
 
   const handleAcceptJob = async (jobId: string) => {
+    // Prevent duplicate accept calls for the same job (double-click, SW message re-render, etc.)
+    if (acceptingJobIds.current.has(jobId)) return
+    acceptingJobIds.current.add(jobId)
     setUpdatingJobId(jobId)
     try {
       await apiClient(`/api/jobs/${jobId}/accept`, { method: "POST" })
@@ -148,6 +154,7 @@ export default function EmployeeJobsPage() {
       }
       showNotification("error", err.message || "Failed to accept job. Please try again.")
     } finally {
+      acceptingJobIds.current.delete(jobId)
       setUpdatingJobId(null)
     }
   }
