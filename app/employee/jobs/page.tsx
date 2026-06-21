@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import {
   Calendar, Users, Briefcase, Clock, CheckCircle2, AlertCircle,
-  XCircle, ThumbsUp, ThumbsDown, RefreshCw,
+  XCircle, RefreshCw,
 } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { cn } from "@/lib/utils"
@@ -19,16 +19,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonList } from "@/components/ui/skeleton-card"
 import { toast } from "sonner"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-const AUTO_REFRESH_MS = 30_000
 
-import { getAuthToken, apiClient } from "@/lib/apiClient"
-function jobAuthHeaders(): Record<string, string> {
-  const token = getAuthToken()
-  const h: Record<string, string> = { "Content-Type": "application/json" }
-  if (token) h["Authorization"] = `Bearer ${token}`
-  return h
-}
+import { apiClient } from "@/lib/apiClient"
 
 function getStatusIcon(status?: string) {
   switch (status?.toLowerCase() || "pending") {
@@ -80,19 +72,14 @@ export default function EmployeeJobsPage() {
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null)
   const [progressValues, setProgressValues] = useState<Record<string, number>>({})
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
-  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null)
+  // Per-job lock: tracks jobs whose accept request is currently in-flight.
+  // Prevents duplicate requests from double-clicks surviving the updatingJobId loading state.
+  const acceptingJobsRef = useRef<Set<string>>(new Set())
 
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const isRefreshingRef = useRef(false)
-  // Tracks in-flight accept calls to prevent duplicate submissions (e.g. double-click or
-  // service worker message triggering a re-render while accept is in flight)
-  const acceptingJobIds = useRef<Set<string>>(new Set())
 
-  const showNotification = (type: "success" | "error", message: string) => {
-    setNotification({ type, message })
-    setTimeout(() => setNotification(null), 3000)
-  }
 
   const handleRefresh = useCallback(async () => {
     if (isRefreshingRef.current) return
@@ -113,11 +100,11 @@ export default function EmployeeJobsPage() {
     }
   }, [refreshJobs])
 
-  // Initial fetch + 30-second auto-refresh
+  // Initial fetch on mount only.
+  // NOTE: job-context already polls every 30s globally — we do NOT add another
+  // setInterval here to avoid double-polling (which caused ERR_CONNECTION_CLOSED).
   useEffect(() => {
     handleRefresh()
-    const intervalId = setInterval(handleRefresh, AUTO_REFRESH_MS)
-    return () => clearInterval(intervalId)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh immediately when a push notification arrives (new job assigned)
@@ -137,24 +124,33 @@ export default function EmployeeJobsPage() {
   }, [handleRefresh])
 
   const handleAcceptJob = async (jobId: string) => {
-    // Prevent duplicate accept calls for the same job (double-click, SW message re-render, etc.)
-    if (acceptingJobIds.current.has(jobId)) return
-    acceptingJobIds.current.add(jobId)
+    // Hard lock: if a request for this job is already in-flight, ignore the click
+    if (acceptingJobsRef.current.has(jobId)) return
+    acceptingJobsRef.current.add(jobId)
     setUpdatingJobId(jobId)
     try {
       await apiClient(`/api/jobs/${jobId}/accept`, { method: "POST" })
-      showNotification("success", "Job accepted successfully!")
+      toast.success("Job accepted! It has been added to your active workstream.")
       await refreshJobs()
       setLastUpdated(new Date())
     } catch (err: any) {
-      // On 409, refresh immediately so stale job state is cleared
       if (err.status === 409) {
-        await refreshJobs()
+        // Always refresh so the UI reflects the real server state
+        await refreshJobs().catch(() => {})
         setLastUpdated(new Date())
+        const msg: string = err.message || ""
+        if (msg.includes("another employee")) {
+          toast.info("This job was just taken by another team member.")
+        } else if (msg.includes("completed") || msg.includes("cancelled")) {
+          toast.info(`This job is already ${msg.includes("completed") ? "completed" : "cancelled"}.`)
+        } else {
+          toast.info("Job status has changed. Refreshing your list...")
+        }
+      } else if (err.name !== "AbortError") {
+        toast.error(err.message || "Failed to accept job. Please try again.")
       }
-      showNotification("error", err.message || "Failed to accept job. Please try again.")
     } finally {
-      acceptingJobIds.current.delete(jobId)
+      acceptingJobsRef.current.delete(jobId)
       setUpdatingJobId(null)
     }
   }
@@ -163,11 +159,13 @@ export default function EmployeeJobsPage() {
     setUpdatingJobId(jobId)
     try {
       await apiClient(`/api/jobs/${jobId}/decline`, { method: "POST" })
-      showNotification("success", "Job declined.")
+      toast.success("Job declined.")
       await refreshJobs()
       setLastUpdated(new Date())
     } catch (err: any) {
-      showNotification("error", err.message || "Failed to decline job. Please try again.")
+      if (err.name !== "AbortError") {
+        toast.error(err.message || "Failed to decline job. Please try again.")
+      }
     } finally {
       setUpdatingJobId(null)
     }
@@ -180,11 +178,13 @@ export default function EmployeeJobsPage() {
         method: "POST",
         body: JSON.stringify({ progress }),
       })
-      showNotification("success", `Progress updated to ${progress}%`)
+      toast.success(`Progress updated to ${progress}%`)
       await refreshJobs()
       setLastUpdated(new Date())
     } catch (err: any) {
-      showNotification("error", err.message || "Failed to update progress. Please try again.")
+      if (err.name !== "AbortError") {
+        toast.error(err.message || "Failed to update progress. Please try again.")
+      }
     } finally {
       setUpdatingJobId(null)
     }
@@ -292,10 +292,8 @@ export default function EmployeeJobsPage() {
             const isPending = (employeeStatus as string) === "pending" || (employeeStatus as string) === "assigned"
             const isAccepted = employeeStatus === "accepted"
             const isDeclined = employeeStatus === "declined"
-            // isCompleted uses ONLY the server-persisted job.progress, NOT the local slider value.
-            // This ensures the "Update Status" button remains visible when the slider is moved to 100%
-            // so the employee can actually persist the update to the database.
-            const isCompleted = status?.toLowerCase() === "completed" || (job.progress ?? 0) === 100
+            // Treat as completed if status is completed OR progress is 100
+            const isCompleted = status?.toLowerCase() === "completed" || progress === 100
             const displayStatus = isCompleted ? "completed" : status
             const acceptedByOther = isAccepted && (job as any).assigned_to && String((job as any).assigned_to) !== String(currentUser?.id)
             const assignedEmployeeName = (job as any).assigned_employee_name
