@@ -324,39 +324,39 @@ export const exportToPDF = ({
     } else if (col.type === "status" || col.type === "priority") {
       colStyles[i].halign = "left"
       colStyles[i].fontStyle = "bold"
-      colStyles[i].cellWidth = 18 // small
+      colStyles[i].minCellWidth = 18 // Use minCellWidth instead of cellWidth to allow overrides
     }
     
     const contentW = pageW - 28 // left/right margins are 14
     const headerStr = col.header.toLowerCase()
 
-    // SaaS Jobs Report column rules - Use minCellWidth instead of fixed cellWidth
-    // to allow dynamic distribution and prevent extreme text wrapping.
+    // SaaS Jobs Report column rules - Optimised minCellWidths to fit perfectly within page boundaries
+    // and prevent horizontal clipping/excessive wrapping.
     if (headerStr === "job title") {
-      colStyles[i].minCellWidth = 50 
+      colStyles[i].minCellWidth = 40 
       colStyles[i].fontStyle = "bold"
       colStyles[i].textColor = [17, 24, 39] // gray-900
     } else if (headerStr === "status") {
-      colStyles[i].minCellWidth = 35
+      colStyles[i].minCellWidth = 22
       colStyles[i].fontStyle = "bold"
     } else if (headerStr === "priority") {
-      colStyles[i].minCellWidth = 30
+      colStyles[i].minCellWidth = 18
       colStyles[i].fontStyle = "bold"
     } else if (headerStr === "progress") {
-      colStyles[i].minCellWidth = 20
+      colStyles[i].minCellWidth = 14
     } else if (headerStr === "assigned to") {
-      colStyles[i].minCellWidth = 25
+      colStyles[i].minCellWidth = 24
       colStyles[i].textColor = [107, 114, 128] // muted gray
     } else if (headerStr === "client/location") {
-      colStyles[i].minCellWidth = 25
+      colStyles[i].minCellWidth = 24
       colStyles[i].textColor = [107, 114, 128] // muted gray
     } else if (headerStr === "dates") {
-      colStyles[i].minCellWidth = 28 // Give enough room for compact dates
+      colStyles[i].minCellWidth = 26 // Give enough room for compact dates
       colStyles[i].textColor = [107, 114, 128] // muted gray
     } else {
       // Fallbacks for other reports
       if (headerStr.includes("title")) {
-        colStyles[i].minCellWidth = 40
+        colStyles[i].minCellWidth = 35
       } else if (headerStr.includes("assigned to") || headerStr.includes("client") || headerStr.includes("location") || headerStr.includes("employee")) {
         colStyles[i].minCellWidth = 20
         colStyles[i].textColor = [107, 114, 128]
@@ -400,18 +400,19 @@ export const exportToPDF = ({
     },
 
     columnStyles: colStyles,
-    margin: { left: 14, right: 14 },
+    margin: { top: 48, bottom: 15, left: 14, right: 14 }, // Set top margin to 48 to prevent header overlap on page 2+
     tableLineColor: BRAND.divider,
     tableLineWidth: 0.1,
+    rowPageBreak: "avoid", // Prevent row splitting across pages
 
     // ── Per-cell colour overrides for status / priority and header widths ────
     didParseCell: (hookData) => {
       // Prevent header text wrapping by enforcing a minimum width based on char count
       if (hookData.section === "head") {
         const textLen = hookData.cell.text[0]?.length || 10
-        // Increase multiplier to guarantee no wrap
+        // Sane multiplier to avoid blowing up column widths on multi-column tables
         if (!hookData.cell.styles.minCellWidth) {
-          hookData.cell.styles.minCellWidth = textLen * 1.8 + 10
+          hookData.cell.styles.minCellWidth = textLen * 1.2 + 5
         }
         return
       }
