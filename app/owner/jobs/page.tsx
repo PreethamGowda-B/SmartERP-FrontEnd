@@ -17,8 +17,6 @@ import { apiClient } from "@/lib/apiClient"
 import {
   Plus, Search, Filter, Calendar, Users, CheckCircle2, Clock,
   XCircle, AlertCircle, TrendingUp, Edit, Trash2, RefreshCw, Briefcase,
-  MapPin, User, Zap, ArrowUpCircle, Minus, ArrowDownCircle, Hash,
-  ChevronRight, MessageSquare, Eye,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ErrorView } from "@/components/ui/error-view"
@@ -44,7 +42,7 @@ function formatLastUpdated(date: Date | null) {
   return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
 }
 
-function getEmployeeStatusBadge(employeeStatus?: string | null) {
+function getEmployeeStatusBadge(employeeStatus?: string) {
   const status = employeeStatus?.toLowerCase() || "pending"
   switch (status) {
     case "accepted":
@@ -182,47 +180,6 @@ export default function OwnerJobsPage() {
               {isRefreshing ? "Refreshing" : "Refresh"}
             </Button>
 
-            <ExportButton
-              filename="Jobs_Report"
-              title="Jobs & Projects Report"
-              subtitle="Operational Job Lifecycle Overview"
-              onExport={async () => {
-                const data = await apiClient("/api/jobs")
-                
-                const formatCompactDate = (dateString: string | undefined | null) => {
-                  if (!dateString) return "N/A"
-                  const d = new Date(dateString)
-                  if (isNaN(d.getTime())) return "N/A"
-                  const day = d.toLocaleDateString("en-GB", { day: "2-digit" })
-                  const month = d.toLocaleDateString("en-GB", { month: "short" })
-                  const year = d.toLocaleDateString("en-GB", { year: "2-digit" })
-                  return `${day} ${month} '${year}`
-                }
-
-                return Array.isArray(data)
-                  ? data.map((j: any) => ({
-                      ...j,
-                      title_fmt: j.title || "Untitled",
-                      employee: (j as any).employee_name || j.employee_email || "Unassigned",
-                      client_location: `${j.client || 'N/A'}\n${j.location || 'N/A'}`,
-                      dates_fmt: `Due: ${formatCompactDate(j.deadline)}\nCreated: ${formatCompactDate(j.created_at)}`,
-                      status_fmt: (j.status || "pending").replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
-                      priority_fmt: (j.priority || "medium").replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
-                      progress_pct: `${j.progress || 0}%`,
-                    }))
-                  : []
-              }}
-              columns={[
-                { header: "Job Title",      dataKey: "title_fmt" },
-                { header: "Status",         dataKey: "status_fmt",        type: "status" },
-                { header: "Priority",       dataKey: "priority_fmt",      type: "priority" },
-                { header: "Progress",       dataKey: "progress_pct" },
-                { header: "Assigned To",    dataKey: "employee" },
-                { header: "Client/Location",dataKey: "client_location" },
-                { header: "Dates",          dataKey: "dates_fmt" },
-              ]}
-            />
-
             <Button onClick={handleCreateJob} size="lg" className="h-10 px-6 shadow-lg shadow-primary/20 btn-premium">
               <Plus className="h-4 w-4 mr-2" />
               New Job
@@ -310,216 +267,84 @@ export default function OwnerJobsPage() {
               onAction={handleCreateJob}
             />
           ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredJobs.map((job) => {
                 const employeeStatus = job.employee_status
-                const empStatusStr = String(employeeStatus || "")
-                const isCompleted  = job.status?.toLowerCase() === "completed"
-                const isInProgress = job.status?.toLowerCase() === "in_progress" || job.status?.toLowerCase() === "active"
-                const isCancelled  = job.status?.toLowerCase() === "cancelled"
+                const empStatusStr = String(employeeStatus)
+                const isCompleted = job.status?.toLowerCase() === "completed"
+                const isInProgress = job.status?.toLowerCase() === "in_progress"
                 const displayProgress = isCompleted ? 100 : (job.progress || 0)
 
-                // ── Status colour strip ───────────────────────────────────
-                const stripColor =
-                  isCompleted              ? "bg-green-500"  :
-                  isCancelled             ? "bg-gray-400"   :
-                  isInProgress            ? "bg-orange-500" :
-                  empStatusStr === "accepted"  ? "bg-blue-500"  :
-                  empStatusStr === "declined"  ? "bg-red-500"   :
-                  empStatusStr === "arrived"   ? "bg-teal-500"  :
-                                                "bg-amber-400"
-
-                // ── Job status badge ──────────────────────────────────────
-                const statusBadge = (() => {
-                  const s = (job.status || "").toLowerCase()
-                  if (s === "completed")  return { label: "Completed",  cls: "bg-green-50  text-green-700  ring-1 ring-green-200",  dot: "bg-green-500" }
-                  if (s === "in_progress" || s === "active") return { label: "In Progress", cls: "bg-orange-50 text-orange-700 ring-1 ring-orange-200", dot: "bg-orange-500 animate-pulse" }
-                  if (s === "cancelled")  return { label: "Cancelled",  cls: "bg-gray-100   text-gray-500   ring-1 ring-gray-200",   dot: "bg-gray-400" }
-                  if (s === "open")       return { label: "Open",       cls: "bg-blue-50   text-blue-700   ring-1 ring-blue-200",   dot: "bg-blue-500" }
-                  return                         { label: s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " "),
-                                                  cls: "bg-amber-50  text-amber-700  ring-1 ring-amber-200",  dot: "bg-amber-500 animate-pulse" }
-                })()
-
-                // ── Employee status badge ─────────────────────────────────
-                const empBadge = (() => {
-                  switch (empStatusStr) {
-                    case "accepted":  return { label: "Tech Accepted",  cls: "bg-green-50  text-green-700  ring-1 ring-green-200" }
-                    case "arrived":   return { label: "On Site",        cls: "bg-teal-50   text-teal-700   ring-1 ring-teal-200" }
-                    case "declined":  return { label: "Declined",       cls: "bg-red-50    text-red-700    ring-1 ring-red-200" }
-                    case "completed": return { label: "Tech Done",      cls: "bg-blue-50   text-blue-700   ring-1 ring-blue-200" }
-                    default:          return { label: "Pending",        cls: "bg-amber-50  text-amber-700  ring-1 ring-amber-200" }
-                  }
-                })()
-
-                // ── Priority icon + colour ────────────────────────────────
-                const priorityMeta = (() => {
-                  switch ((job.priority || "").toLowerCase()) {
-                    case "urgent": return { label: "Urgent", cls: "text-red-600    bg-red-50    ring-1 ring-red-200",    Icon: Zap }
-                    case "high":   return { label: "High",   cls: "text-orange-600 bg-orange-50 ring-1 ring-orange-200", Icon: ArrowUpCircle }
-                    case "low":    return { label: "Low",    cls: "text-gray-500   bg-gray-100  ring-1 ring-gray-200",   Icon: ArrowDownCircle }
-                    default:       return { label: "Medium", cls: "text-blue-600   bg-blue-50   ring-1 ring-blue-200",   Icon: Minus }
-                  }
-                })()
-
-                // ── Progress bar colour ───────────────────────────────────
-                const progressColor =
-                  displayProgress === 100 ? "bg-green-500" :
-                  displayProgress >= 70   ? "bg-blue-500"  :
-                  displayProgress >= 40   ? "bg-orange-400" : "bg-amber-400"
-
-                const techName  = (job as any).employee_name || job.employee_email || null
-                const shortId   = job.id.slice(-6).toUpperCase()
-
                 return (
-                  <div
+                  <Card
                     key={job.id}
-                    className="group relative bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden transition-all duration-200 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-[0_4px_24px_rgba(0,0,0,0.10)] flex flex-col"
+                    className="premium-card hover-lift group overflow-hidden border-none shadow-sm hover:shadow-xl"
                   >
-                    {/* ── Top status strip ─────────────────────────────── */}
-                    <div className={cn("h-0.5 w-full", stripColor)} />
-
-                    <div className="p-5 flex flex-col flex-1">
-
-                      {/* ── Row 1: ID + status badges + actions ──────── */}
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {/* Short ID */}
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-mono text-gray-400">
-                            <Hash className="h-2.5 w-2.5" />{shortId}
-                          </span>
-                          {/* Job status */}
-                          <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold", statusBadge.cls)}>
-                            <span className={cn("w-1.5 h-1.5 rounded-full", statusBadge.dot)} />
-                            {statusBadge.label}
-                          </span>
-                          {/* Priority */}
-                          <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold", priorityMeta.cls)}>
-                            <priorityMeta.Icon className="h-2.5 w-2.5" />
-                            {priorityMeta.label}
-                          </span>
-                        </div>
-
-                        {/* Edit / Delete — appear on hover */}
-                        <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => handleEditJob(job)}
-                            className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 text-gray-400 transition-colors"
-                          >
+                    <div className={cn(
+                      "h-1.5 w-full",
+                      isCompleted ? "bg-green-500" : 
+                      empStatusStr === "accepted" ? "bg-primary" : 
+                      empStatusStr === "declined" ? "bg-red-500" : "bg-yellow-500"
+                    )} />
+                    
+                    <CardHeader className="p-6 pb-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0">
+                          {job.status}
+                        </Badge>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditJob(job)} className="h-7 w-7 rounded-full hover:bg-primary/10 hover:text-primary">
                             <Edit className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteJob(job)}
-                            className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-red-50 hover:text-red-600 text-gray-400 transition-colors"
-                          >
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteJob(job)} className="h-7 w-7 rounded-full hover:bg-red-50 hover:text-red-600">
                             <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          </Button>
                         </div>
                       </div>
+                      <CardTitle className="text-xl font-bold leading-tight group-hover:text-primary transition-colors cursor-pointer" onClick={() => handleEditJob(job)}>
+                        {job.title}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-3">
+                        {getEmployeeStatusBadge(employeeStatus)}
+                        <span className="text-meta">ID: {job.id.substring(0, 8)}</span>
+                      </div>
+                    </CardHeader>
 
-                      {/* ── Row 2: Title ─────────────────────────────── */}
-                      <button
-                        className="text-left mb-1"
-                        onClick={() => handleEditJob(job)}
-                      >
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-snug group-hover:text-blue-700 transition-colors line-clamp-2">
-                          {job.title}
-                        </h3>
-                      </button>
+                    <CardContent className="p-6 pt-0 space-y-6">
+                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                        {job.description || "Project parameters and execution details have been formalized for this assignment."}
+                      </p>
 
-                      {/* Description */}
-                      {job.description && (
-                        <p className="text-xs text-gray-500 line-clamp-1 mb-3">
-                          {job.description}
-                        </p>
-                      )}
-
-                      {/* ── Row 3: Client + Location ─────────────────── */}
-                      <div className="flex flex-col gap-1 mb-3">
-                        {job.client && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                            <Users className="h-3 w-3 text-gray-400 shrink-0" />
-                            <span className="font-medium text-gray-700 truncate">{job.client}</span>
-                          </div>
-                        )}
-                        {job.location && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                            <MapPin className="h-3 w-3 text-gray-400 shrink-0" />
-                            <span className="truncate">{job.location}</span>
-                          </div>
-                        )}
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-end">
+                          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Execution Progress</span>
+                          <span className="text-sm font-black text-primary">{displayProgress}%</span>
+                        </div>
+                        <Progress value={displayProgress} className="h-2 bg-secondary rounded-full overflow-hidden" />
                       </div>
 
-                      {/* ── Row 4: Progress bar ──────────────────────── */}
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1.5">
-                          <span className="font-semibold uppercase tracking-wider">Progress</span>
-                          <span className={cn(
-                            "font-bold text-xs",
-                            displayProgress === 100 ? "text-green-600" : "text-blue-600"
-                          )}>{displayProgress}%</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full transition-all duration-500", progressColor)}
-                            style={{ width: `${displayProgress}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* ── Row 5: Tech + Employee status + Timeline ─── */}
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-zinc-800 mt-auto">
-                        {/* Technician */}
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <div className="w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center text-[10px] font-bold text-blue-600 shrink-0">
-                            {techName?.[0]?.toUpperCase() || <User className="h-3 w-3" />}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wider">Technician</p>
-                            <p className="text-xs font-semibold text-gray-700 truncate max-w-[90px]">
-                              {techName || "Unassigned"}
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/40">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Technician</p>
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold">
+                              {(job as any).employee_name?.[0] || job.employee_email?.[0] || "?"}
+                            </div>
+                            <p className="text-xs font-semibold truncate max-w-[100px]">
+                              {(job as any).employee_name || job.employee_email || "Unassigned"}
                             </p>
                           </div>
                         </div>
-
-                        {/* Employee status badge */}
-                        <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold", empBadge.cls)}>
-                          {empBadge.label}
-                        </span>
-
-                        {/* Deadline */}
-                        <div className="text-right shrink-0">
-                          <p className="text-[10px] text-gray-400 uppercase tracking-wider">Due</p>
-                          <div className="flex items-center justify-end gap-1 text-xs font-semibold text-gray-600">
-                            <Calendar className="h-3 w-3 text-gray-400" />
-                            {job.deadline
-                              ? new Date(job.deadline).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
-                              : <span className="text-gray-400">Not set</span>}
+                        <div className="space-y-1 text-right">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Timeline</p>
+                          <div className="flex items-center justify-end gap-1.5 text-xs font-semibold">
+                            <Calendar className="h-3 w-3 text-primary" />
+                            {formatDate(job.deadline).split(',')[0]}
                           </div>
                         </div>
                       </div>
-
-                      {/* ── Row 6: Action buttons ─────────────────────── */}
-                      <div className="flex items-center gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                        <button
-                          onClick={() => handleEditJob(job)}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold transition-colors shadow-sm shadow-blue-200"
-                        >
-                          <Eye className="h-3 w-3" />
-                          View / Edit
-                        </button>
-                        {!isCompleted && !isCancelled && (
-                          <button
-                            onClick={() => handleDeleteJob(job)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-[11px] font-semibold ring-1 ring-red-200 transition-colors"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            Delete
-                          </button>
-                        )}
-                        <ChevronRight className="h-3.5 w-3.5 text-gray-300 ml-auto" />
-                      </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 )
               })}
             </div>

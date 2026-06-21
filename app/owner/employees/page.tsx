@@ -202,12 +202,12 @@ export default function EmployeesPage() {
               return Array.isArray(data) ? data : []
             }}
             columns={[
-              { header: "Name",        dataKey: "name" },
-              { header: "Email",       dataKey: "email" },
-              { header: "Department",  dataKey: "department" },
-              { header: "Position",    dataKey: "position" },
-              { header: "Status",      dataKey: "status",      type: "status" as const },
-              { header: "Joined Date", dataKey: "created_at",  type: "date"   as const }
+              { header: "Name", dataKey: "name" },
+              { header: "Email", dataKey: "email" },
+              { header: "Department", dataKey: "department" },
+              { header: "Position", dataKey: "position" },
+              { header: "Status", dataKey: "status" },
+              { header: "Joined Date", dataKey: "created_at", type: "date" }
             ]}
           />
         </div>

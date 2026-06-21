@@ -577,7 +577,7 @@ export default function JobDetailPage() {
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                       placeholder="Type a message..."
                       disabled={chatLoading}
-                      className="flex-1 px-3.5 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 bg-gray-50"
+                      className="flex-1 px-3.5 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 bg-gray-50 text-gray-900 placeholder:text-gray-400"
                     />
                     <button
                       onClick={sendMessage}
@@ -828,7 +828,7 @@ export default function JobDetailPage() {
                         onChange={e => setReviewText(e.target.value)}
                         placeholder="Tell us about your experience..."
                         rows={3}
-                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none bg-gray-50"
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none bg-gray-50 text-gray-900 placeholder:text-gray-400"
                       />
                     </div>
 

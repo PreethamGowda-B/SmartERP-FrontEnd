@@ -18,11 +18,9 @@ interface JobCardProps {
 }
 
 export function JobCard({ job, onEdit, onDelete, onView, showActions = true }: JobCardProps) {
-  const budget = job.budget || 0
-  const spent = job.spent || 0
-  const progress = budget > 0 ? (spent / budget) * 100 : 0
+  const progress = (job.spent / job.budget) * 100
   const assignedEmployeeDetails = mockEmployees.filter((emp) =>
-    (job.assignedEmployees || []).includes(emp.id)
+    job.assignedEmployees.includes(emp.id)
   )
 
   const getStatusColor = (status: string) => {
@@ -88,7 +86,7 @@ export function JobCard({ job, onEdit, onDelete, onView, showActions = true }: J
           </div>
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-muted-foreground" />
-            <span>${budget.toLocaleString()}</span>
+            <span>${job.budget.toLocaleString()}</span>
           </div>
         </div>
 
@@ -100,8 +98,8 @@ export function JobCard({ job, onEdit, onDelete, onView, showActions = true }: J
             </div>
             <Progress value={progress} className="h-2" />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>${spent.toLocaleString()} spent</span>
-              <span>${(budget - spent).toLocaleString()} remaining</span>
+              <span>${job.spent.toLocaleString()} spent</span>
+              <span>${(job.budget - job.spent).toLocaleString()} remaining</span>
             </div>
           </div>
         )}

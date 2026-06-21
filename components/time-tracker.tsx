@@ -27,7 +27,7 @@ export function TimeTracker() {
 
   // Get user's assigned jobs
   const assignedJobs = mockJobs.filter(
-    (job) => (job.assignedEmployees || []).includes(user?.id || "") && job.status === "active",
+    (job) => job.assignedEmployees.includes(user?.id || "") && job.status === "active",
   )
 
   // Mock location detection

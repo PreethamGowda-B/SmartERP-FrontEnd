@@ -5,32 +5,27 @@ export interface Job {
   client: string
   location: string
   status: "active" | "completed" | "pending" | "cancelled" | "open" | "in_progress" | "closed"
-  startDate?: string
-  endDate?: string
-  budget?: number
-  spent?: number
-  assignedEmployees?: string[]
+  startDate: string
+  endDate: string
+  budget: number
+  spent: number
+  assignedEmployees: string[]
   description: string
   priority: "low" | "medium" | "high" | "urgent"
-  employee_status?: "pending" | "accepted" | "declined" | "assigned" | "arrived" | "completed" | null
+  // New employee tracking fields
+  employee_status?: "pending" | "accepted" | "declined" | "assigned" | "arrived" | "completed"
   progress?: number
-  accepted_at?: string | null
-  declined_at?: string | null
-  completed_at?: string | null
-  started_at?: string | null
+  accepted_at?: string
+  declined_at?: string
+  completed_at?: string
   created_at?: string
   createdAt?: string
   visible_to_all?: boolean
-  employee_email?: string | null
-  employee_name?: string | null
-  assigned_employee_name?: string | null
-  deadline?: string | null
+  employee_email?: string
+  deadline?: string
   assigned_to?: string | null
-  source?: string | null
-  approval_status?: string | null
-  customer_id?: string | number | null
-  company_id?: string | number | null
-  created_by?: string | null
+  source?: string
+  approval_status?: string
 }
 
 export interface Employee {

@@ -218,7 +218,7 @@ export default function RecurringJobsPage() {
                       value={title}
                       onChange={e => setTitle(e.target.value)}
                       placeholder="e.g. Monthly AC maintenance"
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white text-gray-900 placeholder:text-gray-400"
                     />
                   </div>
                   <div className="sm:col-span-2">
@@ -227,7 +227,7 @@ export default function RecurringJobsPage() {
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 resize-none bg-white text-gray-900 placeholder:text-gray-400"
                     />
                   </div>
                 </div>
@@ -239,7 +239,7 @@ export default function RecurringJobsPage() {
                     <select
                       value={pattern}
                       onChange={e => setPattern(e.target.value as 'daily' | 'weekly' | 'monthly')}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white text-gray-900"
                     >
                       <option value="daily">Daily</option>
                       <option value="weekly">Weekly</option>
@@ -251,7 +251,7 @@ export default function RecurringJobsPage() {
                     <select
                       value={priority}
                       onChange={e => setPriority(e.target.value as JobPriority)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white text-gray-900"
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
@@ -270,7 +270,7 @@ export default function RecurringJobsPage() {
                       value={startDate}
                       onChange={e => setStartDate(e.target.value)}
                       min={minDate}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white text-gray-900"
                     />
                   </div>
                   <div>
@@ -280,7 +280,7 @@ export default function RecurringJobsPage() {
                       value={endDate}
                       onChange={e => setEndDate(e.target.value)}
                       min={startDate || minDate}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white text-gray-900"
                     />
                   </div>
                 </div>

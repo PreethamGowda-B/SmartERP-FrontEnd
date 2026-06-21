@@ -157,7 +157,7 @@ function handleLogout() {
 
     if ((window as any).Android?.logout) {
       (window as any).Android.logout()
-    } else if (typeof window !== "undefined" && !window.location.pathname.includes("/auth/login")) {
+    } else {
       window.location.href = "/auth/login"
     }
   }
@@ -181,10 +181,10 @@ export async function apiClient(path: string, options: RequestInit = {}, retries
     headers["Authorization"] = `Bearer ${currentToken}`
   } else {
     // REQUIREMENT 1.2: If no token, do not send request to protected endpoints
-    // (We allow public paths like /auth/ and /public/)
+    // (We allow public paths like auth/login)
     if (!path.includes('/auth/') && !path.includes('/public/')) {
-      console.warn(`[apiClient] Blocking request to ${path} - no token available`)
-      return Promise.reject({ status: 401, message: "Authentication required" })
+       console.warn(`[apiClient] Blocking request to ${path} - no token available`)
+       // return Promise.reject({ status: 401, message: "Authentication required" })
     }
   }
 

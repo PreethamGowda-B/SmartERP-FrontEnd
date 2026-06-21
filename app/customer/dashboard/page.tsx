@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { motion, type Variants } from 'framer-motion';
 import {
   PlusCircle, Briefcase, CheckCircle, Clock, TrendingUp, ArrowRight,
-  AlertCircle, Bell, History, Repeat, List, Activity,
-  Zap,
+  AlertCircle, Bell, History, Repeat, List, Activity, User, MapPin,
+  Zap, Eye,
 } from 'lucide-react';
 import Link from 'next/link';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
-import { JobCard } from '@/components/customer/jobs/JobCard';
+import { JobStatusBadge } from '@/components/customer/ui/JobStatusBadge';
+import { DashboardSkeleton } from '@/components/customer/ui/LoadingSkeleton';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import customerApi from '@/lib/customerApi';
 import type { Job, JobListResponse } from '@/lib/customerTypes';
@@ -36,6 +37,12 @@ const fadeUp: Variants = {
   }),
 };
 
+const PRIORITY_CONFIG: Record<string, { label: string; className: string }> = {
+  low:    { label: 'Low',    className: 'text-gray-500 bg-gray-100' },
+  medium: { label: 'Medium', className: 'text-blue-600 bg-blue-50' },
+  high:   { label: 'High',   className: 'text-orange-600 bg-orange-50' },
+  urgent: { label: 'Urgent', className: 'text-red-600 bg-red-50' },
+};
 
 export default function CustomerDashboardPage() {
   const router = useRouter();
@@ -322,14 +329,75 @@ export default function CustomerDashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {Array.isArray(activeJobs) && activeJobs.map((job, i) => (
-                    <motion.div
-                      key={job.id}
-                      variants={fadeUp} initial="hidden" animate="visible" custom={4 + i * 0.3}
-                    >
-                      <JobCard job={job} showActions />
-                    </motion.div>
-                  ))}
+                  {Array.isArray(activeJobs) && activeJobs.map((job, i) => {
+                    const priority = PRIORITY_CONFIG[job.priority] || PRIORITY_CONFIG.medium;
+                    const hasSLABreach = job.sla_accept_breached || job.sla_completion_breached;
+                    return (
+                      <motion.div
+                        key={job.id}
+                        variants={fadeUp} initial="hidden" animate="visible" custom={4 + i * 0.3}
+                        className="bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all p-5"
+                      >
+                        <div className="flex items-start justify-between gap-4 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <h3 className="text-sm font-semibold text-gray-900 truncate">{job.title}</h3>
+                              {hasSLABreach && (
+                                <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0" title="SLA breach" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md", priority.className)}>
+                                {priority.label}
+                              </span>
+                              <JobStatusBadge status={job.status} approvalStatus={job.approval_status} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {job.assigned_employee_name && (
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
+                            <User className="h-3.5 w-3.5 text-gray-400" />
+                            <span>Assigned to <span className="font-medium text-gray-700">{job.assigned_employee_name}</span></span>
+                          </div>
+                        )}
+
+                        {Number(job.progress || 0) > 0 && (
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                              <span>Progress</span>
+                              <span className="font-medium text-blue-600">{Number(job.progress || 0)}%</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                style={{ width: `${Number(job.progress || 0)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Link
+                            href={`/customer/job/${job.id}`}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-medium text-gray-700 transition-all"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            View Details
+                          </Link>
+                          {job.employee_status === 'accepted' && (
+                            <Link
+                              href={`/customer/job/${job.id}#tracking`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-xs font-medium text-blue-700 transition-all"
+                            >
+                              <MapPin className="h-3.5 w-3.5" />
+                              Track Live
+                            </Link>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </motion.div>
@@ -349,14 +417,40 @@ export default function CustomerDashboardPage() {
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {recentCompleted.map((job, i) => (
-                    <motion.div
-                      key={job.id}
-                      variants={fadeUp} initial="hidden" animate="visible" custom={6 + i * 0.2}
-                    >
-                      <JobCard job={job} showActions={false} />
-                    </motion.div>
-                  ))}
+                  {recentCompleted.map((job, i) => {
+                    const priority = PRIORITY_CONFIG[job.priority] || PRIORITY_CONFIG.medium;
+                    return (
+                      <motion.div
+                        key={job.id}
+                        variants={fadeUp} initial="hidden" animate="visible" custom={6 + i * 0.2}
+                      >
+                        <Link
+                          href={`/customer/job/${job.id}`}
+                          className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all p-4 group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-700 transition-colors">
+                              {job.title}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${priority.className}`}>
+                                {priority.label}
+                              </span>
+                              {job.completed_at && (
+                                <span className="text-xs text-gray-400">
+                                  Completed {new Date(job.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Activity className="h-4 w-4 text-gray-300 group-hover:text-blue-400 transition-colors shrink-0" />
+                        </Link>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}

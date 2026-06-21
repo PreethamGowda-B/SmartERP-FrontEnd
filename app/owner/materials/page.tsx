@@ -136,13 +136,13 @@ export default function OwnerMaterialsPage() {
               return Array.isArray(data) ? data : []
             }}
             columns={[
-              { header: "Item Name",     dataKey: "item_name" },
-              { header: "Requested By",  dataKey: "requested_by_name" },
-              { header: "Qty",           dataKey: "quantity",      type: "number"   as const },
-              { header: "Urgency",       dataKey: "urgency",       type: "priority" as const },
-              { header: "Status",        dataKey: "status",        type: "status"   as const },
-              { header: "Description",   dataKey: "description" },
-              { header: "Requested Date",dataKey: "created_at",    type: "date"     as const }
+              { header: "Item Name", dataKey: "item_name" },
+              { header: "Requested By", dataKey: "requested_by_name" },
+              { header: "Qty", dataKey: "quantity", type: "number" },
+              { header: "Urgency", dataKey: "urgency" },
+              { header: "Status", dataKey: "status" },
+              { header: "Description", dataKey: "description" },
+              { header: "Requested Date", dataKey: "created_at", type: "date" }
             ]}
           />
         </div>
