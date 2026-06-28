@@ -14,7 +14,7 @@ import { apiClient } from "@/lib/apiClient"
 import {
   Search, Filter, Calendar, Users, CheckCircle2, Clock,
   AlertCircle, TrendingUp, RefreshCw, Briefcase, UserCheck,
-  ChevronRight, User
+  ChevronRight, User, UserRound
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -234,16 +234,17 @@ export default function HRTasksPage() {
                   className="bg-card border rounded-xl p-4 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
                 >
                   {/* Priority stripe */}
-                  <div className={cn("w-1 h-12 rounded-full shrink-0", priorityColor)} />
+                  <div className={cn("w-1 h-12 rounded-full shrink-0", isCustomer ? "bg-teal-500" : priorityColor)} />
 
                   {/* Main content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="font-semibold text-sm truncate">{job.title}</span>
                       {isCustomer && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-indigo-300 text-indigo-600 bg-indigo-50">
-                          Customer
-                        </Badge>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 shrink-0">
+                          <UserRound className="h-2.5 w-2.5" />
+                          Customer Request
+                        </span>
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">

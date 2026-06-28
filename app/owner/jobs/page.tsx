@@ -16,7 +16,7 @@ import { ExportButton } from "@/components/export-button"
 import { apiClient } from "@/lib/apiClient"
 import {
   Plus, Search, Filter, Calendar, Users, CheckCircle2, Clock,
-  XCircle, AlertCircle, TrendingUp, Edit, Trash2, RefreshCw, Briefcase,
+  XCircle, AlertCircle, TrendingUp, Edit, Trash2, RefreshCw, Briefcase, UserRound,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ErrorView } from "@/components/ui/error-view"
@@ -280,14 +280,19 @@ export default function OwnerJobsPage() {
                 const isCompleted = job.status?.toLowerCase() === "completed"
                 const isInProgress = job.status?.toLowerCase() === "in_progress"
                 const displayProgress = isCompleted ? 100 : (job.progress || 0)
+                const isCustomerJob = (job as any).source === "customer"
 
                 return (
                   <Card
                     key={job.id}
-                    className="premium-card hover-lift group overflow-hidden border-none shadow-sm hover:shadow-xl"
+                    className={cn(
+                      "premium-card hover-lift group overflow-hidden border-none shadow-sm hover:shadow-xl",
+                      isCustomerJob && "ring-1 ring-teal-400/30"
+                    )}
                   >
                     <div className={cn(
                       "h-1.5 w-full",
+                      isCustomerJob ? "bg-teal-500" :
                       isCompleted ? "bg-green-500" : 
                       empStatusStr === "accepted" ? "bg-primary" : 
                       empStatusStr === "declined" ? "bg-red-500" : "bg-yellow-500"
@@ -310,7 +315,15 @@ export default function OwnerJobsPage() {
                       <CardTitle className="text-xl font-bold leading-tight group-hover:text-primary transition-colors cursor-pointer" onClick={() => handleEditJob(job)}>
                         {job.title}
                       </CardTitle>
-                      <div className="flex items-center gap-2 mt-3">
+                      {isCustomerJob && (
+                        <div className="flex items-center gap-1.5 mt-2 mb-1">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                            <UserRound className="h-2.5 w-2.5" />
+                            Customer Request
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 mt-1">
                         {getEmployeeStatusBadge(employeeStatus)}
                         <span className="text-meta">ID: {job.id.substring(0, 8)}</span>
                       </div>

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import {
   Calendar, Users, Briefcase, Clock, CheckCircle2, AlertCircle,
-  XCircle, RefreshCw,
+  XCircle, RefreshCw, UserRound,
 } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { cn } from "@/lib/utils"
@@ -297,17 +297,20 @@ export default function EmployeeJobsPage() {
             const displayStatus = isCompleted ? "completed" : status
             const acceptedByOther = isAccepted && (job as any).assigned_to && String((job as any).assigned_to) !== String(currentUser?.id)
             const assignedEmployeeName = (job as any).assigned_employee_name
+            const isCustomerJob = (job as any).source === "customer"
 
             return (
               <Card
                 key={job.id}
                 className={cn(
                   "premium-card hover-lift group border-none shadow-sm hover:shadow-xl overflow-hidden",
-                  isDeclined && "opacity-60 grayscale-[0.5]"
+                  isDeclined && "opacity-60 grayscale-[0.5]",
+                  isCustomerJob && "ring-1 ring-teal-400/30"
                 )}
               >
                 <div className={cn(
                   "h-1.5 w-full transition-colors",
+                  isCustomerJob ? "bg-teal-500" :
                   isCompleted ? "bg-green-500" : isAccepted ? "bg-primary" : "bg-orange-500"
                 )} />
                 
@@ -323,6 +326,14 @@ export default function EmployeeJobsPage() {
                   <CardTitle className="text-xl font-black tracking-tight group-hover:text-primary transition-colors leading-tight">
                     {job.title}
                   </CardTitle>
+                  {isCustomerJob && (
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                        <UserRound className="h-2.5 w-2.5" />
+                        Customer Request
+                      </span>
+                    </div>
+                  )}
                 </CardHeader>
 
                 <CardContent className="p-6 pt-0 space-y-6">
