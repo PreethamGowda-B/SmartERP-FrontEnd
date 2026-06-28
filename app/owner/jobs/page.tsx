@@ -191,12 +191,13 @@ export default function OwnerJobsPage() {
               title="Job Management Report"
               subtitle="Overview of Active Projects & Service Requests"
               data={filteredJobs}
+              orientation="landscape"
               columns={[
                 { header: "Job Title", dataKey: "title" },
                 { header: "Client", dataKey: "client" },
                 { header: "Location", dataKey: "location" },
-                { header: "Status", dataKey: "status" },
-                { header: "Priority", dataKey: "priority" },
+                { header: "Status", dataKey: "status", type: "status" },
+                { header: "Priority", dataKey: "priority", type: "priority" },
                 { header: "Progress", dataKey: "progress", type: "number" },
                 { header: "Budget", dataKey: "budget", type: "currency" },
                 { header: "Spent", dataKey: "spent", type: "currency" },

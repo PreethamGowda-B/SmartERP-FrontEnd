@@ -10,7 +10,7 @@ import { logger } from "@/lib/logger"
 interface ExportColumn {
   header: string
   dataKey: string
-  type?: "text" | "number" | "currency" | "date"
+  type?: "text" | "number" | "currency" | "date" | "status" | "priority"
 }
 
 interface ExportButtonProps {
@@ -22,6 +22,7 @@ interface ExportButtonProps {
   onExport?: () => Promise<any[]> // Async fetch for full dataset
   onExportStart?: () => void
   onExportEnd?: () => void
+  orientation?: "portrait" | "landscape"
 }
 
 export function ExportButton({
@@ -32,7 +33,8 @@ export function ExportButton({
   data,
   onExport,
   onExportStart,
-  onExportEnd
+  onExportEnd,
+  orientation
 }: ExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false)
   
@@ -66,7 +68,7 @@ export function ExportButton({
       // Small delay for smooth transition
       await new Promise(resolve => setTimeout(resolve, 400))
 
-      const options = { filename, title, subtitle, columns, data: exportData }
+      const options = { filename, title, subtitle, columns, data: exportData, orientation }
       exportToPDF(options)
 
       toast.success(`✅ PDF downloaded successfully! (${exportData.length} records)`, { id: toastId })

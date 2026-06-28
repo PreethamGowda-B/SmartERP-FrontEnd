@@ -47,6 +47,8 @@ export interface ExportOptions {
   summary?: { label: string; value: string | number }[]
   /** Name of the user generating the report */
   generatedBy?: string
+  /** PDF Page orientation ("portrait" or "landscape"). Defaults to "portrait". */
+  orientation?: "portrait" | "landscape"
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -70,9 +72,9 @@ const fmtDateTime = (v: string) => {
   } catch { return v }
 }
 
-/** Format currency as ₹1,23,456.00 */
+/** Format currency as Rs. 1,23,456.00 */
 const fmtCurrency = (v: any) =>
-  `\u20B9${Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+  `Rs. ${Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
 
 /** Normalise a raw cell value for display */
 const formatExportValue = (value: any, type?: string): string => {
@@ -295,12 +297,13 @@ export const exportToPDF = ({
   data,
   summary,
   generatedBy,
+  orientation = "portrait",
 }: ExportOptions) => {
   logger.log(`[export-utils] Starting PDF Export: ${filename}`, {
     title, columnsCount: columns.length, dataCount: data.length,
   })
 
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+  const doc = new jsPDF({ orientation, unit: "mm", format: "a4" })
   const pageW = doc.internal.pageSize.getWidth()
 
   const now = fmtDateTime(new Date().toISOString())
@@ -319,51 +322,39 @@ export const exportToPDF = ({
   columns.forEach((col, i) => {
     colStyles[i] = {}
     
-    if (col.type === "number" || col.type === "currency") {
+    // 1. Dynamic base minimum width based on header text length to prevent vertical header wrapping
+    const headerLen = col.header.length
+    colStyles[i].minCellWidth = Math.max(20, (headerLen * 2.2) + 6)
+    
+    // 2. Format specific alignments and cell widths
+    if (col.type === "number") {
       colStyles[i].halign = "right"
+      colStyles[i].minCellWidth = Math.max(colStyles[i].minCellWidth, 18)
+    } else if (col.type === "currency") {
+      colStyles[i].halign = "right"
+      colStyles[i].minCellWidth = Math.max(colStyles[i].minCellWidth, 26) // Currency (e.g. "Rs. 1,00,000.00") needs more width
     } else if (col.type === "status" || col.type === "priority") {
       colStyles[i].halign = "left"
       colStyles[i].fontStyle = "bold"
-      colStyles[i].minCellWidth = 18 // Use minCellWidth instead of cellWidth to allow overrides
+      colStyles[i].minCellWidth = Math.max(colStyles[i].minCellWidth, 24) // Fit words like "completed" or "in progress" without breaking words
     }
-    
-    const contentW = pageW - 28 // left/right margins are 14
+
     const headerStr = col.header.toLowerCase()
 
-    // SaaS Jobs Report column rules - Optimised minCellWidths to fit perfectly within page boundaries
-    // and prevent horizontal clipping/excessive wrapping.
-    if (headerStr === "job title") {
-      colStyles[i].minCellWidth = 40 
+    // 3. Specific report overrides
+    if (headerStr === "job title" || headerStr === "title") {
+      colStyles[i].minCellWidth = Math.max(colStyles[i].minCellWidth, 40)
       colStyles[i].fontStyle = "bold"
       colStyles[i].textColor = [17, 24, 39] // gray-900
-    } else if (headerStr === "status") {
-      colStyles[i].minCellWidth = 22
-      colStyles[i].fontStyle = "bold"
-    } else if (headerStr === "priority") {
-      colStyles[i].minCellWidth = 18
-      colStyles[i].fontStyle = "bold"
-    } else if (headerStr === "progress") {
-      colStyles[i].minCellWidth = 14
-    } else if (headerStr === "assigned to") {
-      colStyles[i].minCellWidth = 24
-      colStyles[i].textColor = [107, 114, 128] // muted gray
-    } else if (headerStr === "client/location") {
-      colStyles[i].minCellWidth = 24
-      colStyles[i].textColor = [107, 114, 128] // muted gray
+    } else if (headerStr === "assigned to" || headerStr.includes("assigned")) {
+      colStyles[i].minCellWidth = Math.max(colStyles[i].minCellWidth, 26)
+      colStyles[i].textColor = [107, 114, 128]
+    } else if (headerStr === "client" || headerStr === "location" || headerStr === "client/location") {
+      colStyles[i].minCellWidth = Math.max(colStyles[i].minCellWidth, 24)
+      colStyles[i].textColor = [107, 114, 128]
     } else if (headerStr === "dates") {
-      colStyles[i].minCellWidth = 26 // Give enough room for compact dates
-      colStyles[i].textColor = [107, 114, 128] // muted gray
-    } else {
-      // Fallbacks for other reports
-      if (headerStr.includes("title")) {
-        colStyles[i].minCellWidth = 35
-      } else if (headerStr.includes("assigned to") || headerStr.includes("client") || headerStr.includes("location") || headerStr.includes("employee")) {
-        colStyles[i].minCellWidth = 20
-        colStyles[i].textColor = [107, 114, 128]
-      } else if (headerStr.includes("date") || headerStr.includes("created")) {
-        colStyles[i].minCellWidth = 20
-        colStyles[i].textColor = [107, 114, 128]
-      }
+      colStyles[i].minCellWidth = Math.max(colStyles[i].minCellWidth, 28)
+      colStyles[i].textColor = [107, 114, 128]
     }
   })
 
@@ -410,10 +401,8 @@ export const exportToPDF = ({
       // Prevent header text wrapping by enforcing a minimum width based on char count
       if (hookData.section === "head") {
         const textLen = hookData.cell.text[0]?.length || 10
-        // Sane multiplier to avoid blowing up column widths on multi-column tables
-        if (!hookData.cell.styles.minCellWidth) {
-          hookData.cell.styles.minCellWidth = textLen * 1.2 + 5
-        }
+        const calculatedWidth = (textLen * 2.2) + 6
+        hookData.cell.styles.minCellWidth = Math.max(hookData.cell.styles.minCellWidth || 20, calculatedWidth)
         return
       }
 
