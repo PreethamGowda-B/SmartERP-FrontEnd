@@ -44,17 +44,40 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // Initialize: fetch CSRF token then check session
+  // Initialize: fetch CSRF token then check session.
+  // A 12-second safety timeout guarantees isLoading always resolves,
+  // even if the backend (Render.com) is cold-starting or the network is slow.
   useEffect(() => {
+    let cancelled = false;
+
+    const INIT_TIMEOUT_MS = 12_000;
+
+    const timeoutId = setTimeout(() => {
+      if (!cancelled) {
+        console.warn('[CustomerAuth] Init timed out — backend may be cold-starting. Resolving isLoading.');
+        setIsLoading(false);
+      }
+    }, INIT_TIMEOUT_MS);
+
     (async () => {
       setIsLoading(true);
       try {
         await fetchCsrfToken();
         await refreshProfile();
+      } catch {
+        // Errors are handled inside fetchCsrfToken / refreshProfile
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          clearTimeout(timeoutId);
+          setIsLoading(false);
+        }
       }
     })();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
   }, [refreshProfile]);
 
   const login = useCallback(async (email: string, password: string) => {

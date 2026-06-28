@@ -49,6 +49,7 @@ export function setCsrfToken(token: string): void {
 const customerApi: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   withCredentials: true, // Send HttpOnly cookies (customer_access_token, customer_refresh_token)
+  timeout: 10000, // 10-second timeout — prevents infinite hangs on cold-start / network issues
   headers: {
     'Content-Type': 'application/json',
   },
