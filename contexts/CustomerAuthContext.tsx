@@ -12,7 +12,7 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import customerApi, { fetchCsrfToken } from '@/lib/customerApi';
+import customerApi, { fetchCsrfToken, setSuppressRefreshRedirect } from '@/lib/customerApi';
 import type { CustomerProfile, AuthState } from '@/lib/customerTypes';
 
 interface CustomerAuthContextValue extends AuthState {
@@ -55,12 +55,17 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
     const timeoutId = setTimeout(() => {
       if (!cancelled) {
         console.warn('[CustomerAuth] Init timed out — backend may be cold-starting. Resolving isLoading.');
+        setSuppressRefreshRedirect(false);
         setIsLoading(false);
       }
     }, INIT_TIMEOUT_MS);
 
     (async () => {
       setIsLoading(true);
+      // Suppress the 401 → refresh → redirect chain during the background session
+      // check. Unauthenticated users will simply get customer=null, not an infinite
+      // redirect loop.
+      setSuppressRefreshRedirect(true);
       try {
         await fetchCsrfToken();
         await refreshProfile();
@@ -69,6 +74,7 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
       } finally {
         if (!cancelled) {
           clearTimeout(timeoutId);
+          setSuppressRefreshRedirect(false);
           setIsLoading(false);
         }
       }
@@ -76,6 +82,7 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
 
     return () => {
       cancelled = true;
+      setSuppressRefreshRedirect(false);
       clearTimeout(timeoutId);
     };
   }, [refreshProfile]);

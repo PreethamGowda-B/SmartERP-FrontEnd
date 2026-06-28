@@ -19,6 +19,15 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smarterp-backendend
 let csrfToken: string | null = null;
 let csrfFetchPromise: Promise<void> | null = null;
 
+// When true, 401 errors will NOT trigger the refresh → redirect flow.
+// Set to true during the background auth init check so that unauthenticated
+// users don't get bounced into an infinite redirect loop.
+let suppressRefreshRedirect = false;
+
+export function setSuppressRefreshRedirect(val: boolean): void {
+  suppressRefreshRedirect = val;
+}
+
 export async function fetchCsrfToken(): Promise<void> {
   if (csrfFetchPromise) return csrfFetchPromise;
 
@@ -82,11 +91,15 @@ customerApi.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-    // Only attempt refresh on 401, and only once per request
+    // Only attempt refresh on 401, and only once per request.
+    // ALSO skip the refresh logic entirely during the silent background init check
+    // (suppressRefreshRedirect = true), otherwise unauthenticated users get bounced
+    // into an infinite redirect loop: profile → 401 → refresh → 401 → login → reload.
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes('/api/customer/auth/refresh')
+      !originalRequest.url?.includes('/api/customer/auth/refresh') &&
+      !suppressRefreshRedirect
     ) {
       if (isRefreshing) {
         // Queue the request until refresh completes
@@ -108,7 +121,7 @@ customerApi.interceptors.response.use(
         return customerApi(originalRequest);
       } catch (refreshError) {
         // Refresh failed — clear queued requests and redirect to login
-        onRefreshed(); 
+        onRefreshed();
         if (typeof window !== 'undefined') {
           window.location.href = '/customer/login';
         }
