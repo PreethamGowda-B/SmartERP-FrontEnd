@@ -403,6 +403,13 @@ export const exportToPDF = ({
         const textLen = hookData.cell.text[0]?.length || 10
         const calculatedWidth = (textLen * 2.2) + 6
         hookData.cell.styles.minCellWidth = Math.max(hookData.cell.styles.minCellWidth || 20, calculatedWidth)
+        
+        // Align header text to match the body cell alignment (left, center, or right)
+        const colIndex = hookData.column.index
+        const colStyle = colStyles[colIndex]
+        if (colStyle && colStyle.halign) {
+          hookData.cell.styles.halign = colStyle.halign
+        }
         return
       }
 
