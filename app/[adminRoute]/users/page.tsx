@@ -15,7 +15,8 @@ import {
   MoreVertical,
   Key,
   ChevronDown,
-  Filter
+  Filter,
+  RefreshCw
 } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
@@ -34,22 +35,41 @@ interface User {
 export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
+  const fetchUsers = async (silent = false) => {
+    if (!silent) setLoading(true)
+    else setIsRefreshing(true)
+    try {
+      // Add cache-busting timestamp to force fresh data from the server
+      const data = await apiClient(`/api/admin/users?_t=${Date.now()}`)
+      setUsers(data?.users || [])
+      setLastUpdated(new Date())
+    } catch (err) {
+      toast.error("Failed to load platform users")
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
+    }
+  }
+
+  // Initial load
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const data = await apiClient("/api/admin/users")
-        // API returns { users: [], pagination: {} }
-        setUsers(data?.users || [])
-      } catch (err) {
-        toast.error("Failed to load platform users")
-      } finally {
-        setLoading(false)
+    fetchUsers()
+  }, [])
+
+  // Re-fetch when the user comes back to this tab (e.g. after navigating away)
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchUsers(true)
       }
     }
-    fetchUsers()
+    document.addEventListener("visibilitychange", onVisibilityChange)
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange)
   }, [])
 
   const filteredUsers = (Array.isArray(users) ? users : []).filter(u => {
@@ -69,9 +89,26 @@ export default function AdminUsers() {
             <p className="text-slate-500 mt-1 text-sm font-bold uppercase tracking-widest opacity-80">Global account management across all tenants</p>
           </div>
           <div className="flex items-center gap-3">
-             <div className="px-4 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest shadow-sm">
-               Platform Users: {users.length}
+             <div className="flex flex-col items-end">
+               <div className="px-4 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest shadow-sm">
+                 Platform Users: {users.length}
+               </div>
+               {lastUpdated && (
+                 <span className="text-[9px] text-slate-400 mt-1 font-medium">
+                   Updated: {lastUpdated.toLocaleTimeString()}
+                 </span>
+               )}
              </div>
+             <Button
+               variant="outline"
+               size="sm"
+               onClick={() => fetchUsers(true)}
+               disabled={isRefreshing}
+               className="flex items-center gap-2 rounded-xl border-slate-200 h-10"
+             >
+               <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+               {isRefreshing ? 'Refreshing...' : 'Refresh'}
+             </Button>
           </div>
         </div>
 
