@@ -186,6 +186,23 @@ export default function OwnerJobsPage() {
               {isRefreshing ? "Refreshing" : "Refresh"}
             </Button>
 
+            <ExportButton
+              filename="Jobs_Report"
+              title="Job Management Report"
+              subtitle="Overview of Active Projects & Service Requests"
+              data={filteredJobs}
+              columns={[
+                { header: "Job Title", dataKey: "title" },
+                { header: "Client", dataKey: "client" },
+                { header: "Location", dataKey: "location" },
+                { header: "Status", dataKey: "status" },
+                { header: "Priority", dataKey: "priority" },
+                { header: "Progress", dataKey: "progress", type: "number" },
+                { header: "Budget", dataKey: "budget", type: "currency" },
+                { header: "Spent", dataKey: "spent", type: "currency" },
+              ]}
+            />
+
             <Button onClick={handleCreateJob} size="lg" className="h-10 px-6 shadow-lg shadow-primary/20 btn-premium">
               <Plus className="h-4 w-4 mr-2" />
               New Job
