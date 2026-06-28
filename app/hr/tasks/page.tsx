@@ -49,6 +49,11 @@ function getStatusBadge(status?: string) {
 
 function getEmployeeStatusBadge(employeeStatus?: string) {
   const s = (employeeStatus || "").toLowerCase()
+  if (s === "completed") return (
+    <Badge className="bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100 gap-1">
+      <CheckCircle2 className="w-3 h-3" />Completed
+    </Badge>
+  )
   if (s === "accepted") return (
     <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100 gap-1">
       <CheckCircle2 className="w-3 h-3" />Accepted

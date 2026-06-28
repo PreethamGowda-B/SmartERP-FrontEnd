@@ -45,6 +45,12 @@ function formatLastUpdated(date: Date | null) {
 function getEmployeeStatusBadge(employeeStatus?: string) {
   const status = employeeStatus?.toLowerCase() || "pending"
   switch (status) {
+    case "completed":
+      return (
+        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+          <CheckCircle2 className="w-3 h-3 mr-1" />Completed
+        </Badge>
+      )
     case "accepted":
       return (
         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
