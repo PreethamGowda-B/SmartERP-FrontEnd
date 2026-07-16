@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
+// Paths that are always allowed through — never redirect these or you get infinite loops
+const ALWAYS_ALLOWED = [
+  "/not-found", "/suspended", "/privacy", "/terms",
+  "/auth", "/owner", "/employee", "/hr", "/customer",
+  "/api", "/_next", "/monitoring",
+]
+
 export function middleware(request: NextRequest) {
     const host = request.headers.get("host") || ""
+    const pathname = request.nextUrl.pathname
+
+    // Never redirect paths that are safe destinations — prevents infinite redirect loops
+    if (ALWAYS_ALLOWED.some(p => pathname === p || pathname.startsWith(p + "/"))) {
+        return NextResponse.next()
+    }
 
     // Allowed hosts for this Next.js app:
     //   - www.prozync.in / prozync.in  → main SmartERP frontend
@@ -25,17 +38,14 @@ export function middleware(request: NextRequest) {
     const adminSlug = process.env.ADMIN_ROUTE;
     if (!adminSlug) {
       console.error("CRITICAL: ADMIN_ROUTE env var is not set. Admin panel access blocked.");
-      // Block all [adminRoute] requests if the env var is missing
-      const url = new URL("/not-found", request.url);
-      return NextResponse.redirect(url);
+      return NextResponse.rewrite(new URL("/not-found", request.url))
     }
-    const pathname = request.nextUrl.pathname
 
     // The Next.js router matches ANY random string as [adminRoute] if it's on the top level.
     // We check if the incoming path matches the pattern `/something` and doesn't match the valid slug (nor auth/owner/etc)
     const activeTopLevelPaths = [
       "/auth", "/owner", "/employee", "/hr",
-      "/customer",   // ← Customer Portal routes
+      "/customer",
       "/privacy", "/terms", "/suspended", "/not-found",
       "/api", "/_next", "/monitoring", "/backend-test",
     ]
@@ -46,9 +56,9 @@ export function middleware(request: NextRequest) {
 
       // If it's trying to hit what would resolve to [adminRoute], but it's not the actual secret slug
       if (!activeTopLevelPaths.includes(`/${topLevelSegment}`) && topLevelSegment !== adminSlug) {
-         // Not a registered generic path, and NOT the admin secret -> Deny access
-         const url = new URL("/not-found", request.url)
-         return NextResponse.redirect(url)
+         // Use rewrite instead of redirect to avoid adding to browser history
+         // and to prevent redirect loops if /not-found itself is unrecognised
+         return NextResponse.rewrite(new URL("/not-found", request.url))
       }
     }
 
