@@ -65,26 +65,40 @@ export function LandingPage() {
     return () => observer.disconnect()
   }, [])
 
-  // Cinematic Loader Logic
+  // Cinematic Loader Logic — skip if user navigated back (e.g. from login page)
   useEffect(() => {
+    // If this is a back-navigation (history traversal), skip the loader entirely
+    const skipLoader = typeof window !== "undefined" &&
+      (window.history.length > 1 ||
+        document.referrer.includes("/auth/") ||
+        sessionStorage.getItem("visited_landing") === "true")
+
+    if (skipLoader) {
+      setLoading(false)
+      setContentVisible(true)
+      sessionStorage.setItem("visited_landing", "true")
+      return
+    }
+
+    sessionStorage.setItem("visited_landing", "true")
+
     let currentProgress = 0
+    // Cap total loader time at ~2.5s
     const interval = setInterval(() => {
       if (currentProgress >= 100) {
         clearInterval(interval)
+        setShutterOpen(true)
         setTimeout(() => {
-          setShutterOpen(true)
-          setTimeout(() => {
-            setContentVisible(true)
-            setLoading(false)
-          }, 800)
-        }, 1000)
+          setContentVisible(true)
+          setLoading(false)
+        }, 600)
       } else {
-        const increment = (100 - currentProgress) * (Math.random() * 0.15 + 0.05)
-        currentProgress += Math.max(increment, 1)
+        const increment = (100 - currentProgress) * (Math.random() * 0.2 + 0.08)
+        currentProgress += Math.max(increment, 2)
         setProgress(Math.min(currentProgress, 100))
         setStatusIndex(Math.floor((currentProgress / 101) * STAGES.length))
       }
-    }, 120)
+    }, 80)
 
     return () => clearInterval(interval)
   }, [])
