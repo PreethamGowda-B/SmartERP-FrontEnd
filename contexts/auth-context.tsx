@@ -38,9 +38,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // 3. Perform the token refresh in the background (non-blocking)
         if (currentUser) {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+          // Use the single source of truth for the refresh token (respects admin vs user keys)
           const rt = getRefreshToken()
           
-          // No refresh token — just keep the cached user for UI, don't force logout
           if (!rt) return;
 
           // Background refresh & profile sync
@@ -56,39 +56,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const isAdmin = currentUser?.role === 'super_admin'
                 setTokens(data.accessToken, data.refreshToken || rt || "", isAdmin)
                 
+                // Now fetch the fresh user profile to sync company code
                 const meRes = await fetch(`${apiUrl}/api/auth/me`, {
                   headers: { "Authorization": `Bearer ${data.accessToken}` }
                 })
                 if (meRes.ok) {
                   const freshUser = await meRes.json()
-                  if (isMounted) {
-                    setUser(freshUser)
-                    localStorage.setItem("smarterp_user", JSON.stringify(freshUser))
-                    if (freshUser.company_code) {
-                      localStorage.setItem("company_code", freshUser.company_code)
-                    }
+                  setUser(freshUser)
+                  localStorage.setItem("smarterp_user", JSON.stringify(freshUser))
+                  if (freshUser.company_code) {
+                    localStorage.setItem("company_code", freshUser.company_code)
                   }
                   logger.log("[v0] ✅ Profile synced with latest DB state")
                 } else {
-                  // Profile sync failed — clear session silently, let layout guards redirect
-                  logger.warn("[v0] Profile sync failed - clearing session")
-                  if (isMounted) {
-                    await signOut()
-                    setUser(null)
-                  }
+                  // 🔴 PART 1: SESSION VALIDATION
+                  // IF token exists BUT request fails -> logout immediately
+                  logger.warn("[v0] Profile sync failed - forcing logout")
+                  signOut().then(() => {
+                    window.location.href = "/auth/login"
+                  })
                 }
               }
             } else if (!refreshRes.ok) {
-              // Refresh failed — clear session silently, let layout guards redirect
-              logger.warn("[v0] Proactive token refresh failed (background)")
-              if (isMounted) {
-                await signOut()
-                setUser(null)
-              }
+              logger.warn("[v0] Proactive token refresh failed (background) - forcing logout")
+              signOut().then(() => {
+                window.location.href = "/auth/login"
+              })
             }
           }).catch(err => {
             logger.warn("[v0] Proactive token refresh error (background):", err)
-            // Network errors: don't force logout — user may just be offline
+            // Only force logout if it's a 401/403, not a network error
+            if (err.status === 401 || err.status === 403) {
+              signOut().then(() => {
+                window.location.href = "/auth/login"
+              })
+            }
           })
         }
     } catch (err) {

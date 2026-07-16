@@ -175,8 +175,7 @@ function handleLogout() {
     if ((window as any).Android?.logout) {
       (window as any).Android.logout()
     } else {
-      // Redirect to landing page, not login — user can choose to sign in again
-      window.location.href = "/"
+      window.location.href = "/auth/login"
     }
   }
 }

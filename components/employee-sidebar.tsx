@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { NavLink } from "@/components/nav-link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
@@ -52,14 +52,12 @@ export function EmployeeSidebar() {
     location_tracking: false
   })
   const pathname = usePathname()
-  const router = useRouter()
   const { user, signOut } = useAuth()
   const { getUnreadCount } = useNotifications()
   const unreadCount = getUnreadCount()
 
   const handleSignOut = async () => {
     await signOut()
-    router.push("/")
   }
 
   useEffect(() => {
