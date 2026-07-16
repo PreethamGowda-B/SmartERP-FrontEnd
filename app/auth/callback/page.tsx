@@ -50,10 +50,12 @@ function CallbackContent() {
         if (code === "fallback" && userParam) {
             try {
                 const user = JSON.parse(decodeURIComponent(userParam))
-                const userKey = user.role === "super_admin" ? "smarterp_admin_user" : "smarterp_user"
+                const isSuperAdmin = user.role === "super_admin"
+                const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
                 localStorage.setItem(userKey, JSON.stringify(user))
                 setUser(user)
-                if (user.role === "super_admin") {
+                // Note: no tokens available in fallback path — user will need to refresh on next load
+                if (isSuperAdmin) {
                     const adminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE
                     if (adminRoute) router.push(`/${adminRoute}/dashboard`)
                     else router.push("/not-found")
@@ -77,6 +79,12 @@ function CallbackContent() {
 
             const user = result.user
             const isSuperAdmin = user.role === "super_admin"
+
+            // Store tokens in sessionStorage — same as regular email/password login
+            // Without this, the auth context background refresh fires with no token and logs the user out
+            if (result.accessToken && result.refreshToken) {
+                setTokens(result.accessToken, result.refreshToken, isSuperAdmin)
+            }
 
             // Store user profile for UI rendering only (no tokens in storage)
             const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
