@@ -249,21 +249,13 @@ export async function apiClient(path: string, options: RequestInit = {}, retries
 
     // Refresh token logic
     if (res.status === 401) {
-      const storedRefreshToken = getRefreshToken()
-
-      // No refresh token at all — skip refresh attempt and go straight to logout
-      // This prevents flooding the backend with "No refresh token provided" warnings
-      if (!storedRefreshToken) {
-        handleLogout()
-        throw new Error("Session expired")
-      }
-
       if (!refreshPromise) {
+        const storedRefreshToken = getRefreshToken()
         refreshPromise = fetch(`${baseUrl}/api/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ refreshToken: storedRefreshToken }),
+          body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
         }).then(async (r) => {
           if (r.ok) {
             const data = await r.json()
