@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { NavLink } from "@/components/nav-link"
 import { apiClient } from "@/lib/apiClient"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
@@ -62,10 +62,12 @@ export function OwnerSidebar() {
     priority_support: false
   })
   const pathname = usePathname()
+  const router = useRouter()
   const { user, signOut } = useAuth()
 
   const handleSignOut = async () => {
     await signOut()
+    router.push("/")
   }
 
   useEffect(() => {
