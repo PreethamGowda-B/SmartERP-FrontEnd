@@ -32,109 +32,33 @@ export interface AuthState {
   isLoading: boolean
 }
 
-// User authentication system (mock offline fallback — no passwords stored)
-interface StoredUserData extends User {
-  passwordHash: string // only a hash for offline comparison, never plaintext
-}
-
-const getMockUsers = (): StoredUserData[] => {
-  if (typeof window === "undefined") return []
-  const stored = sessionStorage.getItem("smarterp_mock_users")
-  if (stored) {
-    try { return JSON.parse(stored) } catch { return [] }
-  }
-  return []
-}
-
-const saveMockUsers = (users: StoredUserData[]) => {
-  if (typeof window === "undefined") return
-  // Use sessionStorage (cleared on tab close) instead of localStorage
-  sessionStorage.setItem("smarterp_mock_users", JSON.stringify(users))
-}
-
-// Simple hash for offline mock auth (not cryptographic — use only in fallback)
-const simpleHash = (str: string): string => {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i)
-    hash |= 0
-  }
-  return String(hash)
-}
-
 export const signUp = async (userData: SignUpData): Promise<User | null> => {
-  try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-    logger.log("[v0] Attempting signup with backend:", apiUrl)
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+  logger.log("[v0] Attempting signup with backend:", apiUrl)
 
-    const response = await fetch(`${apiUrl}/api/auth/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      mode: "cors",
-      body: JSON.stringify(userData),
-    })
+  const response = await fetch(`${apiUrl}/api/auth/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    mode: "cors",
+    body: JSON.stringify(userData),
+  })
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Signup failed" }))
-      logger.error("[v0] Backend signup error:", error)
-      // Always throw real backend errors — never fall through to mock auth
-      throw new Error(error.message || "Signup failed")
-    }
-
-    const data = await response.json()
-    const { user, company_code } = data
-    logger.log("[v0] Backend signup successful:", user.email)
-
-    // If owner, store the company_code so the settings page can show it immediately
-    const userWithMeta = { ...user, company_code: company_code || user.company_code }
-    localStorage.setItem("smarterp_user", JSON.stringify(userWithMeta))
-    if (company_code) localStorage.setItem("company_code", company_code)
-
-    return userWithMeta
-  } catch (error) {
-    // Re-throw any error that has a meaningful message (backend errors, network errors)
-    // Only fall back to mock auth for genuine connection failures (TypeError = network error)
-    const isNetworkError = error instanceof TypeError && 
-      (error.message.includes("fetch") || error.message.includes("network") || error.message.includes("Failed to fetch"))
-
-    if (!isNetworkError) {
-      // This is a real backend error (4xx, validation, etc.) — propagate it
-      throw error
-    }
-
-    logger.log(
-      "[v0] Backend unreachable, falling back to mock auth:",
-      error instanceof Error ? error.message : String(error),
-    )
-
-    // Fallback to mock auth only when backend is genuinely unreachable
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const allMockUsers = getMockUsers()
-
-    if (allMockUsers.some((user) => user.email === userData.email)) {
-      logger.log("[v0] Mock auth: Email already exists")
-      return null
-    }
-
-    const newMockUser: StoredUserData = {
-      id: Date.now().toString(),
-      email: userData.email,
-      name: userData.name,
-      role: userData.role,
-      phone: userData.phone,
-      position: userData.position,
-      department: userData.department,
-      passwordHash: simpleHash(userData.password), // never store plaintext
-    }
-
-    saveMockUsers([...allMockUsers, newMockUser])
-    logger.log("[v0] Mock auth: User created successfully")
-
-    const { passwordHash, ...newUser } = newMockUser
-    return newUser
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: "Signup failed" }))
+    logger.error("[v0] Backend signup error:", error)
+    throw new Error(error.message || "Signup failed")
   }
+
+  const data = await response.json()
+  const { user, company_code } = data
+  logger.log("[v0] Backend signup successful:", user.email)
+
+  const userWithMeta = { ...user, company_code: company_code || user.company_code }
+  localStorage.setItem("smarterp_user", JSON.stringify(userWithMeta))
+  if (company_code) localStorage.setItem("company_code", company_code)
+
+  return userWithMeta
 }
 
 export const signIn = async (email: string, password: string): Promise<User | null> => {
@@ -207,7 +131,6 @@ export const signOut = async (): Promise<void> => {
   clearTokens()
   localStorage.removeItem("smarterp_user")
   localStorage.removeItem("smarterp_admin_user")
-  sessionStorage.removeItem("smarterp_mock_users")
 
   // ✅ Notify Android bridge to clear native session
   if (typeof window !== "undefined" && (window as any).Android?.logout) {

@@ -1,5 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
+import Script from "next/script"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { ConditionalAnalytics } from "@/components/ConditionalAnalytics"
@@ -76,37 +77,26 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         {/* Recovery script for ChunkLoadError (helps during deployments) */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.addEventListener('error', function(e) {
-                if (e.message && (e.message.includes('ChunkLoadError') || e.message.includes('Loading chunk'))) {
-                  ${process.env.NODE_ENV === 'development' ? "console.warn('ChunkLoadError detected, reloading page...');" : ""}
-                  window.location.reload();
-                }
-              }, true);
-            `,
-          }}
-        />
+        <Script id="chunk-error-recovery" strategy="beforeInteractive">{`
+          window.addEventListener('error', function(e) {
+            if (e.message && (e.message.includes('ChunkLoadError') || e.message.includes('Loading chunk'))) {
+              window.location.reload();
+            }
+          }, true);
+        `}</Script>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
           {/* Service Worker Registration */}
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                  window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                      console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    }, function(err) {
-                      console.log('ServiceWorker registration failed: ', err);
-                    });
-                  });
-                }
-              `,
-            }}
-          />
-          <script
+          <Script id="sw-registration" strategy="afterInteractive">{`
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+              });
+            }
+          `}</Script>
+          <Script
+            id="schema-website"
             type="application/ld+json"
+            strategy="afterInteractive"
             dangerouslySetInnerHTML={{
               __html: JSON.stringify({
                 "@context": "https://schema.org",
@@ -122,8 +112,10 @@ export default function RootLayout({
               }),
             }}
           />
-          <script
+          <Script
+            id="schema-org"
             type="application/ld+json"
+            strategy="afterInteractive"
             dangerouslySetInnerHTML={{
               __html: JSON.stringify({
                 "@context": "https://schema.org",

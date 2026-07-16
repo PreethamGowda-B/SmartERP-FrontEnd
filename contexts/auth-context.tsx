@@ -4,7 +4,7 @@ import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { type User, type AuthState, getCurrentUser, signOut } from "@/lib/auth"
-import { setTokens } from "@/lib/apiClient"
+import { setTokens, getRefreshToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import * as Sentry from "@sentry/nextjs"
 
@@ -38,9 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // 3. Perform the token refresh in the background (non-blocking)
         if (currentUser) {
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-          const rt = typeof window !== "undefined" 
-            ? (sessionStorage.getItem("_rt") || localStorage.getItem("_rt") || localStorage.getItem("refreshToken")) 
-            : null
+          // Use the single source of truth for the refresh token (respects admin vs user keys)
+          const rt = getRefreshToken()
           
           if (!rt) return;
 

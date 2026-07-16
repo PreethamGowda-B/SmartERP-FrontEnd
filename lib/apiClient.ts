@@ -140,7 +140,7 @@ export function getAccessToken() {
   return getAuthToken()
 }
 
-function getRefreshToken(): string | null {
+export function getRefreshToken(): string | null {
   if (typeof window !== "undefined") {
     const { rt } = getStorageKeys()
     const fromSession = sessionStorage.getItem(rt)
