@@ -13,6 +13,7 @@ export default function HomePage() {
   const router = useRouter()
 
   useEffect(() => {
+    // Only redirect once we know for certain a user is logged in
     if (user && !isLoading) {
       if (user.role === "owner") {
         router.push("/owner")
@@ -24,14 +25,7 @@ export default function HomePage() {
     }
   }, [user, isLoading, router])
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
-
+  // If a confirmed logged-in user is being redirected, show spinner
   if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -40,5 +34,7 @@ export default function HomePage() {
     )
   }
 
+  // Show landing page immediately — for new/unauthenticated users
+  // isLoading=true just means auth hasn't resolved yet, not that a user exists
   return <LandingPage />
 }

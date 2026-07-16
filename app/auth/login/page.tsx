@@ -4,7 +4,8 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { LoginForm } from "@/components/login-form"
-import { Loader2 } from "lucide-react"
+import { Loader2, ArrowLeft } from "lucide-react"
+import Link from "next/link"
 
 export default function LoginPage() {
   const { user, isLoading } = useAuth()
@@ -32,5 +33,17 @@ export default function LoginPage() {
     )
   }
 
-  return <LoginForm />
+  return (
+    <div className="relative">
+      {/* Back to home button */}
+      <Link
+        href="/"
+        className="absolute top-4 left-4 z-50 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 group"
+      >
+        <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform duration-200" />
+        Back to home
+      </Link>
+      <LoginForm />
+    </div>
+  )
 }
