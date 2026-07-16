@@ -10,7 +10,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend
 
 // ✅ SECURE OAuth callback — exchanges a short-lived one-time code for session cookies
 // Tokens are NEVER passed through the URL (no browser history / Referer leak)
-async function exchangeOAuthCode(code: string): Promise<{ user: any } | null> {
+async function exchangeOAuthCode(code: string): Promise<{ user: any; accessToken?: string; refreshToken?: string } | null> {
     try {
         const res = await fetch(`${API_BASE}/api/auth/exchange-code`, {
             method: "POST",
