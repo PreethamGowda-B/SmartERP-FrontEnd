@@ -69,18 +69,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   }
                   logger.log("[v0] ✅ Profile synced with latest DB state")
                 } else {
-                  // 🔴 PART 1: SESSION VALIDATION
-                  // IF token exists BUT request fails -> logout immediately
+                  // Token exists but server rejected it — clear session and go to landing page
                   logger.warn("[v0] Profile sync failed - forcing logout")
                   signOut().then(() => {
-                    window.location.href = "/auth/login"
+                    window.location.href = "/"
                   })
                 }
               }
             } else if (!refreshRes.ok) {
               logger.warn("[v0] Proactive token refresh failed (background) - forcing logout")
               signOut().then(() => {
-                window.location.href = "/auth/login"
+                window.location.href = "/"
               })
             }
           }).catch(err => {
@@ -88,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Only force logout if it's a 401/403, not a network error
             if (err.status === 401 || err.status === 403) {
               signOut().then(() => {
-                window.location.href = "/auth/login"
+                window.location.href = "/"
               })
             }
           })
