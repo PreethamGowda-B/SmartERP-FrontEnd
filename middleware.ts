@@ -20,7 +20,15 @@ export function middleware(request: NextRequest) {
     }
 
     // Validate admin route dynamically without exposing the slug to the client
-    const adminSlug = process.env.ADMIN_ROUTE || "platform-control-xyz"
+    // ✅ ADMIN_ROUTE must always be set via environment variable.
+    // There is NO default fallback — a missing env var is a deployment error.
+    const adminSlug = process.env.ADMIN_ROUTE;
+    if (!adminSlug) {
+      console.error("CRITICAL: ADMIN_ROUTE env var is not set. Admin panel access blocked.");
+      // Block all [adminRoute] requests if the env var is missing
+      const url = new URL("/not-found", request.url);
+      return NextResponse.redirect(url);
+    }
     const pathname = request.nextUrl.pathname
 
     // The Next.js router matches ANY random string as [adminRoute] if it's on the top level.

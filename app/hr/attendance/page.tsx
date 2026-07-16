@@ -7,18 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { Users, UserCheck, UserX, Clock } from "lucide-react"
 import { HRLayout } from "@/components/hr-layout"
 import { useAuth } from "@/contexts/auth-context"
-import { getAccessToken, apiClient } from "@/lib/apiClient"
+import { apiClient } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"
 import { logger } from "@/lib/logger"
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-
-function authHeaders(): Record<string, string> {
-  const token = getAccessToken()
-  const headers: Record<string, string> = {}
-  if (token) headers["Authorization"] = `Bearer ${token}`
-  return headers
-}
 
 interface EmployeeAttendance {
   user_id: string
@@ -55,16 +46,9 @@ export default function HRAttendancePage() {
   const fetchAttendanceOverview = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${BACKEND_URL}/api/attendance/overview`, {
-        credentials: "include",
-        headers: authHeaders(),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setEmployees(data.employees || [])
-        setSummary(data.summary || { total: 0, present: 0, absent: 0, late: 0 })
-      }
+      const data = await apiClient("/api/attendance/overview")
+      setEmployees(data.employees || [])
+      setSummary(data.summary || { total: 0, present: 0, absent: 0, late: 0 })
     } catch (err) {
       logger.error("Error fetching attendance overview:", err)
     } finally {

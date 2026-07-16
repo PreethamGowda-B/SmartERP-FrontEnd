@@ -206,7 +206,6 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
                     mode="single"
                     selected={formData.startDate}
                     onSelect={(date) => setFormData((prev) => ({ ...prev, startDate: date }))}
-                    initialFocus
                   />
                 </PopoverContent>
               </Popover>
@@ -231,7 +230,6 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
                     mode="single"
                     selected={formData.endDate}
                     onSelect={(date) => setFormData((prev) => ({ ...prev, endDate: date }))}
-                    initialFocus
                   />
                 </PopoverContent>
               </Popover>

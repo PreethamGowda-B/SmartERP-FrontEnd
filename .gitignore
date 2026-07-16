@@ -25,3 +25,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Security: always ignore secrets and local files
+.env.local
+.env.production
+.env.*.local
+uploads/
+scratch/

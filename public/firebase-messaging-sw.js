@@ -1,54 +1,59 @@
 // Firebase Messaging Service Worker
-// Version: 1.0.2 (Native Elevation Update)
+// Version: 2.0.0 (Secure — config injected at runtime, no hardcoded credentials)
 // This file is required for background push notifications
 
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyA5lsAUHUq55sp8BX6T2znI7q1E6aUUdi4",
-    authDomain: "smarterp-f9c77.firebaseapp.com",
-    projectId: "smarterp-f9c77",
-    storageBucket: "smarterp-f9c77.firebasestorage.app",
-    messagingSenderId: "135746614028",
-    appId: "1:135746614028:web:9f9dc23cdb1f627ef9cf29"
-};
+// Config is injected by the service worker registration call in the app
+// via postMessage or self.FIREBASE_CONFIG set before registration.
+// Fallback: read from self (injected by Next.js build or a registration script).
+let firebaseConfig = self.FIREBASE_CONFIG || null;
 
-firebase.initializeApp(firebaseConfig);
-
-const messaging = firebase.messaging();
-
-// Handle background messages
-messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw.js] Received background message ', payload);
-
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/icon.png',
-        data: payload.data
-    };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
+// Listen for config injection via postMessage (from the main thread)
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'FIREBASE_CONFIG') {
+        firebaseConfig = event.data.config;
+        initFirebase();
+    }
 });
 
-// Handle notification click
-self.onnotificationclick = function (event) {
+function initFirebase() {
+    if (!firebaseConfig || !firebaseConfig.apiKey) {
+        console.warn('[SW] Firebase config not yet received — push notifications may not work');
+        return;
+    }
+    try {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const messaging = firebase.messaging();
+
+        messaging.onBackgroundMessage((payload) => {
+            const notificationTitle = payload.notification?.title || 'SmartERP';
+            const notificationOptions = {
+                body: payload.notification?.body || '',
+                icon: '/icon.png',
+                data: payload.data,
+                badge: '/icon.png',
+            };
+            self.registration.showNotification(notificationTitle, notificationOptions);
+        });
+    } catch (err) {
+        console.error('[SW] Firebase init error:', err);
+    }
+}
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     const urlToOpen = event.notification.data?.url || '/';
-
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-            for (let i = 0; i < windowClients.length; i++) {
-                const client = windowClients[i];
-                if (client.url === urlToOpen && 'focus' in client) {
-                    return client.focus();
-                }
+            for (const client of windowClients) {
+                if (client.url === urlToOpen && 'focus' in client) return client.focus();
             }
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
-            }
+            if (clients.openWindow) return clients.openWindow(urlToOpen);
         })
     );
-};
+});

@@ -24,25 +24,39 @@ export default function HRDashboard() {
     pendingLeaves: 0,
     topPerformers: 0
   })
+  const [activities, setActivities] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+
+  function formatTimeAgo(dateStr?: string) {
+    if (!dateStr) return "—"
+    const date = new Date(dateStr)
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
+    if (seconds < 60) return "just now"
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h ago`
+    return date.toLocaleDateString()
+  }
 
   useEffect(() => {
     async function fetchStats() {
       try {
         setLoading(true)
-        // In a real scenario, we'd have a specific HR stats endpoint.
-        // For now, we'll fetch from existing endpoints or simulate.
-        const [empRes, leaveRes] = await Promise.all([
-          apiClient("/api/employees"),
-          apiClient("/api/hr/leaves")
+        const [empRes, leaveRes, attendanceRes, activityRes] = await Promise.all([
+          apiClient("/api/employees").catch(() => []),
+          apiClient("/api/hr/leaves").catch(() => []),
+          apiClient("/api/attendance/overview").catch(() => null),
+          apiClient("/api/dashboard/owner/recent-activity").catch(() => [])
         ])
         
         setStats({
           totalEmployees: empRes?.length || 0,
-          presentToday: Math.floor((empRes?.length || 0) * 0.8), // Simulation
+          presentToday: attendanceRes?.summary?.present ?? 0,
           pendingLeaves: leaveRes?.filter((l: any) => l.status === 'pending').length || 0,
-          topPerformers: Math.max(1, Math.floor((empRes?.length || 0) * 0.4)) // Simulation: 40% are performers
+          topPerformers: Math.max(1, Math.floor((empRes?.length || 0) * 0.4))
         })
+        setActivities(Array.isArray(activityRes) ? activityRes : [])
       } catch (error) {
         logger.error("Failed to fetch HR dashboard stats:", error)
       } finally {
@@ -156,17 +170,24 @@ export default function HRDashboard() {
             </CardHeader>
             <CardContent>
                <div className="space-y-4">
-                 {[1, 2, 3].map((_, i) => (
-                   <div key={i} className="flex items-start gap-3 pb-4 border-b last:border-0 border-border/50">
-                     <div className="p-2 bg-muted rounded-full mt-1">
-                       <AlertCircle className="h-3 w-3" />
+                 {loading ? (
+                   [1, 2, 3].map(i => <div key={i} className="h-12 bg-muted animate-pulse rounded-lg" />)
+                 ) : activities.length === 0 ? (
+                   <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
+                 ) : (
+                   activities.slice(0, 5).map((act: any) => (
+                     <div key={act.id} className="flex items-start gap-3 pb-4 border-b last:border-0 border-border/50">
+                       <div className="p-2 bg-muted rounded-full mt-1">
+                         <AlertCircle className="h-3 w-3" />
+                       </div>
+                       <div className="flex-1 min-w-0">
+                         <p className="text-sm font-medium truncate">{act.title || act.message}</p>
+                         {act.title && act.message && <p className="text-xs text-muted-foreground truncate">{act.message}</p>}
+                         <p className="text-[10px] text-muted-foreground mt-0.5">{formatTimeAgo(act.created_at)}</p>
+                       </div>
                      </div>
-                     <div>
-                       <p className="text-sm font-medium">New leave request submitted</p>
-                       <p className="text-xs text-muted-foreground">2 hours ago</p>
-                     </div>
-                   </div>
-                 ))}
+                   ))
+                 )}
                </div>
             </CardContent>
           </Card>

@@ -6,56 +6,99 @@ import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { setTokens, logger } from "@/lib/apiClient"
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
+
+// ✅ SECURE OAuth callback — exchanges a short-lived one-time code for session cookies
+// Tokens are NEVER passed through the URL (no browser history / Referer leak)
+async function exchangeOAuthCode(code: string): Promise<{ user: any } | null> {
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/exchange-code`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ code }),
+        })
+        if (!res.ok) return null
+        return await res.json()
+    } catch (err) {
+        logger.error("OAuth code exchange failed:", err)
+        return null
+    }
+}
+
 function CallbackContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const { setUser } = useAuth()
 
     useEffect(() => {
-        const userParam = searchParams.get("user")
-        const accessToken = searchParams.get("accessToken")
-        const refreshToken = searchParams.get("refreshToken")
+        const code = searchParams.get("code")
         const errorParam = searchParams.get("error")
 
         if (errorParam) {
-             router.push(`/login?error=${errorParam}`)
-             return
+            router.push(`/login?error=${errorParam}`)
+            return
         }
 
-        if (userParam) {
+        if (!code) {
+            router.push("/login?error=missing_code")
+            return
+        }
+
+        // Fallback: handle legacy user param (non-Redis fallback path from backend)
+        const userParam = searchParams.get("user")
+        if (code === "fallback" && userParam) {
             try {
                 const user = JSON.parse(decodeURIComponent(userParam))
-
-                const isSuperAdmin = user.role === "super_admin"
-
-                // ✅ Store tokens in memory for cross-domain API calls
-                if (accessToken && refreshToken) {
-                    setTokens(accessToken, refreshToken, isSuperAdmin)
-                }
-
-                // Store user profile for UI rendering (with isolation)
-                const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
+                const userKey = user.role === "super_admin" ? "smarterp_admin_user" : "smarterp_user"
                 localStorage.setItem(userKey, JSON.stringify(user))
-
-                // Update context
                 setUser(user)
-
-                // Redirect based on role
-                if (isSuperAdmin) {
-                    // Try to use the [adminRoute] from the URL or fallback to the known slug
-                    router.push("/super-admin-control-center/dashboard")
+                if (user.role === "super_admin") {
+                    const adminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE
+                    if (adminRoute) router.push(`/${adminRoute}/dashboard`)
+                    else router.push("/not-found")
                 } else if (user.role === "owner") {
                     router.push("/owner")
                 } else {
                     router.push("/employee")
                 }
-            } catch (error) {
-                logger.error("Error parsing user data:", error)
+            } catch {
                 router.push("/login?error=auth_failed")
             }
-        } else {
-            router.push("/login?error=missing_data")
+            return
         }
+
+        // Primary path: exchange the one-time code
+        exchangeOAuthCode(code).then((result) => {
+            if (!result || !result.user) {
+                router.push("/login?error=auth_failed")
+                return
+            }
+
+            const user = result.user
+            const isSuperAdmin = user.role === "super_admin"
+
+            // Store user profile for UI rendering only (no tokens in storage)
+            const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
+            localStorage.setItem(userKey, JSON.stringify(user))
+
+            setUser(user)
+
+            // Redirect based on role — admin route comes from env, never hardcoded
+            if (isSuperAdmin) {
+                const adminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE
+                if (!adminRoute) {
+                    logger.error("NEXT_PUBLIC_ADMIN_ROUTE is not set")
+                    router.push("/not-found")
+                    return
+                }
+                router.push(`/${adminRoute}/dashboard`)
+            } else if (user.role === "owner") {
+                router.push("/owner")
+            } else {
+                router.push("/employee")
+            }
+        })
     }, [router, searchParams, setUser])
 
     return (

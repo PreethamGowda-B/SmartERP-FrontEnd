@@ -71,6 +71,15 @@ export function AIChatBot({ className }: { className?: string }) {
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return
+    // Client-side length guard (server also enforces this)
+    if (input.trim().length > 1000) {
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        text: "Message is too long. Please keep it under 1000 characters.",
+        sender: "bot"
+      }])
+      return
+    }
 
     const userText = input
     setInput("")

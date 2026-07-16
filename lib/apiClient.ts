@@ -122,9 +122,18 @@ export function getAuthToken() {
   
   const { at } = getStorageKeys()
   
-  // 1. Check cookies (if you add a cookie library later, check here)
-  // 2. Check Storage (Fresh read)
-  return sessionStorage.getItem(at) || localStorage.getItem(at) || localStorage.getItem("accessToken")
+  // 1. sessionStorage first (tab-scoped, cleared on tab close — safest for web)
+  // 2. localStorage only for Android WebView bridge
+  const fromSession = sessionStorage.getItem(at)
+  if (fromSession) return fromSession
+  
+  const isAndroid = typeof window !== "undefined" && !!(window as any).Android
+  if (isAndroid) {
+    return localStorage.getItem(at) || localStorage.getItem("accessToken")
+  }
+  
+  // Web: do not fall back to localStorage (XSS risk)
+  return null
 }
 
 export function getAccessToken() {
@@ -134,7 +143,15 @@ export function getAccessToken() {
 function getRefreshToken(): string | null {
   if (typeof window !== "undefined") {
     const { rt } = getStorageKeys()
-    return sessionStorage.getItem(rt) || localStorage.getItem(rt) || localStorage.getItem("refreshToken")
+    const fromSession = sessionStorage.getItem(rt)
+    if (fromSession) return fromSession
+    
+    const isAndroid = !!(window as any).Android
+    if (isAndroid) {
+      return localStorage.getItem(rt) || localStorage.getItem("refreshToken")
+    }
+    // Web: sessionStorage only
+    return null
   }
   return null
 }

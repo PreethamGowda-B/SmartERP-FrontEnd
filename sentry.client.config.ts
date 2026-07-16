@@ -36,10 +36,12 @@ function initReplayIfConsented(): void {
     try {
       Sentry.addIntegration(
         Sentry.replayIntegration({
-          // Conservative privacy settings even when user consents
-          maskAllText: false,     // allow text (user chose to accept)
-          blockAllMedia: false,   // allow media (user chose to accept)
-          maskAllInputs: true,    // always mask form inputs (passwords etc.)
+          // ✅ Maximum privacy — this app handles sensitive financial and HR data.
+          // Even with user consent, we mask all text to prevent accidental PII capture
+          // (salary figures, employee names, phone numbers, etc.)
+          maskAllText: true,
+          blockAllMedia: true,
+          maskAllInputs: true,
         })
       );
     } catch {
