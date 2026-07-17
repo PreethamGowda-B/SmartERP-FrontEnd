@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { NavLink } from "@/components/nav-link"
 import { apiClient } from "@/lib/apiClient"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
@@ -62,11 +62,27 @@ export function OwnerSidebar() {
     priority_support: false
   })
   const pathname = usePathname()
+  const router = useRouter()
   const { user, signOut } = useAuth()
+  const navRef = useRef<HTMLDivElement>(null)
 
   const handleSignOut = async () => {
     await signOut()
     window.location.href = "/"
+  }
+
+  // Persist sidebar scroll position across route changes
+  useEffect(() => {
+    const nav = navRef.current
+    if (!nav) return
+    const saved = sessionStorage.getItem("owner_sidebar_scroll")
+    if (saved) nav.scrollTop = parseInt(saved, 10)
+  }, [pathname])
+
+  const handleNavScroll = () => {
+    if (navRef.current) {
+      sessionStorage.setItem("owner_sidebar_scroll", String(navRef.current.scrollTop))
+    }
   }
 
   useEffect(() => {
@@ -114,7 +130,7 @@ export function OwnerSidebar() {
         </div>
 
         {/* Scrollable nav area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+        <div ref={navRef} onScroll={handleNavScroll} className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
           {navigation.filter((item) => {
             if (item.name === "Messages" && !features.messages) return false
             if (item.name === "Payroll" && !features.payroll) return false
