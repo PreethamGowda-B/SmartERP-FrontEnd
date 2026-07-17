@@ -81,12 +81,14 @@ export default function EmployeeDocumentsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const [docs, emp] = await Promise.all([
-        apiClient(`/api/documents/${employeeId}`),
-        apiClient(`/api/users/${employeeId}`)
+      const [docs, employees] = await Promise.all([
+        apiClient(`/api/documents/employee/${employeeId}`),
+        apiClient(`/api/employees`)
       ])
       setDocuments(Array.isArray(docs) ? docs : [])
-      setEmployee(emp)
+      // Find the specific employee from the list
+      const emp = Array.isArray(employees) ? employees.find((e: any) => String(e.id) === String(employeeId)) : null
+      setEmployee(emp || null)
     } catch (err: any) {
       logger.error("Failed to fetch documents:", err)
       toast.error("Could not load documents")
