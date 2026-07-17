@@ -57,8 +57,29 @@ export default function EmployeesPage() {
     is_active: true,
     role: "employee",
   })
+  // Clock-in status map: employee id (string) → boolean (true = clocked in today)
+  const [clockStatusMap, setClockStatusMap] = useState<Record<string, boolean>>({})
+  const [clockStatusLoading, setClockStatusLoading] = useState(true)
 
   // ─── Fetch employees ──────────────────────────────────────────────────────
+  const fetchClockStatus = useCallback(async () => {
+    setClockStatusLoading(true)
+    try {
+      const data = await apiClient("/api/attendance/overview")
+      const records = Array.isArray(data) ? data : (data?.records ?? data?.attendance ?? [])
+      const map: Record<string, boolean> = {}
+      records.forEach((record: any) => {
+        const uid = String(record.user_id ?? record.userId ?? record.employee_id ?? "")
+        if (uid) map[uid] = record.check_in_time != null
+      })
+      setClockStatusMap(map)
+    } catch {
+      // Fail silently — dots will show red (not clocked in) by default
+    } finally {
+      setClockStatusLoading(false)
+    }
+  }, [])
+
   const fetchEmployees = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -73,11 +94,14 @@ export default function EmployeesPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+    // Refresh clock status concurrently with employee list
+    fetchClockStatus()
+  }, [fetchClockStatus])
 
   useEffect(() => {
     fetchEmployees()
-  }, [fetchEmployees])
+    fetchClockStatus()
+  }, [fetchEmployees, fetchClockStatus])
 
   // ─── Start editing ────────────────────────────────────────────────────────
   const startEditing = (employee: Employee) => {
@@ -288,9 +312,21 @@ export default function EmployeesPage() {
                             </AvatarFallback>
                           </Avatar>
                           <div className={cn(
-                            "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-background shadow-sm",
-                            employee.status === "active" ? "bg-green-500" : "bg-muted"
-                          )} />
+                            "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-background shadow-sm transition-colors duration-300",
+                            clockStatusLoading
+                              ? "bg-muted"
+                              : clockStatusMap[String(employee.id)]
+                                ? "bg-green-500"
+                                : "bg-red-500"
+                          )}
+                          title={
+                            clockStatusLoading
+                              ? "Loading attendance..."
+                              : clockStatusMap[String(employee.id)]
+                                ? "Clocked in today"
+                                : "Not clocked in"
+                          }
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-lg font-black tracking-tight truncate group-hover:text-primary transition-colors">
