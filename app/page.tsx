@@ -18,7 +18,7 @@ export default function HomePage() {
         router.push("/owner")
       } else if (user.role === "hr") {
         router.push("/hr")
-      } else {
+      } else if (user.role === "employee") {
         router.push("/employee")
       }
     }

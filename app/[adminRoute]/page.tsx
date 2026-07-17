@@ -31,6 +31,8 @@ import {
   Cell
 } from 'recharts'
 
+import { useAuth } from "@/contexts/auth-context"
+
 interface ChartData {
   date: string
   count: number
@@ -76,10 +78,14 @@ const COLORS = ['#0f172a', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 export default function AdminDashboard() {
   const params = useParams()
   const router = useRouter()
+  const { user, isLoading } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isLoading) return
+    if (!user || user.role !== "super_admin") return
+
     const fetchStats = async () => {
       try {
         const res = await apiClient("/api/admin/dashboard")
@@ -92,7 +98,7 @@ export default function AdminDashboard() {
     }
 
     fetchStats()
-  }, [])
+  }, [user, isLoading])
 
   const stats = data?.stats
   const statCards = [
