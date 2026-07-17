@@ -59,7 +59,9 @@ const MONTHS = [
 
 export default function OwnerPayrollPage() {
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([])
-  // Removed: employees state (now using direct email input)
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [employeeSearch, setEmployeeSearch] = useState("")
+  const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
@@ -93,7 +95,15 @@ export default function OwnerPayrollPage() {
     return base + extra + increment - deduction
   }
 
-  // Removed: fetchEmployees function (now using direct email input)
+  // Fetch employees for dropdown
+  const fetchEmployees = async () => {
+    try {
+      const data = await apiClient("/api/employees")
+      setEmployees(Array.isArray(data) ? data : [])
+    } catch {
+      // Fail silently — user can still type email manually
+    }
+  }
 
   // Fetch payroll records
   const fetchPayrolls = async () => {
@@ -124,6 +134,7 @@ export default function OwnerPayrollPage() {
 
   useEffect(() => {
     fetchPayrolls()
+    fetchEmployees()
   }, [])
 
   // Submit new payroll
@@ -157,6 +168,8 @@ export default function OwnerPayrollPage() {
         deduction: "",
         remarks: ""
       })
+      setEmployeeSearch("")
+      setShowEmployeeDropdown(false)
 
       // Refresh payrolls
       await fetchPayrolls()
@@ -253,16 +266,81 @@ export default function OwnerPayrollPage() {
                 <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-background">
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label htmlFor="employee_email" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Staff Member Email</Label>
-                      <Input
-                        id="employee_email"
-                        type="email"
-                        value={formData.employee_email}
-                        onChange={(e) => setFormData({ ...formData, employee_email: e.target.value })}
-                        placeholder="e.g. technician@smarterp.com"
-                        className="h-11"
-                        required
-                      />
+                      <Label htmlFor="employee_email" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Staff Member</Label>
+                      <div className="relative">
+                        <div
+                          className="h-11 px-3 flex items-center justify-between border rounded-md bg-background cursor-pointer hover:border-primary/50 transition-colors"
+                          onClick={() => setShowEmployeeDropdown(!showEmployeeDropdown)}
+                        >
+                          {formData.employee_email ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                                {(employees.find(e => e.email === formData.employee_email)?.name || formData.employee_email).charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium">{employees.find(e => e.email === formData.employee_email)?.name || formData.employee_email}</span>
+                                <span className="text-xs text-muted-foreground ml-2">{formData.employee_email}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Select a staff member...</span>
+                          )}
+                          <svg className={`h-4 w-4 text-muted-foreground transition-transform ${showEmployeeDropdown ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </div>
+
+                        {showEmployeeDropdown && (
+                          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-hidden">
+                            <div className="p-2 border-b">
+                              <Input
+                                autoFocus
+                                placeholder="Search by name or email..."
+                                value={employeeSearch}
+                                onChange={(e) => setEmployeeSearch(e.target.value)}
+                                className="h-8 text-sm"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                            <div className="overflow-y-auto max-h-44">
+                              {employees
+                                .filter(emp =>
+                                  emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+                                  emp.email.toLowerCase().includes(employeeSearch.toLowerCase())
+                                )
+                                .map(emp => (
+                                  <div
+                                    key={emp.id}
+                                    className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-accent transition-colors ${formData.employee_email === emp.email ? "bg-primary/10" : ""}`}
+                                    onClick={() => {
+                                      setFormData({ ...formData, employee_email: emp.email })
+                                      setShowEmployeeDropdown(false)
+                                      setEmployeeSearch("")
+                                    }}
+                                  >
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
+                                      {emp.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium truncate">{emp.name}</p>
+                                      <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
+                                    </div>
+                                    {formData.employee_email === emp.email && (
+                                      <svg className="h-4 w-4 text-primary ml-auto flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                    )}
+                                  </div>
+                                ))
+                              }
+                              {employees.filter(emp =>
+                                emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+                                emp.email.toLowerCase().includes(employeeSearch.toLowerCase())
+                              ).length === 0 && (
+                                <p className="text-center text-sm text-muted-foreground py-4">No employees found</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {/* Hidden input to satisfy required validation */}
+                      <input type="hidden" value={formData.employee_email} required />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
