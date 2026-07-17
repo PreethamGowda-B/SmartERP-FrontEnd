@@ -66,7 +66,8 @@ export default function EmployeesPage() {
     setClockStatusLoading(true)
     try {
       const data = await apiClient("/api/attendance/overview")
-      const records = Array.isArray(data) ? data : (data?.records ?? data?.attendance ?? [])
+      // API returns { summary, employees: [...] }
+      const records = Array.isArray(data) ? data : (data?.employees ?? data?.records ?? data?.attendance ?? [])
       const map: Record<string, boolean> = {}
       records.forEach((record: any) => {
         const uid = String(record.user_id ?? record.userId ?? record.employee_id ?? "")
