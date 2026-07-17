@@ -14,6 +14,7 @@ import {
 import { OwnerLayout } from "@/components/owner-layout"
 
 import { apiClient } from "@/lib/apiClient"
+import { exportToPDF } from "@/lib/export-utils"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
@@ -109,41 +110,55 @@ export default function ReportsPage() {
 
   const handleExport = () => {
     if (!attendance || !jobs || !materials || !inventory) return
-    const lines = [
-      `SmartERP Report — ${period.toUpperCase()} — Generated ${new Date().toLocaleString()}`,
-      "=".repeat(60),
-      "",
-      "ATTENDANCE SUMMARY",
-      `  Total records: ${attendance.totals?.total_records ?? 0}`,
-      `  Days present:  ${attendance.totals?.total_present ?? 0}`,
-      `  Days absent:   ${attendance.totals?.total_absent ?? 0}`,
-      `  Total hours:   ${attendance.totals?.total_hours ?? 0}`,
-      "",
-      "JOBS SUMMARY",
-      `  Total:         ${jobs.summary?.total ?? 0}`,
-      `  Completed:     ${jobs.summary?.completed ?? 0}`,
-      `  In Progress:   ${jobs.summary?.in_progress ?? 0}`,
-      `  Declined:      ${jobs.summary?.declined ?? 0}`,
-      `  Avg completion:${jobs.summary?.avg_completion_hours ?? "N/A"} hrs`,
-      "",
-      "MATERIAL REQUESTS",
-      `  Total:         ${materials.summary?.total ?? 0}`,
-      `  Approved:      ${materials.summary?.approved ?? 0}`,
-      `  Rejected:      ${materials.summary?.rejected ?? 0}`,
-      `  Pending:       ${materials.summary?.pending ?? 0}`,
-      "",
-      "INVENTORY",
-      `  Total items:   ${inventory.summary?.total_items ?? 0}`,
-      `  Low stock:     ${inventory.summary?.low_stock_count ?? 0}`,
-      `  Categories:    ${inventory.summary?.category_count ?? 0}`,
+
+    const periodLabel = period.toUpperCase()
+    const dateStr = new Date().toISOString().split("T")[0]
+
+    // Build a combined summary row dataset for the PDF
+    const summaryData = [
+      // Attendance
+      { section: "Attendance", metric: "Total Records", value: attendance.totals?.total_records ?? 0 },
+      { section: "Attendance", metric: "Days Present", value: attendance.totals?.total_present ?? 0 },
+      { section: "Attendance", metric: "Days Absent", value: attendance.totals?.total_absent ?? 0 },
+      { section: "Attendance", metric: "Total Hours", value: attendance.totals?.total_hours ?? 0 },
+      // Jobs
+      { section: "Jobs", metric: "Total Jobs", value: jobs.summary?.total ?? 0 },
+      { section: "Jobs", metric: "Completed", value: jobs.summary?.completed ?? 0 },
+      { section: "Jobs", metric: "In Progress", value: jobs.summary?.in_progress ?? 0 },
+      { section: "Jobs", metric: "Declined", value: jobs.summary?.declined ?? 0 },
+      { section: "Jobs", metric: "Avg Completion (hrs)", value: jobs.summary?.avg_completion_hours ?? "N/A" },
+      // Materials
+      { section: "Material Requests", metric: "Total", value: materials.summary?.total ?? 0 },
+      { section: "Material Requests", metric: "Approved", value: materials.summary?.approved ?? 0 },
+      { section: "Material Requests", metric: "Rejected", value: materials.summary?.rejected ?? 0 },
+      { section: "Material Requests", metric: "Pending", value: materials.summary?.pending ?? 0 },
+      // Inventory
+      { section: "Inventory", metric: "Total Items", value: inventory.summary?.total_items ?? 0 },
+      { section: "Inventory", metric: "Low Stock Items", value: inventory.summary?.low_stock_count ?? 0 },
+      { section: "Inventory", metric: "Categories", value: inventory.summary?.category_count ?? 0 },
     ]
-    const blob = new Blob([lines.join("\n")], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `smarterp-report-${period}-${new Date().toISOString().split("T")[0]}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
+
+    exportToPDF({
+      filename: `SmartERP_Report_${periodLabel}_${dateStr}`,
+      title: `SmartERP Summary Report — ${periodLabel}`,
+      subtitle: `Period: ${periodLabel} | Generated: ${new Date().toLocaleString()}`,
+      columns: [
+        { header: "Section", dataKey: "section", type: "text" },
+        { header: "Metric", dataKey: "metric", type: "text" },
+        { header: "Value", dataKey: "value", type: "text" },
+      ],
+      data: summaryData,
+      summary: [
+        { label: "Period", value: periodLabel },
+        { label: "Attendance Records", value: attendance.totals?.total_records ?? 0 },
+        { label: "Total Jobs", value: jobs.summary?.total ?? 0 },
+        { label: "Jobs Completed", value: jobs.summary?.completed ?? 0 },
+        { label: "Material Requests", value: materials.summary?.total ?? 0 },
+        { label: "Inventory Items", value: inventory.summary?.total_items ?? 0 },
+        { label: "Low Stock Alerts", value: inventory.summary?.low_stock_count ?? 0 },
+        { label: "Export Date", value: dateStr },
+      ],
+    })
   }
 
   const jTot = Number(jobs?.summary?.total ?? 0)
