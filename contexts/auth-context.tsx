@@ -70,26 +70,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   logger.log("[v0] ✅ Profile synced with latest DB state")
                 } else {
                   // 🔴 PART 1: SESSION VALIDATION
-                  // IF token exists BUT request fails -> logout immediately
-                  logger.warn("[v0] Profile sync failed - forcing logout")
-                  signOut().then(() => {
-                    window.location.href = "/"
-                  })
+                  // IF token exists BUT /me request fails -> clear session
+                  logger.warn("[v0] Profile sync failed - clearing session")
+                  signOut()
+                  if (isMounted) setUser(null)
                 }
               }
             } else if (!refreshRes.ok) {
-              logger.warn("[v0] Proactive token refresh failed (background) - forcing logout")
-              signOut().then(() => {
-                window.location.href = "/"
-              })
+              logger.warn("[v0] Proactive token refresh failed (background) - clearing session")
+              signOut()
+              if (isMounted) setUser(null)
             }
           }).catch(err => {
             logger.warn("[v0] Proactive token refresh error (background):", err)
-            // Only force logout if it's a 401/403, not a network error
+            // Only clear session if it's a definitive auth failure, not a network error
             if (err.status === 401 || err.status === 403) {
-              signOut().then(() => {
-                window.location.href = "/"
-              })
+              signOut()
+              if (isMounted) setUser(null)
             }
           })
         }
