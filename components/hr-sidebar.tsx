@@ -53,6 +53,7 @@ export function HRSidebar() {
 
   const handleSignOut = async () => {
     await signOut()
+    window.location.href = "/"
   }
 
   useEffect(() => {

@@ -150,10 +150,10 @@ export function LandingPage() {
               <span className="text-xl font-bold text-foreground">SmartERP</span>
             </div>
             <div className="flex items-center gap-4 animate-fade-in-right">
-              <Button variant="ghost" onClick={() => router.push("/auth/login")} className="hover-lift">
+              <Button variant="ghost" onClick={() => router.push("/auth/login?mode=login")} className="hover-lift">
                 Sign In
               </Button>
-              <Button onClick={() => router.push("/auth/login")} className="hover-lift hover-scale animate-button-glow">
+              <Button onClick={() => router.push("/auth/login?mode=signup")} className="hover-lift hover-scale animate-button-glow">
                 Get Started
               </Button>
             </div>
@@ -182,7 +182,7 @@ export function LandingPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-fade-in-up stagger-2">
               <Button
                 size="lg"
-                onClick={() => router.push("/auth/login")}
+                onClick={() => router.push("/auth/login?mode=signup")}
                 className="hover-lift hover-scale animate-press text-lg px-8 py-6 group animate-button-glow"
               >
                 Start Free Trial
@@ -191,7 +191,7 @@ export function LandingPage() {
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => router.push("/auth/login")}
+                onClick={() => router.push("/auth/login?mode=login")}
                 className="hover-lift hover-scale animate-press text-lg px-8 py-6 group"
               >
                 Learn More
@@ -328,7 +328,7 @@ export function LandingPage() {
               <Button
                 size="lg"
                 variant="secondary"
-                onClick={() => router.push("/auth/login")}
+                onClick={() => router.push("/auth/login?mode=signup")}
                 className="hover-lift hover-scale animate-press group animate-button-glow"
               >
                 Start Your Free Trial

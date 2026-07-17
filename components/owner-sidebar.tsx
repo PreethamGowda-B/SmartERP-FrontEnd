@@ -66,6 +66,7 @@ export function OwnerSidebar() {
 
   const handleSignOut = async () => {
     await signOut()
+    window.location.href = "/"
   }
 
   useEffect(() => {

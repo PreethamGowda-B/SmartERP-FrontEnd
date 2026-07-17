@@ -58,6 +58,7 @@ export function EmployeeSidebar() {
 
   const handleSignOut = async () => {
     await signOut()
+    window.location.href = "/"
   }
 
   useEffect(() => {

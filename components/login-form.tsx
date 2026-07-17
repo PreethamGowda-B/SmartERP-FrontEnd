@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { signIn, signUp } from "@/lib/auth"
 import { apiClient } from "@/lib/apiClient"
 import { useAuth } from "@/contexts/auth-context"
-import { Building2, Loader2, HardHat, UserPlus, CheckCircle2, RefreshCw, Mail } from "lucide-react"
+import { Building2, Loader2, HardHat, UserPlus, CheckCircle2, RefreshCw, Mail, ArrowLeft } from "lucide-react"
 import { PremiumBackground } from "./premium-background"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
@@ -46,13 +46,19 @@ export function LoginForm() {
   // Hold pending signup data while waiting for OTP
   const pendingSignupRef = useRef<any>(null)
 
-  // ── Handle Error from Redirect (e.g. Google Auth) ─────────────────────────
+  // ── Handle URL query params (mode & error) ───────────────────────────────
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search)
       const errorParam = urlParams.get("error")
+      const modeParam = urlParams.get("mode")
       if (errorParam === "account_suspended") {
         router.push("/suspended")
+      }
+      if (modeParam === "login") {
+        setMode("login")
+      } else if (modeParam === "signup") {
+        setMode("signup")
       }
     }
   }, [router])
@@ -278,6 +284,18 @@ export function LoginForm() {
 
         <Card className="w-full max-w-md relative z-10 animate-fade-in-up stagger-2 hover-lift border-2 hover:border-primary/20 transition-all duration-500">
           <CardHeader className="text-center animate-fade-in-down stagger-1">
+            {/* Back to Home */}
+            <div className="flex justify-start mb-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/")}
+                className="text-muted-foreground hover:text-foreground gap-1.5 text-xs px-2 py-1 h-auto"
+              >
+                <ArrowLeft className="h-3 w-3" />
+                Back to Home
+              </Button>
+            </div>
             <div className="flex justify-center mb-4">
               <div className="p-3 bg-primary rounded-full animate-scale-in stagger-2 hover-scale animate-float">
                 <Building2 className="h-8 w-8 text-primary-foreground" />
