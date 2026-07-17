@@ -117,7 +117,14 @@ export function LoginForm() {
         setOtpError("Account creation failed. This email may already be registered — try signing in instead.")
       }
     } catch (err: any) {
-      setOtpError(err.message || "Verification failed. Please try again.")
+      const msg: string = err.message || ""
+      if (msg.toLowerCase().includes("already") || msg.toLowerCase().includes("exists") || msg.toLowerCase().includes("duplicate")) {
+        setOtpError("This email is already registered. Please sign in instead.")
+      } else if (msg.toLowerCase().includes("validation")) {
+        setOtpError("Please check your details — make sure your password is at least 10 characters with uppercase, number, and special character.")
+      } else {
+        setOtpError(msg || "Verification failed. Please try again.")
+      }
     } finally {
       setOtpVerifying(false)
     }
@@ -177,6 +184,26 @@ export function LoginForm() {
 
         // Save pending signup data, send OTP, show modal
         pendingSignupRef.current = userData
+
+        // Check if email is already registered before sending OTP
+        try {
+          const checkRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"}/api/auth/check-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          })
+          if (checkRes.ok) {
+            const checkData = await checkRes.json()
+            if (checkData.exists) {
+              setError("This email is already registered. Please sign in instead.")
+              setIsLoading(false)
+              return
+            }
+          }
+        } catch {
+          // check-email endpoint may not exist — proceed anyway, signup will catch it
+        }
+
         await sendOtp(email)
         setShowOtpModal(true)
         setOtp("")
