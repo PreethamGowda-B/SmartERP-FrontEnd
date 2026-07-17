@@ -289,7 +289,7 @@ export function LoginForm() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push("/")}
+                onClick={() => { window.location.href = "/" }}
                 className="text-muted-foreground hover:text-foreground gap-1.5 text-xs px-2 py-1 h-auto"
               >
                 <ArrowLeft className="h-3 w-3" />

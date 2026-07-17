@@ -12,19 +12,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !isLoading) {
-      router.push(user.role === "owner" ? "/owner" : "/employee")
+      if (user.role === "owner") router.push("/owner")
+      else if (user.role === "hr") router.push("/hr")
+      else if (user.role === "employee") router.push("/employee")
     }
   }, [user, isLoading, router])
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
-
-  if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
