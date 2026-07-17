@@ -114,7 +114,7 @@ export function LoginForm() {
         setMode("login")
         setPassword(""); setName(""); setPhone(""); setPosition(""); setDepartment("")
       } else {
-        setOtpError("Account creation failed. Email may already exist.")
+        setOtpError("Account creation failed. This email may already be registered — try signing in instead.")
       }
     } catch (err: any) {
       setOtpError(err.message || "Verification failed. Please try again.")
@@ -159,7 +159,10 @@ export function LoginForm() {
       } else {
         // Signup — validate then show OTP modal
         if (!name.trim()) { setError("Full name is required"); setIsLoading(false); return }
-        if (password.length < 6) { setError("Password must be at least 6 characters long"); setIsLoading(false); return }
+        if (password.length < 10) { setError("Password must be at least 10 characters long"); setIsLoading(false); return }
+        if (!/[A-Z]/.test(password)) { setError("Password must contain at least one uppercase letter"); setIsLoading(false); return }
+        if (!/[0-9]/.test(password)) { setError("Password must contain at least one number"); setIsLoading(false); return }
+        if (!/[^A-Za-z0-9]/.test(password)) { setError("Password must contain at least one special character (e.g. !@#$%)"); setIsLoading(false); return }
 
         const userData = {
           email,
