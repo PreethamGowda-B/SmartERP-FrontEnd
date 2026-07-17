@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bot, Send, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { getAuthToken } from "@/lib/apiClient"
 
 /* ---------------- TYPES ---------------- */
 
@@ -25,7 +26,8 @@ const API_URL =
 /* ---------------- BACKEND CALL ---------------- */
 
 async function askBackendAI(message: string, onFeatureLocked: (data: any) => void) {
-  const token = localStorage.getItem("_at") || localStorage.getItem("accessToken");
+  // Use getAuthToken() — reads from sessionStorage (web) or localStorage (Android)
+  const token = getAuthToken();
 
   const res = await fetch(`${API_URL}/api/ai/chat`, {
     method: "POST",
