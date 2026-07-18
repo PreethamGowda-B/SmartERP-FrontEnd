@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useState, useEffect, useCallback } from "react"
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react"
 import { useAuth } from "./auth-context"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -19,6 +18,9 @@ export interface Notification {
   data?: any // Additional data for the notification
 }
 
+// Callback type for MessagingContext to receive SSE events
+export type MessagingSSEHandler = (event: { type: string; data: unknown }) => void
+
 interface NotificationContextType {
   notifications: Notification[]
   addNotification: (notification: Omit<Notification, "id" | "created_at" | "read">) => void
@@ -27,6 +29,8 @@ interface NotificationContextType {
   getUnreadCount: () => number
   refreshNotifications: () => Promise<void>
   isConnected: boolean
+  registerMessagingHandler: (handler: MessagingSSEHandler) => void
+  unregisterMessagingHandler: () => void
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
@@ -40,6 +44,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [sseConnection, setSSEConnection] = useState<EventSource | null>(null)
   const [reconnectTrigger, setReconnectTrigger] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
+  const messagingHandlerRef = useRef<MessagingSSEHandler | null>(null)
+
+  const registerMessagingHandler = useCallback((handler: MessagingSSEHandler) => {
+    messagingHandlerRef.current = handler
+  }, [])
+
+  const unregisterMessagingHandler = useCallback(() => {
+    messagingHandlerRef.current = null
+  }, [])
 
   // Fetch notifications from backend
   const fetchNotifications = useCallback(async () => {
@@ -141,6 +154,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         if (data.type === "connected") {
           logger.log("✅ SSE connected:", data.message)
+        } else if (data.type === "new_message" || data.type === "status_change") {
+          // Forward messaging events to MessagingContext handler
+          if (messagingHandlerRef.current) {
+            messagingHandlerRef.current({ type: data.type, data: data.data })
+          }
         } else if (data.type === "notification") {
           const notification = data.data
           logger.log("🔔 New notification received:", notification)
@@ -259,24 +277,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         markAllAsRead,
         getUnreadCount,
         refreshNotifications: fetchNotifications,
-        isConnected
+        isConnected,
+        registerMessagingHandler,
+        unregisterMessagingHandler,
       }}
     >
       {children}
-      
-      {/* 🔴 PART 9: SSE UX POLISH (Live Indicator) */}
-      <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 pointer-events-none select-none">
-        <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 backdrop-blur-md border transition-all duration-500 ${
-          isConnected 
-            ? "bg-green-500/10 text-green-600 border-green-500/20" 
-            : "bg-yellow-500/10 text-yellow-600 border-yellow-500/20 animate-pulse"
-        }`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${
-            isConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-yellow-500"
-          }`} />
-          {isConnected ? "Live" : "Reconnecting..."}
-        </div>
-      </div>
     </NotificationContext.Provider>
   )
 }
