@@ -11,7 +11,7 @@ interface MessagingLayoutProps {
 
 export function MessagingLayout({ leftPanel, rightPanel, showChat = false }: MessagingLayoutProps) {
   return (
-    <div className="h-[calc(100vh-4rem)] flex overflow-hidden bg-background">
+    <div className="flex overflow-hidden bg-background" style={{ height: 'calc(100vh - 4rem)' }}>
       {/* Left panel — conversation list */}
       <div
         className={cn(

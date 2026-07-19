@@ -86,9 +86,11 @@ function OwnerMessagingInner() {
 export default function OwnerMessagesPage() {
   return (
     <OwnerLayout>
-      <MessagingProvider>
-        <OwnerMessagingInner />
-      </MessagingProvider>
+      <div className="-m-4 lg:-m-8">
+        <MessagingProvider>
+          <OwnerMessagingInner />
+        </MessagingProvider>
+      </div>
     </OwnerLayout>
   )
 }

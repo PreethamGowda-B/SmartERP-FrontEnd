@@ -41,7 +41,7 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
   }
 
   return (
-    <div className="flex items-end gap-2 p-4 border-t bg-background">
+    <div className="flex items-end gap-2 p-4 pr-16 border-t bg-background">
       <Textarea
         ref={textareaRef}
         value={value}
@@ -57,7 +57,7 @@ export function MessageInput({ onSend, disabled = false }: MessageInputProps) {
         size="icon"
         onClick={handleSend}
         disabled={!value.trim() || disabled}
-        className="shrink-0"
+        className="shrink-0 mr-2"
       >
         {disabled ? (
           <Loader2 className="h-4 w-4 animate-spin" />
