@@ -21,7 +21,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 export function MessageBubble({ message, isOwn }: MessageBubbleProps) {
-  const isTemp = message.id.startsWith("temp_")
+  const isTemp = String(message.id).startsWith("temp_")
 
   return (
     <div className={cn("flex w-full mb-1", isOwn ? "justify-end" : "justify-start")}>

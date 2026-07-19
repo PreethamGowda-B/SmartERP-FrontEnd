@@ -62,14 +62,14 @@ function reducer(state: MessagingState, action: Action): MessagingState {
       return {
         ...state,
         sending: false,
-        messages: state.messages.map(m => m.id === action.payload.tempId ? action.payload.message : m)
+        messages: state.messages.map(m => String(m.id) === String(action.payload.tempId) ? action.payload.message : m)
       }
     case 'REMOVE_MESSAGE':
-      return { ...state, sending: false, messages: state.messages.filter(m => m.id !== action.payload) }
+      return { ...state, sending: false, messages: state.messages.filter(m => String(m.id) !== String(action.payload)) }
     case 'RECEIVE_MESSAGE': {
       const { conversation_id, message_id, sender_id, sender_name, content, message_type, created_at } = action.payload
       const newMsg: Message = {
-        id: message_id, conversation_id, sender_id, sender_name,
+        id: String(message_id), conversation_id, sender_id, sender_name,
         content, message_type, created_at, is_mine: false
       }
       // Update conversation list in-place
@@ -182,7 +182,7 @@ export function useMessaging(currentUserId: string) {
       dispatch({ type: 'SET_LOADING_MESSAGES', payload: true })
       pageRef.current = 1
       const data = await apiClient(`/api/messages/conversation/${conversation_id}?page=1`)
-      const msgs: Message[] = (data.messages ?? []).reverse() // backend returns newest-first, flip for display
+      const msgs: Message[] = (data.messages ?? []).reverse().map((m: Message) => ({ ...m, id: String(m.id) }))
       dispatch({ type: 'SET_MESSAGES', payload: { messages: msgs, hasMore: data.has_more ?? false } })
       // 5. Mark as read on backend
       apiClient(`/api/messages/conversation/${conversation_id}/read`, { method: 'PATCH' }).catch(() => {})
@@ -217,7 +217,7 @@ export function useMessaging(currentUserId: string) {
         method: 'POST',
         body: JSON.stringify({ conversation_id: conversationId, content: content.trim() }),
       })
-      dispatch({ type: 'REPLACE_MESSAGE', payload: { tempId, message: { ...result, is_mine: true } } })
+      dispatch({ type: 'REPLACE_MESSAGE', payload: { tempId, message: { ...result, id: String(result.id), is_mine: true } } })
       // Update conversation list in-place
       dispatch({
         type: 'RECEIVE_MESSAGE',
