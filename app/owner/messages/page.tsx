@@ -18,6 +18,7 @@ function OwnerMessagingInner() {
     loadingConversations,
     searchQuery,
     sending,
+    typingUsers,
     actions,
   } = useMessagingContext()
 
@@ -74,8 +75,10 @@ function OwnerMessagingInner() {
           hasMore={hasMore}
           loadingMessages={loadingMessages}
           sending={sending}
+          typingUsers={typingUsers}
           onSend={actions.sendMessage}
           onLoadMore={actions.loadMoreMessages}
+          onTyping={actions.sendTyping}
           onBack={handleBack}
         />
       }

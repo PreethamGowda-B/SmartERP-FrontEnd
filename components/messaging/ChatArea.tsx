@@ -1,13 +1,16 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useMemo } from "react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ChevronLeft, MessageSquare } from "lucide-react"
+import { format } from "date-fns"
 import { MessageBubble } from "./MessageBubble"
 import { MessageInput } from "./MessageInput"
+import { DateSeparator } from "./DateSeparator"
+import { TypingIndicator } from "./TypingIndicator"
 import type { Message } from "@/types/messaging"
 
 interface ChatAreaProps {
@@ -19,9 +22,20 @@ interface ChatAreaProps {
   hasMore: boolean
   loadingMessages: boolean
   sending: boolean
-  onSend: (content: string) => Promise<void>
+  typingUsers?: Record<string, { name: string; until: number }>
+  onSend: (content: string, attachment?: import("@/types/messaging").MessageAttachment) => Promise<void>
   onLoadMore: () => Promise<void>
+  onTyping?: (typing: boolean) => void
   onBack?: () => void
+}
+
+// Group messages by date for separator rendering
+function getDateKey(iso: string): string {
+  try {
+    return format(new Date(iso), "yyyy-MM-dd")
+  } catch {
+    return ""
+  }
 }
 
 export function ChatArea({
@@ -33,16 +47,43 @@ export function ChatArea({
   hasMore,
   loadingMessages,
   sending,
+  typingUsers = {},
   onSend,
   onLoadMore,
+  onTyping,
   onBack,
 }: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const prevMsgCountRef = useRef(0)
 
-  // Scroll to bottom when new messages arrive
+  // Scroll to bottom only when new messages are appended (not when loading older ones)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (messages.length > prevMsgCountRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+    prevMsgCountRef.current = messages.length
   }, [messages.length])
+
+  // Compute which messages get a date separator before them
+  const messagesWithSeparators = useMemo(() => {
+    const result: Array<{ type: "separator"; date: Date } | { type: "message"; message: Message }> = []
+    let lastDateKey = ""
+    for (const msg of messages) {
+      const key = getDateKey(msg.created_at)
+      if (key && key !== lastDateKey) {
+        result.push({ type: "separator", date: new Date(msg.created_at) })
+        lastDateKey = key
+      }
+      result.push({ type: "message", message: msg })
+    }
+    return result
+  }, [messages])
+
+  // Active typing users (only those whose "until" hasn't expired)
+  const activeTypingEntries = useMemo(() => {
+    const now = Date.now()
+    return Object.entries(typingUsers).filter(([, info]) => info.until > now)
+  }, [typingUsers])
 
   if (!conversationId) {
     return (
@@ -87,8 +128,8 @@ export function ChatArea({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
-        {/* Load more */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-0.5">
+        {/* Load more button */}
         {hasMore && (
           <div className="flex justify-center pb-2">
             <Button
@@ -121,16 +162,34 @@ export function ChatArea({
           </div>
         )}
 
-        {/* Message list */}
-        {messages.map(msg => (
-          <MessageBubble key={msg.id} message={msg} isOwn={msg.is_mine} />
+        {/* Messages with date separators */}
+        {messagesWithSeparators.map((item, idx) => {
+          if (item.type === "separator") {
+            return <DateSeparator key={`sep-${idx}`} date={item.date} />
+          }
+          return (
+            <MessageBubble
+              key={item.message.id}
+              message={item.message}
+              isOwn={item.message.is_mine}
+            />
+          )
+        })}
+
+        {/* Typing indicator */}
+        {activeTypingEntries.map(([userId, info]) => (
+          <TypingIndicator key={userId} name={info.name} />
         ))}
 
         <div ref={bottomRef} />
       </div>
 
       {/* Input */}
-      <MessageInput onSend={onSend} disabled={sending} />
+      <MessageInput
+        onSend={onSend}
+        onTyping={onTyping}
+        disabled={sending}
+      />
     </div>
   )
 }

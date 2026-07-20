@@ -159,6 +159,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           if (messagingHandlerRef.current) {
             messagingHandlerRef.current({ type: data.type, data: data.data })
           }
+        } else if (data.type === "typing_indicator" || data.type === "receipt_update") {
+          // Forward Phase 2 messaging events
+          if (messagingHandlerRef.current) {
+            messagingHandlerRef.current({ type: data.type, data: data.data })
+          }
         } else if (data.type === "notification") {
           const notification = data.data
           logger.log("🔔 New notification received:", notification)

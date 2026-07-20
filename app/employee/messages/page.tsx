@@ -201,7 +201,7 @@ function JobMessagesTab() {
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">{conv.customer_name || "Customer"}</span>
                     {Number(conv.unread_count || 0) > 0 && (
-                      <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center animate-pulse">{conv.unread_count}</span>
+                      <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-4.5 text-center animate-pulse">{conv.unread_count}</span>
                     )}
                   </div>
                   <p className="text-xs text-gray-500 truncate mt-0.5">{conv.job_title}</p>
@@ -267,7 +267,7 @@ function InternalMessagesTab() {
   const {
     contacts, conversations, activeConversationId,
     messages, hasMore, loadingMessages, loadingConversations,
-    searchQuery, sending, actions,
+    searchQuery, sending, typingUsers, actions,
   } = useMessagingContext()
 
   const [mobileShowChat, setMobileShowChat] = useState(false)
@@ -306,8 +306,10 @@ function InternalMessagesTab() {
           hasMore={hasMore}
           loadingMessages={loadingMessages}
           sending={sending}
+          typingUsers={typingUsers}
           onSend={actions.sendMessage}
           onLoadMore={actions.loadMoreMessages}
+          onTyping={actions.sendTyping}
           onBack={() => setMobileShowChat(false)}
         />
       }

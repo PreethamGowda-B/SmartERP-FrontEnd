@@ -4,8 +4,9 @@ import { useReducer, useCallback, useRef } from 'react'
 import { apiClient } from '@/lib/apiClient'
 import { toast } from 'sonner'
 import type {
-  MessagingState, Contact, ConversationItem, Message,
-  SSEMessagingEvent, NewMessageEvent, StatusChangeEvent
+  MessagingState, Contact, ConversationItem, Message, MessageAttachment,
+  SSEMessagingEvent, NewMessageEvent, StatusChangeEvent,
+  TypingIndicatorEvent, ReceiptUpdateEvent
 } from '@/types/messaging'
 
 // Initial state
@@ -19,6 +20,7 @@ const initialState: MessagingState = {
   loadingConversations: false,
   searchQuery: '',
   sending: false,
+  typingUsers: {},
 }
 
 // Actions (discriminated union)
@@ -28,9 +30,9 @@ type Action =
   | { type: 'SET_ACTIVE_CONVERSATION'; payload: string }
   | { type: 'SET_MESSAGES'; payload: { messages: Message[]; hasMore: boolean } }
   | { type: 'APPEND_MESSAGES'; payload: { messages: Message[]; hasMore: boolean } }
-  | { type: 'PREPEND_MESSAGE'; payload: Message }  // optimistic send
+  | { type: 'PREPEND_MESSAGE'; payload: Message }         // optimistic send
   | { type: 'REPLACE_MESSAGE'; payload: { tempId: string; message: Message } }
-  | { type: 'REMOVE_MESSAGE'; payload: string }   // remove by id
+  | { type: 'REMOVE_MESSAGE'; payload: string }           // remove by id
   | { type: 'RECEIVE_MESSAGE'; payload: NewMessageEvent }
   | { type: 'UPDATE_ONLINE_STATUS'; payload: StatusChangeEvent }
   | { type: 'SET_LOADING_MESSAGES'; payload: boolean }
@@ -38,6 +40,10 @@ type Action =
   | { type: 'SET_SENDING'; payload: boolean }
   | { type: 'SET_SEARCH_QUERY'; payload: string }
   | { type: 'MARK_CONVERSATION_READ'; payload: string }
+  | { type: 'UPDATE_SENT_CONVERSATION'; payload: { conversation_id: string; content: string; created_at: string } }
+  | { type: 'SET_TYPING'; payload: TypingIndicatorEvent }
+  | { type: 'CLEAR_TYPING'; payload: { userId: string } }
+  | { type: 'UPDATE_RECEIPTS'; payload: ReceiptUpdateEvent }
 
 function reducer(state: MessagingState, action: Action): MessagingState {
   switch (action.type) {
@@ -62,17 +68,23 @@ function reducer(state: MessagingState, action: Action): MessagingState {
       return {
         ...state,
         sending: false,
-        messages: state.messages.map(m => String(m.id) === String(action.payload.tempId) ? action.payload.message : m)
+        messages: state.messages.map(m =>
+          String(m.id) === String(action.payload.tempId) ? action.payload.message : m
+        )
       }
     case 'REMOVE_MESSAGE':
-      return { ...state, sending: false, messages: state.messages.filter(m => String(m.id) !== String(action.payload)) }
+      return {
+        ...state,
+        sending: false,
+        messages: state.messages.filter(m => String(m.id) !== String(action.payload))
+      }
     case 'RECEIVE_MESSAGE': {
-      const { conversation_id, message_id, sender_id, sender_name, content, message_type, created_at } = action.payload
+      const { conversation_id, message_id, sender_id, sender_name, content, message_type, created_at, attachment } = action.payload
       const newMsg: Message = {
         id: String(message_id), conversation_id, sender_id, sender_name,
-        content, message_type, created_at, is_mine: false
+        content, message_type, created_at, is_mine: false,
+        ...(attachment ? { attachment } : {})
       }
-      // Update conversation list in-place
       const updatedConvs = state.conversations.map(c =>
         c.conversation_id === conversation_id
           ? {
@@ -87,7 +99,6 @@ function reducer(state: MessagingState, action: Action): MessagingState {
         if (b.conversation_id === conversation_id) return 1
         return 0
       })
-      // Only append if this is the active conversation
       if (state.activeConversationId === conversation_id) {
         return { ...state, conversations: updatedConvs, messages: [...state.messages, newMsg] }
       }
@@ -95,13 +106,11 @@ function reducer(state: MessagingState, action: Action): MessagingState {
     }
     case 'UPDATE_ONLINE_STATUS': {
       const { user_id, online } = action.payload
-      const updatedContacts = state.contacts.map(c =>
-        c.user_id === user_id ? { ...c, online_status: online } : c
-      )
-      const updatedConvs = state.conversations.map(c =>
-        c.other_user_id === user_id ? { ...c, other_user_online: online } : c
-      )
-      return { ...state, contacts: updatedContacts, conversations: updatedConvs }
+      return {
+        ...state,
+        contacts: state.contacts.map(c => c.user_id === user_id ? { ...c, online_status: online } : c),
+        conversations: state.conversations.map(c => c.other_user_id === user_id ? { ...c, other_user_online: online } : c),
+      }
     }
     case 'SET_LOADING_MESSAGES':
       return { ...state, loadingMessages: action.payload }
@@ -118,6 +127,56 @@ function reducer(state: MessagingState, action: Action): MessagingState {
           c.conversation_id === action.payload ? { ...c, unread_count: 0 } : c
         )
       }
+    case 'UPDATE_SENT_CONVERSATION': {
+      const { conversation_id, content, created_at } = action.payload
+      const updatedConvs = state.conversations.map(c =>
+        c.conversation_id === conversation_id
+          ? { ...c, last_message: content, last_message_time: created_at }
+          : c
+      ).sort((a, b) => {
+        if (a.conversation_id === conversation_id) return -1
+        if (b.conversation_id === conversation_id) return 1
+        return 0
+      })
+      return { ...state, conversations: updatedConvs }
+    }
+    case 'SET_TYPING': {
+      const { user_id, user_name, typing } = action.payload
+      if (!typing) {
+        const updated = { ...state.typingUsers }
+        delete updated[user_id]
+        return { ...state, typingUsers: updated }
+      }
+      return {
+        ...state,
+        typingUsers: {
+          ...state.typingUsers,
+          [user_id]: { name: user_name, until: Date.now() + 5000 }
+        }
+      }
+    }
+    case 'CLEAR_TYPING': {
+      const updated = { ...state.typingUsers }
+      delete updated[action.payload.userId]
+      return { ...state, typingUsers: updated }
+    }
+    case 'UPDATE_RECEIPTS': {
+      const { message_ids, status } = action.payload
+      const idSet = new Set(message_ids.map(String))
+      return {
+        ...state,
+        messages: state.messages.map(m => {
+          if (!idSet.has(String(m.id)) || !m.is_mine) return m
+          // Only upgrade receipt status (sent → delivered → read)
+          const order = { sent: 0, delivered: 1, read: 2 }
+          const current = m.receipt ?? 'sent'
+          if ((order[status] ?? 0) > (order[current] ?? 0)) {
+            return { ...m, receipt: status }
+          }
+          return m
+        })
+      }
+    }
     default:
       return state
   }
@@ -127,6 +186,9 @@ export function useMessaging(currentUserId: string) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const pageRef = useRef(1)
   const activeConvRef = useRef<string | null>(null)
+  const typingTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  const lastTypingSentRef = useRef<number>(0)
+  const isTypingRef = useRef(false)
 
   // Keep activeConvRef in sync
   const setActive = useCallback((id: string) => {
@@ -138,19 +200,14 @@ export function useMessaging(currentUserId: string) {
   const loadInitialData = useCallback(async () => {
     dispatch({ type: 'SET_LOADING_CONVERSATIONS', payload: true })
     try {
-      // Load contacts and conversations in parallel; handle each failure independently
       const [contactsResult, conversationsResult] = await Promise.allSettled([
         apiClient('/api/messages/contacts'),
         apiClient('/api/messages/conversations'),
       ])
-
       const contacts = contactsResult.status === 'fulfilled' && Array.isArray(contactsResult.value)
-        ? contactsResult.value
-        : []
+        ? contactsResult.value : []
       const conversations = conversationsResult.status === 'fulfilled' && Array.isArray(conversationsResult.value)
-        ? conversationsResult.value
-        : []
-
+        ? conversationsResult.value : []
       dispatch({ type: 'SET_CONTACTS', payload: contacts })
       dispatch({ type: 'SET_CONVERSATIONS', payload: conversations })
     } catch (err) {
@@ -169,22 +226,17 @@ export function useMessaging(currentUserId: string) {
   // Open a conversation with a user
   const openConversation = useCallback(async (userId: string) => {
     try {
-      // 1. Get or create conversation
       const { conversation_id } = await apiClient('/api/messages/conversations/start', {
         method: 'POST',
         body: JSON.stringify({ other_user_id: userId }),
       })
-      // 2. Set active
       setActive(conversation_id)
-      // 3. Optimistic reset unread
       dispatch({ type: 'MARK_CONVERSATION_READ', payload: conversation_id })
-      // 4. Load messages
       dispatch({ type: 'SET_LOADING_MESSAGES', payload: true })
       pageRef.current = 1
       const data = await apiClient(`/api/messages/conversation/${conversation_id}?page=1`)
       const msgs: Message[] = (data.messages ?? []).reverse().map((m: Message) => ({ ...m, id: String(m.id) }))
       dispatch({ type: 'SET_MESSAGES', payload: { messages: msgs, hasMore: data.has_more ?? false } })
-      // 5. Mark as read on backend
       apiClient(`/api/messages/conversation/${conversation_id}/read`, { method: 'PATCH' }).catch(() => {})
     } catch (err: any) {
       dispatch({ type: 'SET_LOADING_MESSAGES', payload: false })
@@ -192,10 +244,13 @@ export function useMessaging(currentUserId: string) {
     }
   }, [setActive])
 
-  // Send a message
-  const sendMessage = useCallback(async (content: string) => {
+  // Send a message (optionally with an attachment)
+  const sendMessage = useCallback(async (content: string, attachment?: MessageAttachment) => {
     const conversationId = activeConvRef.current
-    if (!conversationId || !content.trim() || state.sending) return
+    if (!conversationId || (!content.trim() && !attachment) || state.sending) return
+
+    // Stop typing indicator before sending
+    sendTypingRaw(conversationId, false)
 
     const tempId = `temp_${Date.now()}`
     const optimisticMsg: Message = {
@@ -204,40 +259,97 @@ export function useMessaging(currentUserId: string) {
       sender_id: currentUserId,
       sender_name: 'You',
       content: content.trim(),
-      message_type: 'text',
+      message_type: attachment
+        ? (attachment.file_type.startsWith('image/') ? 'image' : 'document')
+        : 'text',
       created_at: new Date().toISOString(),
       is_mine: true,
+      receipt: 'sent',
+      ...(attachment ? { attachment } : {}),
     }
 
     dispatch({ type: 'SET_SENDING', payload: true })
     dispatch({ type: 'PREPEND_MESSAGE', payload: optimisticMsg })
 
     try {
+      const body: Record<string, unknown> = {
+        conversation_id: conversationId,
+        content: content.trim(),
+      }
+      if (attachment) {
+        body.message_type = optimisticMsg.message_type
+        body.attachment = attachment
+      }
+
       const result = await apiClient('/api/messages', {
         method: 'POST',
-        body: JSON.stringify({ conversation_id: conversationId, content: content.trim() }),
+        body: JSON.stringify(body),
       })
-      dispatch({ type: 'REPLACE_MESSAGE', payload: { tempId, message: { ...result, id: String(result.id), is_mine: true } } })
-      // Update conversation list in-place
       dispatch({
-        type: 'RECEIVE_MESSAGE',
+        type: 'REPLACE_MESSAGE',
+        payload: {
+          tempId,
+          message: {
+            ...result,
+            id: String(result.id),
+            is_mine: true,
+            receipt: result.receipt ?? 'sent',
+            ...(attachment ? { attachment } : {})
+          }
+        }
+      })
+      dispatch({
+        type: 'UPDATE_SENT_CONVERSATION',
         payload: {
           conversation_id: conversationId,
-          message_id: result.id,
-          sender_id: currentUserId,
-          sender_name: 'You',
-          content: content.trim(),
-          message_type: 'text',
-          created_at: result.created_at,
-        },
+          content: content.trim() || (attachment?.file_name ?? 'Attachment'),
+          created_at: result.created_at
+        }
       })
-      // Undo the unread increment that RECEIVE_MESSAGE would add for own message
-      dispatch({ type: 'MARK_CONVERSATION_READ', payload: conversationId })
     } catch (err: any) {
       dispatch({ type: 'REMOVE_MESSAGE', payload: tempId })
       toast.error(err?.message || 'Failed to send message')
     }
-  }, [state.sending, currentUserId])
+  }, [state.sending, currentUserId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Internal — send typing event without debounce guard (used by sendMessage)
+  function sendTypingRaw(conversationId: string, typing: boolean) {
+    apiClient('/api/messages/typing', {
+      method: 'POST',
+      body: JSON.stringify({ conversation_id: conversationId, typing }),
+    }).catch(() => {})
+    isTypingRef.current = typing
+    if (!typing) lastTypingSentRef.current = 0
+  }
+
+  // Debounced typing indicator — call on every keydown in MessageInput
+  const sendTyping = useCallback((typing: boolean) => {
+    const conversationId = activeConvRef.current
+    if (!conversationId) return
+
+    if (typing) {
+      const now = Date.now()
+      // Only re-send typing=true if 3s has elapsed since last send
+      if (now - lastTypingSentRef.current > 3000) {
+        lastTypingSentRef.current = now
+        isTypingRef.current = true
+        apiClient('/api/messages/typing', {
+          method: 'POST',
+          body: JSON.stringify({ conversation_id: conversationId, typing: true }),
+        }).catch(() => {})
+      }
+      // Auto-stop after 4s of silence
+      clearTimeout(typingTimerRef.current['stop'])
+      typingTimerRef.current['stop'] = setTimeout(() => {
+        sendTypingRaw(conversationId, false)
+      }, 4000)
+    } else {
+      clearTimeout(typingTimerRef.current['stop'])
+      if (isTypingRef.current) {
+        sendTypingRaw(conversationId, false)
+      }
+    }
+  }, [])
 
   // Load more (older) messages
   const loadMoreMessages = useCallback(async () => {
@@ -248,7 +360,6 @@ export function useMessaging(currentUserId: string) {
     try {
       const data = await apiClient(`/api/messages/conversation/${conversationId}?page=${pageRef.current}`)
       const olderMsgs: Message[] = (data.messages ?? []).reverse()
-      // Prepend older messages
       dispatch({ type: 'SET_MESSAGES', payload: {
         messages: [...olderMsgs, ...state.messages],
         hasMore: data.has_more ?? false
@@ -272,12 +383,28 @@ export function useMessaging(currentUserId: string) {
   const handleSSEEvent = useCallback((event: SSEMessagingEvent) => {
     if (event.type === 'new_message') {
       dispatch({ type: 'RECEIVE_MESSAGE', payload: event.data })
-      // Auto-mark as read if this conversation is currently open
       if (activeConvRef.current === event.data.conversation_id) {
         apiClient(`/api/messages/conversation/${event.data.conversation_id}/read`, { method: 'PATCH' }).catch(() => {})
       }
     } else if (event.type === 'status_change') {
       dispatch({ type: 'UPDATE_ONLINE_STATUS', payload: event.data })
+    } else if (event.type === 'typing_indicator') {
+      const { user_id, conversation_id, typing } = event.data
+      // Only show typing for the active conversation
+      if (activeConvRef.current === conversation_id) {
+        dispatch({ type: 'SET_TYPING', payload: event.data })
+        if (typing) {
+          // Auto-clear after 5s as safety net
+          clearTimeout(typingTimerRef.current[user_id])
+          typingTimerRef.current[user_id] = setTimeout(() => {
+            dispatch({ type: 'CLEAR_TYPING', payload: { userId: user_id } })
+          }, 5000)
+        } else {
+          clearTimeout(typingTimerRef.current[user_id])
+        }
+      }
+    } else if (event.type === 'receipt_update') {
+      dispatch({ type: 'UPDATE_RECEIPTS', payload: event.data })
     }
   }, [])
 
@@ -292,6 +419,7 @@ export function useMessaging(currentUserId: string) {
       setSearchQuery,
       refreshConversations,
       handleSSEEvent,
+      sendTyping,
     }
   }
 }
