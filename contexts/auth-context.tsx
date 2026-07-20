@@ -31,36 +31,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(currentUser)
         }
         
-        // 2. Set loading to false as early as possible so the user sees the dashboard/landing page
-        // No need to wait for a network request just to show cached data.
-        if (isMounted) setIsLoading(false)
+        // 2. If there is NO cached user, we can stop loading immediately — no
+        //    network call needed, the user is definitively logged out.
+        if (!currentUser) {
+          if (isMounted) setIsLoading(false)
+          return
+        }
 
-        // 3. Perform the token refresh in the background (non-blocking)
-        if (currentUser) {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
-          // Use the single source of truth for the refresh token (respects admin vs user keys)
-          const rt = getRefreshToken()
-          
-          if (!rt) return;
+        // 3. There IS a cached user — perform token refresh to validate it.
+        //    Keep isLoading=true until we know the session is still valid.
+        //    This prevents the landing page from seeing a stale user and
+        //    redirecting to /owner before the refresh confirms or denies it.
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+        const rt = getRefreshToken()
+        
+        if (!rt) {
+          // No refresh token — cached user is stale, clear it
+          signOut()
+          if (isMounted) { setUser(null); setIsLoading(false) }
+          return
+        }
 
-          // Background refresh & profile sync
-          fetch(`${apiUrl}/api/auth/refresh`, {
+        try {
+          const refreshRes = await fetch(`${apiUrl}/api/auth/refresh`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
             body: JSON.stringify({ refreshToken: rt }),
-          }).then(async (refreshRes) => {
-            if (refreshRes.ok && isMounted) {
-              const data = await refreshRes.json()
-              if (data.accessToken) {
-                const isAdmin = currentUser?.role === 'super_admin'
-                setTokens(data.accessToken, data.refreshToken || rt || "", isAdmin)
-                
-                // Now fetch the fresh user profile to sync company code
+          })
+
+          if (refreshRes.ok && isMounted) {
+            const data = await refreshRes.json()
+            if (data.accessToken) {
+              const isAdmin = currentUser?.role === 'super_admin'
+              setTokens(data.accessToken, data.refreshToken || rt || "", isAdmin)
+              
+              // Fetch fresh profile to sync company code
+              try {
                 const meRes = await fetch(`${apiUrl}/api/auth/me`, {
                   headers: { "Authorization": `Bearer ${data.accessToken}` }
                 })
-                if (meRes.ok) {
+                if (meRes.ok && isMounted) {
                   const freshUser = await meRes.json()
                   setUser(freshUser)
                   localStorage.setItem("smarterp_user", JSON.stringify(freshUser))
@@ -68,32 +79,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem("company_code", freshUser.company_code)
                   }
                   logger.log("[v0] ✅ Profile synced with latest DB state")
-                } else {
-                  // 🔴 PART 1: SESSION VALIDATION
-                  // IF token exists BUT /me request fails -> clear session
+                } else if (isMounted) {
                   logger.warn("[v0] Profile sync failed - clearing session")
                   signOut()
-                  if (isMounted) setUser(null)
+                  setUser(null)
                 }
+              } catch {
+                // /me failed — keep the cached user, not a hard failure
               }
-            } else if (!refreshRes.ok) {
-              logger.warn("[v0] Proactive token refresh failed (background) - clearing session")
-              signOut()
-              if (isMounted) setUser(null)
             }
-          }).catch(err => {
-            logger.warn("[v0] Proactive token refresh error (background):", err)
-            // Only clear session if it's a definitive auth failure, not a network error
-            if (err.status === 401 || err.status === 403) {
-              signOut()
-              if (isMounted) setUser(null)
-            }
-          })
+          } else if (isMounted) {
+            logger.warn("[v0] Token refresh failed - clearing stale session")
+            signOut()
+            setUser(null)
+          }
+        } catch (fetchErr: any) {
+          logger.warn("[v0] Token refresh network error:", fetchErr)
+          // Network error (cold start, offline) — keep the cached user so the
+          // app still works offline, but don't redirect to protected routes
+          // (page.tsx waits for authVerified which requires this to complete)
         }
-    } catch (err) {
-      logger.error("[v0] Auth initialization error:", { error: err })
-      if (isMounted) setIsLoading(false)
-    }
+
+        // 4. Auth check done — allow the rest of the app to render
+        if (isMounted) setIsLoading(false)
+
+      } catch (err) {
+        logger.error("[v0] Auth initialization error:", { error: err })
+        if (isMounted) setIsLoading(false)
+      }
     }
 
     initAuth()
