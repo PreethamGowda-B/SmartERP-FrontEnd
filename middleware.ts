@@ -12,6 +12,11 @@ export function middleware(request: NextRequest) {
     const host = request.headers.get("host") || ""
     const pathname = request.nextUrl.pathname
 
+    // Gracefully handle /landing by redirecting to root landing page /
+    if (pathname === "/landing") {
+        return NextResponse.redirect(new URL("/", request.url), { status: 301 })
+    }
+
     // 1. Root path and public routes pass through immediately — never apply admin validation to these
     if (pathname === "/" || ALWAYS_ALLOWED.some(p => pathname === p || pathname.startsWith(p + "/"))) {
         return NextResponse.next()
