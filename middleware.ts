@@ -12,17 +12,18 @@ export function middleware(request: NextRequest) {
     const host = request.headers.get("host") || ""
     const pathname = request.nextUrl.pathname
 
-    // Never redirect paths that are safe destinations — prevents infinite redirect loops
-    if (ALWAYS_ALLOWED.some(p => pathname === p || pathname.startsWith(p + "/"))) {
+    // 1. Root path and public routes pass through immediately — never apply admin validation to these
+    if (pathname === "/" || ALWAYS_ALLOWED.some(p => pathname === p || pathname.startsWith(p + "/"))) {
         return NextResponse.next()
     }
 
-    // Allowed hosts for this Next.js app:
+    // 2. Allowed hosts for this Next.js app:
     //   - www.prozync.in / prozync.in  → main SmartERP frontend
     //   - client.prozync.in            → Prozync Customer Portal
+    //   - *.vercel.app                 → Vercel preview/staging deployments
     //   - localhost:*                  → local development
     const allowedHosts = ["www.prozync.in", "prozync.in", "client.prozync.in"]
-    const isAllowedHost = allowedHosts.some(h => host === h) || host.startsWith("localhost")
+    const isAllowedHost = allowedHosts.some(h => host === h) || host.startsWith("localhost") || host.endsWith(".vercel.app")
 
     // Redirect unknown hosts to the main domain
     if (!isAllowedHost) {
@@ -32,17 +33,9 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(url, { status: 301 })
     }
 
-    // Validate admin route dynamically without exposing the slug to the client
-    // ✅ ADMIN_ROUTE must always be set via environment variable.
-    // There is NO default fallback — a missing env var is a deployment error.
-    const adminSlug = process.env.ADMIN_ROUTE;
-    if (!adminSlug) {
-      console.error("CRITICAL: ADMIN_ROUTE env var is not set. Admin panel access blocked.");
-      return NextResponse.rewrite(new URL("/not-found", request.url))
-    }
-
-    // The Next.js router matches ANY random string as [adminRoute] if it's on the top level.
-    // We check if the incoming path matches the pattern `/something` and doesn't match the valid slug (nor auth/owner/etc)
+    // 3. Admin Route Validation:
+    // Next.js App Router matches any top-level string (e.g. /some-slug) against [adminRoute].
+    // Scope admin slug validation strictly to unrecognized top-level paths.
     const activeTopLevelPaths = [
       "/auth", "/owner", "/employee", "/hr",
       "/customer",
@@ -54,11 +47,12 @@ export function middleware(request: NextRequest) {
     if (isTopLevelPath) {
       const topLevelSegment = pathname.split('/')[1]
 
-      // If it's trying to hit what would resolve to [adminRoute], but it's not the actual secret slug
-      if (!activeTopLevelPaths.includes(`/${topLevelSegment}`) && topLevelSegment !== adminSlug) {
-         // Use rewrite instead of redirect to avoid adding to browser history
-         // and to prevent redirect loops if /not-found itself is unrecognised
-         return NextResponse.rewrite(new URL("/not-found", request.url))
+      // If targeting an unrecognized top-level segment (potential [adminRoute] access):
+      if (!activeTopLevelPaths.includes(`/${topLevelSegment}`)) {
+        const adminSlug = process.env.ADMIN_ROUTE || process.env.NEXT_PUBLIC_ADMIN_ROUTE;
+        if (!adminSlug || topLevelSegment !== adminSlug) {
+          return NextResponse.rewrite(new URL("/not-found", request.url))
+        }
       }
     }
 
