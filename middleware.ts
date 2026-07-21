@@ -78,6 +78,6 @@ export const config = {
          *     manifest.json      → PWA manifest (redirect = 404 loop)
          *     All files with extensions (.js, .json, .png, .svg, .txt, .xml, .mp3, .mp4, .webm, .ogv, .jpg, .webp, .ico, .woff2)
          */
-        "/((?!api|_next/static|_next/image|favicon\\.ico|sw\\.js|firebase-messaging-sw\\.js|manifest\\.json|robots\\.txt|sitemap\\.xml|.*\\.(?:png|svg|jpg|jpeg|webp|gif|ico|mp3|mp4|webm|ogv|woff|woff2|ttf|eot|css|js|json|xml|txt)).*)",
+        "/((?!api|_next/static|_next/image|favicon\\.ico|sw\\.js|firebase-messaging-sw\\.js|manifest\\.json|robots\\.txt|sitemap\\.xml|.*\\.(?:png|svg|jpg|jpeg|webp|gif|ico|mp3|woff|woff2|ttf|eot|css|js|json|xml|txt)).*)",
     ],
 }
