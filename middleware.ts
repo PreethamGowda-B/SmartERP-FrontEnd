@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server"
 // Paths that are always allowed through — never redirect these or you get infinite loops
 const ALWAYS_ALLOWED = [
   "/not-found", "/suspended", "/privacy", "/terms",
-  "/auth", "/owner", "/employee", "/hr", "/customer",
+  "/auth", "/owner", "/employee", "/hr", "/customer", "/videos",
   "/api", "/_next", "/monitoring",
 ]
 
@@ -43,7 +43,7 @@ export function middleware(request: NextRequest) {
     // Scope admin slug validation strictly to unrecognized top-level paths.
     const activeTopLevelPaths = [
       "/auth", "/owner", "/employee", "/hr",
-      "/customer",
+      "/customer", "/videos",
       "/privacy", "/terms", "/suspended", "/not-found",
       "/api", "/_next", "/monitoring", "/backend-test",
     ]
@@ -76,8 +76,8 @@ export const config = {
          *     sw.js              → ServiceWorker (redirect = SecurityError)
          *     firebase-messaging-sw.js → Firebase SW (redirect = SecurityError)
          *     manifest.json      → PWA manifest (redirect = 404 loop)
-         *     All files with extensions (.js, .json, .png, .svg, .txt, .xml, .mp3, .jpg, .webp, .ico, .woff2)
+         *     All files with extensions (.js, .json, .png, .svg, .txt, .xml, .mp3, .mp4, .webm, .ogv, .jpg, .webp, .ico, .woff2)
          */
-        "/((?!api|_next/static|_next/image|favicon\\.ico|sw\\.js|firebase-messaging-sw\\.js|manifest\\.json|robots\\.txt|sitemap\\.xml|.*\\.(?:png|svg|jpg|jpeg|webp|gif|ico|mp3|woff|woff2|ttf|eot|css|js|json|xml|txt)).*)",
+        "/((?!api|_next/static|_next/image|favicon\\.ico|sw\\.js|firebase-messaging-sw\\.js|manifest\\.json|robots\\.txt|sitemap\\.xml|.*\\.(?:png|svg|jpg|jpeg|webp|gif|ico|mp3|mp4|webm|ogv|woff|woff2|ttf|eot|css|js|json|xml|txt)).*)",
     ],
 }
