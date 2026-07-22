@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { signIn, signUp } from "@/lib/auth"
 import { apiClient } from "@/lib/apiClient"
 import { useAuth } from "@/contexts/auth-context"
-import { Building2, Loader2, HardHat, UserPlus, CheckCircle2, RefreshCw, Mail, ArrowLeft } from "lucide-react"
+import { Building2, Loader2, HardHat, UserPlus, CheckCircle2, RefreshCw, Mail, ArrowLeft, Eye, EyeOff } from "lucide-react"
 import { PremiumBackground } from "./premium-background"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
@@ -32,6 +32,7 @@ export function LoginForm() {
   const [activeTab, setActiveTab] = useState("owner")
   const [mode, setMode] = useState<"login" | "signup">("signup")
   const [isFlipping, setIsFlipping] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { setUser } = useAuth()
   const router = useRouter()
 
@@ -380,9 +381,20 @@ export function LoginForm() {
                     </div>
                     <div className="space-y-2 animate-slide-up stagger-3">
                       <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                      <Input id="password" type="password" placeholder="Enter your password" value={password}
-                        onChange={(e) => setPassword(e.target.value)} required
-                        className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
+                      <div className="relative">
+                        <Input id="password" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password}
+                          onChange={(e) => setPassword(e.target.value)} required
+                          className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift pr-10" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                          tabIndex={-1}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
                     {mode === "signup" && (
                       <div className="space-y-2 animate-slide-up stagger-4">
@@ -428,9 +440,20 @@ export function LoginForm() {
                     </div>
                     <div className="space-y-2 animate-slide-up stagger-3">
                       <Label htmlFor="password-emp" className="text-sm font-medium">Password</Label>
-                      <Input id="password-emp" type="password" placeholder="Enter your password" value={password}
-                        onChange={(e) => setPassword(e.target.value)} required
-                        className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
+                      <div className="relative">
+                        <Input id="password-emp" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password}
+                          onChange={(e) => setPassword(e.target.value)} required
+                          className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift pr-10" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                          tabIndex={-1}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
                     {mode === "signup" && (
                       <>
