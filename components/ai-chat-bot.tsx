@@ -11,6 +11,7 @@ import { Bot, Send, X, ArrowUpRight, CheckCircle2, AlertTriangle, Building2, Use
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { getAuthToken } from "@/lib/apiClient"
+import { AIVoiceInput } from "@/components/ai-voice-input"
 
 /* ---------------- TYPES ---------------- */
 
@@ -178,7 +179,6 @@ export function AIChatBot({ className }: { className?: string }) {
         triggerFeatureLock(lockData)
       })
 
-      // Auto-navigate frontend if navigation command is returned
       if (data.navigation?.path) {
         router.push(data.navigation.path)
       }
@@ -423,15 +423,20 @@ export function AIChatBot({ className }: { className?: string }) {
                   <div ref={messagesEndRef} />
                 </ScrollArea>
 
-                {/* Input */}
-                <div className="p-3 border-t flex gap-2 bg-background">
+                {/* Input with Voice Button */}
+                <div className="p-3 border-t flex gap-2 bg-background items-center">
+                  <AIVoiceInput
+                    onSpeechResult={(transcript) => setInput(transcript)}
+                    disabled={loading}
+                  />
+
                   <Input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                    placeholder="Ask SmartERP Agent to analyze or act..."
+                    placeholder="Ask SmartERP Agent or speak command..."
                     disabled={loading}
-                    className="focus:ring-2 focus:ring-primary/50 text-xs"
+                    className="focus:ring-2 focus:ring-primary/50 text-xs flex-1"
                   />
 
                   <Button
