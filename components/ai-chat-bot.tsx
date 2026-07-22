@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Bot, Send, X, ArrowUpRight, CheckCircle2, AlertTriangle, Building2, Users, HardHat, ExternalLink, Loader2 } from "lucide-react"
+import { Bot, Send, X, ArrowUpRight, CheckCircle2, AlertTriangle, Building2, Users, HardHat, ExternalLink, Loader2, Sparkles, Lock, Zap } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { getAuthToken } from "@/lib/apiClient"
@@ -15,7 +15,7 @@ import { getAuthToken } from "@/lib/apiClient"
 /* ---------------- TYPES ---------------- */
 
 interface WidgetPayload {
-  type: "KPI_SUMMARY" | "DATA_TABLE" | "ACTION_CONFIRMATION_REQUIRED" | string
+  type: "KPI_SUMMARY" | "DATA_TABLE" | "ACTION_CONFIRMATION_REQUIRED" | "UPGRADE_PROMPT" | string
   title?: string
   metrics?: Array<{ label: string; value: string | number; color?: string }>
   lowStockCount?: number
@@ -27,6 +27,7 @@ interface WidgetPayload {
   toolName?: string
   params?: any
   message?: string
+  features?: string[]
 }
 
 interface Message {
@@ -36,6 +37,7 @@ interface Message {
   widget?: WidgetPayload | null
   navigation?: { path: string; label: string } | null
   sources?: string[]
+  isUpgradePrompt?: boolean
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
@@ -198,8 +200,25 @@ export function AIChatBot({ className }: { className?: string }) {
           ...prev,
           {
             id: Date.now() + 1,
-            text: "🔒 This feature requires a Pro subscription. I've opened the upgrade details for you.",
+            text: "🚀 SmartERP AI is a Premium Feature",
             sender: "bot",
+            isUpgradePrompt: true,
+            widget: {
+              type: "UPGRADE_PROMPT",
+              title: "🚀 SmartERP AI is a Premium Feature",
+              message:
+                "SmartERP AI can help you analyze your business, answer questions using live ERP data, generate reports, automate workflows, and perform intelligent business actions.",
+              features: [
+                "AI Business Assistant",
+                "Live Business Analytics",
+                "Cross-Module Intelligence",
+                "AI Report Generation",
+                "Workflow Automation",
+                "Smart Recommendations",
+                "AI-Powered Search",
+                "Productivity Tools",
+              ],
+            },
           },
         ])
       } else {
@@ -292,15 +311,52 @@ export function AIChatBot({ className }: { className?: string }) {
                       )}
 
                       <div className="max-w-[85%] space-y-2">
-                        <div
-                          className={`px-3.5 py-2.5 rounded-xl text-sm leading-relaxed shadow-sm ${
-                            m.sender === "user"
-                              ? "bg-primary text-primary-foreground font-medium"
-                              : "bg-muted border border-border/50 text-foreground"
-                          }`}
-                        >
-                          {m.text}
-                        </div>
+                        {!m.isUpgradePrompt && (
+                          <div
+                            className={`px-3.5 py-2.5 rounded-xl text-sm leading-relaxed shadow-sm ${
+                              m.sender === "user"
+                                ? "bg-primary text-primary-foreground font-medium"
+                                : "bg-muted border border-border/50 text-foreground"
+                            }`}
+                          >
+                            {m.text}
+                          </div>
+                        )}
+
+                        {/* Premium Upgrade Widget Card */}
+                        {m.widget && m.widget.type === "UPGRADE_PROMPT" && (
+                          <div className="p-4 bg-gradient-to-br from-primary/10 via-accent/10 to-background border-2 border-primary/30 rounded-2xl space-y-3 shadow-lg">
+                            <div className="flex items-center gap-2 text-sm font-extrabold text-primary">
+                              <Sparkles className="h-4 w-4 text-amber-500 animate-spin" />
+                              <span>{m.widget.title || "🚀 SmartERP AI is a Premium Feature"}</span>
+                            </div>
+
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              {m.widget.message}
+                            </p>
+
+                            <div className="space-y-1.5 pt-1">
+                              <p className="text-[11px] font-bold text-foreground">Upgrade to Pro to unlock:</p>
+                              <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                                {m.widget.features?.map((feat, i) => (
+                                  <div key={i} className="flex items-center gap-1 text-muted-foreground font-medium">
+                                    <Zap className="h-3 w-3 text-amber-500 shrink-0" />
+                                    <span>{feat}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <Button
+                              size="sm"
+                              onClick={() => router.push("/owner/billing")}
+                              className="w-full text-xs font-black uppercase tracking-wider bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground shadow-md gap-1.5 mt-2"
+                            >
+                              <Sparkles className="h-3.5 w-3.5" />
+                              Upgrade to Pro
+                            </Button>
+                          </div>
+                        )}
 
                         {/* Navigation Trigger Button */}
                         {m.navigation && (
