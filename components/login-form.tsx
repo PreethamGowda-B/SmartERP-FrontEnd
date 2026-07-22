@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
@@ -354,16 +354,16 @@ export function LoginForm() {
         </div>
 
         {/* â”€â”€ Main Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <div className="lp-card-wrapper w-full max-w-5xl mx-4 sm:mx-6 flex min-h-[620px] rounded-[28px] overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.14),0_0_0_1px_rgba(255,255,255,0.8)] lp-enter lp-enter-d1"
+        <div className="lp-card-wrapper w-full max-w-[900px] mx-4 sm:mx-6 flex min-h-[540px] rounded-[24px] overflow-hidden shadow-[0_24px_64px_rgba(0,0,0,0.13),0_0_0_1px_rgba(255,255,255,0.8)] lp-enter lp-enter-d1"
           style={{ background: "rgba(255,255,255,0.97)" }}>
 
           {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               LEFT PANEL â€” FORM
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-          <div className="lp-form-panel w-full lg:w-[46%] flex flex-col p-9 sm:p-11 overflow-y-auto">
+          <div className="lp-form-panel w-full lg:w-[46%] flex flex-col p-7 sm:p-9 overflow-y-auto">
 
             {/* Brand bar */}
-            <div className="flex items-center gap-2.5 mb-9 lp-enter lp-enter-d1">
+            <div className="flex items-center gap-2.5 mb-6 lp-enter lp-enter-d1">
               <div className="h-9 w-9 bg-primary rounded-xl flex items-center justify-center lp-logo-pulse shadow-[0_4px_12px_oklch(0.45_0.15_240/0.35)]">
                 <Building2 className="h-5 w-5 text-white" aria-hidden />
               </div>
@@ -379,8 +379,8 @@ export function LoginForm() {
             </div>
 
             {/* Heading */}
-            <div className="mb-7 lp-enter lp-enter-d2">
-              <h1 className="text-[1.85rem] font-black text-slate-900 leading-[1.15] tracking-tight mb-1.5">
+            <div className="mb-5 lp-enter lp-enter-d2">
+              <h1 className="text-[1.6rem] font-black text-slate-900 leading-[1.15] tracking-tight mb-1">
                 {mode === "login" ? "Welcome back" : "Create an account"}
               </h1>
               <p className="text-[0.875rem] text-slate-500 font-medium">
@@ -390,7 +390,7 @@ export function LoginForm() {
 
             {/* Role Tabs */}
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex-1 lp-enter lp-enter-d3">
-              <TabsList className="grid w-full grid-cols-2 rounded-xl bg-slate-100 p-1 mb-6 h-11">
+              <TabsList className="grid w-full grid-cols-2 rounded-xl bg-slate-100 p-1 mb-4 h-10">
                 <TabsTrigger
                   value="owner"
                   className="rounded-lg text-[0.8rem] font-semibold gap-1.5 transition-all duration-200
@@ -413,27 +413,27 @@ export function LoginForm() {
 
                 {/* â”€â”€ OWNER TAB â”€â”€ */}
                 <TabsContent value="owner">
-                  <form onSubmit={handleSubmit} className="space-y-4">
+                  <form onSubmit={handleSubmit} className="space-y-3">
                     {mode === "signup" && (
                       <div className="space-y-1.5">
                         <Label htmlFor="name" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Full Name</Label>
                         <Input id="name" type="text" placeholder="Your full name" value={name}
                           onChange={(e) => setName(e.target.value)} required
-                          className="lp-input h-11 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
+                          className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
                       </div>
                     )}
                     <div className="space-y-1.5">
                       <Label htmlFor="email" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Email</Label>
                       <Input id="email" type="email" placeholder="you@company.com" value={email}
                         onChange={(e) => setEmail(e.target.value)} required
-                        className="lp-input h-11 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
+                        className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="password" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Password</Label>
                       <div className="relative">
                         <Input id="password" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password}
                           onChange={(e) => setPassword(e.target.value)} required
-                          className="lp-input h-11 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400 pr-11" />
+                          className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400 pr-11" />
                         <button type="button" onClick={() => setShowPassword(v => !v)} tabIndex={-1}
                           className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-700 transition-colors"
                           aria-label={showPassword ? "Hide password" : "Show password"}>
@@ -446,13 +446,13 @@ export function LoginForm() {
                         <Label htmlFor="phone" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Phone <span className="text-slate-400 normal-case font-normal">(Optional)</span></Label>
                         <Input id="phone" type="tel" placeholder="Your phone number" value={phone}
                           onChange={(e) => setPhone(e.target.value)}
-                          className="lp-input h-11 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
+                          className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
                       </div>
                     )}
                     {error && <Alert variant="destructive" className="rounded-xl py-2.5 text-sm"><AlertDescription>{error}</AlertDescription></Alert>}
                     {success && <Alert className="rounded-xl py-2.5 text-sm border-emerald-200 bg-emerald-50 text-emerald-800"><AlertDescription>{success}</AlertDescription></Alert>}
                     <Button type="submit" disabled={isLoading}
-                      className="lp-btn-primary w-full h-11 rounded-xl bg-primary hover:bg-primary text-white font-semibold text-sm shadow-[0_4px_14px_oklch(0.45_0.15_240/0.30)]">
+                      className="lp-btn-primary w-full h-10 rounded-xl bg-primary hover:bg-primary text-white font-semibold text-sm shadow-[0_4px_14px_oklch(0.45_0.15_240/0.30)]">
                       {isLoading
                         ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{mode === "login" ? "Signing inâ€¦" : "Sending OTPâ€¦"}</>
                         : mode === "login" ? "Sign In as Owner" : "Create Owner Account"
@@ -469,27 +469,27 @@ export function LoginForm() {
 
                 {/* â”€â”€ EMPLOYEE TAB â”€â”€ */}
                 <TabsContent value="employee">
-                  <form onSubmit={handleSubmit} className="space-y-4">
+                  <form onSubmit={handleSubmit} className="space-y-3">
                     {mode === "signup" && (
                       <div className="space-y-1.5">
                         <Label htmlFor="name-emp" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Full Name</Label>
                         <Input id="name-emp" type="text" placeholder="Your full name" value={name}
                           onChange={(e) => setName(e.target.value)} required
-                          className="lp-input h-11 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
+                          className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
                       </div>
                     )}
                     <div className="space-y-1.5">
                       <Label htmlFor="email-emp" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Email</Label>
                       <Input id="email-emp" type="email" placeholder="you@company.com" value={email}
                         onChange={(e) => setEmail(e.target.value)} required
-                        className="lp-input h-11 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
+                        className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="password-emp" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Password</Label>
                       <div className="relative">
                         <Input id="password-emp" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password}
                           onChange={(e) => setPassword(e.target.value)} required
-                          className="lp-input h-11 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400 pr-11" />
+                          className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400 pr-11" />
                         <button type="button" onClick={() => setShowPassword(v => !v)} tabIndex={-1}
                           className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-700 transition-colors"
                           aria-label={showPassword ? "Hide password" : "Show password"}>
@@ -503,33 +503,33 @@ export function LoginForm() {
                           <Label htmlFor="company_code" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Company Code <span className="text-red-500">*</span></Label>
                           <Input id="company_code" type="text" placeholder="Enter the code from your employer"
                             value={companyCode} onChange={(e) => setCompanyCode(e.target.value.toUpperCase())} required
-                            className="lp-input h-11 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] font-mono tracking-widest placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal" />
+                            className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] font-mono tracking-widest placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal" />
                           <p className="text-[0.74rem] text-slate-400">Ask your employer for the company code (e.g. SMR1001)</p>
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="phone-emp" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Phone <span className="text-slate-400 normal-case font-normal">(Optional)</span></Label>
                           <Input id="phone-emp" type="tel" placeholder="Your phone number" value={phone}
                             onChange={(e) => setPhone(e.target.value)}
-                            className="lp-input h-11 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
+                            className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="position" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Position <span className="text-slate-400 normal-case font-normal">(Optional)</span></Label>
                           <Input id="position" type="text" placeholder="e.g., Site Supervisor, Foreman"
                             value={position} onChange={(e) => setPosition(e.target.value)}
-                            className="lp-input h-11 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
+                            className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="department" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Department <span className="text-slate-400 normal-case font-normal">(Optional)</span></Label>
                           <Input id="department" type="text" placeholder="e.g., Construction, Electrical"
                             value={department} onChange={(e) => setDepartment(e.target.value)}
-                            className="lp-input h-11 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
+                            className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
                         </div>
                       </>
                     )}
                     {error && <Alert variant="destructive" className="rounded-xl py-2.5 text-sm"><AlertDescription>{error}</AlertDescription></Alert>}
                     {success && <Alert className="rounded-xl py-2.5 text-sm border-emerald-200 bg-emerald-50 text-emerald-800"><AlertDescription>{success}</AlertDescription></Alert>}
                     <Button type="submit" disabled={isLoading}
-                      className="lp-btn-accent w-full h-11 rounded-xl bg-accent hover:bg-accent text-white font-semibold text-sm shadow-[0_4px_14px_oklch(0.65_0.18_45/0.30)]">
+                      className="lp-btn-accent w-full h-10 rounded-xl bg-accent hover:bg-accent text-white font-semibold text-sm shadow-[0_4px_14px_oklch(0.65_0.18_45/0.30)]">
                       {isLoading
                         ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{mode === "login" ? "Signing inâ€¦" : "Sending OTPâ€¦"}</>
                         : mode === "login" ? "Sign In as Employee" : "Create Employee Account"
@@ -547,7 +547,7 @@ export function LoginForm() {
             </Tabs>
 
             {/* Divider */}
-            <div className="relative my-5 lp-enter lp-enter-d4">
+            <div className="relative my-3 lp-enter lp-enter-d4">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100" /></div>
               <div className="relative flex justify-center">
                 <span className="bg-white px-3 text-[0.72rem] uppercase tracking-[0.1em] text-slate-400 font-semibold">or continue with</span>
@@ -561,7 +561,7 @@ export function LoginForm() {
                 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
                 window.location.href = `${apiUrl}/api/auth/google?role=${activeTab}`
               }}
-              className="lp-btn-google w-full h-11 rounded-xl border border-slate-200 bg-white flex items-center justify-center gap-2.5 text-[0.875rem] font-semibold text-slate-700 lp-enter lp-enter-d5"
+              className="lp-btn-google w-full h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center gap-2.5 text-[0.875rem] font-semibold text-slate-700 lp-enter lp-enter-d5"
             >
               <svg className="h-[18px] w-[18px] flex-shrink-0" viewBox="0 0 24 24" aria-hidden>
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -573,7 +573,7 @@ export function LoginForm() {
             </button>
 
             {/* Mode toggle */}
-            <div className="mt-5 flex items-center justify-between lp-enter lp-enter-d6">
+            <div className="mt-4 flex items-center justify-between lp-enter lp-enter-d6">
               <button type="button" onClick={toggleMode}
                 className="flex items-center gap-1.5 text-[0.82rem] text-slate-500 hover:text-primary font-medium transition-colors">
                 <UserPlus className="h-3.5 w-3.5" aria-hidden />
