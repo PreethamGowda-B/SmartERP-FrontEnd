@@ -342,135 +342,182 @@ export function LoginForm() {
               </p>
             </div>
 
-            {/* Role Tabs */}
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full mb-6">
-              <TabsList className="grid w-full grid-cols-2 bg-slate-100 rounded-xl p-1">
+            {/* Owner / Employee Tabs — ORIGINAL LOGIC PRESERVED */}
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-muted/50 backdrop-blur-sm">
                 <TabsTrigger
                   value="owner"
-                  className="rounded-lg text-sm font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="flex items-center gap-2 transition-all duration-300 hover-scale data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg animate-press"
                 >
-                  <Building2 className="h-3.5 w-3.5 mr-1.5" />Owner
+                  <Building2 className="h-4 w-4" />Owner
                 </TabsTrigger>
                 <TabsTrigger
                   value="employee"
-                  className="rounded-lg text-sm font-semibold transition-all data-[state=active]:bg-accent data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="flex items-center gap-2 transition-all duration-300 hover-scale data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-lg animate-press"
                 >
-                  <HardHat className="h-3.5 w-3.5 mr-1.5" />Employee
+                  <HardHat className="h-4 w-4" />Employee
                 </TabsTrigger>
               </TabsList>
 
               <div className={`mt-6 transition-all duration-300 ${isFlipping ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}>
 
-                {/* ── OWNER TAB ── */}
-                <TabsContent value="owner">
+                {/* ── OWNER TAB ────────────────────────────────────────────── */}
+                <TabsContent value="owner" className="animate-fade-in-right stagger-1">
                   <form onSubmit={handleSubmit} className="space-y-4">
                     {mode === "signup" && (
-                      <div className="space-y-1">
-                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Full Name</Label>
-                        <Input placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} required
-                          className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:border-primary focus:ring-primary/20 text-sm" />
+                      <div className="space-y-2 animate-slide-up stagger-1">
+                        <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
+                        <Input id="name" type="text" placeholder="Enter your full name" value={name}
+                          onChange={(e) => setName(e.target.value)} required
+                          className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
                       </div>
                     )}
-                    <div className="space-y-1">
-                      <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Email</Label>
-                      <Input id="email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required
-                        className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:border-primary focus:ring-primary/20 text-sm" />
+                    <div className="space-y-2 animate-slide-up stagger-2">
+                      <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                      <Input id="email" type="email" placeholder="Enter your email" value={email}
+                        onChange={(e) => setEmail(e.target.value)} required
+                        className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Password</Label>
-                      <Input id="password" type="password" placeholder="••••••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required
-                        className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:border-primary focus:ring-primary/20 text-sm" />
+                    <div className="space-y-2 animate-slide-up stagger-3">
+                      <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                      <Input id="password" type="password" placeholder="Enter your password" value={password}
+                        onChange={(e) => setPassword(e.target.value)} required
+                        className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
                     </div>
                     {mode === "signup" && (
-                      <div className="space-y-1">
-                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Phone (Optional)</Label>
-                        <Input type="tel" placeholder="Your phone number" value={phone} onChange={(e) => setPhone(e.target.value)}
-                          className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:border-primary focus:ring-primary/20 text-sm" />
+                      <div className="space-y-2 animate-slide-up stagger-4">
+                        <Label htmlFor="phone" className="text-sm font-medium">Phone Number (Optional)</Label>
+                        <Input id="phone" type="tel" placeholder="Enter your phone number" value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
                       </div>
                     )}
-                    {error && <Alert variant="destructive" className="rounded-xl"><AlertDescription>{error}</AlertDescription></Alert>}
-                    {success && <Alert className="rounded-xl border-green-200 bg-green-50 text-green-800"><AlertDescription>{success}</AlertDescription></Alert>}
-                    <Button type="submit" disabled={isLoading}
-                      className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-sm shadow-md shadow-primary/30 transition-all">
+                    {error && <Alert variant="destructive" className="animate-fade-in-up"><AlertDescription>{error}</AlertDescription></Alert>}
+                    {success && <Alert className="animate-fade-in-up border-green-200 bg-green-50 text-green-800"><AlertDescription>{success}</AlertDescription></Alert>}
+                    <Button type="submit" className="w-full transition-all duration-300 hover-lift hover-scale animate-press" disabled={isLoading}>
                       {isLoading
                         ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{mode === "login" ? "Signing in..." : "Sending OTP..."}</>
                         : mode === "login" ? "Sign In as Owner" : "Create Owner Account"
                       }
                     </Button>
                   </form>
+                  <div className="mt-4 p-3 bg-primary/10 rounded-lg animate-fade-in-up stagger-5 hover:bg-primary/20 transition-colors duration-300 hover-lift">
+                    <p className="text-sm text-center text-foreground font-medium">
+                      <Building2 className="h-4 w-4 inline mr-1 animate-float text-primary" />
+                      Access full business management features
+                    </p>
+                  </div>
                 </TabsContent>
 
-                {/* ── EMPLOYEE TAB ── */}
-                <TabsContent value="employee">
+                {/* ── EMPLOYEE TAB ──────────────────────────────────────────── */}
+                <TabsContent value="employee" className="animate-fade-in-left stagger-1">
                   <form onSubmit={handleSubmit} className="space-y-4">
                     {mode === "signup" && (
+                      <div className="space-y-2 animate-slide-up stagger-1">
+                        <Label htmlFor="name-emp" className="text-sm font-medium">Full Name</Label>
+                        <Input id="name-emp" type="text" placeholder="Enter your full name" value={name}
+                          onChange={(e) => setName(e.target.value)} required
+                          className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
+                      </div>
+                    )}
+                    <div className="space-y-2 animate-slide-up stagger-2">
+                      <Label htmlFor="email-emp" className="text-sm font-medium">Email</Label>
+                      <Input id="email-emp" type="email" placeholder="Enter your email" value={email}
+                        onChange={(e) => setEmail(e.target.value)} required
+                        className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
+                    </div>
+                    <div className="space-y-2 animate-slide-up stagger-3">
+                      <Label htmlFor="password-emp" className="text-sm font-medium">Password</Label>
+                      <Input id="password-emp" type="password" placeholder="Enter your password" value={password}
+                        onChange={(e) => setPassword(e.target.value)} required
+                        className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
+                    </div>
+                    {mode === "signup" && (
                       <>
-                        <div className="space-y-1">
-                          <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Full Name</Label>
-                          <Input placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} required
-                            className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:border-accent focus:ring-accent/20 text-sm" />
+                        <div className="space-y-2 animate-slide-up stagger-4">
+                          <Label htmlFor="company_code" className="text-sm font-medium">
+                            Company Code <span className="text-red-500">*</span>
+                          </Label>
+                          <Input id="company_code" type="text" placeholder="Enter the code from your employer"
+                            value={companyCode} onChange={(e) => setCompanyCode(e.target.value.toUpperCase())} required
+                            className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift font-mono tracking-widest" />
+                          <p className="text-xs text-muted-foreground">Ask your employer for the company code (e.g. SMR1001)</p>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Company Code <span className="text-red-500">*</span></Label>
-                          <Input placeholder="e.g. SMR1001" value={companyCode} onChange={(e) => setCompanyCode(e.target.value.toUpperCase())} required
-                            className="h-12 rounded-xl bg-slate-50 border-slate-200 font-mono tracking-widest focus:border-accent text-sm" />
+                        <div className="space-y-2 animate-slide-up stagger-5">
+                          <Label htmlFor="phone-emp" className="text-sm font-medium">Phone Number (Optional)</Label>
+                          <Input id="phone-emp" type="tel" placeholder="Enter your phone number" value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
+                        </div>
+                        <div className="space-y-2 animate-slide-up stagger-6">
+                          <Label htmlFor="position" className="text-sm font-medium">Position (Optional)</Label>
+                          <Input id="position" type="text" placeholder="e.g., Site Supervisor, Foreman"
+                            value={position} onChange={(e) => setPosition(e.target.value)}
+                            className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
+                        </div>
+                        <div className="space-y-2 animate-slide-up stagger-6">
+                          <Label htmlFor="department" className="text-sm font-medium">Department (Optional)</Label>
+                          <Input id="department" type="text" placeholder="e.g., Construction, Electrical"
+                            value={department} onChange={(e) => setDepartment(e.target.value)}
+                            className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg hover-lift" />
                         </div>
                       </>
                     )}
-                    <div className="space-y-1">
-                      <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Email</Label>
-                      <Input id="email-emp" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required
-                        className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:border-accent focus:ring-accent/20 text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Password</Label>
-                      <Input id="password-emp" type="password" placeholder="••••••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required
-                        className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:border-accent focus:ring-accent/20 text-sm" />
-                    </div>
-                    {error && <Alert variant="destructive" className="rounded-xl"><AlertDescription>{error}</AlertDescription></Alert>}
-                    {success && <Alert className="rounded-xl border-green-200 bg-green-50 text-green-800"><AlertDescription>{success}</AlertDescription></Alert>}
-                    <Button type="submit" disabled={isLoading}
-                      className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 text-white font-bold text-sm shadow-md shadow-accent/30 transition-all">
+                    {error && <Alert variant="destructive" className="animate-fade-in-up"><AlertDescription>{error}</AlertDescription></Alert>}
+                    {success && <Alert className="animate-fade-in-up border-green-200 bg-green-50 text-green-800"><AlertDescription>{success}</AlertDescription></Alert>}
+                    <Button type="submit"
+                      className="w-full bg-accent hover:bg-accent/90 transition-all duration-300 hover-lift hover-scale animate-press"
+                      disabled={isLoading}
+                    >
                       {isLoading
                         ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{mode === "login" ? "Signing in..." : "Sending OTP..."}</>
                         : mode === "login" ? "Sign In as Employee" : "Create Employee Account"
                       }
                     </Button>
                   </form>
+                  <div className="mt-4 p-3 bg-accent/10 rounded-lg animate-fade-in-up stagger-5 hover:bg-accent/20 transition-colors duration-300 hover-lift">
+                    <p className="text-sm text-center text-foreground font-medium">
+                      <HardHat className="h-4 w-4 inline mr-1 animate-float text-accent" />
+                      Access your jobs, time tracking &amp; more
+                    </p>
+                  </div>
                 </TabsContent>
               </div>
             </Tabs>
 
             {/* Divider */}
-            <div className="relative mb-5">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-200" /></div>
-              <div className="relative flex justify-center"><span className="bg-white px-3 text-[11px] uppercase tracking-widest text-slate-400 font-semibold">or continue with</span></div>
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground">Or continue with</span>
+              </div>
             </div>
 
-            {/* Google Button */}
+            {/* Google Sign-In — ORIGINAL LOGIC */}
             <Button
               variant="outline"
-              className="w-full h-12 rounded-xl bg-white text-slate-800 font-semibold border-slate-200 hover:bg-slate-50 hover:text-slate-900 shadow-sm transition-all group mb-6"
+              className="w-full flex items-center justify-center gap-2 bg-white text-slate-800 font-semibold border-slate-200 hover:bg-slate-100 hover:text-slate-900 transition-all duration-300 shadow-sm hover-lift group"
               onClick={() => {
                 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
                 window.location.href = `${apiUrl}/api/auth/google?role=${activeTab}`
               }}
             >
-              <svg className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
-              <span className="text-slate-800 font-semibold">Sign in with Google</span>
+              <span className="text-slate-800 font-semibold group-hover:text-slate-900">Sign in with Google</span>
             </Button>
 
-            {/* Footer */}
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <button type="button" onClick={toggleMode} className="hover:text-primary transition-colors font-medium">
-                {mode === "login" ? "Need an account? Sign up" : "Already have an account? Sign in"}
-              </button>
-              <a href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</a>
+            {/* Mode toggle — ORIGINAL */}
+            <div className="mt-6 text-center animate-fade-in-up stagger-6">
+              <Button variant="ghost" onClick={toggleMode}
+                className="text-sm hover-scale transition-all duration-300 hover:bg-primary/10 animate-press">
+                <UserPlus className="h-4 w-4 mr-2" />
+                {mode === "login" ? "Need an account? Create one" : "Already have an account? Sign in"}
+              </Button>
             </div>
           </div>
 
