@@ -1,0 +1,204 @@
+/* =========================================================
+   SmartERP — Premium Login Page Styles
+   Micro-interactions, floating decorations, animations
+   ========================================================= */
+
+/* ── Google One Tap container positioning ─────────── */
+#g_id_onload,
+.g_id_signin {
+  display: none !important;
+}
+
+/* ── Page entrance ────────────────────────────────── */
+@keyframes lp-fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes lp-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes lp-slide-left {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.lp-enter       { animation: lp-fade-up  0.6s cubic-bezier(0.22,1,0.36,1) both; }
+.lp-enter-slow  { animation: lp-fade-up  0.8s cubic-bezier(0.22,1,0.36,1) both; }
+.lp-enter-hero  { animation: lp-slide-left 0.7s cubic-bezier(0.22,1,0.36,1) both; }
+.lp-enter-d1    { animation-delay: 0.05s; }
+.lp-enter-d2    { animation-delay: 0.12s; }
+.lp-enter-d3    { animation-delay: 0.20s; }
+.lp-enter-d4    { animation-delay: 0.30s; }
+.lp-enter-d5    { animation-delay: 0.40s; }
+.lp-enter-d6    { animation-delay: 0.50s; }
+
+/* ── Background floating decorations ─────────────── */
+@keyframes lp-float-a {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33%       { transform: translateY(-18px) rotate(3deg); }
+  66%       { transform: translateY(-8px) rotate(-2deg); }
+}
+@keyframes lp-float-b {
+  0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
+  50%       { transform: translateY(-22px) rotate(-4deg) scale(1.03); }
+}
+@keyframes lp-float-c {
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  40%       { transform: translateY(-12px) translateX(8px); }
+  80%       { transform: translateY(-20px) translateX(-5px); }
+}
+@keyframes lp-spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes lp-spin-slow-rev {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes lp-pulse-glow {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50%       { opacity: 0.28; transform: scale(1.08); }
+}
+@keyframes lp-drift {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(12px, -16px) rotate(5deg); }
+  50%  { transform: translate(-8px, -28px) rotate(-3deg); }
+  75%  { transform: translate(-14px, -10px) rotate(4deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.lp-deco-float-a { animation: lp-float-a 7s ease-in-out infinite; will-change: transform; }
+.lp-deco-float-b { animation: lp-float-b 9s ease-in-out infinite; will-change: transform; }
+.lp-deco-float-c { animation: lp-float-c 11s ease-in-out infinite; will-change: transform; }
+.lp-deco-spin    { animation: lp-spin-slow 22s linear infinite; will-change: transform; }
+.lp-deco-spin-r  { animation: lp-spin-slow-rev 18s linear infinite; will-change: transform; }
+.lp-deco-glow    { animation: lp-pulse-glow 5s ease-in-out infinite; will-change: opacity, transform; }
+.lp-deco-drift   { animation: lp-drift 14s ease-in-out infinite; will-change: transform; }
+
+/* ── KPI widget floating ──────────────────────────── */
+@keyframes lp-widget-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+@keyframes lp-widget-float-b {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-7px); }
+}
+@keyframes lp-widget-float-c {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-13px); }
+}
+
+.lp-widget-a { animation: lp-widget-float   5s ease-in-out infinite; will-change: transform; }
+.lp-widget-b { animation: lp-widget-float-b 6.5s ease-in-out infinite; will-change: transform; animation-delay: 0.8s; }
+.lp-widget-c { animation: lp-widget-float-c 4s ease-in-out infinite; will-change: transform; animation-delay: 1.6s; }
+
+/* ── Input premium focus ─────────────────────────── */
+.lp-input {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.lp-input:focus {
+  border-color: oklch(0.45 0.15 240) !important;
+  box-shadow: 0 0 0 3px oklch(0.45 0.15 240 / 0.12), 0 1px 4px 0 oklch(0 0 0 / 0.06) !important;
+  background-color: #fff !important;
+  outline: none !important;
+}
+
+/* ── Button ripple ────────────────────────────────── */
+@keyframes lp-ripple {
+  to { transform: scale(4); opacity: 0; }
+}
+.lp-btn-primary {
+  position: relative; overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.lp-btn-primary:hover  { transform: translateY(-1px); box-shadow: 0 8px 24px oklch(0.45 0.15 240 / 0.35); }
+.lp-btn-primary:active { transform: translateY(0px); }
+
+.lp-btn-accent {
+  position: relative; overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.lp-btn-accent:hover  { transform: translateY(-1px); box-shadow: 0 8px 24px oklch(0.65 0.18 45 / 0.35); }
+.lp-btn-accent:active { transform: translateY(0px); }
+
+.lp-btn-google {
+  transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.lp-btn-google:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.10);
+  border-color: oklch(0.82 0 0) !important;
+}
+
+/* ── Tab transitions ──────────────────────────────── */
+.lp-tab-content {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.lp-tab-content.hidden-tab {
+  opacity: 0; transform: translateY(6px);
+}
+
+/* ── Gradient animated border on card ────────────── */
+@keyframes lp-gradient-border {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+/* ── Gradient shift on hero overlay ──────────────── */
+@keyframes lp-gradient-shift {
+  0%, 100% { background-position: 0% 0%; }
+  50%       { background-position: 100% 100%; }
+}
+
+/* ── Avatar pulse ring ────────────────────────────── */
+@keyframes lp-avatar-ring {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.45 0.15 240 / 0.4); }
+  50%       { box-shadow: 0 0 0 6px oklch(0.45 0.15 240 / 0); }
+}
+.lp-avatar-ring { animation: lp-avatar-ring 2.5s ease-in-out infinite; }
+
+/* ── Subtle parallax wrapper ──────────────────────── */
+.lp-parallax-slow { transition: transform 0.1s ease-out; will-change: transform; }
+
+/* ── Live dot pulse ───────────────────────────────── */
+@keyframes lp-dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.5); opacity: 0.7; }
+}
+.lp-dot-pulse { animation: lp-dot-pulse 1.8s ease-in-out infinite; }
+
+/* ── Shimmer on logo ──────────────────────────────── */
+@keyframes lp-logo-shine {
+  0%   { box-shadow: 0 0 0 0 oklch(0.45 0.15 240 / 0.5); }
+  70%  { box-shadow: 0 0 0 10px oklch(0.45 0.15 240 / 0); }
+  100% { box-shadow: 0 0 0 0 oklch(0.45 0.15 240 / 0); }
+}
+.lp-logo-pulse { animation: lp-logo-shine 2.8s ease-out infinite; }
+
+/* ── Network lines background (CSS only) ─────────── */
+.lp-network-bg {
+  background-image:
+    radial-gradient(circle at 20% 30%, oklch(0.45 0.15 240 / 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, oklch(0.65 0.18 45 / 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, oklch(0.45 0.15 240 / 0.02) 0%, transparent 70%);
+}
+
+/* ── Glassmorphism decoration ─────────────────────── */
+.lp-glass {
+  background: oklch(1 0 0 / 0.08);
+  border: 1px solid oklch(1 0 0 / 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media (max-width: 1024px) {
+  .lp-hero-panel { display: none !important; }
+  .lp-form-panel { border-radius: 24px !important; }
+}
+@media (max-width: 640px) {
+  .lp-card-wrapper { border-radius: 20px !important; margin: 12px !important; }
+  .lp-form-panel { padding: 28px 24px !important; }
+}
