@@ -21,6 +21,8 @@ import { FloatingActionHub } from "@/components/floating-action-hub"
 import { GlobalCommandPalette } from "@/components/global-command-palette"
 import { AICopilot } from "@/components/ai-copilot"
 import { BackgroundSubscriptionPoller } from "@/components/background-subscription-poller"
+import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal"
+import { OnboardingTourModal } from "@/components/onboarding-tour-modal"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import "./globals.css"
 
@@ -154,6 +156,8 @@ export default function RootLayout({
                     <GlobalCommandPalette />
                     <AICopilot />
                     <BackgroundSubscriptionPoller />
+                    <KeyboardShortcutsModal />
+                    <OnboardingTourModal />
                   </CommandRegistryProvider>
                 </NotificationProvider>
               </AuthProvider>
