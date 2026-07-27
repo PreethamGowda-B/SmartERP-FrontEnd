@@ -35,8 +35,27 @@ interface ChatMessage {
 
 export function AICopilot() {
   const pathname = usePathname()
-  const router = useRouter()
   const { user } = useAuth()
+
+  // Hide AI Copilot completely on public landing, auth, or customer portal pages
+  const isPublicPage =
+    !pathname ||
+    pathname === "/" ||
+    pathname === "/customer/landing" ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/customer") ||
+    pathname === "/privacy" ||
+    pathname === "/terms"
+
+  if (isPublicPage || !user) {
+    return null
+  }
+
+  return <AICopilotInner user={user} pathname={pathname} />
+}
+
+function AICopilotInner({ user, pathname }: { user: any; pathname: string }) {
+  const router = useRouter()
 
   const [isOpen, setIsOpen] = React.useState(false)
   const [input, setInput] = React.useState("")
@@ -86,20 +105,6 @@ export function AICopilot() {
     shortcut: "⌘I",
     action: () => setIsOpen(true),
   })
-
-  // Hide AI Copilot completely on public landing, auth, or customer portal pages
-  const isPublicPage =
-    !pathname ||
-    pathname === "/" ||
-    pathname === "/customer/landing" ||
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/customer") ||
-    pathname === "/privacy" ||
-    pathname === "/terms"
-
-  if (isPublicPage || !user) {
-    return null
-  }
 
   // AI Copilot is an Enterprise Pro feature (Plan ID 3 or Active Pro Trial)
   const isProPlan = (planId !== null && planId >= 3) || isTrial
