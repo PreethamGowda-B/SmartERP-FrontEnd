@@ -11,6 +11,8 @@ import { apiClient } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"
 import { logger } from "@/lib/logger"
 
+import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
+
 interface EmployeeAttendance {
   user_id: string
   employee_name: string
@@ -128,43 +130,57 @@ export default function HRAttendancePage() {
           </Card>
         </div>
 
-        <Card className="border-none shadow-sm">
-          <CardHeader>
-            <CardTitle>Daily Roster</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {employees.map((employee) => (
-                  <div key={employee.user_id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-muted/50 transition-colors">
+        <Card className="border border-border/70 shadow-xs">
+          <CardContent className="p-0">
+            <EnterpriseDataTable<EmployeeAttendance>
+              data={employees}
+              columns={[
+                {
+                  id: "employee",
+                  header: "Employee",
+                  enableSorting: true,
+                  cell: (emp) => (
                     <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
-                         {employee.employee_name.charAt(0).toUpperCase()}
-                       </div>
-                       <div>
-                         <p className="font-medium text-sm">{employee.employee_name}</p>
-                         <p className="text-xs text-muted-foreground">{employee.employee_email}</p>
-                       </div>
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-xs shrink-0">
+                        {emp.employee_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium text-xs text-foreground">{emp.employee_name}</p>
+                        <p className="text-[11px] text-muted-foreground">{emp.employee_email}</p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-6">
-                       <div className="text-center">
-                         <p className="text-[10px] text-muted-foreground uppercase font-bold">In</p>
-                         <p className="text-sm">{formatTime(employee.check_in_time)}</p>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-[10px] text-muted-foreground uppercase font-bold">Out</p>
-                         <p className="text-sm">{formatTime(employee.check_out_time)}</p>
-                       </div>
-                       {getStatusBadge(employee)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ),
+                },
+                {
+                  id: "check_in",
+                  header: "Check In",
+                  accessorKey: "check_in_time",
+                  enableSorting: true,
+                  cell: (emp) => <span className="text-xs">{formatTime(emp.check_in_time)}</span>,
+                },
+                {
+                  id: "check_out",
+                  header: "Check Out",
+                  accessorKey: "check_out_time",
+                  enableSorting: true,
+                  cell: (emp) => <span className="text-xs">{formatTime(emp.check_out_time)}</span>,
+                },
+                {
+                  id: "status",
+                  header: "Status",
+                  accessorKey: "status",
+                  enableSorting: true,
+                  cell: (emp) => getStatusBadge(emp),
+                },
+              ]}
+              getRowId={(emp) => String(emp.user_id)}
+              searchPlaceholder="Search attendance roster..."
+              isLoading={loading}
+              storageKey="hr_attendance_table"
+              emptyTitle="No attendance records"
+              emptyDescription="No employee attendance records found for today."
+              emptyIcon={Users}
+            />
           </CardContent>
         </Card>
       </div>

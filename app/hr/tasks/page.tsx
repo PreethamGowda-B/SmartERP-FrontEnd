@@ -4,12 +4,14 @@ import { useState, useCallback, useEffect } from "react"
 import { HRLayout } from "@/components/hr-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import type { Job } from "@/lib/data"
 import { useJobs } from "@/contexts/job-context"
+import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
 import { apiClient } from "@/lib/apiClient"
 import {
   Search, Filter, Calendar, Users, CheckCircle2, Clock,
@@ -214,72 +216,86 @@ export default function HRTasksPage() {
           </Select>
         </div>
 
-        {/* Job list */}
-        {filteredJobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-xl border-2 border-dashed">
-            <Briefcase className="w-10 h-10 text-muted-foreground/40 mb-3" />
-            <p className="font-semibold text-muted-foreground">No tasks found</p>
-            <p className="text-sm text-muted-foreground/60 mt-1">Try adjusting your filters</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filteredJobs.map((job) => {
-              const priorityColor = PRIORITY_COLORS[job.priority || "medium"] || PRIORITY_COLORS.medium
-              const isCustomer = (job as any).source === "customer"
-
-              return (
-                <div
-                  key={job.id}
-                  onClick={() => setSelectedJob(job)}
-                  className="bg-card border rounded-xl p-4 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
-                >
-                  {/* Priority stripe */}
-                  <div className={cn("w-1 h-12 rounded-full shrink-0", isCustomer ? "bg-teal-500" : priorityColor)} />
-
-                  {/* Main content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="font-semibold text-sm truncate">{job.title}</span>
-                      {isCustomer && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 shrink-0">
-                          <UserRound className="h-2.5 w-2.5" />
-                          Customer Request
-                        </span>
-                      )}
+        {/* Tasks Table */}
+        <Card className="border border-border/70 shadow-xs">
+          <CardContent className="p-0">
+            <EnterpriseDataTable<Job>
+              data={filteredJobs}
+              columns={[
+                {
+                  id: "title",
+                  header: "Task Title",
+                  enableSorting: true,
+                  cell: (job) => {
+                    const priorityColor = PRIORITY_COLORS[job.priority || "medium"] || PRIORITY_COLORS.medium
+                    const isCustomer = (job as any).source === "customer"
+                    return (
+                      <div className="flex items-center gap-2.5">
+                        <div className={cn("w-1.5 h-8 rounded-full shrink-0", isCustomer ? "bg-teal-500" : priorityColor)} />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-xs text-foreground capitalize truncate">{job.title}</span>
+                            {isCustomer && (
+                              <Badge variant="outline" className="text-[9px] px-1 py-0 border-teal-300 text-teal-700 bg-teal-50">
+                                Customer Request
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-muted-foreground">{formatDate(job.created_at)}</span>
+                        </div>
+                      </div>
+                    )
+                  },
+                },
+                {
+                  id: "assignee",
+                  header: "Assigned To",
+                  accessorKey: "employee_email",
+                  enableSorting: true,
+                  cell: (job) => (
+                    <span className="text-xs font-medium text-foreground">
+                      {job.employee_email ? job.employee_email.split("@")[0] : "Unassigned"}
+                    </span>
+                  ),
+                },
+                {
+                  id: "progress",
+                  header: "Progress",
+                  accessorKey: "progress",
+                  enableSorting: true,
+                  cell: (job) => (
+                    <div className="flex items-center gap-2 w-28">
+                      <span className="text-xs font-semibold text-primary">{job.progress || 0}%</span>
+                      <Progress value={job.progress || 0} className="h-1.5 flex-1" />
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                      {job.employee_email && (
-                        <span className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {job.employee_email.split("@")[0]}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(job.created_at)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Progress */}
-                  {(job.progress || 0) > 0 && (
-                    <div className="hidden sm:flex flex-col items-end gap-1 w-24 shrink-0">
-                      <span className="text-xs font-medium text-primary">{job.progress}%</span>
-                      <Progress value={job.progress || 0} className="h-1.5 w-full" />
-                    </div>
-                  )}
-
-                  {/* Badges */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    {getStatusBadge(job.status)}
-                    {getEmployeeStatusBadge(job.employee_status)}
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+                  ),
+                },
+                {
+                  id: "status",
+                  header: "Job Status",
+                  accessorKey: "status",
+                  enableSorting: true,
+                  cell: (job) => getStatusBadge(job.status),
+                },
+                {
+                  id: "employee_status",
+                  header: "Employee Status",
+                  accessorKey: "employee_status",
+                  enableSorting: true,
+                  cell: (job) => getEmployeeStatusBadge(job.employee_status),
+                },
+              ]}
+              getRowId={(job) => String(job.id)}
+              searchPlaceholder="Search tasks by title, assignee, description..."
+              isLoading={isRefreshing && jobs.length === 0}
+              storageKey="hr_tasks_table"
+              emptyTitle="No tasks found"
+              emptyDescription="No job assignments match your filter criteria."
+              emptyIcon={Briefcase}
+              onRowClick={(job) => setSelectedJob(job)}
+            />
+          </CardContent>
+        </Card>
 
         {/* Detail dialog */}
         <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>

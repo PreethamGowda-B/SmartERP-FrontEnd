@@ -31,26 +31,52 @@ import {
   UserCheck,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { NotificationCenterDrawer } from "@/components/notification-center-drawer"
 import { logger } from "@/lib/logger"
 
-const navigation = [
-  { name: "Dashboard", href: "/owner", icon: LayoutDashboard },
-  { name: "Tasks", href: "/owner/jobs", icon: Briefcase },
-  { name: "Customer Jobs", href: "/owner/customer-jobs", icon: UserCheck },
-  { name: "Employees", href: "/owner/employees", icon: Users },
-  { name: "Attendance", href: "/owner/attendance", icon: Clock },
-  { name: "Materials", href: "/owner/materials", icon: Package },
-  { name: "Inventory", href: "/owner/inventory", icon: Box },
-  { name: "Documents", href: "/owner/documents", icon: Files },
-  { name: "Payroll", href: "/owner/payroll", icon: DollarSign },
-  { name: "Reports", href: "/owner/reports", icon: BarChart3 },
-  { name: "Messages", href: "/owner/messages", icon: MessageSquare },
-  { name: "Notifications", href: "/owner/notifications", icon: Bell },
-  { name: "Tracking", href: "/owner/tracking", icon: MapPin },
-  { name: "Settings", href: "/owner/settings", icon: Settings },
-  { name: "Billing", href: "/owner/billing", icon: CreditCard },
-  { name: "HR Hub", href: "/owner/hr-hub", icon: Megaphone },
-  { name: "Contact Support", href: "/owner/support", icon: Headset },
+const navCategories = [
+  {
+    title: "Operations",
+    items: [
+      { name: "Dashboard", href: "/owner", icon: LayoutDashboard },
+      { name: "Tasks", href: "/owner/jobs", icon: Briefcase },
+      { name: "Customer Jobs", href: "/owner/customer-jobs", icon: UserCheck },
+      { name: "Tracking", href: "/owner/tracking", icon: MapPin },
+    ],
+  },
+  {
+    title: "People & HR",
+    items: [
+      { name: "Employees", href: "/owner/employees", icon: Users },
+      { name: "Attendance", href: "/owner/attendance", icon: Clock },
+      { name: "Payroll", href: "/owner/payroll", icon: DollarSign },
+      { name: "HR Hub", href: "/owner/hr-hub", icon: Megaphone },
+    ],
+  },
+  {
+    title: "Supplies & Docs",
+    items: [
+      { name: "Materials", href: "/owner/materials", icon: Package },
+      { name: "Inventory", href: "/owner/inventory", icon: Box },
+      { name: "Documents", href: "/owner/documents", icon: Files },
+    ],
+  },
+  {
+    title: "Communication & Insights",
+    items: [
+      { name: "Messages", href: "/owner/messages", icon: MessageSquare },
+      { name: "Notifications", href: "/owner/notifications", icon: Bell },
+      { name: "Reports", href: "/owner/reports", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Account",
+    items: [
+      { name: "Settings", href: "/owner/settings", icon: Settings },
+      { name: "Billing", href: "/owner/billing", icon: CreditCard },
+      { name: "Contact Support", href: "/owner/support", icon: Headset },
+    ],
+  },
 ]
 
 export function OwnerSidebar() {
@@ -111,49 +137,67 @@ export function OwnerSidebar() {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0 shadow-xs",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         {/* Header */}
-        <div className="p-6 border-b border-border flex flex-col gap-4 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-primary rounded-lg">
-              <Building2 className="h-6 w-6 text-primary-foreground" />
+        <div className="p-5 border-b border-border/80 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
+              <Building2 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">SmartERP</h1>
-              <p className="text-sm text-muted-foreground">Owner Portal</p>
+              <h1 className="text-base font-bold tracking-tight">SmartERP</h1>
+              <p className="text-xs text-muted-foreground">Owner Portal</p>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <NotificationCenterDrawer />
+            <ThemeToggle />
+          </div>
         </div>
 
         {/* Scrollable nav area */}
-        <div ref={navRef} onScroll={handleNavScroll} className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-          {navigation.filter((item) => {
-            if (item.name === "Messages" && !features.messages) return false
-            if (item.name === "Payroll" && !features.payroll) return false
-            if (item.name === "Tracking" && !features.location_tracking) return false
-            if (item.name === "Contact Support" && !features.priority_support) return false
-            return true
-          }).map((item) => {
-            const isActive = pathname === item.href
+        <div ref={navRef} onScroll={handleNavScroll} className="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          {navCategories.map((category) => {
+            const filteredItems = category.items.filter((item) => {
+              if (item.name === "Messages" && !features.messages) return false
+              if (item.name === "Payroll" && !features.payroll) return false
+              if (item.name === "Tracking" && !features.location_tracking) return false
+              if (item.name === "Contact Support" && !features.priority_support) return false
+              return true
+            })
+
+            if (filteredItems.length === 0) return null
+
             return (
-              <NavLink
-                key={item.name}
-                href={item.href}
-                id={item.name}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent",
-                )}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.name}
-              </NavLink>
+              <div key={category.title} className="space-y-1">
+                <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  {category.title}
+                </p>
+                <div className="space-y-0.5">
+                  {filteredItems.map((item) => {
+                    const isActive = pathname === item.href
+                    return (
+                      <NavLink
+                        key={item.name}
+                        href={item.href}
+                        id={item.name}
+                        className={cn(
+                          "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150",
+                          isActive
+                            ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                            : "text-muted-foreground hover:text-foreground hover:bg-accent/70",
+                        )}
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span>{item.name}</span>
+                      </NavLink>
+                    )
+                  })}
+                </div>
+              </div>
             )
           })}
         </div>

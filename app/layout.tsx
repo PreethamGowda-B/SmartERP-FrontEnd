@@ -15,8 +15,11 @@ import { SlowNetworkNotice } from "@/components/slow-network-notice"
 import { NotificationPermissionPrompt } from "@/components/notification-permission-prompt"
 import { Suspense } from "react"
 import { LoadingProvider } from "@/contexts/loading-context"
+import { CommandRegistryProvider } from "@/contexts/command-registry-context"
 import PremiumLoader from "@/components/premium-loader"
 import { FloatingActionHub } from "@/components/floating-action-hub"
+import { GlobalCommandPalette } from "@/components/global-command-palette"
+import { AICopilot } from "@/components/ai-copilot"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import "./globals.css"
 
@@ -135,17 +138,21 @@ export default function RootLayout({
             <LoadingProvider>
               <AuthProvider>
                 <NotificationProvider>
-                  <JobProvider>
-                    <ErrorBoundary>
-                      {children}
-                    </ErrorBoundary>
-                  </JobProvider>
-                  <Toaster richColors closeButton position="top-right" />
-                  <LockedFeaturePrompt />
-                  <SlowNetworkNotice />
-                  <NotificationPermissionPrompt />
-                  <PremiumLoader />
-                  <FloatingActionHub />
+                  <CommandRegistryProvider>
+                    <JobProvider>
+                      <ErrorBoundary>
+                        {children}
+                      </ErrorBoundary>
+                    </JobProvider>
+                    <Toaster richColors closeButton position="top-right" />
+                    <LockedFeaturePrompt />
+                    <SlowNetworkNotice />
+                    <NotificationPermissionPrompt />
+                    <PremiumLoader />
+                    <FloatingActionHub />
+                    <GlobalCommandPalette />
+                    <AICopilot />
+                  </CommandRegistryProvider>
                 </NotificationProvider>
               </AuthProvider>
             </LoadingProvider>

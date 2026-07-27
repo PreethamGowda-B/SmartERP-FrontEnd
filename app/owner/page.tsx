@@ -25,6 +25,11 @@ import { apiClient } from "@/lib/apiClient"
 import { useAuth } from "@/contexts/auth-context"
 import { logger } from "@/lib/logger"
 import { cn } from "@/lib/utils"
+import { ApprovalCenter } from "@/components/approval-center"
+import { ActivityTimeline } from "@/components/activity-timeline"
+import { AuditLogsTable } from "@/components/audit-logs-table"
+import { ExecutiveAnalyticsDashboard } from "@/components/executive-analytics-dashboard"
+import { ProactiveAIInsights } from "@/components/proactive-ai-insights"
 
 type DashboardMetrics = {
   activeJobs: number
@@ -162,6 +167,9 @@ export default function OwnerDashboard() {
 
         <SubscriptionStatus />
 
+        {/* Proactive AI Business Operating Intelligence Banner */}
+        <ProactiveAIInsights />
+
         {/* Key Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
@@ -288,6 +296,18 @@ export default function OwnerDashboard() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Executive Analytics Dashboard */}
+        <ExecutiveAnalyticsDashboard />
+
+        {/* Centralized Approval Center */}
+        <ApprovalCenter />
+
+        {/* Activity Stream + Audit Trail Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ActivityTimeline />
+          <AuditLogsTable />
         </div>
 
         <div className="space-y-4">

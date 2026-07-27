@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Users, Search, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye, Save, X, UserCheck, Star } from "lucide-react"
+import { Users, Search, MapPin, Clock, Phone, Mail, Trash2, Loader2, Eye, Save, X, UserCheck, Star, Edit } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
@@ -19,6 +19,7 @@ import { toast } from "sonner"
 import { ErrorView } from "@/components/ui/error-view"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonList, SkeletonCard } from "@/components/ui/skeleton-card"
+import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
 
 interface Employee {
   id: number
@@ -284,197 +285,175 @@ export default function EmployeesPage() {
           </Select>
         </div>
 
-        <div className="space-y-6">
-          {loading && employees.length === 0 ? (
-            <SkeletonList count={6} />
-          ) : error && employees.length === 0 ? (
-            <ErrorView title={error.title} message={error.message} onRetry={fetchEmployees} />
-          ) : filtered.length === 0 ? (
-            <EmptyState 
-              icon={Users}
-              title="No employees found"
-              description="We couldn't find any staff members matching your current search or filter criteria."
-              actionLabel="Refresh Directory"
-              onAction={fetchEmployees}
-            />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {Array.isArray(filtered) && filtered.map((employee) => {
-                const isEditing = editingId === employee.id
-
-                return (
-                  <Card key={employee.id} className="premium-card hover-lift group border-none shadow-sm hover:shadow-xl overflow-hidden">
-                    <CardHeader className="p-6 pb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <Avatar className="h-14 w-14 ring-2 ring-background shadow-md">
-                            <AvatarFallback className="bg-primary/5 text-primary font-bold text-lg">
-                              {(employee.name || "E").charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className={cn(
-                            "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-background shadow-sm transition-colors duration-300",
+        {/* Enterprise Data Table */}
+        <Card className="border border-border/70 shadow-xs">
+          <CardContent className="p-0">
+            <EnterpriseDataTable<Employee>
+              data={filtered}
+              columns={[
+                {
+                  id: "employee",
+                  header: "Employee",
+                  enableSorting: true,
+                  cell: (employee) => (
+                    <div className="flex items-center gap-3">
+                      <div className="relative shrink-0">
+                        <Avatar className="h-9 w-9 ring-1 ring-border">
+                          <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                            {(employee.name || "E").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div
+                          className={cn(
+                            "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-background",
                             clockStatusLoading
                               ? "bg-muted"
                               : clockStatusMap[String(employee.id)]
-                                ? "bg-green-500"
-                                : "bg-red-500"
+                              ? "bg-emerald-500"
+                              : "bg-rose-500"
                           )}
                           title={
                             clockStatusLoading
                               ? "Loading attendance..."
                               : clockStatusMap[String(employee.id)]
-                                ? "Clocked in today"
-                                : "Not clocked in"
+                              ? "Clocked in today"
+                              : "Not clocked in"
                           }
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-lg font-black tracking-tight truncate group-hover:text-primary transition-colors">
-                            {employee.name}
-                          </CardTitle>
-                          <p className="text-meta">{employee.position}</p>
-                        </div>
+                        />
                       </div>
-                    </CardHeader>
-                    
-                    <CardContent className="p-6 pt-0 space-y-5">
-                      {isEditing ? (
-                        <div className="space-y-4 pt-2 animate-in slide-in-from-top-2 duration-300">
-                           <div className="space-y-1.5">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Department</p>
-                            <Select
-                              value={editForm.department}
-                              onValueChange={(value) => setEditForm({ ...editForm, department: value })}
-                            >
-                              <SelectTrigger className="h-9">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.isArray(DEPARTMENTS) && DEPARTMENTS.map((dept) => (
-                                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                             <div className="space-y-1.5">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Role</p>
-                              <Select
-                                value={editForm.role}
-                                onValueChange={(value) => setEditForm({ ...editForm, role: value })}
-                              >
-                                <SelectTrigger className="h-9">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="employee">Staff</SelectItem>
-                                  <SelectItem value="hr">HR</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-1.5 flex flex-col justify-end">
-                              <div className="flex items-center justify-between h-9 px-1">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Active</span>
-                                <Switch
-                                  checked={editForm.is_active}
-                                  onCheckedChange={(checked) => setEditForm({ ...editForm, is_active: checked })}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 pt-2">
-                            <Button size="sm" className="flex-1 btn-premium" onClick={() => saveEmployee(employee.id)} disabled={submitting}>
-                              Save Changes
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={cancelEditing} disabled={submitting}>
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-4 animate-in fade-in duration-500">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Department</p>
-                              <p className="text-xs font-semibold">{employee.department || "Unassigned"}</p>
-                            </div>
-                            <div className="space-y-1 text-right">
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Joined</p>
-                              <p className="text-xs font-semibold">{employee.created_at ? new Date(employee.created_at).toLocaleDateString('en-IN') : '—'}</p>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Mail className="h-3 w-3" />
-                              <span className="truncate">{employee.email}</span>
-                            </div>
-                            {employee.phone && (
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Phone className="h-3 w-3" />
-                                <span>{employee.phone}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Customer Rating */}
-                          <div className="flex items-center justify-between pt-1 pb-1 border-t border-border/50">
-                            <div className="flex items-center gap-1.5">
-                              {employee.rating !== null ? (
-                                <>
-                                  <div className="flex items-center gap-0.5">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                      <Star
-                                        key={star}
-                                        className={cn(
-                                          "h-3.5 w-3.5",
-                                          star <= Math.round(employee.rating!)
-                                            ? "fill-amber-400 text-amber-400"
-                                            : "fill-muted text-muted-foreground/30"
-                                        )}
-                                      />
-                                    ))}
-                                  </div>
-                                  <span className="text-sm font-semibold text-amber-600">
-                                    {employee.rating.toFixed(1)}
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="flex items-center gap-0.5">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                      <Star key={star} className="h-3.5 w-3.5 fill-muted text-muted-foreground/20" />
-                                    ))}
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">No ratings yet</span>
-                                </>
-                              )}
-                            </div>
-                            {employee.review_count > 0 && (
-                              <span className="text-[11px] text-muted-foreground">
-                                {employee.review_count} {employee.review_count === 1 ? "review" : "reviews"}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex gap-2 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="secondary" size="sm" className="flex-1 btn-premium h-8" onClick={() => startEditing(employee)}>
-                              Edit Profile
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-600" onClick={() => setDeleteConfirm(employee)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-foreground truncate">{employee.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{employee.position}</div>
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  id: "department",
+                  header: "Department",
+                  accessorKey: "department",
+                  enableSorting: true,
+                  cell: (employee) => (
+                    <Badge variant="outline" className="text-xs font-normal">
+                      {employee.department || "Unassigned"}
+                    </Badge>
+                  ),
+                },
+                {
+                  id: "contact",
+                  header: "Contact",
+                  enableSorting: false,
+                  cell: (employee) => (
+                    <div className="space-y-0.5 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Mail className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+                        <span className="truncate">{employee.email}</span>
+                      </div>
+                      {employee.phone && (
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+                          <span>{employee.phone}</span>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          )}
-        </div>
+                    </div>
+                  ),
+                },
+                {
+                  id: "status",
+                  header: "Status",
+                  accessorKey: "status",
+                  enableSorting: true,
+                  cell: (employee) => (
+                    <Badge
+                      variant={employee.status === "active" ? "success" : "secondary"}
+                      className="text-xs capitalize"
+                    >
+                      {employee.status}
+                    </Badge>
+                  ),
+                },
+                {
+                  id: "rating",
+                  header: "Rating",
+                  accessorKey: "rating",
+                  enableSorting: true,
+                  cell: (employee) =>
+                    employee.rating !== null ? (
+                      <div className="flex items-center gap-1 text-xs">
+                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                        <span className="font-semibold text-amber-600 dark:text-amber-400">
+                          {employee.rating.toFixed(1)}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          ({employee.review_count})
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ),
+                },
+                {
+                  id: "joined",
+                  header: "Joined Date",
+                  accessorKey: "created_at",
+                  enableSorting: true,
+                  cell: (employee) =>
+                    employee.created_at
+                      ? new Date(employee.created_at).toLocaleDateString("en-IN")
+                      : "—",
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  enableSorting: false,
+                  enableHiding: false,
+                  headerClassName: "text-right",
+                  cell: (employee) => (
+                    <div className="flex items-center gap-1 justify-end">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => setViewDetails(employee)}
+                        title="View Profile Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={() => startEditing(employee)}
+                        title="Edit Employee"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteConfirm(employee)}
+                        title="Delete Employee"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ),
+                },
+              ]}
+              getRowId={(e) => String(e.id)}
+              searchPlaceholder="Search employees by name, role, email..."
+              isLoading={loading}
+              isError={!!error}
+              errorMessage={error?.message}
+              onRetry={fetchEmployees}
+              storageKey="owner_employees_table"
+              emptyTitle="No employees found"
+              emptyDescription="We couldn't find any staff members matching your search or filter criteria."
+              emptyIcon={Users}
+            />
+          </CardContent>
+        </Card>
 
         {/* ─── DELETE CONFIRMATION MODAL ──────────────────────────────────── */}
         {deleteConfirm && (

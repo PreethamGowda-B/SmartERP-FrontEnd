@@ -30,6 +30,7 @@ import { logger } from "@/lib/logger"
 import { ErrorView } from "@/components/ui/error-view"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonList } from "@/components/ui/skeleton-card"
+import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
 
 interface Employee {
   id: string
@@ -512,95 +513,122 @@ export default function OwnerPayrollPage() {
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
-              Historical Records <span className="text-sm font-bold text-muted-foreground/60 ml-2">({filteredPayrolls.length})</span>
-            </h2>
-            <div className="text-meta">Audit-ready documentation</div>
-          </div>
-
-          {loading && payrolls.length === 0 ? (
-            <SkeletonList count={4} />
-          ) : error && payrolls.length === 0 ? (
-            <ErrorView title={error.title} message={error.message} onRetry={fetchPayrolls} />
-          ) : filteredPayrolls.length === 0 ? (
-            <EmptyState 
-              icon={FileText}
-              title="No payroll records found"
-              description="Your financial disbursement history is empty. Start by creating a new payroll record for your staff."
-              actionLabel="New Disbursement"
-              onAction={() => setDialogOpen(true)}
-            />
-          ) : (
-            <div className="grid grid-cols-1 gap-6">
-              {filteredPayrolls.map((payroll) => (
-                <Card
-                  key={payroll.id}
-                  className="premium-card hover-lift group border-none shadow-sm overflow-hidden"
-                >
-                  <div className="h-1.5 w-full bg-primary/20 group-hover:bg-primary transition-colors" />
-                  <CardContent className="p-8">
-                    <div className="flex flex-col lg:flex-row justify-between gap-8">
-                      <div className="space-y-4 flex-1">
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary font-black text-xl">
-                            {payroll.employee_name?.[0] || "E"}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-xl font-black tracking-tight group-hover:text-primary transition-colors">{payroll.employee_name}</h3>
-                              <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest px-2 py-0">
-                                {MONTHS[(payroll.payroll_month - 1) % 12]} {payroll.payroll_year}
-                              </Badge>
-                            </div>
-                            <p className="text-meta">{payroll.employee_email}</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-4">
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Base Salary</p>
-                            <p className="text-sm font-black tracking-tight">₹{Number(payroll.base_salary || 0).toLocaleString('en-IN')}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-green-600/60">Increments</p>
-                            <p className="text-sm font-black tracking-tight text-green-600">+₹{Number((payroll.extra_amount || 0) + (payroll.salary_increment || 0)).toLocaleString('en-IN')}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-red-600/60">Deductions</p>
-                            <p className="text-sm font-black tracking-tight text-red-600">-₹{Number(payroll.deduction || 0).toLocaleString('en-IN')}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Generated</p>
-                            <p className="text-sm font-semibold text-muted-foreground">{new Date(payroll.created_at).toLocaleDateString()}</p>
-                          </div>
-                        </div>
+        {/* Payroll Table */}
+        <Card className="border border-border/70 shadow-xs">
+          <CardContent className="p-0">
+            <EnterpriseDataTable<PayrollRecord>
+              data={filteredPayrolls}
+              columns={[
+                {
+                  id: "employee",
+                  header: "Employee",
+                  enableSorting: true,
+                  cell: (payroll) => (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-xs shrink-0">
+                        {payroll.employee_name?.[0] || "E"}
                       </div>
-
-                      <div className="lg:w-64 flex flex-col justify-center items-end border-t lg:border-t-0 lg:border-l border-border/40 pt-6 lg:pt-0 lg:pl-8">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-primary/60 mb-1">Net Disbursement</p>
-                        <div className="text-4xl font-black tracking-tighter text-primary">₹{Number(payroll.total_salary || 0).toLocaleString('en-IN')}</div>
-                        <Button variant="ghost" size="sm" className="mt-4 h-8 text-xs font-bold gap-2 hover:bg-primary/5 hover:text-primary">
-                          <FileText className="h-3.5 w-3.5" />
-                          Download Slip
-                        </Button>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-foreground truncate">{payroll.employee_name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{payroll.employee_email}</div>
                       </div>
                     </div>
-
-                    {payroll.remarks && (
-                      <div className="mt-6 p-4 rounded-2xl bg-secondary/30 text-xs font-medium text-muted-foreground leading-relaxed">
-                        <span className="font-black uppercase tracking-widest text-[9px] mr-2 text-muted-foreground/50">Notes:</span> 
-                        {payroll.remarks}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+                  ),
+                },
+                {
+                  id: "period",
+                  header: "Period",
+                  enableSorting: true,
+                  cell: (payroll) => (
+                    <Badge variant="outline" className="text-xs font-normal">
+                      {MONTHS[(payroll.payroll_month - 1) % 12]} {payroll.payroll_year}
+                    </Badge>
+                  ),
+                },
+                {
+                  id: "base_salary",
+                  header: "Base Salary",
+                  accessorKey: "base_salary",
+                  enableSorting: true,
+                  cell: (payroll) => (
+                    <span className="font-medium text-xs">
+                      ₹{Number(payroll.base_salary || 0).toLocaleString("en-IN")}
+                    </span>
+                  ),
+                },
+                {
+                  id: "increments",
+                  header: "Extra / Increments",
+                  enableSorting: true,
+                  cell: (payroll) => {
+                    const extra = (payroll.extra_amount || 0) + (payroll.salary_increment || 0)
+                    return extra > 0 ? (
+                      <span className="font-semibold text-xs text-emerald-600 dark:text-emerald-400">
+                        +₹{Number(extra).toLocaleString("en-IN")}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )
+                  },
+                },
+                {
+                  id: "deduction",
+                  header: "Deductions",
+                  accessorKey: "deduction",
+                  enableSorting: true,
+                  cell: (payroll) =>
+                    payroll.deduction > 0 ? (
+                      <span className="font-semibold text-xs text-rose-600 dark:text-rose-400">
+                        -₹{Number(payroll.deduction || 0).toLocaleString("en-IN")}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ),
+                },
+                {
+                  id: "total_salary",
+                  header: "Net Disbursement",
+                  accessorKey: "total_salary",
+                  enableSorting: true,
+                  cell: (payroll) => (
+                    <span className="font-black text-sm text-primary">
+                      ₹{Number(payroll.total_salary || 0).toLocaleString("en-IN")}
+                    </span>
+                  ),
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  enableSorting: false,
+                  enableHiding: false,
+                  headerClassName: "text-right",
+                  cell: (payroll) => (
+                    <div className="flex items-center gap-1 justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs px-2"
+                        onClick={() => alert(`Downloading payslip for ${payroll.employee_name}`)}
+                      >
+                        <FileText className="h-3 w-3 mr-1" /> Slip
+                      </Button>
+                    </div>
+                  ),
+                },
+              ]}
+              getRowId={(payroll) => String(payroll.id)}
+              searchPlaceholder="Search payroll records by employee..."
+              isLoading={loading}
+              isError={!!error}
+              errorMessage={error?.message}
+              onRetry={fetchPayrolls}
+              storageKey="owner_payroll_table"
+              emptyTitle="No payroll records found"
+              emptyDescription="Your financial disbursement history is empty. Start by creating a new disbursement."
+              emptyIcon={DollarSign}
+            />
+          </CardContent>
+        </Card>
       </div>
     </OwnerLayout>
   )

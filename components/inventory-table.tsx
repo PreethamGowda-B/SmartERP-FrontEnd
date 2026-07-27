@@ -6,9 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Search, Edit, Archive, Trash2 } from "lucide-react"
+import { Search, Edit, Archive, Trash2, Package } from "lucide-react"
 import { getAccessToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
+import { cn } from "@/lib/utils"
+import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
+import type { ColumnDef } from "@/components/data-table/data-table-types"
 
 type InventoryItem = {
   id: number
@@ -155,138 +158,135 @@ export default function InventoryTable({
     }
   }
 
-  const filteredItems = useMemo(() => {
-    if (!searchTerm.trim()) return items
-    const term = searchTerm.toLowerCase()
-    return items.filter(
-      (item) =>
-        item.name.toLowerCase().includes(term) ||
-        item.description?.toLowerCase().includes(term) ||
-        item.employee_name?.toLowerCase().includes(term) ||
-        item.office_name?.toLowerCase().includes(term),
-    )
-  }, [items, searchTerm])
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-center text-muted-foreground">Loading inventory...</p>
-        </CardContent>
-      </Card>
-    )
-  }
+  const columns = useMemo<ColumnDef<InventoryItem>[]>(
+    () => [
+      {
+        id: "image",
+        header: "Image",
+        enableSorting: false,
+        enableHiding: false,
+        cell: (item) => {
+          const url = getImageUrl(item.image_url)
+          return url ? (
+            <div className="h-10 w-10 shrink-0 rounded-md bg-muted overflow-hidden relative border border-border/60">
+              <Image src={url} alt={item.name} fill className="object-cover" />
+            </div>
+          ) : (
+            <div className="h-10 w-10 shrink-0 rounded-md bg-muted flex items-center justify-center text-muted-foreground text-xs font-semibold">
+              {item.name.slice(0, 2).toUpperCase()}
+            </div>
+          )
+        },
+      },
+      {
+        id: "name",
+        header: "Item Name",
+        accessorKey: "name",
+        enableSorting: true,
+        cell: (item) => (
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-foreground capitalize">{item.name}</span>
+              {item.category && (
+                <Badge className={cn("text-[10px] px-1.5 py-0 font-medium", categoryColors[item.category] || categoryColors["Uncategorized"])}>
+                  {item.category}
+                </Badge>
+              )}
+            </div>
+            {item.description && (
+              <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{item.description}</p>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: "quantity",
+        header: "Stock Level",
+        accessorKey: "quantity",
+        enableSorting: true,
+        cell: (item) => {
+          const isLowStock = item.min_quantity && item.quantity < item.min_quantity
+          return (
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-foreground">{item.quantity}</span>
+              <span className="text-xs text-muted-foreground">{item.unit || "units"}</span>
+              {isLowStock && (
+                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                  Low Stock
+                </Badge>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        id: "min_quantity",
+        header: "Min Target",
+        accessorKey: "min_quantity",
+        enableSorting: true,
+        cell: (item) => item.min_quantity || "—",
+      },
+      {
+        id: "supplier",
+        header: "Supplier",
+        accessorKey: "supplier_name",
+        enableSorting: true,
+        cell: (item) => item.supplier_name || "—",
+      },
+      ...(role === "owner"
+        ? [
+            {
+              id: "added_by",
+              header: "Added By",
+              accessorKey: "employee_name",
+              enableSorting: true,
+              cell: (item: InventoryItem) => item.employee_name || "—",
+            },
+          ]
+        : []),
+      {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        enableHiding: false,
+        headerClassName: "text-right",
+        cell: (item) => (
+          <div className="flex items-center gap-1.5 justify-end">
+            <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs" onClick={() => handleEdit(item)}>
+              <Edit className="h-3 w-3 mr-1" /> Edit
+            </Button>
+            {role === "owner" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                onClick={() => handleArchive(item)}
+              >
+                <Archive className="h-3 w-3 mr-1" /> Archive
+              </Button>
+            )}
+          </div>
+        ),
+      },
+    ],
+    [role, handleEdit, handleArchive, categoryColors, getImageUrl]
+  )
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between gap-4">
-          <CardTitle>Inventory List</CardTitle>
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search items..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {filteredItems.length === 0 ? (
-          <p className="text-center py-8 text-muted-foreground">
-            {items.length === 0 ? "No inventory items yet" : "No items match your search"}
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {filteredItems.map((item) => {
-              const isLowStock = item.min_quantity && item.quantity < item.min_quantity
-              const stockPercentage = item.min_quantity ? (item.quantity / item.min_quantity) * 100 : 100
-
-              return (
-                <div key={item.id} className="border rounded-lg p-4 hover:bg-accent/5 transition">
-                  <div className="flex gap-4">
-                    {item.image_url && (
-                      <div className="h-20 w-20 shrink-0 rounded-lg bg-muted overflow-hidden relative">
-                        <Image
-                          src={getImageUrl(item.image_url) || "/placeholder.svg"}
-                          alt={item.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    )}
-
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-foreground text-base capitalize">{item.name}</h3>
-                          {item.category && (
-                            <Badge className={categoryColors[item.category] || categoryColors["Uncategorized"]}>
-                              {item.category}
-                            </Badge>
-                          )}
-                          {isLowStock && (
-                            <Badge variant="destructive" className="shrink-0">
-                              Low Stock
-                            </Badge>
-                          )}
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8"
-                            onClick={() => handleEdit(item)}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
-                          {role === "owner" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                              onClick={() => handleArchive(item)}
-                            >
-                              <Archive className="h-3 w-3 mr-1" />
-                              Archive
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      {item.description && <p className="text-sm text-muted-foreground mb-3">{item.description}</p>}
-
-                      <div className="flex flex-wrap gap-4 text-sm">
-                        <span className="text-muted-foreground">
-                          <span className="font-semibold text-foreground">{item.quantity}</span> {item.unit || "units"}
-                        </span>
-                        {item.min_quantity && item.min_quantity > 0 && (
-                          <span className="text-muted-foreground">
-                            Min: <span className="font-semibold text-foreground">{item.min_quantity}</span>
-                          </span>
-                        )}
-                        {item.supplier_name && (
-                          <span className="text-muted-foreground">
-                            Supplier: <span className="font-semibold text-foreground">{item.supplier_name}</span>
-                          </span>
-                        )}
-                        {role === "owner" && item.employee_name && (
-                          <span className="text-muted-foreground">
-                            Added by: <span className="font-semibold text-foreground">{item.employee_name}</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+    <Card className="border-none shadow-none bg-transparent">
+      <CardContent className="p-0">
+        <EnterpriseDataTable<InventoryItem>
+          data={items}
+          columns={columns}
+          getRowId={(item) => String(item.id)}
+          searchPlaceholder="Search inventory items, suppliers, descriptions..."
+          searchableKey="name"
+          isLoading={loading}
+          storageKey="inventory_table"
+          emptyTitle="No inventory items"
+          emptyDescription={items.length === 0 ? "No inventory items recorded yet." : "No items match your search term."}
+          emptyIcon={Package}
+        />
       </CardContent>
     </Card>
   )

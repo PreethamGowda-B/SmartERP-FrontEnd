@@ -10,6 +10,8 @@ import { Package, Search, Loader2, Check, X, Clock } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"
+import { cn } from "@/lib/utils"
+import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
 
 interface MaterialRequest {
   id: number
@@ -215,103 +217,130 @@ export default function OwnerMaterialsPage() {
           </Select>
         </div>
 
-        {/* Requests List */}
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : filteredRequests.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-16">
-              <Package className="h-12 w-12 mx-auto mb-3 opacity-40 text-muted-foreground" />
-              <p className="text-lg font-medium">No material requests found</p>
-              <p className="text-sm text-muted-foreground">
-                {requests.length === 0 ? "No requests have been submitted yet" : "Try adjusting your search or filter"}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredRequests.map((request) => (
-              <Card key={request.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{request.item_name}</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Requested by: <span className="font-medium text-foreground">{request.requested_by_name}</span>
-                      </p>
+        {/* Requests Table */}
+        <Card className="border border-border/70 shadow-xs">
+          <CardContent className="p-0">
+            <EnterpriseDataTable<MaterialRequest>
+              data={filteredRequests}
+              columns={[
+                {
+                  id: "item_name",
+                  header: "Requested Item",
+                  accessorKey: "item_name",
+                  enableSorting: true,
+                  cell: (req) => (
+                    <div>
+                      <div className="font-semibold text-xs text-foreground">{req.item_name}</div>
+                      {req.description && (
+                        <p className="text-[11px] text-muted-foreground line-clamp-1">{req.description}</p>
+                      )}
                     </div>
-                    <Badge className={getStatusColor(request.status)}>
-                      {request.status ? (request.status.charAt(0).toUpperCase() + request.status.slice(1)) : "Pending"}
+                  ),
+                },
+                {
+                  id: "requested_by",
+                  header: "Requested By",
+                  accessorKey: "requested_by_name",
+                  enableSorting: true,
+                  cell: (req) => <span className="text-xs font-medium">{req.requested_by_name}</span>,
+                },
+                {
+                  id: "quantity",
+                  header: "Quantity",
+                  accessorKey: "quantity",
+                  enableSorting: true,
+                  cell: (req) => <span className="font-bold text-xs">{req.quantity}</span>,
+                },
+                {
+                  id: "urgency",
+                  header: "Urgency",
+                  accessorKey: "urgency",
+                  enableSorting: true,
+                  cell: (req) => (
+                    <span className={cn("text-xs font-medium capitalize", getUrgencyColor(req.urgency))}>
+                      {req.urgency}
+                    </span>
+                  ),
+                },
+                {
+                  id: "status",
+                  header: "Status",
+                  accessorKey: "status",
+                  enableSorting: true,
+                  cell: (req) => (
+                    <Badge className={cn("text-xs capitalize", getStatusColor(req.status))}>
+                      {req.status ? req.status : "Pending"}
                     </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Quantity:</span>
-                      <span className="font-semibold">{request.quantity}</span>
+                  ),
+                },
+                {
+                  id: "date",
+                  header: "Requested Date",
+                  accessorKey: "created_at",
+                  enableSorting: true,
+                  cell: (req) => (
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(req.created_at).toLocaleDateString()}
+                    </span>
+                  ),
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  enableSorting: false,
+                  enableHiding: false,
+                  headerClassName: "text-right",
+                  cell: (req) => (
+                    <div className="flex items-center gap-1.5 justify-end">
+                      {req.status === "pending" ? (
+                        <>
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs px-2.5 bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => handleAccept(req.id)}
+                            disabled={processing === req.id}
+                          >
+                            {processing === req.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>
+                                <Check className="h-3 w-3 mr-1" /> Accept
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs px-2.5 text-rose-600 hover:bg-rose-50"
+                            onClick={() => handleDecline(req.id)}
+                            disabled={processing === req.id}
+                          >
+                            {processing === req.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>
+                                <X className="h-3 w-3 mr-1" /> Decline
+                              </>
+                            )}
+                          </Button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Urgency:</span>
-                      <span className={getUrgencyColor(request.urgency)}>{request.urgency}</span>
-                    </div>
-                  </div>
-
-                  {request.description && (
-                    <div className="pt-2 border-t">
-                      <p className="text-xs text-muted-foreground mb-1">Description:</p>
-                      <p className="text-sm">{request.description}</p>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
-                    <Clock className="h-3 w-3" />
-                    {new Date(request.created_at).toLocaleDateString()} at{" "}
-                    {new Date(request.created_at).toLocaleTimeString()}
-                  </div>
-
-                  {request.status === "pending" && (
-                    <div className="flex gap-2 pt-3">
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                        onClick={() => handleAccept(request.id)}
-                        disabled={processing === request.id}
-                      >
-                        {processing === request.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <>
-                            <Check className="h-3 w-3 mr-1" />
-                            Accept
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 text-red-600 hover:bg-red-50"
-                        onClick={() => handleDecline(request.id)}
-                        disabled={processing === request.id}
-                      >
-                        {processing === request.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <>
-                            <X className="h-3 w-3 mr-1" />
-                            Decline
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                  ),
+                },
+              ]}
+              getRowId={(req) => String(req.id)}
+              searchPlaceholder="Search material requests by item or requester..."
+              isLoading={loading}
+              storageKey="owner_materials_table"
+              emptyTitle="No material requests found"
+              emptyDescription="No material requests have been submitted yet."
+              emptyIcon={Package}
+            />
+          </CardContent>
+        </Card>
       </div>
     </OwnerLayout>
   )

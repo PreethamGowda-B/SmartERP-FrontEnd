@@ -14,6 +14,7 @@ import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"
 import { logger } from "@/lib/logger"
 import { SkeletonList } from "@/components/ui/skeleton-card"
+import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
 
 function authHeaders(): Record<string, string> {
   const token = getAuthToken()
@@ -207,69 +208,87 @@ export default function OwnerAttendancePage() {
           </Card>
         </div>
 
-        {/* Employee Attendance List */}
-        <Card className="premium-card border-none shadow-lg">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-black tracking-tight">Today's Attendance Stream</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <SkeletonList count={5} />
-            ) : (Array.isArray(employees) && employees.length === 0) ? (
-              <div className="text-center py-16 bg-gray-50/50 rounded-2xl border border-dashed">
-                <Users className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-                <p className="text-sm font-bold text-muted-foreground">No attendance records found for today</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {Array.isArray(employees) && employees.map((employee) => (
-                  <div
-                    key={employee.user_id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border border-border/50 rounded-2xl hover:bg-accent/50 transition-all duration-300 group cursor-pointer"
-                    onClick={() => {
-                      router.push(`/owner/attendance/${employee.user_id}`)
-                    }}
-                  >
-                    <div className="flex items-center gap-4 mb-4 sm:mb-0">
-                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
-                        <span className="text-xl font-black text-primary">
-                          {(employee.employee_name || "E").charAt(0).toUpperCase()}
-                        </span>
+        {/* Employee Attendance Table */}
+        <Card className="border border-border/70 shadow-xs">
+          <CardContent className="p-0">
+            <EnterpriseDataTable<EmployeeAttendance>
+              data={employees}
+              columns={[
+                {
+                  id: "employee",
+                  header: "Employee",
+                  enableSorting: true,
+                  cell: (emp) => (
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center font-bold text-primary text-xs shrink-0">
+                        {(emp.employee_name || "E").charAt(0).toUpperCase()}
                       </div>
-                      <div>
-                        <p className="font-black text-foreground group-hover:text-primary transition-colors leading-none mb-1">{employee.employee_name}</p>
-                        <p className="text-xs font-medium text-muted-foreground/70 truncate max-w-[150px]">{employee.employee_email}</p>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-foreground truncate">{emp.employee_name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{emp.employee_email}</div>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-4 sm:gap-8 justify-between sm:justify-end">
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0.5">In</p>
-                        <p className="font-bold text-sm tracking-tight">{formatTime(employee.check_in_time)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0.5">Out</p>
-                        <p className="font-bold text-sm tracking-tight">{formatTime(employee.check_out_time)}</p>
-                      </div>
-                      <div className="text-right min-w-[60px]">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-0.5">Total</p>
-                        <p className="font-black text-sm tracking-tighter">
-                          {employee.working_hours ? `${Number(employee.working_hours || 0).toFixed(1)}h` : "—"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(employee)}
-                        {employee.is_late && (
-                          <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-tighter text-orange-500 border-orange-500/30">
-                            Late
-                          </Badge>
-                        )}
-                      </div>
+                  ),
+                },
+                {
+                  id: "check_in",
+                  header: "Check In",
+                  accessorKey: "check_in_time",
+                  enableSorting: true,
+                  cell: (emp) => (
+                    <span className="font-medium text-xs text-foreground">
+                      {formatTime(emp.check_in_time)}
+                    </span>
+                  ),
+                },
+                {
+                  id: "check_out",
+                  header: "Check Out",
+                  accessorKey: "check_out_time",
+                  enableSorting: true,
+                  cell: (emp) => (
+                    <span className="font-medium text-xs text-foreground">
+                      {formatTime(emp.check_out_time)}
+                    </span>
+                  ),
+                },
+                {
+                  id: "working_hours",
+                  header: "Hours",
+                  accessorKey: "working_hours",
+                  enableSorting: true,
+                  cell: (emp) =>
+                    emp.working_hours ? `${Number(emp.working_hours || 0).toFixed(1)}h` : "—",
+                },
+                {
+                  id: "status",
+                  header: "Status",
+                  accessorKey: "status",
+                  enableSorting: true,
+                  cell: (emp) => (
+                    <div className="flex items-center gap-1.5">
+                      {getStatusBadge(emp)}
+                      {emp.is_late && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-semibold text-amber-600 border-amber-300 dark:border-amber-800"
+                        >
+                          Late
+                        </Badge>
+                      )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ),
+                },
+              ]}
+              getRowId={(emp) => String(emp.user_id)}
+              searchPlaceholder="Search attendance by employee name or email..."
+              isLoading={loading}
+              storageKey="owner_attendance_table"
+              emptyTitle="No attendance records found"
+              emptyDescription="There are no attendance records logged for today yet."
+              emptyIcon={Users}
+              onRowClick={(emp) => router.push(`/owner/attendance/${emp.user_id}`)}
+            />
           </CardContent>
         </Card>
       </div>

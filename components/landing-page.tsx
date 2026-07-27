@@ -211,9 +211,9 @@ export function LandingPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => router.push("/customer/landing")}
-                className="hidden sm:inline-flex items-center gap-2 border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:text-white transition-all shadow-xs"
+                className="hidden sm:inline-flex items-center gap-2 border-slate-200 dark:border-blue-500/30 bg-white dark:bg-blue-950/20 text-slate-800 dark:text-blue-300 hover:bg-slate-50 dark:hover:bg-blue-900/40 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-blue-500/50 shadow-xs hover:shadow-sm group hover-lift transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
               >
-                <UserCheck className="h-4 w-4" />
+                <UserCheck className="h-4 w-4 text-slate-600 dark:text-blue-400 group-hover:text-slate-800 dark:group-hover:text-blue-300 transition-colors" />
                 Customer Portal
               </Button>
 
@@ -262,11 +262,11 @@ export function LandingPage() {
                 size="lg"
                 variant="outline"
                 onClick={() => router.push("/customer/landing")}
-                className="w-full sm:w-auto text-base font-semibold px-8 py-6 border-blue-500/30 bg-blue-950/20 text-blue-300 hover:bg-blue-900/40 hover:text-white backdrop-blur-md group hover-lift"
+                className="w-full sm:w-auto text-base font-semibold px-8 py-6 border-slate-200 dark:border-blue-500/30 bg-white dark:bg-blue-950/20 text-slate-800 dark:text-blue-300 hover:bg-slate-50 dark:hover:bg-blue-900/40 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-blue-500/50 shadow-xs hover:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-600 dark:focus-visible:ring-blue-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none backdrop-blur-md group hover-lift transition-all duration-200"
               >
-                <UserCheck className="mr-2 h-5 w-5 text-blue-400" />
+                <UserCheck className="mr-2 h-5 w-5 text-slate-600 dark:text-blue-400 group-hover:text-slate-800 dark:group-hover:text-blue-300 transition-colors" />
                 Access Customer Portal
-                <ExternalLink className="ml-2 h-4 w-4 opacity-70 group-hover:opacity-100 transition-opacity" />
+                <ExternalLink className="ml-2 h-4 w-4 text-slate-500 dark:text-blue-400 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all duration-200" />
               </Button>
             </div>
 

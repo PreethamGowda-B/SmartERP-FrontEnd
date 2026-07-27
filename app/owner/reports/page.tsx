@@ -15,6 +15,7 @@ import { OwnerLayout } from "@/components/owner-layout"
 
 import { apiClient } from "@/lib/apiClient"
 import { exportToPDF } from "@/lib/export-utils"
+import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
 
@@ -239,41 +240,66 @@ export default function ReportsPage() {
                   <StatCard icon={TrendingUp} label="Employees Tracked" value={attendance.totals?.employees_with_records} color="text-purple-500" />
                 </div>
 
-                <Card>
-                  <CardHeader><CardTitle>Per-Employee Breakdown</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-2 pr-4 font-medium">Employee</th>
-                            <th className="text-center py-2 px-2 font-medium">Present</th>
-                            <th className="text-center py-2 px-2 font-medium">Absent</th>
-                            <th className="text-center py-2 px-2 font-medium">Half Day</th>
-                            <th className="text-center py-2 px-2 font-medium">Late</th>
-                            <th className="text-right py-2 pl-2 font-medium">Hours</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {attendance.employees?.length === 0 && (
-                            <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">No attendance records for this period</td></tr>
-                          )}
-                          {attendance.employees?.map((emp: any) => (
-                            <tr key={emp.id} className="border-b last:border-0 hover:bg-muted/50">
-                              <td className="py-3 pr-4">
-                                <p className="font-medium">{emp.name}</p>
-                                <p className="text-xs text-muted-foreground">{emp.email}</p>
-                              </td>
-                              <td className="text-center py-3 px-2 text-green-600 font-medium">{emp.days_present}</td>
-                              <td className="text-center py-3 px-2 text-red-500">{emp.days_absent}</td>
-                              <td className="text-center py-3 px-2 text-yellow-500">{emp.half_days}</td>
-                              <td className="text-center py-3 px-2 text-orange-500">{emp.late_count}</td>
-                              <td className="text-right py-3 pl-2 font-medium">{emp.total_hours}h</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                <Card className="border border-border/70 shadow-xs">
+                  <CardHeader><CardTitle className="text-base">Per-Employee Breakdown</CardTitle></CardHeader>
+                  <CardContent className="p-0">
+                    <EnterpriseDataTable<any>
+                      data={attendance.employees || []}
+                      columns={[
+                        {
+                          id: "employee",
+                          header: "Employee",
+                          enableSorting: true,
+                          cell: (emp) => (
+                            <div>
+                              <p className="font-semibold text-xs text-foreground">{emp.name}</p>
+                              <p className="text-[11px] text-muted-foreground">{emp.email}</p>
+                            </div>
+                          ),
+                        },
+                        {
+                          id: "days_present",
+                          header: "Present",
+                          accessorKey: "days_present",
+                          enableSorting: true,
+                          cell: (emp) => <span className="font-semibold text-xs text-emerald-600 dark:text-emerald-400">{emp.days_present}</span>,
+                        },
+                        {
+                          id: "days_absent",
+                          header: "Absent",
+                          accessorKey: "days_absent",
+                          enableSorting: true,
+                          cell: (emp) => <span className="font-semibold text-xs text-rose-600 dark:text-rose-400">{emp.days_absent}</span>,
+                        },
+                        {
+                          id: "half_days",
+                          header: "Half Day",
+                          accessorKey: "half_days",
+                          enableSorting: true,
+                          cell: (emp) => <span className="text-xs text-amber-600">{emp.half_days}</span>,
+                        },
+                        {
+                          id: "late_count",
+                          header: "Late",
+                          accessorKey: "late_count",
+                          enableSorting: true,
+                          cell: (emp) => <span className="text-xs text-orange-600">{emp.late_count}</span>,
+                        },
+                        {
+                          id: "total_hours",
+                          header: "Hours",
+                          accessorKey: "total_hours",
+                          enableSorting: true,
+                          headerClassName: "text-right",
+                          cell: (emp) => <span className="font-bold text-xs text-right block">{emp.total_hours}h</span>,
+                        },
+                      ]}
+                      getRowId={(emp) => String(emp.id)}
+                      searchPlaceholder="Search breakdown..."
+                      storageKey="reports_attendance_table"
+                      emptyTitle="No attendance records"
+                      emptyDescription="No attendance records for this period."
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
