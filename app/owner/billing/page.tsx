@@ -182,14 +182,14 @@ export default function BillingPage() {
                 title: "Upgrade Successful! 🎉",
                 description: `Your plan has been upgraded. Redirecting...`,
               })
-              router.push("/owner/payment-success")
+              router.push(`/owner/payment-success?order_id=${response.razorpay_order_id}&payment_id=${response.razorpay_payment_id}`)
             } else {
               throw new Error(verifyRes.message || "Verification failed")
             }
           } catch (err: any) {
             logger.error("Payment verification failed", err)
             // Background webhook will finalize it if direct verification fails
-            router.push("/owner/payment-success")
+            router.push(`/owner/payment-success?order_id=${response?.razorpay_order_id || 'N/A'}&payment_id=${response?.razorpay_payment_id || 'N/A'}`)
           } finally {
             setUpgrading(false)
           }

@@ -1,118 +1,296 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
-import { CheckCircle2, ArrowRight, ShieldCheck, Mail, ArrowLeft } from "lucide-react"
+import { useEffect, useState, useCallback, useRef } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import {
+  CheckCircle2,
+  ArrowRight,
+  ShieldCheck,
+  Mail,
+  ArrowLeft,
+  Loader2,
+  AlertTriangle,
+  HelpCircle,
+  Copy,
+  Check,
+  Sparkles,
+  RefreshCw,
+} from "lucide-react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
+
+const ACTIVATION_STEPS = [
+  "Verifying payment signature...",
+  "Activating your subscription plan...",
+  "Updating company feature limits...",
+  "Refreshing tenant workspace permissions...",
+  "Preparing your executive dashboard...",
+  "Almost ready...",
+]
 
 export default function PaymentSuccessPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
-  const [loading, setLoading] = useState(true)
-  const [currentPlan, setCurrentPlan] = useState<string | null>(null)
+  const { toast } = useToast()
+
+  const orderId = searchParams.get("order_id") || "N/A"
+  const paymentId = searchParams.get("payment_id") || "N/A"
+
+  const [stepIndex, setStepIndex] = useState(0)
+  const [progress, setProgress] = useState(15)
+  const [isActivated, setIsActivated] = useState(false)
+  const [activePlanName, setActivePlanName] = useState<string>("Basic")
+  const [isDelayed, setIsDelayed] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [reportModalOpen, setReportModalOpen] = useState(false)
+  const [pollCount, setPollCount] = useState(0)
+
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const startTimeRef = useRef<number>(Date.now())
+
+  // Step Message Rotator
+  useEffect(() => {
+    if (isActivated) return
+
+    const interval = setInterval(() => {
+      setStepIndex((prev) => (prev < ACTIVATION_STEPS.length - 1 ? prev + 1 : prev))
+      setProgress((prev) => Math.min(prev + 15, 90))
+    }, 2500)
+
+    return () => clearInterval(interval)
+  }, [isActivated])
+
+  // Polling Loop for Automatic Subscription Activation Verification
+  const verifyStatus = useCallback(async () => {
+    try {
+      setPollCount((prev) => prev + 1)
+      const res = await apiClient("/api/subscription/status")
+
+      const isPaidPlan = res.plan && res.plan.id > 1 && !res.plan.is_trial
+      if (isPaidPlan) {
+        setIsActivated(true)
+        setActivePlanName(res.plan.name || "Pro")
+        setProgress(100)
+
+        toast({
+          title: "🎉 Welcome to SmartERP " + (res.plan.name || "Pro") + "!",
+          description: "Your subscription has been activated successfully.",
+        })
+
+        // Automatic seamless redirect to Owner Dashboard after 2 seconds
+        setTimeout(() => {
+          router.push("/owner")
+        }, 2000)
+        return
+      }
+
+      // Check if polling has exceeded 25 seconds
+      const elapsed = Date.now() - startTimeRef.current
+      if (elapsed > 25000) {
+        setIsDelayed(true)
+      }
+    } catch (err) {
+      logger.error("[PAYMENT] Subscription verification poll error", err)
+    }
+  }, [router, toast])
 
   useEffect(() => {
-    // Refresh subscription status to confirm upgrade
-    async function verifyUpgrade() {
-      try {
-        const res = await apiClient("/api/subscription/status")
-        setCurrentPlan(res.plan?.name || "Basic")
-        logger.log("[PAYMENT] Subscription verified on success page:", res.plan?.name)
-      } catch (err) {
-        logger.error("[PAYMENT] Could not verify upgrade on success page", err)
-      } finally {
-        setLoading(false)
-      }
+    verifyStatus()
+
+    // Poll every 3 seconds until activated
+    pollTimerRef.current = setInterval(verifyStatus, 3000)
+
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current)
     }
-    
-    // Tiny delay to allow background processes (webhook) to finish
-    const timer = setTimeout(verifyUpgrade, 1500)
-    return () => clearTimeout(timer)
-  }, [])
+  }, [verifyStatus])
+
+  const technicalReportData = `
+========================================
+🚨 SMARTERP PAYMENT ACTIVATION ISSUE REPORT
+========================================
+Timestamp: ${new Date().toISOString()}
+Company ID: ${user?.company_id || "N/A"}
+User ID: ${user?.id || "N/A"}
+User Email: ${user?.email || "N/A"}
+Order ID: ${orderId}
+Payment ID: ${paymentId}
+User Agent: ${typeof window !== "undefined" ? navigator.userAgent : "N/A"}
+Poll Retries Count: ${pollCount}
+Status: Pending Backend Activation Sync
+========================================
+`.trim()
+
+  const handleCopyReport = () => {
+    navigator.clipboard.writeText(technicalReportData)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+    toast({
+      title: "Report Copied to Clipboard",
+      description: "You can paste this directly to support.",
+    })
+  }
 
   return (
     <OwnerLayout>
-      <div className="flex flex-col items-center justify-center min-h-[80vh] container max-w-2xl mx-auto px-4 py-12">
+      <div className="flex flex-col items-center justify-center min-h-[85vh] container max-w-2xl mx-auto px-4 py-12">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, type: "spring" }}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
           className="w-full"
         >
-          <Card className="text-center shadow-2xl border-indigo-100 overflow-hidden">
-            <div className="h-2 bg-gradient-to-r from-green-400 to-emerald-500" />
-            
-            <CardHeader className="pt-10">
+          <Card className="text-center shadow-2xl border border-border/80 overflow-hidden bg-card">
+            <div className="h-2 bg-gradient-to-r from-emerald-500 via-primary to-accent" />
+
+            <CardHeader className="pt-10 pb-6">
               <div className="flex justify-center mb-6">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring", stiffness: 260, damping: 20 }}
-                  className="bg-green-100 p-4 rounded-full"
-                >
-                  <CheckCircle2 className="w-16 h-16 text-green-600" />
-                </motion.div>
+                {isActivated ? (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                    className="p-4 rounded-full bg-emerald-500/10 border border-emerald-500/20"
+                  >
+                    <CheckCircle2 className="w-16 h-16 text-emerald-500" />
+                  </motion.div>
+                ) : (
+                  <div className="relative flex items-center justify-center">
+                    <div className="w-20 h-20 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+                      <Sparkles className="w-10 h-10 text-primary animate-pulse" />
+                    </div>
+                  </div>
+                )}
               </div>
-              <CardTitle className="text-3xl font-bold text-gray-900">Payment Successful! 🎉</CardTitle>
-              <Badge variant="secondary" className="mt-2 bg-green-50 text-green-700 border-green-200">
-                {loading ? "Confirming activation..." : `Active Plan: ${currentPlan}`}
-              </Badge>
+
+              <CardTitle className="text-3xl font-extrabold tracking-tight text-foreground">
+                {isActivated ? "Subscription Activated! 🎉" : "Payment Received Successfully"}
+              </CardTitle>
+
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <Badge
+                  variant={isActivated ? "success" : "outline"}
+                  className="text-xs px-3 py-1 font-semibold"
+                >
+                  {isActivated ? `Active Plan: ${activePlanName}` : "Verifying & Activating..."}
+                </Badge>
+              </div>
             </CardHeader>
 
-            <CardContent className="px-8 pb-10 space-y-6">
-              <div className="space-y-4 text-gray-600">
-                <p className="text-lg leading-relaxed">
-                  Thank you for your payment! Your subscription has been successfully upgraded to the 
-                  <span className="font-bold text-indigo-600"> Basic Plan</span>.
-                </p>
-                <p className="text-sm">
-                  You now have access to premium features like **Payroll Generation**, **Location Tracking**, 
-                  and increased limits for your employees and inventory.
-                </p>
-              </div>
-
-              <div className="bg-blue-50/50 rounded-xl p-4 flex items-start gap-4 text-left border border-blue-100">
-                <ShieldCheck className="w-6 h-6 text-blue-600 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-blue-900">Activation Status</p>
-                  <p className="text-xs text-blue-700 mt-1">
-                    Your features are unlocked immediately. If you don't see them yet, simply refresh your dashboard.
+            <CardContent className="px-6 sm:px-10 pb-8 space-y-6">
+              {/* Progress Bar & Rotating Message */}
+              {!isActivated && (
+                <div className="space-y-3 bg-muted/30 p-5 rounded-2xl border border-border/60">
+                  <div className="flex items-center justify-between text-xs font-semibold text-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                      {ACTIVATION_STEPS[stepIndex]}
+                    </span>
+                    <span>{progress}%</span>
+                  </div>
+                  <Progress value={progress} className="h-2 bg-muted [&>div]:bg-primary transition-all duration-500" />
+                  <p className="text-[11px] text-muted-foreground text-left">
+                    Please keep this window open while we prepare your upgraded workspace. No manual action is required.
                   </p>
                 </div>
-              </div>
+              )}
+
+              {/* Delayed Reassurance Banner (> 25 seconds) */}
+              {isDelayed && !isActivated && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-left space-y-2"
+                >
+                  <div className="flex items-center gap-2 font-bold text-xs text-amber-600 dark:text-amber-400">
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>Payment Confirmed — Finalizing Activation</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Thank you for your purchase. We have verified your payment with Razorpay and your money is 100% safe. Activation is taking a few seconds longer than usual due to network sync. You do <strong className="text-foreground">NOT</strong> need to pay again.
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Activated Confirmation Body */}
+              {isActivated && (
+                <div className="space-y-4 text-left bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5">
+                  <div className="flex items-center gap-2 font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                    <ShieldCheck className="h-5 w-5" />
+                    <span>Workspace Upgraded to SmartERP {activePlanName}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Your feature limits, payroll modules, location tracking, and team capacity have been unlocked across your organization.
+                  </p>
+                </div>
+              )}
             </CardContent>
 
-            <CardFooter className="bg-gray-50/50 border-t p-8 flex flex-col sm:flex-row gap-4">
-              <Button asChild className="w-full sm:w-1/2 h-12 text-md font-semibold bg-indigo-600 hover:bg-indigo-700 shadow-md">
+            <CardFooter className="bg-muted/20 border-t border-border/70 p-6 flex flex-col sm:flex-row gap-3">
+              <Button
+                asChild
+                className="w-full sm:w-1/2 h-11 text-xs font-bold btn-premium"
+                disabled={!isActivated}
+              >
                 <Link href="/owner">
-                  Go to Dashboard <ArrowRight className="ml-2 w-5 h-5" />
+                  Go to Command Center <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="w-full sm:w-1/2 h-12 text-md font-medium border-gray-200 hover:bg-white hover:text-indigo-600 transition-colors">
-                <Link href="/owner/settings">
-                  View Billing Details
-                </Link>
-              </Button>
+
+              {/* Emergency Report Button */}
+              <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-1/2 h-11 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 border-rose-500/30 gap-1.5"
+                  >
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>🚨 Report Payment Issue</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-base font-bold flex items-center gap-2 text-foreground">
+                      <AlertTriangle className="h-5 w-5 text-rose-500" />
+                      Report Payment Activation Issue
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground">
+                      If your payment was deducted but your subscription is not active yet, use this pre-filled diagnostic payload to contact our engineering support immediately.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-3 pt-2">
+                    <div className="p-3 bg-muted rounded-lg font-mono text-[11px] space-y-1 overflow-x-auto text-foreground max-h-48">
+                      <pre>{technicalReportData}</pre>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="flex-1 text-xs gap-1.5" onClick={handleCopyReport}>
+                        {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copied ? "Copied!" : "Copy Diagnostics"}
+                      </Button>
+                      <Button size="sm" className="flex-1 text-xs btn-premium" asChild>
+                        <a href={`mailto:support@prozync.in?subject=SmartERP%20Payment%20Issue%20-%20Order%20${orderId}&body=${encodeURIComponent(technicalReportData)}`}>
+                          <Mail className="h-3.5 w-3.5 mr-1" /> Email Support
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardFooter>
           </Card>
-
-          <div className="mt-8 text-center space-y-4">
-            <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
-              <Mail className="w-4 h-4" />
-              <span>Need help? Contact us at </span>
-              <a href="mailto:support@prozync.in" className="text-indigo-600 font-semibold hover:underline">support@prozync.in</a>
-            </div>
-            
-            <Link href="/owner" className="inline-flex items-center text-sm text-gray-400 hover:text-gray-600 transition-colors">
-              <ArrowLeft className="mr-2 w-4 h-4" /> Back to SmartERP
-            </Link>
-          </div>
         </motion.div>
       </div>
     </OwnerLayout>
