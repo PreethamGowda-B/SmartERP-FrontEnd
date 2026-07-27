@@ -15,6 +15,7 @@ import {
   Check,
   Sparkles,
   RefreshCw,
+  HeartHandshake,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -31,11 +32,11 @@ import { useToast } from "@/hooks/use-toast"
 
 const ACTIVATION_STEPS = [
   "Verifying payment signature...",
-  "Activating your subscription plan...",
-  "Updating company feature limits...",
-  "Refreshing tenant workspace permissions...",
-  "Preparing your executive dashboard...",
+  "Activating your subscription...",
+  "Updating company features...",
+  "Preparing your workspace...",
   "Almost ready...",
+  "Thank you for your purchase!",
 ]
 
 export default function PaymentSuccessPage() {
@@ -52,6 +53,7 @@ export default function PaymentSuccessPage() {
   const [isActivated, setIsActivated] = useState(false)
   const [activePlanName, setActivePlanName] = useState<string>("Basic")
   const [isDelayed, setIsDelayed] = useState(false)
+  const [hasError, setHasError] = useState(false)
   const [copied, setCopied] = useState(false)
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [pollCount, setPollCount] = useState(0)
@@ -65,8 +67,8 @@ export default function PaymentSuccessPage() {
 
     const interval = setInterval(() => {
       setStepIndex((prev) => (prev < ACTIVATION_STEPS.length - 1 ? prev + 1 : prev))
-      setProgress((prev) => Math.min(prev + 15, 90))
-    }, 2500)
+      setProgress((prev) => Math.min(prev + 15, 95))
+    }, 2200)
 
     return () => clearInterval(interval)
   }, [isActivated])
@@ -80,8 +82,14 @@ export default function PaymentSuccessPage() {
       const isPaidPlan = res.plan && res.plan.id > 1 && !res.plan.is_trial
       if (isPaidPlan) {
         setIsActivated(true)
+        setHasError(false)
         setActivePlanName(res.plan.name || "Pro")
         setProgress(100)
+
+        // Notify global layout listeners to refresh subscription session
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("subscription-activated"))
+        }
 
         toast({
           title: "🎉 Welcome to SmartERP " + (res.plan.name || "Pro") + "!",
@@ -95,13 +103,18 @@ export default function PaymentSuccessPage() {
         return
       }
 
-      // Check if polling has exceeded 25 seconds
+      // Check if polling has exceeded 20 seconds
       const elapsed = Date.now() - startTimeRef.current
-      if (elapsed > 25000) {
+      if (elapsed > 20000) {
         setIsDelayed(true)
       }
     } catch (err) {
       logger.error("[PAYMENT] Subscription verification poll error", err)
+      // If error occurs after 30 seconds, display non-scary recovery UI
+      const elapsed = Date.now() - startTimeRef.current
+      if (elapsed > 30000) {
+        setHasError(true)
+      }
     }
   }, [router, toast])
 
@@ -175,7 +188,7 @@ Status: Pending Backend Activation Sync
               </div>
 
               <CardTitle className="text-3xl font-extrabold tracking-tight text-foreground">
-                {isActivated ? "Subscription Activated! 🎉" : "Payment Received Successfully"}
+                {isActivated ? "🎉 Welcome to SmartERP Pro!" : "🎉 Payment Successful!"}
               </CardTitle>
 
               <div className="flex items-center justify-center gap-2 mt-3">
@@ -183,16 +196,19 @@ Status: Pending Backend Activation Sync
                   variant={isActivated ? "success" : "outline"}
                   className="text-xs px-3 py-1 font-semibold"
                 >
-                  {isActivated ? `Active Plan: ${activePlanName}` : "Verifying & Activating..."}
+                  {isActivated ? `Active Plan: ${activePlanName}` : "Activating Subscription..."}
                 </Badge>
               </div>
             </CardHeader>
 
             <CardContent className="px-6 sm:px-10 pb-8 space-y-6">
               {/* Progress Bar & Rotating Message */}
-              {!isActivated && (
+              {!isActivated && !hasError && (
                 <div className="space-y-3 bg-muted/30 p-5 rounded-2xl border border-border/60">
-                  <div className="flex items-center justify-between text-xs font-semibold text-foreground">
+                  <p className="text-sm font-medium text-foreground">
+                    Thank you for choosing SmartERP. We're preparing your upgraded workspace.
+                  </p>
+                  <div className="flex items-center justify-between text-xs font-semibold text-foreground pt-2">
                     <span className="flex items-center gap-1.5">
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                       {ACTIVATION_STEPS[stepIndex]}
@@ -201,13 +217,13 @@ Status: Pending Backend Activation Sync
                   </div>
                   <Progress value={progress} className="h-2 bg-muted [&>div]:bg-primary transition-all duration-500" />
                   <p className="text-[11px] text-muted-foreground text-left">
-                    Please keep this window open while we prepare your upgraded workspace. No manual action is required.
+                    No action is required. Please keep this page open while activation completes.
                   </p>
                 </div>
               )}
 
-              {/* Delayed Reassurance Banner (> 25 seconds) */}
-              {isDelayed && !isActivated && (
+              {/* Delayed Reassurance Banner (> 20 seconds) */}
+              {isDelayed && !isActivated && !hasError && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
@@ -215,10 +231,27 @@ Status: Pending Backend Activation Sync
                 >
                   <div className="flex items-center gap-2 font-bold text-xs text-amber-600 dark:text-amber-400">
                     <ShieldCheck className="h-4 w-4" />
-                    <span>Payment Confirmed — Finalizing Activation</span>
+                    <span>Payment Received Successfully</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Thank you for your purchase. We have verified your payment with Razorpay and your money is 100% safe. Activation is taking a few seconds longer than usual due to network sync. You do <strong className="text-foreground">NOT</strong> need to pay again.
+                    Thank you for your purchase. We have successfully verified your payment and your money is completely safe. We're currently activating your subscription. This is taking a little longer than expected. You do <strong className="text-foreground">NOT</strong> need to pay again. Please keep this page open while we finish setting everything up.
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Unexpected Technical Recovery Screen */}
+              {hasError && !isActivated && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-5 text-left space-y-3"
+                >
+                  <div className="flex items-center gap-2 font-bold text-sm text-blue-600 dark:text-blue-400">
+                    <HeartHandshake className="h-5 w-5" />
+                    <span>We're Sorry for the Inconvenience</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Your payment has already been successfully verified. Your money is completely safe. A temporary technical issue occurred while activating your subscription. Our system is continuing to activate your plan automatically. Our support team can also assist you if needed.
                   </p>
                 </motion.div>
               )}
@@ -231,7 +264,7 @@ Status: Pending Backend Activation Sync
                     <span>Workspace Upgraded to SmartERP {activePlanName}</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Your feature limits, payroll modules, location tracking, and team capacity have been unlocked across your organization.
+                    Your subscription has been activated successfully. Features, limits, and team permissions have been updated.
                   </p>
                 </div>
               )}
