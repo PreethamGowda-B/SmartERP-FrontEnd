@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server"
 // Paths that are always allowed through — never redirect these or you get infinite loops
 const ALWAYS_ALLOWED = [
   "/not-found", "/suspended", "/privacy", "/terms",
+  "/pricing", "/features", "/about", "/contact",
   "/auth", "/owner", "/employee", "/hr", "/customer", "/videos",
   "/api", "/_next", "/monitoring",
 ]
@@ -44,6 +45,7 @@ export function middleware(request: NextRequest) {
     const activeTopLevelPaths = [
       "/auth", "/owner", "/employee", "/hr",
       "/customer", "/videos",
+      "/pricing", "/features", "/about", "/contact",
       "/privacy", "/terms", "/suspended", "/not-found",
       "/api", "/_next", "/monitoring", "/backend-test",
     ]

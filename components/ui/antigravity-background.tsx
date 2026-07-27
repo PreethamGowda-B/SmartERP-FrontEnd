@@ -175,9 +175,9 @@ export const AntigravityBackground: React.FC = () => {
             />
 
             {/* Aurora Layers: These create the ₹1L+ depth feel */}
-            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[140px] animate-aurora mix-blend-screen" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-accent/20 rounded-full blur-[160px] animate-aurora mix-blend-screen" style={{ animationDelay: '-10s' }} />
-            <div className="absolute top-[30%] left-[20%] w-[30%] h-[30%] bg-secondary/10 rounded-full blur-[120px] animate-aurora mix-blend-screen" style={{ animationDelay: '-5s' }} />
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 dark:bg-primary/20 rounded-full blur-[140px] animate-aurora dark:mix-blend-screen" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-accent/10 dark:bg-accent/20 rounded-full blur-[160px] animate-aurora dark:mix-blend-screen" style={{ animationDelay: '-10s' }} />
+            <div className="absolute top-[30%] left-[20%] w-[30%] h-[30%] bg-secondary/10 dark:bg-secondary/20 rounded-full blur-[120px] animate-aurora dark:mix-blend-screen" style={{ animationDelay: '-5s' }} />
 
             {/* Subtle Grid Texture for that professional SaaS look */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none"

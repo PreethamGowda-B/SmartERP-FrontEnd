@@ -120,7 +120,8 @@ export function LandingPage() {
           {/* Navigation items */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <a href="#demo" className="hover:text-foreground transition-colors">Product Demo</a>
-            <a href="#features" className="hover:text-foreground transition-colors">Features</a>
+            <Link href="/features" className="hover:text-foreground transition-colors">Features</Link>
+            <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
             <a href="#benefits" className="hover:text-foreground transition-colors">Why SmartERP</a>
             <Link
               href="/customer/landing"
@@ -137,7 +138,7 @@ export function LandingPage() {
               asChild
               variant="outline"
               size="sm"
-              className="hidden sm:inline-flex items-center gap-2 border-border bg-card text-foreground hover:bg-muted hover:text-primary transition-all font-semibold"
+              className="hidden sm:inline-flex items-center gap-2 border-border bg-card text-foreground hover:bg-muted hover:border-primary/40 transition-all font-semibold shadow-xs"
             >
               <Link href="/customer/landing">
                 <UserCheck className="h-4 w-4 text-primary" />
@@ -149,7 +150,7 @@ export function LandingPage() {
               asChild
               variant="ghost"
               size="sm"
-              className="font-semibold hover:bg-muted"
+              className="font-semibold hover:bg-muted text-foreground"
             >
               <Link href="/auth/login?mode=login">
                 Sign In
@@ -206,12 +207,12 @@ export function LandingPage() {
               asChild
               size="lg"
               variant="outline"
-              className="w-full sm:w-auto text-base font-semibold px-8 py-6 border-border bg-card hover:bg-muted text-foreground cursor-pointer"
+              className="w-full sm:w-auto text-base font-semibold px-8 py-6 border-border bg-card hover:bg-muted hover:border-primary/50 text-foreground shadow-sm cursor-pointer"
             >
               <Link href="/customer/landing">
                 <UserCheck className="mr-2 h-5 w-5 text-primary" />
                 Access Customer Portal
-                <ExternalLink className="ml-2 h-4 w-4 opacity-60" />
+                <ExternalLink className="ml-2 h-4 w-4 opacity-70" />
               </Link>
             </Button>
           </div>
@@ -556,14 +557,17 @@ export function LandingPage() {
               <h4 className="font-bold text-xs uppercase tracking-wider text-foreground mb-3">Product</h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
                 <li><a href="#demo" className="hover:text-foreground transition-colors">Interactive Demo</a></li>
-                <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
+                <li><Link href="/features" className="hover:text-foreground transition-colors">Features</Link></li>
+                <li><Link href="/pricing" className="hover:text-foreground transition-colors">Pricing Plans</Link></li>
                 <li><a href="#benefits" className="hover:text-foreground transition-colors">Why SmartERP</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-bold text-xs uppercase tracking-wider text-foreground mb-3">Legal</h4>
+              <h4 className="font-bold text-xs uppercase tracking-wider text-foreground mb-3">Company & Legal</h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
+                <li><Link href="/about" className="hover:text-foreground transition-colors">About Us</Link></li>
+                <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact Support</Link></li>
                 <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
                 <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
               </ul>
