@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { AntigravityBackground } from "@/components/ui/antigravity-background"
 import {
@@ -29,7 +29,6 @@ import {
 import { useState, useEffect, useRef } from "react"
 
 export function LandingPage() {
-  const router = useRouter()
   const [counters, setCounters] = useState({ users: 1500, jobs: 12500, teams: 450 })
 
   // Demo Video Controls
@@ -109,56 +108,62 @@ export function LandingPage() {
       {/* ── 1. Navigation Header ─────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/60 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push("/")}>
+          <Link href="/" className="flex items-center gap-3 cursor-pointer">
             <div className="p-2 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg shadow-blue-500/20">
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <span className="text-xl font-black tracking-tight text-foreground">
               SmartERP<span className="text-blue-500">.</span>
             </span>
-          </div>
+          </Link>
 
           {/* Navigation items */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <a href="#demo" className="hover:text-foreground transition-colors">Product Demo</a>
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#benefits" className="hover:text-foreground transition-colors">Why SmartERP</a>
-            <button
-              onClick={() => router.push("/customer/landing")}
+            <Link
+              href="/customer/landing"
               className="hover:text-blue-500 transition-colors flex items-center gap-1.5 font-semibold text-blue-500"
             >
               <Sparkles className="h-3.5 w-3.5" />
               Customer Portal
-            </button>
+            </Link>
           </nav>
 
           <div className="flex items-center gap-3">
             {/* Customer Portal Quick Action */}
             <Button
+              asChild
               variant="outline"
               size="sm"
-              onClick={() => router.push("/customer/landing")}
               className="hidden sm:inline-flex items-center gap-2 border-border bg-card text-foreground hover:bg-muted hover:text-primary transition-all font-semibold"
             >
-              <UserCheck className="h-4 w-4 text-primary" />
-              Customer Portal
+              <Link href="/customer/landing">
+                <UserCheck className="h-4 w-4 text-primary" />
+                Customer Portal
+              </Link>
             </Button>
 
             <Button
+              asChild
               variant="ghost"
               size="sm"
-              onClick={() => router.push("/auth/login?mode=login")}
               className="font-semibold hover:bg-muted"
             >
-              Sign In
+              <Link href="/auth/login?mode=login">
+                Sign In
+              </Link>
             </Button>
             
             <Button
+              asChild
               size="sm"
-              onClick={() => router.push("/auth/login?mode=signup")}
               className="font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30"
             >
-              Get Started
+              <Link href="/auth/login?mode=signup">
+                Get Started
+              </Link>
             </Button>
           </div>
         </div>
@@ -187,23 +192,27 @@ export function LandingPage() {
           {/* Action CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
             <Button
+              asChild
               size="lg"
-              onClick={() => router.push("/auth/login?mode=signup")}
               className="w-full sm:w-auto text-base font-bold px-8 py-6 bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/30 group cursor-pointer"
             >
-              Start Free Trial
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              <Link href="/auth/login?mode=signup">
+                Start Free Trial
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </Button>
 
             <Button
+              asChild
               size="lg"
               variant="outline"
-              onClick={() => router.push("/customer/landing")}
               className="w-full sm:w-auto text-base font-semibold px-8 py-6 border-border bg-card hover:bg-muted text-foreground cursor-pointer"
             >
-              <UserCheck className="mr-2 h-5 w-5 text-primary" />
-              Access Customer Portal
-              <ExternalLink className="ml-2 h-4 w-4 opacity-60" />
+              <Link href="/customer/landing">
+                <UserCheck className="mr-2 h-5 w-5 text-primary" />
+                Access Customer Portal
+                <ExternalLink className="ml-2 h-4 w-4 opacity-60" />
+              </Link>
             </Button>
           </div>
 
@@ -369,21 +378,25 @@ export function LandingPage() {
 
             <div className="flex flex-col sm:flex-row lg:flex-col gap-3 justify-center">
               <Button
+                asChild
                 size="lg"
-                onClick={() => router.push("/customer/landing")}
                 className="w-full text-sm font-bold px-6 py-6 bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/30 cursor-pointer"
               >
-                <UserCheck className="mr-2 h-5 w-5" />
-                Access Customer Portal
+                <Link href="/customer/landing">
+                  <UserCheck className="mr-2 h-5 w-5" />
+                  Access Customer Portal
+                </Link>
               </Button>
               <Button
+                asChild
                 size="lg"
                 variant="outline"
-                onClick={() => router.push("/customer/login")}
                 className="w-full text-sm font-semibold px-6 py-6 border-white/20 bg-white/10 hover:bg-white/20 text-white cursor-pointer"
               >
-                Customer Sign In
-                <ChevronRight className="ml-2 h-4 w-4" />
+                <Link href="/customer/login">
+                  Customer Sign In
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
             </div>
           </div>
@@ -464,21 +477,25 @@ export function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
+                asChild
                 size="lg"
-                onClick={() => router.push("/auth/login?mode=signup")}
                 className="text-sm font-bold px-8 py-6 bg-white hover:bg-slate-100 text-slate-900 shadow-xl cursor-pointer"
               >
-                Start Your Free Trial
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <Link href="/auth/login?mode=signup">
+                  Start Your Free Trial
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
               </Button>
               <Button
+                asChild
                 size="lg"
                 variant="outline"
-                onClick={() => router.push("/customer/landing")}
                 className="text-sm font-semibold px-8 py-6 border-white/20 bg-white/10 hover:bg-white/20 text-white cursor-pointer"
               >
-                <UserCheck className="mr-2 h-5 w-5" />
-                Access Customer Portal
+                <Link href="/customer/landing">
+                  <UserCheck className="mr-2 h-5 w-5" />
+                  Access Customer Portal
+                </Link>
               </Button>
             </div>
           </div>
@@ -511,12 +528,12 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center md:text-left mb-10">
             <div className="space-y-3 md:col-span-1">
-              <div className="flex items-center justify-center md:justify-start gap-2 cursor-pointer" onClick={() => router.push("/")}>
+              <Link href="/" className="flex items-center justify-center md:justify-start gap-2 cursor-pointer">
                 <div className="p-2 bg-blue-600 rounded-xl">
                   <Building2 className="h-5 w-5 text-white" />
                 </div>
                 <span className="font-extrabold text-xl">SmartERP</span>
-              </div>
+              </Link>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Enterprise field workforce management and real-time customer service tracking.
               </p>
@@ -526,12 +543,12 @@ export function LandingPage() {
               <h4 className="font-bold text-xs uppercase tracking-wider text-foreground mb-3">Portals</h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
                 <li>
-                  <button onClick={() => router.push("/customer/landing")} className="hover:text-blue-500 transition-colors flex items-center gap-1.5 mx-auto md:mx-0">
+                  <Link href="/customer/landing" className="hover:text-blue-500 transition-colors flex items-center gap-1.5 justify-center md:justify-start">
                     <UserCheck className="h-3.5 w-3.5 text-blue-500" /> Customer Portal
-                  </button>
+                  </Link>
                 </li>
-                <li><button onClick={() => router.push("/customer/login")} className="hover:text-foreground transition-colors">Customer Sign In</button></li>
-                <li><button onClick={() => router.push("/auth/login")} className="hover:text-foreground transition-colors">Staff & Crew Sign In</button></li>
+                <li><Link href="/customer/login" className="hover:text-foreground transition-colors">Customer Sign In</Link></li>
+                <li><Link href="/auth/login" className="hover:text-foreground transition-colors">Staff & Crew Sign In</Link></li>
               </ul>
             </div>
 
@@ -547,8 +564,8 @@ export function LandingPage() {
             <div>
               <h4 className="font-bold text-xs uppercase tracking-wider text-foreground mb-3">Legal</h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
-                <li><button onClick={() => router.push("/terms")} className="hover:text-foreground transition-colors">Terms of Service</button></li>
-                <li><button onClick={() => router.push("/privacy")} className="hover:text-foreground transition-colors">Privacy Policy</button></li>
+                <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
+                <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
           </div>
