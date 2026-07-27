@@ -102,8 +102,11 @@ export function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
+    <div className="min-h-screen relative bg-background text-foreground">
       <AntigravityBackground />
+
+      {/* Main content wrapper — must be above z-0 background */}
+      <div className="relative z-10">
 
       {/* ── 1. Navigation Header ─────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/60 shadow-xs">
@@ -579,6 +582,7 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
+      </div>{/* end z-10 content wrapper */}
     </div>
   )
 }
