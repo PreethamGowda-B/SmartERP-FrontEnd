@@ -1,21 +1,19 @@
 "use client"
 
 import { useEffect, useState, useCallback, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import {
   CheckCircle2,
   ArrowRight,
   ShieldCheck,
   Mail,
-  ArrowLeft,
   Loader2,
   AlertTriangle,
-  HelpCircle,
   Copy,
   Check,
   Sparkles,
-  RefreshCw,
   HeartHandshake,
+  LayoutDashboard,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -61,6 +59,16 @@ export default function PaymentSuccessPage() {
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null)
   const startTimeRef = useRef<number>(Date.now())
 
+  // Persist pending payment marker to localStorage for background polling fallback
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "smarterp_pending_payment",
+        JSON.stringify({ orderId, paymentId, timestamp: Date.now() })
+      )
+    }
+  }, [orderId, paymentId])
+
   // Step Message Rotator
   useEffect(() => {
     if (isActivated) return
@@ -86,8 +94,8 @@ export default function PaymentSuccessPage() {
         setActivePlanName(res.plan.name || "Pro")
         setProgress(100)
 
-        // Notify global layout listeners to refresh subscription session
         if (typeof window !== "undefined") {
+          localStorage.removeItem("smarterp_pending_payment")
           window.dispatchEvent(new CustomEvent("subscription-activated"))
         }
 
@@ -110,7 +118,6 @@ export default function PaymentSuccessPage() {
       }
     } catch (err) {
       logger.error("[PAYMENT] Subscription verification poll error", err)
-      // If error occurs after 30 seconds, display non-scary recovery UI
       const elapsed = Date.now() - startTimeRef.current
       if (elapsed > 30000) {
         setHasError(true)
@@ -120,8 +127,6 @@ export default function PaymentSuccessPage() {
 
   useEffect(() => {
     verifyStatus()
-
-    // Poll every 3 seconds until activated
     pollTimerRef.current = setInterval(verifyStatus, 3000)
 
     return () => {
@@ -188,7 +193,7 @@ Status: Pending Backend Activation Sync
               </div>
 
               <CardTitle className="text-3xl font-extrabold tracking-tight text-foreground">
-                {isActivated ? "🎉 Welcome to SmartERP Pro!" : "🎉 Payment Successful!"}
+                {isActivated ? "🎉 Welcome to SmartERP Pro!" : "🎉 Payment Successful"}
               </CardTitle>
 
               <div className="flex items-center justify-center gap-2 mt-3">
@@ -234,7 +239,7 @@ Status: Pending Backend Activation Sync
                     <span>Payment Received Successfully</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Thank you for your purchase. We have successfully verified your payment and your money is completely safe. We're currently activating your subscription. This is taking a little longer than expected. You do <strong className="text-foreground">NOT</strong> need to pay again. Please keep this page open while we finish setting everything up.
+                    Thank you for your purchase. We have successfully verified your payment and your money is completely safe. We're currently activating your subscription. This is taking a little longer than expected. You do <strong className="text-foreground">NOT</strong> need to pay again. We'll automatically complete the activation and take you to your dashboard.
                   </p>
                 </motion.div>
               )}
@@ -251,7 +256,7 @@ Status: Pending Backend Activation Sync
                     <span>We're Sorry for the Inconvenience</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Your payment has already been successfully verified. Your money is completely safe. A temporary technical issue occurred while activating your subscription. Our system is continuing to activate your plan automatically. Our support team can also assist you if needed.
+                    Your payment has already been verified successfully. Your money is completely safe. A temporary technical issue occurred while activating your subscription. Our system is continuing to activate your plan automatically in the background. Please feel free to open your dashboard below.
                   </p>
                 </motion.div>
               )}
@@ -271,13 +276,14 @@ Status: Pending Backend Activation Sync
             </CardContent>
 
             <CardFooter className="bg-muted/20 border-t border-border/70 p-6 flex flex-col sm:flex-row gap-3">
+              {/* Continue to Dashboard Button */}
               <Button
                 asChild
                 className="w-full sm:w-1/2 h-11 text-xs font-bold btn-premium"
-                disabled={!isActivated}
               >
                 <Link href="/owner">
-                  Go to Command Center <ArrowRight className="ml-2 h-4 w-4" />
+                  <span>Continue to Dashboard</span>
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
 

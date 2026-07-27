@@ -20,6 +20,7 @@ import PremiumLoader from "@/components/premium-loader"
 import { FloatingActionHub } from "@/components/floating-action-hub"
 import { GlobalCommandPalette } from "@/components/global-command-palette"
 import { AICopilot } from "@/components/ai-copilot"
+import { BackgroundSubscriptionPoller } from "@/components/background-subscription-poller"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import "./globals.css"
 
@@ -152,6 +153,7 @@ export default function RootLayout({
                     <FloatingActionHub />
                     <GlobalCommandPalette />
                     <AICopilot />
+                    <BackgroundSubscriptionPoller />
                   </CommandRegistryProvider>
                 </NotificationProvider>
               </AuthProvider>
