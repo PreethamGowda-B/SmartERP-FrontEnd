@@ -1,14 +1,14 @@
 "use client"
 
-import { useState } from "react"
-import { FileSpreadsheet, Upload, AlertCircle, CheckCircle2, Download, AlertTriangle, X, Check } from "lucide-react"
+import { useState, useRef } from "react"
+import { FileSpreadsheet, Upload, AlertCircle, CheckCircle2, Download, AlertTriangle, Check } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
 
-interface CsvRow {
+export interface CsvRow {
   id: number
   name: string
   email: string
@@ -32,20 +32,76 @@ export function CsvImportValidatorModal({
   title = "Bulk CSV Import Validator",
 }: CsvImportValidatorModalProps) {
   const { toast } = useToast()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [rows, setRows] = useState<CsvRow[]>([])
   const [uploaded, setUploaded] = useState(false)
+  const [fileName, setFileName] = useState<string | null>(null)
 
-  // Demo sample loader for client verification
-  const handleSimulateFileSelect = () => {
-    const sampleRows: CsvRow[] = [
-      { id: 1, name: "Sarah Jenkins", email: "sarah.j@company.com", role: "employee", department: "Engineering", isValid: true, errors: [] },
-      { id: 2, name: "Alex Rivera", email: "invalid-email-format", role: "hr", department: "HR", isValid: false, errors: ["Invalid email format"] },
-      { id: 3, name: "David Chen", email: "david.c@company.com", role: "employee", department: "", isValid: false, errors: ["Missing department"] },
-      { id: 4, name: "Maria Garcia", email: "maria.g@company.com", role: "owner", department: "Executive", isValid: true, errors: [] },
-    ]
+  // Real CSV text parser
+  const parseCsvText = (text: string) => {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0)
+    if (lines.length <= 1) {
+      toast({
+        title: "Empty or Invalid CSV",
+        description: "The uploaded CSV file contains no data rows.",
+        variant: "destructive",
+      })
+      return
+    }
 
-    setRows(sampleRows)
+    const parsed: CsvRow[] = []
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    // Skip header line
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(",").map((c) => c.trim().replace(/^["']|["']$/g, ""))
+      const name = cols[0] || ""
+      const email = cols[1] || ""
+      const role = cols[2] || "employee"
+      const department = cols[3] || ""
+
+      const errors: string[] = []
+      if (!name) errors.push("Missing name")
+      if (!email) errors.push("Missing email")
+      else if (!emailRegex.test(email)) errors.push("Invalid email format")
+      if (!department) errors.push("Missing department")
+
+      parsed.push({
+        id: i,
+        name,
+        email,
+        role,
+        department,
+        isValid: errors.length === 0,
+        errors,
+      })
+    }
+
+    setRows(parsed)
     setUploaded(true)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setFileName(file.name)
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const content = event.target?.result as string
+      if (content) parseCsvText(content)
+    }
+    reader.readAsText(file)
+  }
+
+  const handleSimulateFileSelect = () => {
+    const sampleCsv = `Name,Email,Role,Department
+Sarah Jenkins,sarah.j@company.com,employee,Engineering
+Alex Rivera,invalid-email-format,hr,HR
+David Chen,david.c@company.com,employee,
+Maria Garcia,maria.g@company.com,owner,Executive`
+    setFileName("sample_employees.csv")
+    parseCsvText(sampleCsv)
   }
 
   const validRows = rows.filter((r) => r.isValid)
@@ -64,9 +120,28 @@ export function CsvImportValidatorModal({
     onImportConfirmed(validRows)
     toast({
       title: "Bulk Import Successful! 🎉",
-      description: `Successfully imported ${validRows.length} valid records.`,
+      description: `Successfully imported ${validRows.length} valid records to SmartERP.`,
     })
     onOpenChange(false)
+  }
+
+  const handleDownloadErrorCsv = () => {
+    if (invalidRows.length === 0) return
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      ["Name,Email,Role,Department,Errors"]
+        .concat(
+          invalidRows.map((r) => `"${r.name}","${r.email}","${r.role}","${r.department}","${r.errors.join("; ")}"`)
+        )
+        .join("\n")
+
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", "csv_import_errors.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   return (
@@ -93,14 +168,22 @@ export function CsvImportValidatorModal({
             )}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Preview, validate, and isolate invalid rows before committing records to SmartERP.
+            Preview, validate, and isolate invalid rows before committing records to SmartERP. {fileName && `File: ${fileName}`}
           </DialogDescription>
         </DialogHeader>
 
         <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".csv"
+            className="hidden"
+          />
+
           {!uploaded ? (
             <div
-              onClick={handleSimulateFileSelect}
+              onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-border/80 hover:border-primary rounded-2xl p-10 text-center cursor-pointer transition-colors space-y-3 bg-muted/20"
             >
               <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto text-primary">
@@ -108,11 +191,16 @@ export function CsvImportValidatorModal({
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground">Click to upload CSV file</p>
-                <p className="text-xs text-muted-foreground mt-1">Supports .csv and .xlsx formats up to 10MB</p>
+                <p className="text-xs text-muted-foreground mt-1">Supports .csv format up to 10MB</p>
               </div>
-              <Button size="sm" variant="outline" className="text-xs mt-2">
-                Simulate CSV Validation Preview
-              </Button>
+              <div className="pt-2 flex items-center justify-center gap-2">
+                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} className="text-xs">
+                  Choose CSV File
+                </Button>
+                <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleSimulateFileSelect(); }} className="text-xs text-muted-foreground">
+                  Load Sample Data
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -137,8 +225,8 @@ export function CsvImportValidatorModal({
                             <AlertCircle className="h-4 w-4 text-rose-500" />
                           )}
                         </TableCell>
-                        <TableCell className="text-xs font-semibold text-foreground">{row.name}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{row.email}</TableCell>
+                        <TableCell className="text-xs font-semibold text-foreground">{row.name || "(Empty)"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{row.email || "(Empty)"}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{row.department || "N/A"}</TableCell>
                         <TableCell className="text-xs text-right">
                           {row.isValid ? (
@@ -159,8 +247,8 @@ export function CsvImportValidatorModal({
                     <AlertTriangle className="h-4 w-4 shrink-0" />
                     Invalid rows will be skipped during import.
                   </span>
-                  <Button size="sm" variant="ghost" className="text-xs h-7 hover:bg-amber-500/20">
-                    Download Error CSV
+                  <Button size="sm" variant="ghost" onClick={handleDownloadErrorCsv} className="text-xs h-7 hover:bg-amber-500/20">
+                    <Download className="h-3 w-3 mr-1" /> Download Error CSV
                   </Button>
                 </div>
               )}
