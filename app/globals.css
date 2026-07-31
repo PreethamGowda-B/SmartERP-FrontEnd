@@ -421,16 +421,19 @@
 .entrance-content {
   opacity: 0;
   transform: scale(0.98) translateY(20px);
+  /* NOTE: pointer-events intentionally NOT set here.
+   * The flagship-loader (z-index: 9999) covers the page visually during intro.
+   * In light theme the loader background is white-on-white, so users see a
+   * loaded page and click immediately — pointer-events: none was silently
+   * swallowing every click for ~2.7s. The loader z-index handles blocking. */
   transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.5s ease;
   filter: blur(10px);
-  pointer-events: none; /* Never block clicks while invisible/blurry */
 }
 
 .entrance-content.visible {
   opacity: 1;
   transform: scale(1) translateY(0);
   filter: blur(0px);
-  pointer-events: auto; /* Restore clicks once fully revealed */
 }
 
 /* Cinematic Grain */
