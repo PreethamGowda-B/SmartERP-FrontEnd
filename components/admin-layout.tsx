@@ -40,7 +40,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   useEffect(() => {
     if (!isLoading && (!user || user.role !== 'super_admin')) {
       logger.warn("🚫 Access denied: Not a superadmin")
-      router.push("/auth/login")
+      router.push("/superadmin/login")
     }
   }, [user?.id, user?.role, isLoading, router])
 

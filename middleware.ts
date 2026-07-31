@@ -15,8 +15,13 @@ export function middleware(request: NextRequest) {
     const cleanHost = host.replace(/:\d+$/, "")
 
     // Subdomain-specific root rewrites/redirects
-    if (cleanHost === "superadmin.prozync.in" && pathname === "/") {
-        return NextResponse.redirect(new URL("/superadmin", request.url))
+    if (cleanHost === "superadmin.prozync.in") {
+        if (pathname === "/") {
+            return NextResponse.redirect(new URL("/superadmin", request.url))
+        }
+        if (pathname.startsWith("/auth")) {
+            return NextResponse.redirect(new URL("/superadmin/login", request.url))
+        }
     }
     if (cleanHost === "customer.prozync.in" && pathname === "/") {
         return NextResponse.redirect(new URL("/customer/landing", request.url))
