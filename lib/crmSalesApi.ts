@@ -39,6 +39,7 @@ export const crmSalesApi = {
   }) => {
     return await apiClient("/api/v1/crm-sales/leads", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     })
   },
@@ -46,6 +47,7 @@ export const crmSalesApi = {
   updateLeadStage: async (leadId: string, stage: string) => {
     return await apiClient(`/api/v1/crm-sales/leads/${leadId}/stage`, {
       method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ stage }),
     })
   },

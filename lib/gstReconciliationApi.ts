@@ -3,97 +3,128 @@ import { apiClient } from "@/lib/apiClient"
 export interface GstReconciliationRun {
   id: string
   company_id: string
-  created_by: string
   financial_period: string
-  gstr_type: "GSTR_2A" | "GSTR_2B"
-  version: number
-  is_latest: boolean
+  gstr_type: string
   total_books_invoices: number
-  total_portal_invoices: number
   total_matched: number
   total_mismatched: number
-  total_itc_claimed: number | string
-  total_itc_blocked: number | string
-  status: "draft" | "processing" | "completed" | "failed"
+  total_itc_claimed: number
+  total_itc_blocked: number
+  status: string
+  is_latest: boolean
+  version?: number
   created_at: string
 }
 
 export interface GstReconciliationItem {
   id: string
   reconciliation_run_id: string
-  company_id: string
   supplier_gstin: string
   supplier_name: string
   invoice_number_books: string
   invoice_number_portal: string
+  taxable_value_books: number
+  taxable_value_portal: number
+  cgst_books: number
+  cgst_portal: number
+  sgst_books: number
+  sgst_portal: number
+  igst_books: number
+  igst_portal: number
   invoice_date_books: string
   invoice_date_portal: string
-  taxable_value_books: number | string
-  taxable_value_portal: number | string
-  cgst_books: number | string
-  cgst_portal: number | string
-  sgst_books: number | string
-  sgst_portal: number | string
-  igst_books: number | string
-  igst_portal: number | string
-  variance_amount: number | string
-  match_status: "exact_match" | "fuzzy_match" | "tax_mismatch" | "missing_in_gstr" | "missing_in_books" | "manual_overridden"
-  confidence_score: number | string
+  confidence_score: number
+  match_status: "exact_match" | "fuzzy_match" | "tax_mismatch" | "missing_in_gstr" | "missing_in_books" | "manual_override"
+  variance_amount: number
+  is_itc_eligible: boolean
   ai_match_reasoning: string
-  vendor_notified: boolean
-  vendor_notified_at?: string
-  created_at: string
 }
 
 export const gstReconciliationApi = {
   requestGspOtp: async (gstin: string, username: string) => {
-    const res = await apiClient.post("/api/v1/gst-reconciliation/asp/request-otp", { gstin, username })
-    return res.data
+    return await apiClient("/api/v1/gst-reconciliation/asp/request-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gstin, username }),
+    })
   },
 
-  verifyGspOtp: async (gstin: string, otp: string, requestId?: string) => {
-    const res = await apiClient.post("/api/v1/gst-reconciliation/asp/verify-otp", { gstin, otp, requestId })
-    return res.data
+  verifyGspOtp: async (sessionKey: string, otp: string) => {
+    return await apiClient("/api/v1/gst-reconciliation/asp/verify-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionKey, otp }),
+    })
   },
 
-  triggerRun: async (payload: {
-    financialPeriod: string
-    gstrType?: "GSTR_2A" | "GSTR_2B"
-    booksInvoices: any[]
-    portalInvoices: any[]
-  }) => {
-    const res = await apiClient.post("/api/v1/gst-reconciliation/run", payload)
-    return res.data
+  executeReconciliationRun: async (financialPeriod: string, booksInvoices: any[]) => {
+    return await apiClient("/api/v1/gst-reconciliation/runs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ financialPeriod, booksInvoices }),
+    })
   },
 
-  getRuns: async (period?: string, latestOnly: boolean = true) => {
+  triggerRun: async (data: { financialPeriod: string; gstrType?: string; booksInvoices?: any[]; portalInvoices?: any[] }) => {
+    return await apiClient("/api/v1/gst-reconciliation/runs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+  },
+
+  getLatestRun: async (period?: string) => {
+    const url = period ? `/api/v1/gst-reconciliation/runs?period=${period}` : "/api/v1/gst-reconciliation/runs"
+    return await apiClient(url)
+  },
+
+  getRuns: async (period?: string, latestOnly?: boolean) => {
     const params = new URLSearchParams()
     if (period) params.append("period", period)
-    params.append("latestOnly", String(latestOnly))
-    const res = await apiClient.get(`/api/v1/gst-reconciliation/runs?${params.toString()}`)
-    return res.data
+    if (latestOnly !== undefined) params.append("latestOnly", String(latestOnly))
+    const query = params.toString() ? `?${params.toString()}` : ""
+    return await apiClient(`/api/v1/gst-reconciliation/runs${query}`)
   },
 
   getRunDetails: async (runId: string) => {
-    const res = await apiClient.get(`/api/v1/gst-reconciliation/runs/${runId}`)
-    return res.data
+    return await apiClient(`/api/v1/gst-reconciliation/runs/${runId}`)
   },
 
-  overrideItemStatus: async (itemId: string, matchStatus: string, reasoning: string) => {
-    const res = await apiClient.patch(`/api/v1/gst-reconciliation/items/${itemId}/override`, {
-      matchStatus,
-      reasoning,
+  manualOverrideMatch: async (itemId: string, matchStatus: string, notes?: string) => {
+    return await apiClient("/api/v1/gst-reconciliation/override", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId, matchStatus, notes }),
     })
-    return res.data
   },
 
-  notifyVendors: async (reconciliationRunId: string) => {
-    const res = await apiClient.post("/api/v1/gst-reconciliation/notify-vendors", { reconciliationRunId })
-    return res.data
+  overrideItemStatus: async (itemId: string, matchStatus: string, notes?: string) => {
+    return await apiClient("/api/v1/gst-reconciliation/override", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId, matchStatus, notes }),
+    })
   },
 
-  updateSettings: async (settings: { isAutoPaymentBlockEnabled: boolean; canonicalToleranceAmount?: number }) => {
-    const res = await apiClient.patch("/api/v1/gst-reconciliation/settings", settings)
-    return res.data
+  notifyVendors: async (runId: string) => {
+    return await apiClient(`/api/v1/gst-reconciliation/runs/${runId}/notify-vendors`, {
+      method: "POST",
+    })
+  },
+
+  updateSettings: async (settings: { isAutoPaymentBlockEnabled?: boolean; canonicalToleranceAmount?: number }) => {
+    return await apiClient("/api/v1/gst-reconciliation/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    })
+  },
+
+  sendWhatsAppReminder: async (supplierGstin: string, supplierName: string, phone: string) => {
+    return await apiClient("/api/v1/gst-reconciliation/send-whatsapp-reminder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ supplierGstin, supplierName, phone }),
+    })
   },
 }

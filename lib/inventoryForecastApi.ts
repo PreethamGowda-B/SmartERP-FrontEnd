@@ -71,6 +71,7 @@ export const inventoryForecastApi = {
   }) => {
     return await apiClient("/api/v1/inventory-forecast/suppliers", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     })
   },
@@ -86,6 +87,7 @@ export const inventoryForecastApi = {
   }) => {
     return await apiClient("/api/v1/inventory-forecast/purchase-orders", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     })
   },

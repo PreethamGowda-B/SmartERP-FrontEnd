@@ -48,6 +48,7 @@ export const arCollectionsApi = {
   dispatchReminder: async (scheduleId: string, channel: string = "whatsapp") => {
     return await apiClient("/api/v1/ar-collections/dispatch-reminder", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scheduleId, channel }),
     })
   },
@@ -67,6 +68,7 @@ export const arCollectionsApi = {
   generatePaymentPlanOffer: async (data: { customerName: string; outstandingAmount: number; overdueDays: number }) => {
     return await apiClient("/api/v1/ar-collections/payment-plan-offer", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     })
   },

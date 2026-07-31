@@ -34,6 +34,7 @@ export const payrollValidationApi = {
   validatePreRun: async (month: number, year: number, proposedPayroll: any[] = []) => {
     return await apiClient("/api/v1/payroll-validation/validate-pre-run", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ month, year, proposedPayroll }),
     })
   },
@@ -45,6 +46,7 @@ export const payrollValidationApi = {
   resolveFlag: async (flagId: string, resolutionNotes: string) => {
     return await apiClient(`/api/v1/payroll-validation/validation-flags/${flagId}/resolve`, {
       method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ resolutionNotes }),
     })
   },
@@ -52,6 +54,7 @@ export const payrollValidationApi = {
   approvePreRun: async (runId: string) => {
     return await apiClient("/api/v1/payroll-validation/approve-pre-run", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ runId }),
     })
   },
