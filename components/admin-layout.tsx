@@ -55,9 +55,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Settings", icon: Settings, href: "/settings" },
   ]
 
-  // Get the secret route prefix from current pathname
+  // Get route prefix from current pathname (/superadmin or legacy secret slug)
   const pathParts = pathname.split('/')
-  const secretPrefix = `/${pathParts[1]}`
+  const baseSegment = pathParts[1] || "superadmin"
+  const secretPrefix = `/${baseSegment}`
 
   if (isLoading || !user || user.role !== 'super_admin') {
     return (

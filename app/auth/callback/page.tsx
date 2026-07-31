@@ -95,12 +95,11 @@ function CallbackContent() {
             // Redirect based on role — admin route comes from env, never hardcoded
             if (isSuperAdmin) {
                 const adminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE
-                if (!adminRoute) {
-                    logger.error("NEXT_PUBLIC_ADMIN_ROUTE is not set")
-                    router.push("/not-found")
-                    return
+                if (adminRoute) {
+                    router.push(`/${adminRoute}/dashboard`)
+                } else {
+                    router.push("/superadmin")
                 }
-                router.push(`/${adminRoute}/dashboard`)
             } else if (user.role === "owner") {
                 router.push("/owner")
             } else {

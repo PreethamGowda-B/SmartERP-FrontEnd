@@ -143,8 +143,11 @@ export const getCurrentUser = (): User | null => {
 
   // Priority: If on an admin path, check admin user first
   const pathname = window.location.pathname
-  const isAdminPath = pathname.includes('/super-admin') || 
-                      pathname.includes('[adminRoute]')
+  const hostname = window.location.hostname
+  const isAdminPath = pathname.includes('/superadmin') ||
+                      pathname.includes('/super-admin') ||
+                      pathname.includes('[adminRoute]') ||
+                      hostname.startsWith('superadmin.')
 
   if (isAdminPath) {
     const adminStored = localStorage.getItem("smarterp_admin_user")

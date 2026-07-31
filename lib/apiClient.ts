@@ -47,8 +47,11 @@ function getStorageKeys() {
   if (typeof window === "undefined") return { at: USER_AT, rt: USER_RT }
   
   const pathname = window.location.pathname
-  const isAdminPath = pathname.includes('/super-admin') ||
-                      pathname.includes('[adminRoute]')
+  const hostname = window.location.hostname
+  const isAdminPath = pathname.includes('/superadmin') ||
+                      pathname.includes('/super-admin') ||
+                      pathname.includes('[adminRoute]') ||
+                      hostname.startsWith('superadmin.')
   
   // Also check if we have an active admin session in localStorage
   const adminUser = localStorage.getItem("smarterp_admin_user")

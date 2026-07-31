@@ -5,13 +5,22 @@ import type { NextRequest } from "next/server"
 const ALWAYS_ALLOWED = [
   "/not-found", "/suspended", "/privacy", "/terms",
   "/pricing", "/features", "/about", "/contact",
-  "/auth", "/owner", "/employee", "/hr", "/customer", "/videos",
+  "/auth", "/owner", "/employee", "/hr", "/customer", "/superadmin", "/videos",
   "/api", "/_next", "/monitoring",
 ]
 
 export function middleware(request: NextRequest) {
     const host = request.headers.get("host") || ""
     const pathname = request.nextUrl.pathname
+    const cleanHost = host.replace(/:\d+$/, "")
+
+    // Subdomain-specific root rewrites/redirects
+    if (cleanHost === "superadmin.prozync.in" && pathname === "/") {
+        return NextResponse.redirect(new URL("/superadmin", request.url))
+    }
+    if (cleanHost === "customer.prozync.in" && pathname === "/") {
+        return NextResponse.redirect(new URL("/customer/landing", request.url))
+    }
 
     // Gracefully handle /landing by redirecting to root landing page /
     if (pathname === "/landing") {
@@ -24,12 +33,21 @@ export function middleware(request: NextRequest) {
     }
 
     // 2. Allowed hosts for this Next.js app:
-    //   - www.prozync.in / prozync.in  → main SmartERP frontend
-    //   - client.prozync.in            → Prozync Customer Portal
-    //   - *.vercel.app                 → Vercel preview/staging deployments
-    //   - localhost:*                  → local development
-    const allowedHosts = ["www.prozync.in", "prozync.in", "client.prozync.in"]
-    const isAllowedHost = allowedHosts.some(h => host === h) || host.startsWith("localhost") || host.endsWith(".vercel.app")
+    //   - www.prozync.in / prozync.in       → main company site
+    //   - smarterp.prozync.in              → SmartERP SaaS app
+    //   - customer.prozync.in / client.     → Prozync Customer Portal
+    //   - superadmin.prozync.in            → Super Admin Portal
+    //   - *.vercel.app                      → Vercel deployments
+    //   - localhost:*                       → local development
+    const allowedHosts = [
+      "www.prozync.in",
+      "prozync.in",
+      "smarterp.prozync.in",
+      "customer.prozync.in",
+      "superadmin.prozync.in",
+      "client.prozync.in"
+    ]
+    const isAllowedHost = allowedHosts.some(h => cleanHost === h) || cleanHost.startsWith("localhost") || cleanHost.endsWith(".vercel.app")
 
     // Redirect unknown hosts to the main domain
     if (!isAllowedHost) {
@@ -44,7 +62,7 @@ export function middleware(request: NextRequest) {
     // Scope admin slug validation strictly to unrecognized top-level paths.
     const activeTopLevelPaths = [
       "/auth", "/owner", "/employee", "/hr",
-      "/customer", "/videos",
+      "/customer", "/superadmin", "/videos",
       "/pricing", "/features", "/about", "/contact",
       "/privacy", "/terms", "/suspended", "/not-found",
       "/api", "/_next", "/monitoring", "/backend-test",
