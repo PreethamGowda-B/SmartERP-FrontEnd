@@ -55,7 +55,7 @@ export function CustomerNotificationProvider({ children }: { children: React.Rea
     return () => {
       clearInterval(pollInterval)
     }
-  }, [customer, isLoading, fetchNotifications])
+  }, [customer?.id, isLoading, fetchNotifications])
 
   const markAsRead = async (id: string) => {
     try {

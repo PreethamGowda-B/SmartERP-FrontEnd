@@ -132,7 +132,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       mounted = false
       if (intervalId) clearInterval(intervalId)
     }
-  }, [user, isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role, isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { addNotification } = useNotifications()
 
@@ -295,7 +295,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       logger.error("[v0] Failed to refresh jobs:", err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err)))
     }
-  }, [user])
+  }, [user?.id, user?.role])
 
   return (
     <JobContext.Provider

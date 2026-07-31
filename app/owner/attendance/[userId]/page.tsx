@@ -70,7 +70,7 @@ export default function EmployeeAttendanceDetailPage() {
         if (user && userId) {
             fetchEmployeeAttendance()
         }
-    }, [user, userId, selectedMonth, selectedYear, fetchEmployeeAttendance])
+    }, [user?.id, userId, selectedMonth, selectedYear, fetchEmployeeAttendance])
 
     const formatTime = (timestamp: string | null) => {
         if (!timestamp) return "—"

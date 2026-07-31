@@ -62,18 +62,23 @@ export function useLocationTracking({ onPermissionChange }: UseLocationTrackingO
         }
     }, [])
 
+    const onPermissionChangeRef = useRef(onPermissionChange)
+    useEffect(() => {
+        onPermissionChangeRef.current = onPermissionChange
+    }, [onPermissionChange])
+
     useEffect(() => {
         if (typeof window === "undefined") return
         if (!("geolocation" in navigator)) {
             permRef.current = "unsupported"
-            onPermissionChange?.("unsupported")
+            onPermissionChangeRef.current?.("unsupported")
             return
         }
 
         const handlePosition = (pos: GeolocationPosition) => {
             if (permRef.current !== "granted") {
                 permRef.current = "granted"
-                onPermissionChange?.("granted")
+                onPermissionChangeRef.current?.("granted")
             }
 
             const { latitude: lat, longitude: lng } = pos.coords
@@ -99,7 +104,7 @@ export function useLocationTracking({ onPermissionChange }: UseLocationTrackingO
         const handleError = (err: GeolocationPositionError) => {
             if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
                 permRef.current = "denied"
-                onPermissionChange?.("denied")
+                onPermissionChangeRef.current?.("denied")
             }
         }
 
@@ -114,5 +119,5 @@ export function useLocationTracking({ onPermissionChange }: UseLocationTrackingO
                 navigator.geolocation.clearWatch(watchIdRef.current)
             }
         }
-    }, [onPermissionChange, sendLocation])
+    }, [sendLocation])
 }

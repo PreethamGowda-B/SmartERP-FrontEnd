@@ -27,7 +27,7 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
     if (!isLoading && (!user || user.role !== "owner")) {
       router.push("/")
     }
-  }, [user, isLoading, router])
+  }, [user?.id, user?.role, isLoading, router])
 
   if (isLoading) {
     return (

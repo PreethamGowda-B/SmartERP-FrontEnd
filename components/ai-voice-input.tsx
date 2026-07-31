@@ -14,6 +14,11 @@ export function AIVoiceInput({ onSpeechResult, disabled }: AIVoiceInputProps) {
   const [isListening, setIsListening] = useState(false)
   const [isSupported, setIsSupported] = useState(true)
   const recognitionRef = useRef<any>(null)
+  const onSpeechResultRef = useRef(onSpeechResult)
+
+  useEffect(() => {
+    onSpeechResultRef.current = onSpeechResult
+  }, [onSpeechResult])
 
   useEffect(() => {
     const SpeechRecognition =
@@ -32,7 +37,7 @@ export function AIVoiceInput({ onSpeechResult, disabled }: AIVoiceInputProps) {
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript
       if (transcript) {
-        onSpeechResult(transcript)
+        onSpeechResultRef.current(transcript)
       }
       setIsListening(false)
     }
@@ -47,7 +52,7 @@ export function AIVoiceInput({ onSpeechResult, disabled }: AIVoiceInputProps) {
     }
 
     recognitionRef.current = recognition
-  }, [onSpeechResult])
+  }, [])
 
   const toggleListening = () => {
     if (!recognitionRef.current) return

@@ -31,7 +31,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     if (!isLoading && (!user || user.role !== "employee")) {
       router.push("/")
     }
-  }, [user, isLoading, router])
+  }, [user?.id, user?.role, isLoading, router])
 
   if (isLoading) {
     return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -42,7 +42,7 @@ export function SmartClockInOut() {
     } else {
       setElapsedMs(0)
     }
-  }, [activeRecord, currentTime])
+  }, [activeRecord?.clockIn, activeRecord?.date, currentTime])
 
   // ─── On mount: ask the backend if we have an open record today ─────────
   const fetchOpenRecord = useCallback(async () => {
@@ -94,15 +94,20 @@ export function SmartClockInOut() {
     }
   }, [notification])
 
+  const handleClockOutRef = useRef(handleClockOut)
+  useEffect(() => {
+    handleClockOutRef.current = handleClockOut
+  }, [handleClockOut])
+
   // ─── Auto clock-out at 7 PM ─────────────────────────────────────────────
   useEffect(() => {
     if (!activeRecord) return
     if (currentTime.getHours() >= 19) {
       // Trigger clock-out automatically
       setNotification("You have been automatically clocked out at 7:00 PM")
-      handleClockOut()
+      handleClockOutRef.current()
     }
-  }, [currentTime, activeRecord, handleClockOut])
+  }, [currentTime, activeRecord?.id])
 
   // ─── Get GPS location ───────────────────────────────────────────────────
   const getLocation = (): Promise<string> =>

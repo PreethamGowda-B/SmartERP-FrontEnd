@@ -94,7 +94,7 @@ function AICopilotInner({ user, pathname }: { user: any; pathname: string }) {
     }
 
     checkPlan()
-  }, [user])
+  }, [user?.id, user?.company_id])
 
   // Register Command Palette Action (⌘I)
   useRegisterCommand({

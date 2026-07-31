@@ -72,7 +72,7 @@ export default function OwnerAttendancePage() {
     if (user) {
       fetchAttendanceOverview()
     }
-  }, [user])
+  }, [user?.id])
 
   const formatTime = (timestamp: string | null) => {
     if (!timestamp) return "—"

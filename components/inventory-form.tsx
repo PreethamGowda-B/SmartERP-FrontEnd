@@ -68,7 +68,7 @@ export default function InventoryForm({
       setSupplierEmail(item.supplier_email || "")
       setImagePreview(item.image_url || null)
     }
-  }, [item])
+  }, [item?.id])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

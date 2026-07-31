@@ -23,7 +23,7 @@ export function HRLayout({ children }: HRLayoutProps) {
     if (!isLoading && (!user || (user.role !== "hr" && user.role !== "owner"))) {
       router.push("/")
     }
-  }, [user, isLoading, router])
+  }, [user?.id, user?.role, isLoading, router])
 
   if (isLoading) {
     return (

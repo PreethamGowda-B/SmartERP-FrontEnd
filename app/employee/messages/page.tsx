@@ -99,7 +99,7 @@ function JobMessagesTab() {
       if (selectedJob?.job_id !== jobId) fetchConversations()
       if (selectedJob?.job_id === jobId) apiClient(`/api/messages/job/${jobId}`).catch(() => {})
     }
-  }, [notifications, selectedJob, fetchConversations])
+  }, [notifications[0]?.type, notifications[0]?.data?.job_id, notifications[0]?.message, notifications[0]?.created_at, selectedJob?.job_id, fetchConversations])
 
   const fetchMessages = useCallback(async (jobId: string) => {
     setLoadingMsgs(true)
@@ -149,7 +149,7 @@ function JobMessagesTab() {
   }, [fetchMessages, connectSSE])
 
   useEffect(() => () => { sseRef.current?.close(); if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current) }, [])
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages.length, messages[messages.length - 1]?.id])
   useEffect(() => { fetchConversations(); const id = setInterval(fetchConversations, 30_000); return () => clearInterval(id) }, []) // eslint-disable-line
 
   const sendMessage = async () => {

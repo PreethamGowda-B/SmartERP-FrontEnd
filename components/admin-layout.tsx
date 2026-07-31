@@ -42,7 +42,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       logger.warn("🚫 Access denied: Not a superadmin")
       router.push("/auth/login")
     }
-  }, [user, isLoading, router])
+  }, [user?.id, user?.role, isLoading, router])
 
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, href: "" }, // Base of secret route

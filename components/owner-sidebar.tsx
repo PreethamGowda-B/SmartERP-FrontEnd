@@ -29,6 +29,8 @@ import {
   Megaphone,
   Files,
   UserCheck,
+  Flame,
+  ShieldCheck,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationCenterDrawer } from "@/components/notification-center-drawer"
@@ -41,6 +43,7 @@ const navCategories = [
       { name: "Dashboard", href: "/owner", icon: LayoutDashboard },
       { name: "Tasks", href: "/owner/jobs", icon: Briefcase },
       { name: "Customer Jobs", href: "/owner/customer-jobs", icon: UserCheck },
+      { name: "Sales Pipeline", href: "/owner/crm/pipeline", icon: Flame },
       { name: "Tracking", href: "/owner/tracking", icon: MapPin },
     ],
   },
@@ -50,6 +53,7 @@ const navCategories = [
       { name: "Employees", href: "/owner/employees", icon: Users },
       { name: "Attendance", href: "/owner/attendance", icon: Clock },
       { name: "Payroll", href: "/owner/payroll", icon: DollarSign },
+      { name: "Payroll Audit", href: "/owner/payroll/pre-run-validation", icon: ShieldCheck },
       { name: "HR Hub", href: "/owner/hr-hub", icon: Megaphone },
     ],
   },
@@ -58,6 +62,7 @@ const navCategories = [
     items: [
       { name: "Materials", href: "/owner/materials", icon: Package },
       { name: "Inventory", href: "/owner/inventory", icon: Box },
+      { name: "Demand Forecasts", href: "/owner/inventory/forecasts", icon: Box },
       { name: "Documents", href: "/owner/documents", icon: Files },
     ],
   },
@@ -67,6 +72,8 @@ const navCategories = [
       { name: "Messages", href: "/owner/messages", icon: MessageSquare },
       { name: "Notifications", href: "/owner/notifications", icon: Bell },
       { name: "Reports", href: "/owner/reports", icon: BarChart3 },
+      { name: "GST Reconcile", href: "/owner/gst-reconciliation", icon: Files },
+      { name: "AR Collections", href: "/owner/ar-collections", icon: DollarSign },
     ],
   },
   {

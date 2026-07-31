@@ -63,7 +63,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     } catch (error) {
       logger.error("❌ Error fetching notifications:", error)
     }
-  }, [user])
+  }, [])
 
   // Initialize FCM and request permission
   const setupFCM = useCallback(async () => {
@@ -115,7 +115,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     } catch (error) {
       logger.error("❌ Error setting up FCM:", error);
     }
-  }, [user]);
+  }, []);
 
   // Establish SSE connection for real-time notifications
   useEffect(() => {
@@ -228,7 +228,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setIsConnected(false)
       logger.log("📡 SSE connection closed")
     }
-  }, [user, isLoading, fetchNotifications, router, reconnectTrigger])
+  }, [user?.id, isLoading, fetchNotifications, router, reconnectTrigger])
 
   const addNotification = (notificationData: Omit<Notification, "id" | "created_at" | "read">) => {
     // This is for local notifications only (not used in production)

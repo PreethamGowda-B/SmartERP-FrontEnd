@@ -107,7 +107,7 @@ export default function SettingsPage() {
     }
   }, [])
 
-  useEffect(() => { if (user?.role === "owner") loadData() }, [user, loadData])
+  useEffect(() => { if (user?.role === "owner") loadData() }, [user?.role, loadData])
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleUpdateProfile = async () => {

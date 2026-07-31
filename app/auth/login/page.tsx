@@ -16,7 +16,7 @@ export default function LoginPage() {
       else if (user.role === "hr") router.push("/hr")
       else if (user.role === "employee") router.push("/employee")
     }
-  }, [user, isLoading, router])
+  }, [user?.id, user?.role, isLoading, router])
 
   if (isLoading) {
     return (

@@ -73,7 +73,7 @@ export function OnboardingTourModal() {
       const timer = setTimeout(() => setOpen(true), 1200)
       return () => clearTimeout(timer)
     }
-  }, [user])
+  }, [user?.id, user?.company_id])
 
   const handleNext = () => {
     if (currentStep < TOUR_STEPS.length - 1) {

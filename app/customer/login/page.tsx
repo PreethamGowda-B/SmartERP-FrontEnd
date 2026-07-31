@@ -37,14 +37,14 @@ function LoginContent() {
     } else if (registered === '1') {
       setSuccessMessage('Account created! Please sign in.');
     }
-  }, [searchParams]);
+  }, [searchParams?.get('error'), searchParams?.get('registered')]);
 
   // Redirect to dashboard if already authenticated (only after auth state resolves)
   useEffect(() => {
     if (!authLoading && isAuthenticated && customer) {
       router.push('/customer/dashboard');
     }
-  }, [authLoading, isAuthenticated, customer, router]);
+  }, [authLoading, isAuthenticated, customer?.id, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

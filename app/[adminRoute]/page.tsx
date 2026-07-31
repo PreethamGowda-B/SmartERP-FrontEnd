@@ -98,7 +98,7 @@ export default function AdminDashboard() {
     }
 
     fetchStats()
-  }, [user, isLoading])
+  }, [user?.id, user?.role, isLoading])
 
   const stats = data?.stats
   const statCards = [

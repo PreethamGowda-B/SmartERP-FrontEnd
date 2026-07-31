@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       Sentry.setUser(null)
     }
-  }, [user])
+  }, [user?.id, user?.email, user?.role, user?.company_id])
 
   const handleSignOut = async () => {
     await signOut()
