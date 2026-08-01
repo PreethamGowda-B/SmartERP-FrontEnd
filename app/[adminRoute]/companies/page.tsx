@@ -1,14 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, usePathname } from "next/navigation"
+import Link from "next/link"
 import { AdminLayout } from "@/components/admin-layout"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   Building2, 
   Search, 
   Filter, 
-  MoreVertical, 
+  ExternalLink, 
   CheckCircle2, 
   AlertCircle, 
   Mail,
@@ -39,6 +40,8 @@ export default function AdminCompanies() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
+  const pathname = usePathname()
+  const basePrefix = pathname.split("/companies")[0]
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -204,6 +207,12 @@ export default function AdminCompanies() {
 
                     {/* Right: Actions */}
                     <div className="flex items-center gap-3 shrink-0">
+                      <Link href={`${basePrefix}/companies/${company.id}`}>
+                        <Button variant="outline" className="rounded-xl font-black text-[10px] uppercase tracking-widest border border-slate-200 bg-slate-50 hover:bg-slate-900 hover:text-white transition-all gap-1.5">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Details
+                        </Button>
+                      </Link>
                       <Button 
                         variant="outline" 
                         className={`min-w-[120px] rounded-xl font-black text-[10px] uppercase tracking-widest border transition-all duration-300
@@ -214,9 +223,6 @@ export default function AdminCompanies() {
                         onClick={() => toggleStatus(company.id, company.status || 'active')}
                       >
                         {company.status === 'suspended' ? 'Activate Account' : 'Suspend Account'}
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl border border-slate-200">
-                        <MoreVertical className="h-5 w-5" />
                       </Button>
                     </div>
                   </div>

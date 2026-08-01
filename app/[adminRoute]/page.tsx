@@ -80,6 +80,7 @@ export default function AdminDashboard() {
   const router = useRouter()
   const { user, isLoading } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
+  const [health, setHealth] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -88,8 +89,12 @@ export default function AdminDashboard() {
 
     const fetchStats = async () => {
       try {
-        const res = await apiClient("/api/admin/dashboard")
+        const [res, healthRes] = await Promise.all([
+          apiClient("/api/admin/dashboard"),
+          apiClient("/api/admin/health").catch(() => null)
+        ])
         setData(res)
+        setHealth(healthRes)
       } catch (err) {
         logger.error("Failed to fetch admin stats:", err)
       } finally {
@@ -303,23 +308,38 @@ export default function AdminDashboard() {
                 <ShieldCheck className="h-32 w-32" />
               </div>
               <div className="relative z-10">
-                <h3 className="text-2xl font-black tracking-tighter mb-1">Platform Summary</h3>
-                <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mb-12">Snapshot of the last 24h</p>
+                <h3 className="text-2xl font-black tracking-tighter mb-1">Platform Health</h3>
+                <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mb-8">Live system diagnostics</p>
                 
-                <div className="space-y-8">
+                <div className="space-y-6">
                    <div>
-                      <p className="text-5xl font-black tracking-tight">{stats?.recentActivity24h ?? 0}</p>
-                      <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mt-1">Actions in 24h</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-2 h-2 rounded-full ${health?.status === 'operational' ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                        <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">System Status</p>
+                      </div>
+                      <p className="text-xl font-black tracking-tight text-emerald-400">
+                        {health?.status === 'operational' ? 'OPERATIONAL' : 'DEGRADED'}
+                      </p>
                    </div>
                    <div className="h-px bg-white/10 w-full" />
                    <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                         <span className="text-xs font-bold text-white/60">System Health</span>
-                         <span className="text-xs font-black text-emerald-400">OPTIMAL</span>
+                         <span className="text-xs font-bold text-white/60">DB Latency</span>
+                         <span className="text-xs font-black text-blue-400">{health?.dbLatencyMs ?? '—'}ms</span>
                       </div>
                       <div className="flex items-center justify-between">
-                         <span className="text-xs font-bold text-white/60">Active Sessions</span>
-                         <span className="text-xs font-black text-blue-400">{stats?.totalUsers ?? 0}</span>
+                         <span className="text-xs font-bold text-white/60">Active Users (24h)</span>
+                         <span className="text-xs font-black text-white">{health?.activeUsersLast24h ?? stats?.recentActivity24h ?? 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                         <span className="text-xs font-bold text-white/60">Actions (24h)</span>
+                         <span className="text-xs font-black text-white">{stats?.recentActivity24h ?? 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                         <span className="text-xs font-bold text-white/60">Bug Reports (24h)</span>
+                         <span className={`text-xs font-black ${(health?.bugReportsLast24h || 0) > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                           {health?.bugReportsLast24h ?? 0}
+                         </span>
                       </div>
                    </div>
                 </div>
