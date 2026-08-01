@@ -17,7 +17,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Brain
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -46,12 +47,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }, [user?.id, user?.role, isLoading, router])
 
   const menuItems = [
-    { name: "Dashboard", icon: LayoutDashboard, href: "" }, // Base of secret route
+    { name: "Dashboard", icon: LayoutDashboard, href: "" },
     { name: "Companies", icon: Building2, href: "/companies" },
     { name: "Users", icon: Users, href: "/users" },
     { name: "Subscriptions", icon: CreditCard, href: "/billing" },
     { name: "Announcements", icon: Megaphone, href: "/announcements" },
     { name: "Feedback", icon: MessageSquare, href: "/feedback" },
+    { name: "AI Operations", icon: Brain, href: "/ai-operations" },
     { name: "Analytics", icon: BarChart3, href: "/analytics" },
     { name: "Settings", icon: Settings, href: "/settings" },
   ]

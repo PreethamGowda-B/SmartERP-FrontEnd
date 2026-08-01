@@ -1,59 +1,17 @@
 "use client"
 
-import { FeedbackFAB } from "./feedback-fab"
-import { AIChatBot } from "./ai-chat-bot"
-import { AICopilot } from "./ai-copilot"
-import { useAuth } from "@/contexts/auth-context"
-import { usePathname } from "next/navigation"
+import { SmartAIPanel } from "./smart-ai-panel"
 
 /**
  * FloatingActionHub
- * 
- * Enterprise container for floating action triggers in SmartERP.
- * Ensures zero overlapping, vertical gap-3 alignment, soft elevation shadows,
- * ring hover indicators, and crisp responsiveness across all viewports.
+ *
+ * Single unified entry point for the SmartERP Intelligence Hub.
+ * Replaces the previous three separate floating buttons (AIChatBot, FeedbackFAB, AICopilot)
+ * with one premium enterprise AI panel that orchestrates all three internally.
+ *
+ * The legacy components (ai-chat-bot.tsx, ai-copilot.tsx, feedback-fab.tsx)
+ * remain intact for reuse within smart-ai-panel.tsx as internal modules.
  */
 export function FloatingActionHub() {
-  const { user } = useAuth()
-  const pathname = usePathname()
-
-  // Hide completely on public marketing landing pages, auth, and customer portal routes
-  const isPublicPage =
-    !pathname ||
-    pathname === "/" ||
-    pathname === "/customer/landing" ||
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/customer") ||
-    pathname === "/privacy" ||
-    pathname === "/terms"
-
-  if (isPublicPage) {
-    return null
-  }
-
-  // Only show after login (when user object exists)
-  const showAIAssistant = !!user
-
-  return (
-    <div className="fixed bottom-6 right-6 flex flex-col-reverse items-center gap-3 z-[9999] pointer-events-none transition-all duration-300">
-      {/* 1. Primary AI ChatBot Trigger */}
-      {showAIAssistant && (
-        <div className="pointer-events-auto rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.3)] hover:scale-105 transition-all duration-300 hover:ring-2 hover:ring-primary/40">
-          <AIChatBot />
-        </div>
-      )}
-
-      {/* 2. Feedback Trigger */}
-      <div className="pointer-events-auto rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.3)] hover:scale-105 transition-all duration-300 hover:ring-2 hover:ring-primary/40">
-        <FeedbackFAB />
-      </div>
-
-      {/* 3. AI Copilot Trigger */}
-      {showAIAssistant && (
-        <div className="pointer-events-auto rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.3)] hover:scale-105 transition-all duration-300 hover:ring-2 hover:ring-primary/40">
-          <AICopilot className="relative bottom-0 right-0 z-auto shadow-none" />
-        </div>
-      )}
-    </div>
-  )
+  return <SmartAIPanel />
 }
