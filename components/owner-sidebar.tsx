@@ -172,15 +172,7 @@ export function OwnerSidebar() {
         {/* Scrollable nav area */}
         <div ref={navRef} onScroll={handleNavScroll} className="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
           {navCategories.map((category) => {
-            const filteredItems = category.items.filter((item) => {
-              if (item.name === "Messages" && !features.messages) return false
-              if (item.name === "Payroll" && !features.payroll) return false
-              if (item.name === "Tracking" && !features.location_tracking) return false
-              if (item.name === "Contact Support" && !features.priority_support) return false
-              return true
-            })
-
-            if (filteredItems.length === 0) return null
+            const filteredItems = category.items
 
             return (
               <div key={category.title} className="space-y-1.5">

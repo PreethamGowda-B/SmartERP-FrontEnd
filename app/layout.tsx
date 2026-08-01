@@ -6,6 +6,7 @@ import { GeistMono } from "geist/font/mono"
 import { ConditionalAnalytics } from "@/components/ConditionalAnalytics"
 import { CookieConsentBanner } from "@/components/CookieConsentBanner"
 import { AuthProvider } from "@/contexts/auth-context"
+import { SubscriptionProvider } from "@/contexts/subscription-context"
 import { JobProvider } from "@/contexts/job-context"
 import { NotificationProvider } from "@/contexts/notification-context"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -139,25 +140,27 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <LoadingProvider>
               <AuthProvider>
-                <NotificationProvider>
-                  <CommandRegistryProvider>
-                    <JobProvider>
-                      <ErrorBoundary>
-                        {children}
-                      </ErrorBoundary>
-                    </JobProvider>
-                    <Toaster richColors closeButton position="top-right" />
-                    <LockedFeaturePrompt />
-                    <SlowNetworkNotice />
-                    <NotificationPermissionPrompt />
-                    <PremiumLoader />
-                    <FloatingActionHub />
-                    <GlobalCommandPalette />
-                    <BackgroundSubscriptionPoller />
-                    <KeyboardShortcutsModal />
-                    <OnboardingTourModal />
-                  </CommandRegistryProvider>
-                </NotificationProvider>
+                <SubscriptionProvider>
+                  <NotificationProvider>
+                    <CommandRegistryProvider>
+                      <JobProvider>
+                        <ErrorBoundary>
+                          {children}
+                        </ErrorBoundary>
+                      </JobProvider>
+                      <Toaster richColors closeButton position="top-right" />
+                      <LockedFeaturePrompt />
+                      <SlowNetworkNotice />
+                      <NotificationPermissionPrompt />
+                      <PremiumLoader />
+                      <FloatingActionHub />
+                      <GlobalCommandPalette />
+                      <BackgroundSubscriptionPoller />
+                      <KeyboardShortcutsModal />
+                      <OnboardingTourModal />
+                    </CommandRegistryProvider>
+                  </NotificationProvider>
+                </SubscriptionProvider>
               </AuthProvider>
             </LoadingProvider>
           </Suspense>

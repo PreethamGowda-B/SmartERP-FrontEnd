@@ -26,7 +26,11 @@ import {
   Info
 } from "lucide-react"
 
+import { LockedFeatureScreen } from "@/components/locked-feature-screen"
+import { useSubscription } from "@/contexts/subscription-context"
+
 export default function GstReconciliationPage() {
+  const { isPro } = useSubscription()
   const { toast } = useToast()
   const [selectedPeriod, setSelectedPeriod] = useState<string>("2026-07")
   const [gstrType, setGstrType] = useState<"GSTR_2A" | "GSTR_2B">("GSTR_2B")
@@ -183,6 +187,18 @@ export default function GstReconciliationPage() {
       (item.invoice_number_books && item.invoice_number_books.toLowerCase().includes(searchTerm.toLowerCase()))
     return matchesFilter && matchesSearch
   })
+
+  if (!isPro) {
+    return (
+      <OwnerLayout>
+        <LockedFeatureScreen
+          featureTitle="GST Intelligence & Automated Reconciliation"
+          featureDescription="Automated GSTR-2A/2B reconciliation, ITC match engine, and vendor discrepancy management are exclusive to the Pro plan."
+          requiredTier="pro"
+        />
+      </OwnerLayout>
+    )
+  }
 
   return (
     <OwnerLayout>

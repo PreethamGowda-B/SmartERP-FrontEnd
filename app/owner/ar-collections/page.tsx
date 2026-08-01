@@ -24,7 +24,11 @@ import {
   ShieldAlert
 } from "lucide-react"
 
+import { LockedFeatureScreen } from "@/components/locked-feature-screen"
+import { useSubscription } from "@/contexts/subscription-context"
+
 export default function ArCollectionsPage() {
+  const { isPro } = useSubscription()
   const { toast } = useToast()
   const [aging, setAging] = useState<ArAgingSummary | null>(null)
   const [schedules, setSchedules] = useState<ArSchedule[]>([])
@@ -120,6 +124,18 @@ export default function ArCollectionsPage() {
       s.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       String(s.invoice_id).includes(searchTerm)
   )
+
+  if (!isPro) {
+    return (
+      <OwnerLayout>
+        <LockedFeatureScreen
+          featureTitle="AR Collections & Automated Dunning Engine"
+          featureDescription="Automated aging schedules, smart payment plan offers, and dunning workflows are exclusive to the Pro plan."
+          requiredTier="pro"
+        />
+      </OwnerLayout>
+    )
+  }
 
   return (
     <OwnerLayout>

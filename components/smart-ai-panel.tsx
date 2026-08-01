@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAuth } from "@/contexts/auth-context"
+import { useSubscription } from "@/contexts/subscription-context"
 import { getAuthToken } from "@/lib/apiClient"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -235,6 +236,13 @@ function WidgetRenderer({ widget }: { widget: WidgetPayload }) {
 
 export function SmartAIPanel() {
   const { user } = useAuth()
+  const { isPro, isBasic } = useSubscription()
+
+  function isModelLocked(modelPlan: string) {
+    if (isPro) return false // ALL 9 MODELS UNLOCKED FOR PRO! 0 LOCK ICONS!
+    if (isBasic && modelPlan !== "pro") return false
+    return modelPlan !== "all" && modelPlan !== "free"
+  }
   const pathname = usePathname()
 
   const isPublicPage =
@@ -259,6 +267,14 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   const [showHistory, setShowHistory] = React.useState(false)
   const [showModelSelector, setShowModelSelector] = React.useState(false)
   const [isMultiAgent, setIsMultiAgent] = React.useState(false)
+
+  const { isPro, isBasic } = useSubscription()
+
+  function isModelLocked(modelPlan: string) {
+    if (isPro) return false // ALL 9 MODELS UNLOCKED FOR PRO! 0 LOCK ICONS!
+    if (isBasic && modelPlan !== "pro") return false
+    return modelPlan !== "all" && modelPlan !== "free"
+  }
 
   // ── Model selection
   const [selectedModel, setSelectedModel] = React.useState<string>("auto")
@@ -863,7 +879,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                                   <div className="min-w-0">
                                     <div className="text-[11px] font-bold text-foreground truncate flex items-center gap-1">
                                       {model.label}
-                                      {model.plan === "pro" && <Lock className="h-2.5 w-2.5 text-amber-500" />}
+                                      {isModelLocked(model.plan) && <Lock className="h-2.5 w-2.5 text-amber-500" />}
                                     </div>
                                     <div className="text-[9px] text-muted-foreground truncate">{model.description}</div>
                                   </div>
