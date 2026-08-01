@@ -79,6 +79,25 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       return
     }
 
+    // Super admins have no company subscription — give them an unlimited sentinel plan
+    if (user.role === 'super_admin') {
+      setPlan({
+        id: 0,
+        name: 'Super Admin',
+        is_trial: false,
+        days_remaining: 36500,
+        employee_limit: null,
+        max_inventory_items: null,
+        features: {
+          payroll: true, messages: true, ai_assistant: true,
+          basic_reports: true, export_reports: true, advanced_reports: true,
+          inventory_images: true, priority_support: true, location_tracking: true
+        }
+      })
+      setLoading(false)
+      return
+    }
+
     try {
       const res = await apiClient("/api/subscription/status")
       if (res && res.plan) {
