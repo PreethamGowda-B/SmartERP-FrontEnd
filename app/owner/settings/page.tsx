@@ -55,7 +55,7 @@ export default function SettingsPage() {
 
   // ── Notifications ─────────────────────────────────────────────────────────
   const [notifPrefs, setNotifPrefs] = useState({
-    email: true, push: true, sms: false, safety: true, budget: true,
+    email: true, push: true, whatsapp: false, sms: false, safety: true, budget: true,
   })
   const [savingNotif, setSavingNotif] = useState(false)
 
