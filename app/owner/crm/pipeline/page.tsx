@@ -27,7 +27,11 @@ import {
   RefreshCw
 } from "lucide-react"
 
+import { LockedFeatureScreen } from "@/components/locked-feature-screen"
+import { useSubscription } from "@/contexts/subscription-context"
+
 export default function CrmPipelinePage() {
+  const { isPro } = useSubscription()
   const { toast } = useToast()
   const [pipeline, setPipeline] = useState<Record<string, CrmLead[]>>({
     new_lead: [],
@@ -129,6 +133,18 @@ export default function CrmPipelinePage() {
     { key: "negotiation", title: "Negotiation", color: "border-orange-500/50 bg-orange-500/5" },
     { key: "closed_won", title: "Closed Won", color: "border-emerald-500/50 bg-emerald-500/5" },
   ]
+
+  if (!isPro) {
+    return (
+      <OwnerLayout>
+        <LockedFeatureScreen
+          featureTitle="Sales Pipeline & CRM AI Deal Automation"
+          featureDescription="Kanban deal stages, win-probability AI scoring, proposal generation, and deal velocity tracking are exclusive to the Pro plan."
+          requiredTier="pro"
+        />
+      </OwnerLayout>
+    )
+  }
 
   return (
     <OwnerLayout>

@@ -293,6 +293,11 @@ export async function apiClient(path: string, options: RequestInit = {}, retries
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: res.statusText }))
+      if (res.status === 403 && (error.code === 'PLAN_LIMIT_REACHED' || error.details?.limitType)) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('plan-limit-reached', { detail: error.details }))
+        }
+      }
       if (res.status === 403 && error.upgrade_required) {
         triggerFeatureLock({
           feature: error.feature || "this premium feature",

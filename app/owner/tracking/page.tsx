@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { MapPin, Users, Wifi, WifiOff, RefreshCw } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
+import { LockedFeatureScreen } from "@/components/locked-feature-screen"
+import { useSubscription } from "@/contexts/subscription-context"
 
 // Leaflet CSS — loaded once at module level
 const LEAFLET_CSS_ID = "leaflet-css"
@@ -40,6 +42,7 @@ function formatLastSeen(ts: string | null): string {
 }
 
 export default function EmployeeTrackingPage() {
+    const { isFree } = useSubscription()
     const mapRef = useRef<any>(null)        // L.Map
     const markersRef = useRef<Map<string, any>>(new Map()) // id → L.Marker
     const containerRef = useRef<HTMLDivElement>(null)
@@ -214,6 +217,18 @@ export default function EmployeeTrackingPage() {
     const withLocation = employees.filter(e => e.latitude != null)
     const withoutLocation = employees.filter(e => e.latitude == null)
     const onlineCount = withLocation.filter(e => e.is_online).length
+
+    if (isFree) {
+        return (
+            <OwnerLayout>
+                <LockedFeatureScreen
+                    featureTitle="Live Employee GPS Tracking"
+                    featureDescription="Real-time map tracking of field staff and geofenced attendance requires the Basic or Pro Plan."
+                    requiredTier="basic"
+                />
+            </OwnerLayout>
+        )
+    }
 
     return (
         <OwnerLayout>

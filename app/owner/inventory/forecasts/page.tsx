@@ -23,7 +23,11 @@ import {
   Bot
 } from "lucide-react"
 
+import { LockedFeatureScreen } from "@/components/locked-feature-screen"
+import { useSubscription } from "@/contexts/subscription-context"
+
 export default function InventoryForecastsPage() {
+  const { isPro } = useSubscription()
   const { toast } = useToast()
   const [forecasts, setForecasts] = useState<InventoryForecast[]>([])
   const [suppliers, setSuppliers] = useState<InventorySupplier[]>([])
@@ -148,6 +152,18 @@ export default function InventoryForecastsPage() {
     f.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     f.category.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  if (!isPro) {
+    return (
+      <OwnerLayout>
+        <LockedFeatureScreen
+          featureTitle="Inventory Demand Forecasting & Reorder AI"
+          featureDescription="AI stock depletion prediction, automatic purchase order generation, and supplier lead-time forecasting are exclusive to the Pro plan."
+          requiredTier="pro"
+        />
+      </OwnerLayout>
+    )
+  }
 
   return (
     <OwnerLayout>

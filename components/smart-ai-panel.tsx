@@ -270,10 +270,18 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
 
   const { isPro, isBasic } = useSubscription()
 
-  function isModelLocked(modelPlan: string) {
-    if (isPro) return false // ALL 9 MODELS UNLOCKED FOR PRO! 0 LOCK ICONS!
-    if (isBasic && modelPlan !== "pro") return false
-    return modelPlan !== "all" && modelPlan !== "free"
+  function isModelLocked(modelKey: string) {
+    if (isPro) return false // Pro: ALL 9 MODELS UNLOCKED!
+    if (modelKey === "auto" || modelKey === "general") return false // Free + Basic: General AI unlocked
+
+    if (isBasic) {
+      // Basic unlocks: attendance, inventory, hr, support, operations
+      const basicUnlocked = ["attendance", "inventory", "hr", "support", "operations"]
+      return !basicUnlocked.includes(modelKey)
+    }
+
+    // Free plan: Locks all specialist models except auto & general
+    return true
   }
 
   // ── Model selection
@@ -879,7 +887,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                                   <div className="min-w-0">
                                     <div className="text-[11px] font-bold text-foreground truncate flex items-center gap-1">
                                       {model.label}
-                                      {isModelLocked(model.plan) && <Lock className="h-2.5 w-2.5 text-amber-500" />}
+                                      {isModelLocked(model.key) && <Lock className="h-2.5 w-2.5 text-amber-500" />}
                                     </div>
                                     <div className="text-[9px] text-muted-foreground truncate">{model.description}</div>
                                   </div>

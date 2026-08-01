@@ -25,7 +25,11 @@ import {
   Unlock
 } from "lucide-react"
 
+import { LockedFeatureScreen } from "@/components/locked-feature-screen"
+import { useSubscription } from "@/contexts/subscription-context"
+
 export default function PayrollPreRunValidationPage() {
+  const { isPro } = useSubscription()
   const { toast } = useToast()
   const [selectedMonth, setSelectedMonth] = useState<number>(7)
   const [selectedYear, setSelectedYear] = useState<number>(2026)
@@ -102,6 +106,18 @@ export default function PayrollPreRunValidationPage() {
   }
 
   const criticalUnresolved = flags.filter((f) => f.severity === "critical" && !f.is_resolved).length
+
+  if (!isPro) {
+    return (
+      <OwnerLayout>
+        <LockedFeatureScreen
+          featureTitle="AI Payroll Pre-Run Audit & Flag Engine"
+          featureDescription="Automated anomaly detection, ghost employee prevention, and salary variance audits require the Pro Plan."
+          requiredTier="pro"
+        />
+      </OwnerLayout>
+    )
+  }
 
   return (
     <OwnerLayout>

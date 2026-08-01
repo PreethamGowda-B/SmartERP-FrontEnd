@@ -31,6 +31,8 @@ import { ErrorView } from "@/components/ui/error-view"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonList } from "@/components/ui/skeleton-card"
 import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
+import { LockedFeatureScreen } from "@/components/locked-feature-screen"
+import { useSubscription } from "@/contexts/subscription-context"
 
 interface Employee {
   id: string
@@ -59,6 +61,7 @@ const MONTHS = [
 ]
 
 export default function OwnerPayrollPage() {
+  const { isFree } = useSubscription()
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [employeeSearch, setEmployeeSearch] = useState("")
@@ -203,6 +206,18 @@ export default function OwnerPayrollPage() {
 
   // Get unique years from payrolls
   const uniqueYears = Array.from(new Set(payrolls.map(p => p.payroll_year))).sort((a, b) => b - a)
+
+  if (isFree) {
+    return (
+      <OwnerLayout>
+        <LockedFeatureScreen
+          featureTitle="Payroll Processing & Payslip Generation"
+          featureDescription="Automated monthly payroll, deductions, increments, and digital payslips require the Basic or Pro Plan."
+          requiredTier="basic"
+        />
+      </OwnerLayout>
+    )
+  }
 
   return (
     <OwnerLayout>
