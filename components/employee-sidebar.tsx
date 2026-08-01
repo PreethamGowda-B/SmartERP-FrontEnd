@@ -3,7 +3,9 @@
 import { useState } from "react"
 import { NavLink } from "@/components/nav-link"
 import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
+import { cn, isRouteActive } from "@/lib/utils"
+
+const empNavHrefs = navigation.map((n) => n.href)
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import { useNotifications } from "@/contexts/notification-context"
@@ -114,7 +116,7 @@ export function EmployeeSidebar() {
               if (item.name === "Time Tracking" && !features.location_tracking) return false;
               return true;
             }).map((item) => {
-              const isActive = pathname === item.href
+              const isActive = isRouteActive(pathname, item.href, empNavHrefs)
               return (
                 <NavLink
                   key={item.name}

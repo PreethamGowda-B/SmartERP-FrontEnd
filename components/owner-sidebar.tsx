@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { NavLink } from "@/components/nav-link"
 import { apiClient } from "@/lib/apiClient"
 import { usePathname, useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
+import { cn, isRouteActive } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import {
@@ -86,6 +86,8 @@ const navCategories = [
   },
 ]
 
+const allNavHrefs = navCategories.flatMap((cat) => cat.items.map((i) => i.href))
+
 export function OwnerSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [features, setFeatures] = useState<Record<string, boolean>>({
@@ -161,7 +163,7 @@ export function OwnerSidebar() {
           </div>
           <div className="flex items-center gap-1">
             <NotificationCenterDrawer />
-            <ThemeToggle />
+            <ThemeToggle compact />
           </div>
         </div>
 
@@ -185,7 +187,7 @@ export function OwnerSidebar() {
                 </p>
                 <div className="space-y-0.5">
                   {filteredItems.map((item) => {
-                    const isActive = pathname === item.href
+                    const isActive = isRouteActive(pathname, item.href, allNavHrefs)
                     return (
                       <NavLink
                         key={item.name}

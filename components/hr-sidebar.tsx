@@ -4,7 +4,9 @@ import { useState, useEffect } from "react"
 import { NavLink } from "@/components/nav-link"
 import { apiClient } from "@/lib/apiClient"
 import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
+import { cn, isRouteActive } from "@/lib/utils"
+
+const hrNavHrefs = navigation.map((n) => n.href)
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import {
@@ -108,7 +110,7 @@ export function HRSidebar() {
             if (item.name === "Contact Support" && !features.priority_support) return false
             return true
           }).map((item) => {
-            const isActive = pathname === item.href
+            const isActive = isRouteActive(pathname, item.href, hrNavHrefs)
             return (
               <NavLink
                 key={item.name}

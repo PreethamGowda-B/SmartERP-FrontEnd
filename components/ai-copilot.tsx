@@ -51,10 +51,10 @@ export function AICopilot() {
     return null
   }
 
-  return <AICopilotInner user={user} pathname={pathname} />
+  return <AICopilotInner user={user} pathname={pathname} className={className} />
 }
 
-function AICopilotInner({ user, pathname }: { user: any; pathname: string }) {
+function AICopilotInner({ user, pathname, className }: { user: any; pathname: string; className?: string }) {
   const router = useRouter()
 
   const [isOpen, setIsOpen] = React.useState(false)
@@ -173,8 +173,9 @@ function AICopilotInner({ user, pathname }: { user: any; pathname: string }) {
       <Button
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "fixed bottom-20 right-6 z-[9990] h-12 w-12 rounded-full shadow-2xl transition-transform hover:scale-105 btn-premium flex items-center justify-center",
-          isOpen && "rotate-90 bg-destructive hover:bg-destructive"
+          "h-12 w-12 rounded-full shadow-2xl transition-all duration-300 hover:scale-105 btn-premium flex items-center justify-center border-2 border-white/20",
+          isOpen && "rotate-90 bg-destructive hover:bg-destructive text-white",
+          className || "fixed bottom-24 right-6 z-[9990]"
         )}
         aria-label="Toggle AI Copilot"
       >
