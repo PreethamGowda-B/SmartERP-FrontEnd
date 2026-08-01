@@ -325,8 +325,13 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
 
   // ── Auto-scroll to latest message
   React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    if (isOpen && !isMinimized) {
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [messages, isLoading, isOpen, isMinimized])
 
   // ── Get current portal
   const currentPortal = React.useMemo(() => {
@@ -678,8 +683,9 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 440, opacity: 0 }}
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
+            style={{ overscrollBehavior: "contain" }}
             className={cn(
-              "fixed right-0 top-0 z-[9998] h-screen",
+              "fixed right-0 top-0 z-[9998] h-screen overscroll-contain",
               "w-full sm:w-[440px]",
               "flex flex-col",
               "bg-background/95 backdrop-blur-2xl",
@@ -900,23 +906,24 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                     </AnimatePresence>
                   </div>
 
-                  {/* Messages */}
-                  <ScrollArea className="flex-1 px-4 py-3">
-                    <div className="space-y-4">
-                      {messages.map(msg => (
-                        <MessageBubble
-                          key={msg.id}
-                          msg={msg}
-                          onCopy={copyMessage}
-                          onRegenerate={regenerateLastResponse}
-                          onFollowUp={text => { setInput(""); sendMessage(text); recordPrompt(String(user.id), autoModelBadge || selectedModel, text) }}
-                          onNavigate={path => { router.push(path); setIsOpen(false) }}
-                          isLastAI={msg.sender === "ai" && msg === [...messages].reverse().find(m => m.sender === "ai")}
-                        />
-                      ))}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  </ScrollArea>
+                  {/* Messages Scroll Area */}
+                  <div
+                    className="flex-1 overflow-y-auto px-4 py-3 space-y-4 touch-pan-y overscroll-contain"
+                    style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
+                  >
+                    {messages.map(msg => (
+                      <MessageBubble
+                        key={msg.id}
+                        msg={msg}
+                        onCopy={copyMessage}
+                        onRegenerate={regenerateLastResponse}
+                        onFollowUp={text => { setInput(""); sendMessage(text); recordPrompt(String(user.id), autoModelBadge || selectedModel, text) }}
+                        onNavigate={path => { router.push(path); setIsOpen(false) }}
+                        isLastAI={msg.sender === "ai" && msg === [...messages].reverse().find(m => m.sender === "ai")}
+                      />
+                    ))}
+                    <div ref={messagesEndRef} className="h-2" />
+                  </div>
 
                   {/* Personalized Quick Actions */}
                   {topActions.length > 0 && messages.length <= 1 && (
