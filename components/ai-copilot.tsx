@@ -33,7 +33,7 @@ interface ChatMessage {
   timestamp: string
 }
 
-export function AICopilot() {
+export function AICopilot({ className }: { className?: string }) {
   const pathname = usePathname()
   const { user } = useAuth()
 

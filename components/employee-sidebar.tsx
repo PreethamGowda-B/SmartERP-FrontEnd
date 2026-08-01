@@ -1,17 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { NavLink } from "@/components/nav-link"
 import { usePathname } from "next/navigation"
 import { cn, isRouteActive } from "@/lib/utils"
-
-const empNavHrefs = navigation.map((n) => n.href)
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import { useNotifications } from "@/contexts/notification-context"
 import { apiClient } from "@/lib/apiClient"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { useEffect } from "react"
 import { logger } from "@/lib/logger"
 import {
   HardHat,
@@ -45,6 +42,23 @@ const navigation = [
   { name: "Settings", href: "/employee/settings", icon: Settings },
 ]
 
+const empNavHrefs = navigation.map((n) => n.href)
+
+const navigation = [
+  { name: "Dashboard", href: "/employee", icon: LayoutDashboard },
+  { name: "My Tasks", href: "/employee/jobs", icon: Briefcase },
+  { name: "Time Tracking", href: "/employee/time-tracking", icon: Clock },
+  { name: "Material Requests", href: "/employee/materials", icon: Package },
+  { name: "Inventory", href: "/employee/inventory", icon: Package2 },
+  { name: "Payroll", href: "/employee/payroll", icon: DollarSign },
+  { name: "Messages", href: "/employee/messages", icon: MessageSquare },
+  { name: "Notifications", href: "/employee/notifications", icon: Bell },
+  { name: "Reports", href: "/employee/reports", icon: BarChart3 },
+  { name: "Workplace", href: "/employee/hr-hub", icon: Megaphone },
+  { name: "Settings", href: "/employee/settings", icon: Settings },
+]
+
+const empNavHrefs = navigation.map((n) => n.href)
 
 export function EmployeeSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
