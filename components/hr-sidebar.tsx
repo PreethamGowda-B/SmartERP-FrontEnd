@@ -5,8 +5,6 @@ import { NavLink } from "@/components/nav-link"
 import { apiClient } from "@/lib/apiClient"
 import { usePathname } from "next/navigation"
 import { cn, isRouteActive } from "@/lib/utils"
-
-const hrNavHrefs = navigation.map((n) => n.href)
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import {
@@ -42,6 +40,8 @@ const navigation = [
   { name: "Notifications", href: "/hr/notifications", icon: Bell },
   { name: "Contact Support", href: "/hr/support", icon: Headset },
 ]
+
+const hrNavHrefs = navigation.map((n) => n.href)
 
 export function HRSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
