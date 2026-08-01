@@ -70,15 +70,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans">
       {/* Sidebar */}
       <motion.aside
         initial={false}
         animate={{ width: isSidebarOpen ? 280 : 80 }}
-        className="relative z-30 flex flex-col bg-slate-900 text-white shadow-xl transition-all duration-300 ease-in-out border-r border-slate-800"
+        className="relative z-30 flex flex-col bg-sidebar text-sidebar-foreground shadow-xl transition-all duration-300 ease-in-out border-r border-sidebar-border"
       >
         {/* Header */}
-        <div className="h-16 flex items-center px-6 border-b border-white/5">
+        <div className="h-16 flex items-center px-6 border-b border-sidebar-border/80 bg-sidebar/50 backdrop-blur-md">
           <AnimatePresence mode="wait">
             {isSidebarOpen ? (
               <motion.div
@@ -88,50 +88,46 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 exit={{ opacity: 0 }}
                 className="flex items-center gap-3 overflow-hidden"
               >
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0">
-                  <ShieldCheck className="h-5 w-5 text-slate-900" />
+                <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary border border-primary/30 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
                 </div>
-                <span className="font-bold text-lg tracking-tight whitespace-nowrap">
-                  Control Center
-                </span>
+                <div>
+                  <h1 className="font-extrabold text-sm tracking-tight whitespace-nowrap">Control Center</h1>
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    Super Admin
+                  </span>
+                </div>
               </motion.div>
             ) : (
               <motion.div
                 key="icon"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center mx-auto"
+                className="w-8 h-8 rounded-xl bg-primary/20 text-primary border border-primary/30 flex items-center justify-center mx-auto"
               >
-                <ShieldCheck className="h-5 w-5 text-white" />
+                <ShieldCheck className="h-5 w-5 text-primary" />
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 space-y-1 py-6 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-3 space-y-1 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
           {menuItems.map((item) => {
             const fullHref = `${secretPrefix}${item.href}`
-            const isActive = pathname === fullHref || (item.href !== "" && pathname.startsWith(fullHref))
+            const isActive = isRouteActive(pathname, fullHref, menuItems.map(m => `${secretPrefix}${m.href}`))
             
             return (
               <Link key={item.name} href={fullHref}>
-                <div className={`
-                  relative flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group
-                  ${isActive 
-                    ? "bg-white/10 text-white" 
-                    : "text-slate-400 hover:bg-white/5 hover:text-white"
-                  }
-                `}>
-                  <item.icon className={`h-5 w-5 ${isActive ? "text-white" : "group-hover:text-white transition-colors"}`} />
+                <div className={cn(
+                  "relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group text-xs font-medium",
+                  isActive 
+                    ? "bg-primary/15 text-primary font-bold border-l-2 border-primary shadow-xs" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/75 hover:translate-x-0.5"
+                )}>
+                  <item.icon className={cn("h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110", isActive && "text-primary")} />
                   {isSidebarOpen && (
-                    <span className="font-medium whitespace-nowrap text-sm tracking-tight">{item.name}</span>
-                  )}
-                  {isActive && (
-                    <motion.div
-                      layoutId="active-indicator"
-                      className="absolute left-0 w-1 h-6 bg-white rounded-r-full"
-                    />
+                    <span className="font-medium whitespace-nowrap text-xs tracking-tight">{item.name}</span>
                   )}
                 </div>
               </Link>
@@ -140,47 +136,47 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/5 bg-black/20">
-           <div className={`p-3 rounded-lg bg-white/5 flex items-center gap-3 ${!isSidebarOpen && "justify-center"}`}>
-              <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0 border border-white/10">
-                <Users className="h-4 w-4 text-white" />
+        <div className="p-3 border-t border-sidebar-border shrink-0">
+           <div className={cn("p-3 rounded-xl bg-sidebar-accent/40 border border-sidebar-border/60 backdrop-blur-xs flex items-center gap-3", !isSidebarOpen && "justify-center")}>
+              <div className="w-8 h-8 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center justify-center shrink-0 font-bold text-xs">
+                <Users className="h-4 w-4 text-primary" />
               </div>
               {isSidebarOpen && (
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-bold truncate text-white uppercase tracking-wider">{user.name}</span>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Platform Dev</span>
+                  <span className="text-xs font-bold truncate text-foreground">{user.name}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Super Admin</span>
                 </div>
               )}
            </div>
            <Button 
              variant="ghost" 
              onClick={signOut}
-             className={`w-full justify-start gap-3 mt-4 text-slate-400 hover:text-red-400 hover:bg-red-400/10 h-10 px-4 transition-colors ${!isSidebarOpen && "justify-center"}`}
+             className={cn("w-full justify-start gap-3 mt-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 px-3 text-xs transition-colors", !isSidebarOpen && "justify-center")}
            >
-             <LogOut className="h-5 w-5" />
-             {isSidebarOpen && <span className="font-bold text-xs uppercase tracking-widest">Logout</span>}
+             <LogOut className="h-4 w-4" />
+             {isSidebarOpen && <span className="font-semibold text-xs">Logout</span>}
            </Button>
         </div>
 
         {/* Toggle Button */}
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white flex items-center justify-center text-slate-900 shadow-lg border border-slate-200 hover:scale-110 transition-transform z-40"
+          className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-card text-foreground flex items-center justify-center shadow-lg border border-border hover:scale-110 transition-transform z-40"
         >
           {isSidebarOpen ? <ChevronLeft className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
         </button>
       </motion.aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative z-10 custom-scrollbar flex flex-col">
-        <header className="h-16 border-b border-slate-200 flex items-center justify-between px-8 bg-white sticky top-0 z-20 shadow-sm">
+      <main className="flex-1 overflow-y-auto relative z-10 scrollbar-thin scrollbar-thumb-muted flex flex-col">
+        <header className="h-16 border-b border-border/80 flex items-center justify-between px-8 bg-card/80 backdrop-blur-md sticky top-0 z-20 shadow-xs">
            <div className="flex items-center gap-4">
-             <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">SmartERP System Control</h2>
+             <h2 className="text-xs font-extrabold text-muted-foreground uppercase tracking-[0.2em]">SmartERP System Control</h2>
            </div>
-           <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-200">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-black text-green-700 uppercase tracking-tighter">Systems Live</span>
+           <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tight">Systems Live</span>
               </div>
            </div>
         </header>

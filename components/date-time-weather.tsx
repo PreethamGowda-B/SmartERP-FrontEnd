@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Cloud, CloudRain, Sun } from "lucide-react"
+import { Cloud, CloudRain, Sun, Compass } from "lucide-react"
 import { logger } from "@/lib/logger"
+import { cn } from "@/lib/utils"
 
 export function DateTimeWeather() {
   const [dateTime, setDateTime] = useState<{
@@ -14,6 +15,7 @@ export function DateTimeWeather() {
     temp: number
     condition: string
     icon: string
+    location: string
   } | null>(null)
 
   useEffect(() => {
@@ -40,64 +42,66 @@ export function DateTimeWeather() {
     updateDateTime()
     const interval = setInterval(updateDateTime, 1000)
 
-    // Fetch weather data
-    const fetchWeather = async () => {
-      try {
-        // Use a free weather API - we'll use mock data as fallback
-        // In production, you'd use a real API like OpenWeatherMap
-        const mockWeatherData = {
-          temp: Math.round(Math.random() * 15 + 18), // 18-33°C
-          condition: ["Sunny", "Cloudy", "Rainy"][Math.floor(Math.random() * 3)],
-          icon: ["sun", "cloud", "rain"][Math.floor(Math.random() * 3)],
-        }
-        setWeather(mockWeatherData)
-      } catch (error) {
-        logger.error("[v0] Failed to fetch weather:", error)
-        // Fallback weather
-        setWeather({ temp: 22, condition: "Partly Cloudy", icon: "cloud" })
-      }
-    }
+    // Set stable mock weather for demonstration (24°C, Partly Sunny)
+    setWeather({
+      temp: 24,
+      condition: "Partly Sunny",
+      icon: "sun",
+      location: "Bengaluru, IN",
+    })
 
-    fetchWeather()
+    return () => clearInterval(interval)
   }, [])
 
   const getWeatherIcon = (icon: string | undefined) => {
     switch (icon) {
       case "sun":
-        return <Sun className="w-5 h-5 text-yellow-500" />
+        return <Sun className="w-5 h-5 text-amber-500 animate-pulse" />
       case "rain":
-        return <CloudRain className="w-5 h-5 text-blue-500" />
+        return <CloudRain className="w-5 h-5 text-blue-400" />
       case "cloud":
       default:
-        return <Cloud className="w-5 h-5 text-gray-400" />
+        return <Cloud className="w-5 h-5 text-indigo-400" />
     }
   }
 
   if (!dateTime) return null
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 p-4 rounded-lg bg-gradient-to-br from-white/50 via-white/30 to-transparent backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in-up">
+    <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-5 px-4 py-3 rounded-2xl bg-card/70 dark:bg-card/80 backdrop-blur-xl border border-border/70 shadow-lg hover:shadow-xl transition-all duration-300">
       {/* Date and Time */}
-      <div className="flex flex-col gap-1">
-        <p className="text-sm text-muted-foreground font-medium">{dateTime.dayName}</p>
-        <p className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+      <div className="flex flex-col gap-0.5 min-w-[120px]">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+            {dateTime.dayName}
+          </span>
+        </div>
+        <p className="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-primary via-indigo-500 to-amber-500 bg-clip-text text-transparent">
           {dateTime.time}
         </p>
-        <p className="text-sm text-muted-foreground">{dateTime.date}</p>
+        <span className="text-xs font-medium text-muted-foreground">{dateTime.date}</span>
       </div>
 
-      {/* Divider */}
-      <div className="hidden sm:block w-px h-12 bg-gradient-to-b from-transparent via-border to-transparent" />
+      {/* Vertical Divider */}
+      <div className="hidden sm:block w-px h-10 bg-border/80" />
 
-      {/* Weather */}
+      {/* Weather Info */}
       {weather && (
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-white/50 backdrop-blur-sm border border-white/20">
+        <div className="flex items-center gap-3 pl-1 sm:pl-0">
+          <div className="p-2.5 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 flex items-center justify-center shrink-0">
             {getWeatherIcon(weather.icon)}
           </div>
-          <div className="flex flex-col gap-0.5">
-            <p className="text-sm font-medium text-primary">{weather.temp}°C</p>
-            <p className="text-xs text-muted-foreground">{weather.condition}</p>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="text-base font-bold text-foreground">{weather.temp}°C</span>
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                {weather.condition}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
+              <Compass className="w-3 h-3 text-muted-foreground shrink-0" />
+              <span>{weather.location}</span>
+            </div>
           </div>
         </div>
       )}

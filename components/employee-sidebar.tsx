@@ -93,21 +93,23 @@ export function EmployeeSidebar() {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex flex-col gap-4 p-6 border-b border-border">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-accent rounded-lg">
-                <HardHat className="h-6 w-6 text-accent-foreground" />
+          <div className="p-4 border-b border-sidebar-border/80 flex items-center justify-between shrink-0 bg-sidebar/50 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-accent/20 rounded-xl border border-accent/30 shadow-xs">
+                <HardHat className="h-5 w-5 text-accent" />
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl font-bold">SmartERP</h1>
-                <p className="text-sm text-muted-foreground">Employee Portal</p>
+                <h1 className="text-sm font-extrabold tracking-tight text-foreground">SmartERP</h1>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">
+                  Employee Portal
+                </span>
               </div>
             </div>
-            <ThemeToggle />
+            <ThemeToggle compact />
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
             {navigation.filter((item) => {
               if (item.name === "Messages" && !features.messages) return false;
               if (item.name === "Payroll" && !features.payroll) return false;
@@ -121,15 +123,15 @@ export function EmployeeSidebar() {
                   href={item.href}
                   id={item.name}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    "flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 relative group",
                     isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                      ? "bg-primary/15 text-primary font-bold border-l-2 border-primary shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/75 hover:translate-x-0.5",
                   )}
                 >
                   <div className="flex items-center gap-3 flex-1">
-                    <item.icon className="h-4 w-4" />
-                    {item.name}
+                    <item.icon className={cn("h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110", isActive && "text-primary")} />
+                    <span>{item.name}</span>
                   </div>
                   {item.name === "Notifications" && unreadCount > 0 && (
                     <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
@@ -142,20 +144,27 @@ export function EmployeeSidebar() {
           </nav>
 
           {/* User info and sign out */}
-          <div className="p-4 border-t border-border">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-accent-foreground">{user?.name?.charAt(0)}</span>
+          <div className="p-3 border-t border-sidebar-border shrink-0">
+            <div className="p-3 rounded-xl bg-sidebar-accent/40 border border-sidebar-border/60 backdrop-blur-xs">
+              <div className="flex items-center gap-3 mb-2.5">
+                <div className="w-8 h-8 rounded-full bg-accent/20 text-accent border border-accent/30 flex items-center justify-center font-bold text-xs shrink-0">
+                  {user?.name?.charAt(0).toUpperCase() || "E"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate">{user?.name || "Employee"}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{user?.position || user?.email}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{user?.position}</p>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-8 text-xs font-semibold hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-3.5 w-3.5 mr-2" />
+                Sign Out
+              </Button>
             </div>
-            <Button variant="outline" size="sm" className="w-full bg-transparent" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
           </div>
         </div>
       </div>

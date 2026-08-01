@@ -8,6 +8,8 @@ import { LayoutDashboard, PlusCircle, User, LogOut, Menu, X, Bell, List, History
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { useCustomerNotifications } from '@/contexts/CustomerNotificationContext';
 
+import { ThemeToggle } from '@/components/theme-toggle';
+
 const NAV_ITEMS = [
   { href: '/customer/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
   { href: '/customer/jobs',          label: 'All Requests', icon: List },
@@ -31,35 +33,40 @@ export function CustomerNavbar() {
     : '?';
 
   return (
-    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
+    <nav className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border/80 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/customer/dashboard" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">P</span>
+            <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary border border-primary/30 flex items-center justify-center font-bold text-sm">
+              <span>P</span>
             </div>
-            <span className="text-gray-900 font-semibold text-base">Prozync</span>
+            <div>
+              <span className="text-foreground font-extrabold text-base tracking-tight">Prozync</span>
+              <span className="ml-2 text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                Customer
+              </span>
+            </div>
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden sm:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1">
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = pathname === href || pathname.startsWith(href + '/');
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                     active
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'bg-primary/15 text-primary font-bold border-b-2 border-primary'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
                   <span>{label}</span>
                   {label === 'Notifications' && unreadCount > 0 && (
-                    <span className="ml-auto sm:ml-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                    <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                       {unreadCount}
                     </span>
                   )}
@@ -70,13 +77,15 @@ export function CustomerNavbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
+            <ThemeToggle compact />
+
             {/* Avatar + name */}
             {customer && (
-              <div className="hidden sm:flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-blue-700 font-semibold text-xs">{initials}</span>
+              <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/60">
+                <div className="w-7 h-7 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center justify-center font-bold text-xs">
+                  <span>{initials}</span>
                 </div>
-                <span className="text-sm text-gray-700 font-medium max-w-[120px] truncate">
+                <span className="text-xs text-foreground font-semibold max-w-[120px] truncate">
                   {customer.name || customer.email}
                 </span>
               </div>
@@ -84,7 +93,7 @@ export function CustomerNavbar() {
 
             <button
               onClick={() => logout()}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all font-medium"
             >
               <LogOut className="h-4 w-4" />
               Sign out
@@ -93,7 +102,7 @@ export function CustomerNavbar() {
             {/* Mobile toggle */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="sm:hidden p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-all"
+              className="lg:hidden p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -108,17 +117,17 @@ export function CustomerNavbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="sm:hidden border-t border-gray-200 bg-white overflow-hidden"
+            className="lg:hidden border-t border-border/80 bg-card overflow-hidden"
           >
             <div className="px-4 py-3 space-y-1">
               {customer && (
-                <div className="flex items-center gap-3 px-3 py-3 mb-2 border-b border-gray-100">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="text-blue-700 font-semibold text-sm">{initials}</span>
+                <div className="flex items-center gap-3 px-3 py-3 mb-2 border-b border-border/60">
+                  <div className="w-9 h-9 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center justify-center font-bold text-xs">
+                    <span>{initials}</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{customer.name}</p>
-                    <p className="text-xs text-gray-500">{customer.email}</p>
+                    <p className="text-xs font-bold text-foreground">{customer.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{customer.email}</p>
                   </div>
                 </div>
               )}
@@ -127,16 +136,16 @@ export function CustomerNavbar() {
                     key={href}
                     href={href}
                     onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                       pathname === href
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        ? 'bg-primary/15 text-primary font-bold border-l-2 border-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                     }`}
                   >
                     <Icon className="h-4 w-4" />
                     <span>{label}</span>
                     {label === 'Notifications' && unreadCount > 0 && (
-                      <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
                         {unreadCount}
                       </span>
                     )}
@@ -144,7 +153,7 @@ export function CustomerNavbar() {
               ))}
               <button
                 onClick={() => logout()}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
               >
                 <LogOut className="h-4 w-4" />
                 Sign out

@@ -151,14 +151,16 @@ export function OwnerSidebar() {
         )}
       >
         {/* Header */}
-        <div className="p-5 border-b border-border/80 flex items-center justify-between shrink-0">
+        <div className="p-4 border-b border-sidebar-border/80 flex items-center justify-between shrink-0 bg-sidebar/50 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
+            <div className="p-2 bg-primary/10 rounded-xl border border-primary/20 shadow-xs">
               <Building2 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-base font-bold tracking-tight">SmartERP</h1>
-              <p className="text-xs text-muted-foreground">Owner Portal</p>
+              <h1 className="text-sm font-extrabold tracking-tight text-foreground">SmartERP</h1>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                Owner Portal
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -181,11 +183,11 @@ export function OwnerSidebar() {
             if (filteredItems.length === 0) return null
 
             return (
-              <div key={category.title} className="space-y-1">
-                <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <div key={category.title} className="space-y-1.5">
+                <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
                   {category.title}
                 </p>
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   {filteredItems.map((item) => {
                     const isActive = isRouteActive(pathname, item.href, allNavHrefs)
                     return (
@@ -194,13 +196,13 @@ export function OwnerSidebar() {
                         href={item.href}
                         id={item.name}
                         className={cn(
-                          "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150",
+                          "flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 relative group",
                           isActive
-                            ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
-                            : "text-muted-foreground hover:text-foreground hover:bg-accent/70",
+                            ? "bg-primary/15 text-primary font-bold border-l-2 border-primary shadow-xs"
+                            : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/75 hover:translate-x-0.5",
                         )}
                       >
-                        <item.icon className="h-4 w-4 shrink-0" />
+                        <item.icon className={cn("h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110", isActive && "text-primary")} />
                         <span>{item.name}</span>
                       </NavLink>
                     )
@@ -212,20 +214,27 @@ export function OwnerSidebar() {
         </div>
 
         {/* Footer - user info */}
-        <div className="p-4 border-t border-border shrink-0">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-primary-foreground">{user?.name?.charAt(0)}</span>
+        <div className="p-3 border-t border-sidebar-border shrink-0">
+          <div className="p-3 rounded-xl bg-sidebar-accent/40 border border-sidebar-border/60 backdrop-blur-xs">
+            <div className="flex items-center gap-3 mb-2.5">
+              <div className="w-8 h-8 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center justify-center font-bold text-xs shrink-0">
+                {user?.name?.charAt(0).toUpperCase() || "O"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-foreground truncate">{user?.name || "Owner User"}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full h-8 text-xs font-semibold hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-3.5 w-3.5 mr-2" />
+              Sign Out
+            </Button>
           </div>
-          <Button variant="outline" size="sm" className="w-full bg-transparent" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
         </div>
       </div>
 
