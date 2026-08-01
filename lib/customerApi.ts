@@ -13,7 +13,7 @@
 
 import axios, { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smarterp-backendend.onrender.com';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
 
 // In-memory CSRF token store (not localStorage — no XSS risk)
 let csrfToken: string | null = null;

@@ -118,7 +118,7 @@ function JobMessagesTab() {
     if (sseRef.current) { sseRef.current.close(); sseRef.current = null }
     if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current)
     const token = getAuthToken()
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://smarterp-backendend.onrender.com"
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
     const url = `${BACKEND_URL}/api/customer/jobs/${jobId}/events${token ? `?token=${token}` : ""}`
     const source = new EventSource(url, { withCredentials: true })
     sseRef.current = source

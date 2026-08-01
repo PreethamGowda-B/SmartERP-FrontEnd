@@ -18,7 +18,7 @@ import Link from "next/link"
 import { getAuthToken, apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
+const API = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
 
 function authHeaders(): Record<string, string> {
   const token = getAuthToken()

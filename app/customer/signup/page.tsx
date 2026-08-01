@@ -7,7 +7,7 @@ import { User, Mail, Lock, Phone, Loader2, ArrowLeft } from 'lucide-react';
 import { CompanyCodeField } from '@/components/customer/auth/CompanyCodeField';
 import customerApi from '@/lib/customerApi';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smarterp-backendend.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
 
 export default function CustomerSignupPage() {
   const router = useRouter();

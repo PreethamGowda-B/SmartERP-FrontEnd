@@ -13,7 +13,7 @@ import { EmployeeLayout } from "@/components/employee-layout"
 
 import { getAccessToken } from "@/lib/apiClient"
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
+const API = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
 
 function authHeaders(): Record<string, string> {
     const token = getAccessToken()

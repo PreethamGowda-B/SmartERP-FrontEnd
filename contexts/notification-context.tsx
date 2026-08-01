@@ -138,7 +138,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setupFCM() // Request FCM permission
 
     // SSE requires token as query param since EventSource doesn't support custom headers
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://smarterp-backendend.onrender.com"
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
     const token = getAuthToken()
     const sseUrl = token
       ? `${BACKEND_URL}/api/notifications/sse?token=${encodeURIComponent(token)}`

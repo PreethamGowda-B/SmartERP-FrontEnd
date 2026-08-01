@@ -187,7 +187,7 @@ function handleLogout() {
 let refreshPromise: Promise<any> | null = null
 
 export async function apiClient(path: string, options: RequestInit = {}, retries = 2) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
   
   const isFormData = options.body instanceof FormData
   const headers: Record<string, string> = {

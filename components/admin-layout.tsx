@@ -18,7 +18,9 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
-  Brain
+  Brain,
+  ScrollText,
+  Server
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -55,7 +57,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Feedback", icon: MessageSquare, href: "/feedback" },
     { name: "AI Operations", icon: Brain, href: "/ai-operations" },
     { name: "Analytics", icon: BarChart3, href: "/analytics" },
-    { name: "Settings", icon: Settings, href: "/settings" },
+    { name: "System Logs", icon: ScrollText, href: "/logs" },
+    { name: "Settings & Maintenance", icon: Settings, href: "/settings" },
   ]
 
   // Get route prefix from current pathname (/superadmin or legacy secret slug)

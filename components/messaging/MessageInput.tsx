@@ -87,7 +87,7 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
       formData.append("attachment", file)
 
       // Use fetch directly for multipart (apiClient uses JSON)
-      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://smarterp-backendend.onrender.com"
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
       const token = typeof window !== "undefined"
         ? (localStorage.getItem("token") ?? sessionStorage.getItem("token") ?? "")
         : ""

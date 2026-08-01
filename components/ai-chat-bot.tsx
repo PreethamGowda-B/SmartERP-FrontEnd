@@ -42,7 +42,7 @@ interface Message {
   intercepted?: boolean
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
 
 /* ---------------- BACKEND CALL ---------------- */
 

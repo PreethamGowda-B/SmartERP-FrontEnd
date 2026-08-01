@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Building2, Loader2, HardHat, UserPlus, CheckCircle2, RefreshCw, Mail, ArrowLeft, Eye, EyeOff, TrendingUp, Users, Clock, Calendar, Bell } from "lucide-react"
 import "@/app/login-page.css"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
@@ -188,7 +188,7 @@ export function LoginForm() {
 
         // Check if email is already registered before sending OTP
         try {
-          const checkRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"}/api/auth/check-email`, {
+          const checkRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"}/api/auth/check-email`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email }),
@@ -558,7 +558,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={() => {
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
                 window.location.href = `${apiUrl}/api/auth/google?role=${activeTab}`
               }}
               className="lp-btn-google w-full h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center gap-2.5 text-[0.875rem] font-semibold text-slate-700 lp-enter lp-enter-d5"

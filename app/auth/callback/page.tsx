@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { setTokens, logger } from "@/lib/apiClient"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
 
 // ✅ SECURE OAuth callback — exchanges a short-lived one-time code for session cookies
 // Tokens are NEVER passed through the URL (no browser history / Referer leak)

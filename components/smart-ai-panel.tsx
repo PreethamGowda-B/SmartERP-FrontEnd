@@ -70,7 +70,7 @@ interface FeedbackDetection {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
 
 const MODEL_SPECS = [
   { key: "auto", label: "Auto", description: "AI picks the best specialist", icon: Sparkles, plan: "all", color: "from-violet-500 to-purple-600" },

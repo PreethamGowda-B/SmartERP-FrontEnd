@@ -27,7 +27,7 @@ interface EmployeeLocation {
 }
 
 const POLL_INTERVAL_MS = 5_000
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
 
 function formatLastSeen(ts: string | null): string {
     if (!ts) return "Never"

@@ -22,7 +22,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import type { SSEEvent } from '@/lib/customerTypes';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smarterp-backendend.onrender.com';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
 const DEDUP_WINDOW = 50; // keep last N event_ids
 
 interface UseSSEOptions {

@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, Loader2, ArrowLeft } from 'lucide-react';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smarterp-backendend.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
 
 // Map backend OAuth error codes to user-friendly messages
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
