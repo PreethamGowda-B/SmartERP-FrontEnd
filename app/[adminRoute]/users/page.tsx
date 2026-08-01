@@ -16,6 +16,7 @@ interface User {
   name: string
   email: string
   role: string
+  user_type?: "staff" | "customer"
   company_id: number
   company_name: string
   created_at: string
@@ -30,6 +31,7 @@ export default function AdminUsers() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
+  const [userTypeFilter, setUserTypeFilter] = useState("all")
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   
   // Action state
@@ -109,27 +111,28 @@ export default function AdminUsers() {
             method: "DELETE",
             body: JSON.stringify({ hard_delete: true })
           })
-          toast.success(`User ${selectedUser.name} permanently deleted`)
+          toast.success(`${selectedUser.name} permanently deleted`)
           setUsers(prev => prev.filter(u => u.id !== selectedUser.id))
           break
       }
       closeAction()
-      fetchUsers(true)
-    } catch (err: any) {
-      toast.error(err?.message || "Action failed")
+    } catch {
+      toast.error(`Action failed`)
     } finally {
       setActionLoading(false)
     }
   }
 
-  const filteredUsers = (Array.isArray(users) ? users : []).filter(u => {
+  const filteredUsers = users.filter((u) => {
+    const q = searchQuery.toLowerCase()
     const matchesSearch = (
-      u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.company_name?.toLowerCase().includes(searchQuery.toLowerCase())
+      (u.name || "").toLowerCase().includes(q) ||
+      (u.email || "").toLowerCase().includes(q) ||
+      (u.company_name || "").toLowerCase().includes(q)
     )
     const matchesRole = roleFilter === "all" || u.role === roleFilter
-    return matchesSearch && matchesRole
+    const matchesType = userTypeFilter === "all" || (u.user_type || (u.role === "customer" ? "customer" : "staff")) === userTypeFilter
+    return matchesSearch && matchesRole && matchesType
   })
 
   const ACTION_CONFIGS = {
@@ -186,6 +189,18 @@ export default function AdminUsers() {
           <div className="flex items-center gap-2">
             <div className="relative font-bold">
               <select
+                className="appearance-none bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:border-slate-900 transition-all min-w-[140px]"
+                value={userTypeFilter}
+                onChange={(e) => setUserTypeFilter(e.target.value)}
+              >
+                <option value="all">All Account Types</option>
+                <option value="staff">Staff Members</option>
+                <option value="customer">Customer Accounts</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+            </div>
+            <div className="relative font-bold">
+              <select
                 className="appearance-none bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:border-slate-900 transition-all min-w-[160px]"
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
@@ -195,6 +210,7 @@ export default function AdminUsers() {
                 <option value="employee">Staff Members</option>
                 <option value="hr">HR Managers</option>
                 <option value="admin">System Admins</option>
+                <option value="customer">Customers</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
             </div>
@@ -242,6 +258,9 @@ export default function AdminUsers() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-base font-black text-slate-900 truncate tracking-tight">{user.name}</p>
+                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${user.user_type === 'customer' || user.role === 'customer' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-indigo-100 text-indigo-700 border border-indigo-200'}`}>
+                              {user.user_type || (user.role === 'customer' ? 'customer' : 'staff')}
+                            </span>
                             {user.is_active === false && (
                               <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-100 text-red-600">
                                 Deactivated

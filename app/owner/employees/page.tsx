@@ -725,11 +725,11 @@ export default function EmployeesPage() {
                     </div>
                   )}
 
-                  {/* Customer Rating in modal */}
+                  {/* Customer Rating & Detailed Performance History */}
                   <div className="flex items-start gap-3 pt-2 border-t">
                     <Star className="h-5 w-5 text-amber-400 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Customer Rating</p>
+                    <div className="w-full">
+                      <p className="text-xs text-muted-foreground">Customer Rating & Performance</p>
                       {viewDetails.rating !== null ? (
                         <div className="flex items-center gap-2 mt-0.5">
                           <div className="flex items-center gap-0.5">
@@ -753,6 +753,9 @@ export default function EmployeesPage() {
                       ) : (
                         <p className="text-sm text-muted-foreground mt-0.5">No customer reviews yet</p>
                       )}
+
+                      {/* Review History Breakdown */}
+                      <PerformanceHistorySection employeeId={viewDetails.id} />
                     </div>
                   </div>
                 </div>
@@ -768,5 +771,46 @@ export default function EmployeesPage() {
         )}
       </div>
     </OwnerLayout>
+  )
+}
+
+function PerformanceHistorySection({ employeeId }: { employeeId: number }) {
+  const [history, setHistory] = useState<{ average_rating: number; total_reviews: number; reviews: any[] }>({ average_rating: 0, total_reviews: 0, reviews: [] })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchPerformance() {
+      try {
+        const data = await apiClient(`/api/employees/${employeeId}/performance`)
+        if (data) setHistory(data)
+      } catch (err) {
+        logger.error("Failed to load performance history", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPerformance()
+  }, [employeeId])
+
+  if (loading) return <div className="text-xs text-muted-foreground mt-2">Loading review history...</div>
+  if (!history.reviews || history.reviews.length === 0) return null
+
+  return (
+    <div className="mt-3 space-y-2 max-h-40 overflow-y-auto pr-1">
+      <p className="text-xs font-bold text-foreground">Recent Customer Feedback:</p>
+      {history.reviews.map((rev) => (
+        <div key={rev.id} className="p-2 rounded-lg bg-slate-50 border text-xs space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-slate-900">{rev.customer_name || "Client"}</span>
+            <div className="flex items-center gap-0.5">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              <span className="font-bold">{rev.rating}</span>
+            </div>
+          </div>
+          {rev.comment && <p className="text-slate-600 italic">"{rev.comment}"</p>}
+          <p className="text-[10px] text-slate-400">{rev.job_title || "Job"} • {new Date(rev.created_at).toLocaleDateString()}</p>
+        </div>
+      ))}
+    </div>
   )
 }

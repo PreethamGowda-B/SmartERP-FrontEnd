@@ -309,12 +309,13 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {([
-                { key: "email", label: "Email Notifications", desc: "Receive notifications via email" },
-                { key: "push", label: "Push Notifications", desc: "In-app push notifications" },
-                { key: "sms", label: "SMS Notifications", desc: "Critical alerts via SMS" },
-                { key: "safety", label: "Safety Alerts", desc: "Immediate safety incident alerts" },
-                { key: "budget", label: "Budget Alerts", desc: "Project budget threshold alerts" },
-              ] as const).map(({ key, label, desc }, i, arr) => (
+                { key: "email", label: "Email Notifications", desc: "Receive notifications via email", configured: true },
+                { key: "push", label: "Push Notifications", desc: "In-app push notifications", configured: true },
+                { key: "whatsapp", label: "WhatsApp Notifications", desc: "Job assignment, OTP, & status updates via Meta WhatsApp Cloud API", configured: false },
+                { key: "sms", label: "SMS Notifications", desc: "Critical alerts via SMS", configured: true },
+                { key: "safety", label: "Safety Alerts", desc: "Immediate safety incident alerts", configured: true },
+                { key: "budget", label: "Budget Alerts", desc: "Project budget threshold alerts", configured: true },
+              ] as const).map(({ key, label, desc, configured }, i, arr) => (
                 <div key={key}>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">

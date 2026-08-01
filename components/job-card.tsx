@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { type Job, mockEmployees } from "@/lib/data"
-import { MapPin, Calendar, Users, DollarSign, Edit, Trash2, Eye } from "lucide-react"
+import { MapPin, Calendar, Users, DollarSign, Edit, Trash2, Eye, Zap } from "lucide-react"
 import { format } from "date-fns"
 
 interface JobCardProps {
@@ -129,11 +129,44 @@ export function JobCard({ job, onEdit, onDelete, onView, showActions = true }: J
         </div>
 
         {showActions && (
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-2 flex-wrap items-center">
             {onView && (
               <Button variant="outline" size="sm" onClick={() => onView(job)}>
                 <Eye className="h-4 w-4 mr-1" />
                 View
+              </Button>
+            )}
+            {job.status !== "completed" && job.status !== "cancelled" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 font-bold"
+                onClick={() => {
+                  const evt = new CustomEvent("openJobActions", { detail: { jobId: job.id, jobTitle: job.title } })
+                  window.dispatchEvent(evt)
+                }}
+              >
+                <Zap className="h-4 w-4 mr-1 text-indigo-600" />
+                Job Actions
+              </Button>
+            )}
+            {job.status === "completed" && (
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                onClick={async () => {
+                  try {
+                    const res = await (await import("@/lib/apiClient")).apiClient(`/api/jobs/${job.id}/invoice`, { method: "POST" })
+                    const { toast } = await import("sonner")
+                    toast.success(`Invoice ${res.invoice?.invoice_number || ''} generated successfully!`)
+                  } catch (err: any) {
+                    const { toast } = await import("sonner")
+                    toast.error(err?.message || "Failed to generate invoice")
+                  }
+                }}
+              >
+                Generate Invoice
               </Button>
             )}
             {onEdit && (

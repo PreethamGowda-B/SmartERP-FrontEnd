@@ -415,7 +415,92 @@ export default function BillingPage() {
                 <span className="absolute inset-0 bg-zinc-100 dark:bg-zinc-800 scale-x-0 origin-left transition-transform duration-300 group-hover:scale-x-100 mix-blend-multiply dark:mix-blend-lighten"></span>
             </Button>
         </div>
+
+        {/* ── Job Invoices Section ── */}
+        <JobInvoicesSection />
       </div>
     </OwnerLayout>
+  )
+}
+
+function JobInvoicesSection() {
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadInvoices() {
+      try {
+        const data = await apiClient("/api/jobs/invoices/all")
+        setInvoices(Array.isArray(data) ? data : [])
+      } catch (err) {
+        logger.error("Failed to load job invoices", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadInvoices()
+  }, [])
+
+  return (
+    <Card className="mt-12 border border-slate-200">
+      <CardHeader>
+        <CardTitle className="text-xl font-bold flex items-center gap-2">
+          Job Invoices
+          <Badge variant="outline" className="ml-auto font-mono text-xs">
+            Auto-retry Backoff: 3 Attempts Active
+          </Badge>
+        </CardTitle>
+        <CardDescription>Generated invoices and billing records for completed service jobs.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">Loading job invoices...</div>
+        ) : invoices.length === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground border border-dashed rounded-xl">
+            No job invoices generated yet. Click "Generate Invoice" on any completed job in the Jobs tab.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-4">Invoice #</th>
+                  <th className="py-3 px-4">Job Title</th>
+                  <th className="py-3 px-4">Customer</th>
+                  <th className="py-3 px-4">Amount</th>
+                  <th className="py-3 px-4">Generated Date</th>
+                  <th className="py-3 px-4 text-right">PDF Invoice</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-slate-50">
+                    <td className="py-3 px-4 font-mono font-bold text-indigo-600">{inv.invoice_number}</td>
+                    <td className="py-3 px-4 font-medium text-slate-900">{inv.job_title || 'Service Job'}</td>
+                    <td className="py-3 px-4 text-slate-600">{inv.customer_name || 'Client'}</td>
+                    <td className="py-3 px-4 font-bold">₹{parseFloat(inv.total_amount || 0).toLocaleString()}</td>
+                    <td className="py-3 px-4 text-slate-500 text-xs">{new Date(inv.generated_at).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-right">
+                      {inv.pdf_url ? (
+                        <a
+                          href={inv.pdf_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition-colors"
+                        >
+                          Download Invoice PDF
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-400">PDF Ready</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

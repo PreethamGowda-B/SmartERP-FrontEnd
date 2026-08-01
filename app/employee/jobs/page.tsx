@@ -70,6 +70,7 @@ export default function EmployeeJobsPage() {
       })
     : allJobs
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null)
+  const [activeActionsJob, setActiveActionsJob] = useState<{ id: string; title: string } | null>(null)
   const [progressValues, setProgressValues] = useState<Record<string, number>>({})
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
   // Per-job lock: tracks jobs whose accept request is currently in-flight.
@@ -402,6 +403,18 @@ export default function EmployeeJobsPage() {
                     </div>
                   )}
 
+                  {isAccepted && !isCompleted && (
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11 rounded-2xl"
+                        onClick={() => setActiveActionsJob({ id: job.id, title: job.title })}
+                      >
+                        <Zap className="h-4 w-4 mr-2" />
+                        Job Actions
+                      </Button>
+                    </div>
+                  )}
+
                   {acceptedByOther && !isCompleted && (
                     <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
@@ -431,7 +444,20 @@ export default function EmployeeJobsPage() {
             )
           })}
         </div>
+
+        {activeActionsJob && (
+          <JobActionsModal
+            jobId={activeActionsJob.id}
+            jobTitle={activeActionsJob.title}
+            isOpen={!!activeActionsJob}
+            onClose={() => setActiveActionsJob(null)}
+            onActionComplete={() => refreshJobs()}
+          />
+        )}
       </div>
     </EmployeeLayout>
   )
 }
+
+import { JobActionsModal } from "@/components/job-actions-modal"
+import { Zap } from "lucide-react"

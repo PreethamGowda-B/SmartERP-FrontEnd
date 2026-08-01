@@ -77,18 +77,65 @@ export function ApprovalCenter() {
     },
   ])
 
+  React.useEffect(() => {
+    async function loadFieldActions() {
+      try {
+        const { apiClient } = await import("@/lib/apiClient")
+        const fieldActions = await apiClient("/api/admin/approvals/field-actions")
+        if (Array.isArray(fieldActions) && fieldActions.length > 0) {
+          const mapped: ApprovalItem[] = fieldActions.map((fa: any) => ({
+            id: fa.id,
+            title: `Job Action: ${fa.action_type ? fa.action_type.replace(/_/g, ' ').toUpperCase() : 'FIELD REQUEST'} (${fa.job_title || 'Job'})`,
+            category: "Job Approval",
+            requester: fa.requester_name || "Field Employee",
+            requestedDate: new Date(fa.created_at).toLocaleDateString(),
+            amountOrQty: fa.urgency ? fa.urgency.toUpperCase() : "NORMAL",
+            status: fa.status === 'pending_approval' ? 'pending' : (fa.status === 'approved' ? 'approved' : 'rejected'),
+            details: fa.notes || `Module: ${fa.module}, Action: ${fa.action_type}`
+          }))
+          setApprovals((prev) => [...mapped, ...prev.filter(p => !p.id.includes('-'))])
+        }
+      } catch (err) {
+        // Fallback silently if unauthenticated or offline
+      }
+    }
+    loadFieldActions()
+  }, [])
+
   const [activeTab, setActiveTab] = React.useState<string>("pending")
 
-  const handleApprove = (id: string) => {
+  const handleApprove = async (id: string) => {
     setApprovals((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: "approved" } : a))
     )
+    if (!id.startsWith("app-")) {
+      try {
+        const { apiClient } = await import("@/lib/apiClient")
+        await apiClient(`/api/jobs/actions/${id}/respond`, {
+          method: "PATCH",
+          body: JSON.stringify({ decision: "approved", owner_response: "Approved via Approval Center" })
+        })
+        const { toast } = await import("sonner")
+        toast.success("Field Action Approved!")
+      } catch (e) {}
+    }
   }
 
-  const handleReject = (id: string) => {
+  const handleReject = async (id: string) => {
     setApprovals((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: "rejected" } : a))
     )
+    if (!id.startsWith("app-")) {
+      try {
+        const { apiClient } = await import("@/lib/apiClient")
+        await apiClient(`/api/jobs/actions/${id}/respond`, {
+          method: "PATCH",
+          body: JSON.stringify({ decision: "rejected", owner_response: "Declined via Approval Center" })
+        })
+        const { toast } = await import("sonner")
+        toast.error("Field Action Rejected")
+      } catch (e) {}
+    }
   }
 
   const filteredData = approvals.filter((a) => a.status === activeTab)
