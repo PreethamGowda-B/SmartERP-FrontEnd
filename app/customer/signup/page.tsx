@@ -219,7 +219,7 @@ export default function CustomerSignupPage() {
 
             {/* Google */}
             <a
-              href={`${API_URL}/api/customer/auth/google`}
+              href={`${API_URL}/api/auth/google?type=customer`}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium transition-all"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
