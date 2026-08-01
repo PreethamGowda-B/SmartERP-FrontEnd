@@ -24,6 +24,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { logger } from "@/lib/logger"
+import { cn, isRouteActive } from "@/lib/utils"
 
 
 interface AdminLayoutProps {
