@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { FileText, Download, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { MessageAttachment } from "@/types/messaging"
@@ -42,6 +42,10 @@ export function AttachmentPreview({ attachment, isOwn }: AttachmentPreviewProps)
         {/* Lightbox */}
         <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
           <DialogContent className="max-w-3xl p-2 bg-black/90 border-0">
+            <div className="sr-only">
+              <DialogTitle>Image Preview</DialogTitle>
+              <DialogDescription>{attachment.file_name}</DialogDescription>
+            </div>
             <div className="relative flex items-center justify-center">
               <Button
                 variant="ghost"

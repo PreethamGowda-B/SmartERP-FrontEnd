@@ -69,6 +69,10 @@ export function PlanLimitModal({ isOpen, onClose, data }: PlanLimitModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border border-border/80 shadow-2xl bg-card">
+        <div className="sr-only">
+          <DialogTitle>Plan Limit Reached</DialogTitle>
+          <DialogDescription>You have reached the limit for your current subscription plan.</DialogDescription>
+        </div>
         {/* Top Decorative Amber Banner */}
         <div className="h-3 bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-600" />
 

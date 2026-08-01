@@ -70,6 +70,10 @@ export function TrialWelcomeModal({ onConfirm }: { onConfirm?: () => void }) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleDismiss()}>
       <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-0 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl">
+        <div className="sr-only">
+          <DialogTitle>Welcome to SmartERP Trial</DialogTitle>
+          <DialogDescription>Your 14-day Pro trial has started. Explore all features.</DialogDescription>
+        </div>
         {/* Banner header */}
         <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
           <div className="absolute inset-0 bg-black/10 mix-blend-overlay"></div>

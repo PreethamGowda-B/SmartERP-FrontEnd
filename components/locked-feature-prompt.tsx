@@ -126,6 +126,10 @@ export function LockedFeaturePrompt() {
       else setIsOpen(open)
     }}>
       <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border border-border/80 shadow-2xl bg-card">
+        <div className="sr-only">
+          <DialogTitle>Pro Feature Locked</DialogTitle>
+          <DialogDescription>Upgrade your plan to unlock this feature.</DialogDescription>
+        </div>
         {/* Top Decorative Gradient Banner */}
         <div className="h-3 bg-gradient-to-r from-amber-500 via-violet-600 to-indigo-600" />
 

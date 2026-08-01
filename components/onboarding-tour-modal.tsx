@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/auth-context"
@@ -103,6 +103,10 @@ export function OnboardingTourModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-lg p-0 overflow-hidden bg-card border border-border shadow-2xl">
+        <div className="sr-only">
+          <DialogTitle>SmartERP Onboarding Tour</DialogTitle>
+          <DialogDescription>Step-by-step guide to get you started with SmartERP.</DialogDescription>
+        </div>
         <div className="h-2 bg-gradient-to-r from-primary via-emerald-500 to-accent" />
 
         <div className="p-6 sm:p-8 space-y-6">

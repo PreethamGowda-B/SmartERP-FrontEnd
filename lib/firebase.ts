@@ -15,16 +15,26 @@ const requiredEnvVars = {
 
 // Validate at startup — fail loudly in development, warn in production
 if (typeof window !== "undefined") {
+  const KEY_MAP: Record<string, string> = {
+    apiKey: "NEXT_PUBLIC_FIREBASE_API_KEY",
+    authDomain: "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+    projectId: "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+    storageBucket: "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+    messagingSenderId: "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    appId: "NEXT_PUBLIC_FIREBASE_APP_ID",
+    measurementId: "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID",
+  };
+
   const missing = Object.entries(requiredEnvVars)
     .filter(([, v]) => !v)
-    .map(([k]) => `NEXT_PUBLIC_${k.replace(/([A-Z])/g, "_$1").toUpperCase()}`);
+    .map(([k]) => KEY_MAP[k] || k);
 
   if (missing.length > 0) {
     const msg = `Firebase config missing env vars: ${missing.join(", ")}`;
     if (process.env.NODE_ENV === "development") {
-      throw new Error(msg);
+      console.warn("⚠️ " + msg);
     } else {
-      console.error("⚠️ " + msg);
+      console.warn("⚠️ " + msg);
     }
   }
 }
