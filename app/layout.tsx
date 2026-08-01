@@ -19,7 +19,6 @@ import { CommandRegistryProvider } from "@/contexts/command-registry-context"
 import PremiumLoader from "@/components/premium-loader"
 import { FloatingActionHub } from "@/components/floating-action-hub"
 import { GlobalCommandPalette } from "@/components/global-command-palette"
-import { AICopilot } from "@/components/ai-copilot"
 import { BackgroundSubscriptionPoller } from "@/components/background-subscription-poller"
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal"
 import { OnboardingTourModal } from "@/components/onboarding-tour-modal"
@@ -154,7 +153,6 @@ export default function RootLayout({
                     <PremiumLoader />
                     <FloatingActionHub />
                     <GlobalCommandPalette />
-                    <AICopilot />
                     <BackgroundSubscriptionPoller />
                     <KeyboardShortcutsModal />
                     <OnboardingTourModal />

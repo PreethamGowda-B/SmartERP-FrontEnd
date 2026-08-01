@@ -5,11 +5,11 @@ import { usePathname, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Sparkles, X, Send, Bot, User, Minimize2, Maximize2, ChevronDown, ChevronUp,
-  Copy, RotateCcw, FileText, Table2, Share2, Mail, ExternalLink, Loader2,
-  MessageSquarePlus, Bug, Lightbulb, AlertTriangle, Lock, Zap, ChevronRight,
+  Copy, RotateCcw, ExternalLink, Loader2,
+  MessageSquarePlus, Bug, AlertTriangle, Lock, Zap,
   History, Plus, Trash2, Edit3, Search, Check, Brain, TrendingUp, Package,
   CalendarCheck, CreditCard, Users, FileSpreadsheet, Globe, BarChart3,
-  Mic, MicOff, ShieldCheck, Clock
+  ShieldCheck, Clock
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -99,12 +99,6 @@ const FEEDBACK_PATTERNS = [
   { regex: /\b(billing|charge|payment|invoice|subscription|refund)\b/i, type: "billing", severity: "high" },
 ]
 
-const PLAN_PLAN_TIER_MAP: Record<string, string[]> = {
-  all: ["free", "basic", "pro"],
-  free: ["free", "basic", "pro"],
-  basic: ["basic", "pro"],
-  pro: ["pro"],
-}
 
 // ─── Storage Helpers ──────────────────────────────────────────────────────────
 
@@ -289,6 +283,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   // ── Display state
   const [autoModelBadge, setAutoModelBadge] = React.useState<string | null>(null)
   const [topActions, setTopActions] = React.useState<string[]>([])
+  const [renamingConvId, setRenamingConvId] = React.useState<string | null>(null)
+  const [renameValue, setRenameValue] = React.useState("")
 
   // ── Refs
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
@@ -384,6 +380,23 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
     if (activeConvId === id) {
       startNewConversation()
     }
+  }
+
+  // ── Rename conversation
+  function startRename(conv: Conversation, e: React.MouseEvent) {
+    e.stopPropagation()
+    setRenamingConvId(conv.id)
+    setRenameValue(conv.title)
+  }
+
+  function commitRename(id: string) {
+    if (!renameValue.trim()) { setRenamingConvId(null); return }
+    setConversations(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, title: renameValue.trim() } : c)
+      saveConversations(String(user.id), updated)
+      return updated
+    })
+    setRenamingConvId(null)
   }
 
   // ── Load conversation
@@ -739,10 +752,32 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                                   ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
                                   : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
                               )}
-                              onClick={() => loadConversation(conv)}
+                              onClick={() => renamingConvId !== conv.id && loadConversation(conv)}
                             >
                               <MessageSquarePlus className="h-3 w-3 shrink-0" />
-                              <span className="flex-1 truncate">{conv.title}</span>
+                              {renamingConvId === conv.id ? (
+                                <input
+                                  autoFocus
+                                  value={renameValue}
+                                  onChange={e => setRenameValue(e.target.value)}
+                                  onBlur={() => commitRename(conv.id)}
+                                  onKeyDown={e => {
+                                    if (e.key === "Enter") commitRename(conv.id)
+                                    if (e.key === "Escape") setRenamingConvId(null)
+                                  }}
+                                  onClick={e => e.stopPropagation()}
+                                  className="flex-1 bg-transparent border-b border-violet-500 outline-none text-[11px] text-foreground"
+                                />
+                              ) : (
+                                <span className="flex-1 truncate">{conv.title}</span>
+                              )}
+                              <Button
+                                variant="ghost" size="icon"
+                                className="h-4 w-4 opacity-0 group-hover:opacity-100 hover:text-violet-500 shrink-0"
+                                onClick={e => startRename(conv, e)}
+                              >
+                                <Edit3 className="h-2.5 w-2.5" />
+                              </Button>
                               <Button
                                 variant="ghost" size="icon"
                                 className="h-4 w-4 opacity-0 group-hover:opacity-100 hover:text-destructive shrink-0"
