@@ -39,6 +39,7 @@ interface Message {
   navigation?: { path: string; label: string } | null
   sources?: string[]
   isUpgradePrompt?: boolean
+  intercepted?: boolean
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://smarterp-backendend.onrender.com"
@@ -53,6 +54,16 @@ async function askSmartERPAgent(
 ) {
   const token = getAuthToken()
 
+  // Derive current portal and current module from active route
+  let currentPortal = "owner"
+  if (pathname.startsWith("/employee")) currentPortal = "employee"
+  else if (pathname.startsWith("/hr")) currentPortal = "hr"
+  else if (pathname.startsWith("/customer")) currentPortal = "customer"
+  else if (pathname.startsWith("/superadmin")) currentPortal = "superadmin"
+
+  const pathSegments = pathname.split("/").filter(Boolean)
+  const currentModule = pathSegments.length > 1 ? pathSegments[1] : "overview"
+
   const res = await fetch(`${API_URL}/api/ai/agent`, {
     method: "POST",
     headers: {
@@ -61,7 +72,10 @@ async function askSmartERPAgent(
     },
     body: JSON.stringify({
       message,
-      clientContext: { currentPage: pathname },
+      currentPortal,
+      currentModule,
+      currentPagePath: pathname,
+      clientContext: { currentPage: pathname, portal: currentPortal, module: currentModule },
       history: history.map((m) => ({
         sender: m.sender,
         content: m.text,
@@ -150,9 +164,10 @@ export function AIChatBot({ className }: { className?: string }) {
     }
   }
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading) return
-    if (input.trim().length > 1000) {
+  const sendMessage = async (presetText?: string) => {
+    const textToSend = presetText || input
+    if (!textToSend.trim() || loading) return
+    if (textToSend.trim().length > 1000) {
       setMessages((prev) => [
         ...prev,
         {
@@ -164,22 +179,21 @@ export function AIChatBot({ className }: { className?: string }) {
       return
     }
 
-    const userText = input
     setInput("")
     setLoading(true)
 
     setMessages((prev) => [
       ...prev,
-      { id: Date.now(), text: userText, sender: "user" },
+      { id: Date.now(), text: textToSend, sender: "user" },
     ])
 
     try {
       const { triggerFeatureLock } = await import("@/components/locked-feature-prompt")
-      const data = await askSmartERPAgent(userText, pathname, messages, (lockData) => {
+      const data = await askSmartERPAgent(textToSend, pathname, messages, (lockData) => {
         triggerFeatureLock(lockData)
       })
 
-      if (data.navigation?.path) {
+      if (data.navigation?.path && !data.intercepted) {
         router.push(data.navigation.path)
       }
 
@@ -189,9 +203,15 @@ export function AIChatBot({ className }: { className?: string }) {
           id: Date.now() + 1,
           text: data.text || "Processed request.",
           sender: "bot",
-          widget: data.widget || null,
+          widget: data.widget || (data.intercepted ? {
+            type: "UPGRADE_PROMPT",
+            title: "🔒 Pro Plan Feature Required",
+            message: data.text,
+            features: ["AI Revenue Forecasting", "GST Reconciliation", "Cross-Module Business Intelligence", "Automated Payroll Validation"],
+          } : null),
           navigation: data.navigation || null,
           sources: data.sources || [],
+          intercepted: data.intercepted || false,
         },
       ])
     } catch (err: any) {
@@ -291,6 +311,29 @@ export function AIChatBot({ className }: { className?: string }) {
 
               {/* Content */}
               <CardContent className="p-0 flex flex-col flex-1 min-h-0 bg-background">
+                {/* Pro Capabilities Quick Shortcuts Bar */}
+                <div className="p-2 border-b bg-muted/20 flex gap-1.5 overflow-x-auto text-[11px] scrollbar-none">
+                  <button
+                    onClick={() => sendMessage("Show today's attendance summary")}
+                    className="px-2.5 py-1 rounded-full bg-accent/40 hover:bg-accent text-foreground whitespace-nowrap font-medium transition-colors"
+                  >
+                    📊 Attendance
+                  </button>
+                  <button
+                    onClick={() => sendMessage("Show active jobs overview")}
+                    className="px-2.5 py-1 rounded-full bg-accent/40 hover:bg-accent text-foreground whitespace-nowrap font-medium transition-colors"
+                  >
+                    🛠️ Active Jobs
+                  </button>
+                  <button
+                    onClick={() => sendMessage("Forecast inventory & revenue demand")}
+                    className="px-2.5 py-1 rounded-full bg-primary/10 text-primary font-bold hover:bg-primary/20 whitespace-nowrap flex items-center gap-1 transition-colors"
+                  >
+                    <Lock className="h-3 w-3 text-amber-500" />
+                    <span>Forecast AI</span>
+                  </button>
+                </div>
+
                 <ScrollArea className="flex-1 min-h-0 p-3.5 space-y-3">
                   {messages.map((m) => (
                     <motion.div
@@ -316,6 +359,8 @@ export function AIChatBot({ className }: { className?: string }) {
                             className={`px-3.5 py-2.5 rounded-xl text-sm leading-relaxed shadow-sm ${
                               m.sender === "user"
                                 ? "bg-primary text-primary-foreground font-medium"
+                                : m.intercepted
+                                ? "bg-amber-500/10 border border-amber-500/30 text-foreground"
                                 : "bg-muted border border-border/50 text-foreground"
                             }`}
                           >
@@ -328,7 +373,7 @@ export function AIChatBot({ className }: { className?: string }) {
                           <div className="p-4 bg-gradient-to-br from-primary/10 via-accent/10 to-background border-2 border-primary/30 rounded-2xl space-y-3 shadow-lg">
                             <div className="flex items-center gap-2 text-sm font-extrabold text-primary">
                               <Sparkles className="h-4 w-4 text-amber-500 animate-spin" />
-                              <span>{m.widget.title || "🚀 SmartERP AI is a Premium Feature"}</span>
+                              <span>{m.widget.title || "🚀 SmartERP AI Pro Feature"}</span>
                             </div>
 
                             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -442,7 +487,7 @@ export function AIChatBot({ className }: { className?: string }) {
                   <Button
                     size="sm"
                     className="bg-primary text-primary-foreground px-3"
-                    onClick={sendMessage}
+                    onClick={() => sendMessage()}
                     disabled={loading}
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
