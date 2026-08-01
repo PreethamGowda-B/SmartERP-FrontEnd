@@ -124,18 +124,17 @@ export function getAuthToken() {
   if (typeof window === "undefined") return null
   
   const { at } = getStorageKeys()
+  const altAt = at === ADMIN_AT ? USER_AT : ADMIN_AT
   
-  // 1. sessionStorage first (tab-scoped, cleared on tab close — safest for web)
-  // 2. localStorage only for Android WebView bridge
-  const fromSession = sessionStorage.getItem(at)
+  // 1. Preferred key in sessionStorage
+  const fromSession = sessionStorage.getItem(at) || sessionStorage.getItem(altAt)
   if (fromSession) return fromSession
   
   const isAndroid = typeof window !== "undefined" && !!(window as any).Android
   if (isAndroid) {
-    return localStorage.getItem(at) || localStorage.getItem("accessToken")
+    return localStorage.getItem(at) || localStorage.getItem(altAt) || localStorage.getItem("accessToken")
   }
   
-  // Web: do not fall back to localStorage (XSS risk)
   return null
 }
 
@@ -146,14 +145,14 @@ export function getAccessToken() {
 export function getRefreshToken(): string | null {
   if (typeof window !== "undefined") {
     const { rt } = getStorageKeys()
-    const fromSession = sessionStorage.getItem(rt)
+    const altRt = rt === ADMIN_RT ? USER_RT : ADMIN_RT
+    const fromSession = sessionStorage.getItem(rt) || sessionStorage.getItem(altRt)
     if (fromSession) return fromSession
     
     const isAndroid = !!(window as any).Android
     if (isAndroid) {
-      return localStorage.getItem(rt) || localStorage.getItem("refreshToken")
+      return localStorage.getItem(rt) || localStorage.getItem(altRt) || localStorage.getItem("refreshToken")
     }
-    // Web: sessionStorage only
     return null
   }
   return null
