@@ -19,8 +19,8 @@ self.addEventListener('message', (event) => {
 });
 
 function initFirebase() {
-    if (!firebaseConfig || !firebaseConfig.apiKey) {
-        console.warn('[SW] Firebase config not yet received — push notifications may not work');
+    if (!firebaseConfig || !firebaseConfig.apiKey || !firebaseConfig.projectId) {
+        // Skip gracefully if Firebase env vars are missing
         return;
     }
     try {

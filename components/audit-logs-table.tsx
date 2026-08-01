@@ -71,9 +71,11 @@ export function AuditLogsTable() {
   const fetchAuditLogs = React.useCallback(async () => {
     setLoading(true)
     try {
-      const res = await apiClient("/api/audit-logs")
+      const res = await apiClient("/api/ai/audit-logs")
       if (Array.isArray(res) && res.length > 0) {
         setLogs(res)
+      } else if (res && Array.isArray(res.logs)) {
+        setLogs(res.logs)
       }
     } catch (err) {
       logger.log("[AUDIT LOGS] Using active audit stream fallback", err)

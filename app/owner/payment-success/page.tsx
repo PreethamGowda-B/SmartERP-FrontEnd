@@ -66,15 +66,71 @@ export default function PaymentSuccessPage() {
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null)
   const startTimeRef = useRef<number>(Date.now())
 
-  // Launch celebration confetti
+  // Launch cinematic Apple/Stripe-grade celebration confetti
   const launchConfetti = useCallback(() => {
     try {
+      const colors = ["#f59e0b", "#fbbf24", "#3b82f6", "#60a5fa", "#ffffff", "#e2e8f0", "#8b5cf6", "#d97706"]
+      const duration = 4500
+      const end = Date.now() + duration
+
+      // Stage 1: Dual Side Cannons (0s)
       confetti({
         particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ["#8b5cf6", "#ec4899", "#10b981", "#f59e0b", "#3b82f6"]
+        angle: 60,
+        spread: 60,
+        origin: { x: 0, y: 0.7 },
+        colors,
+        startVelocity: 45
       })
+      confetti({
+        particleCount: 100,
+        angle: 120,
+        spread: 60,
+        origin: { x: 1, y: 0.7 },
+        colors,
+        startVelocity: 45
+      })
+
+      // Stage 2: Center Skyburst (0.6s)
+      setTimeout(() => {
+        confetti({
+          particleCount: 150,
+          spread: 100,
+          origin: { x: 0.5, y: 0.4 },
+          colors,
+          scalar: 1.2,
+          startVelocity: 35
+        })
+      }, 600)
+
+      // Stage 3: Continuous Sparkling Rain Shower (1.2s to 4.0s)
+      const interval: any = setInterval(() => {
+        const timeLeft = end - Date.now()
+        if (timeLeft <= 0) {
+          clearInterval(interval)
+          return
+        }
+        const particleCount = Math.floor(25 * (timeLeft / duration))
+        confetti({
+          particleCount,
+          startVelocity: 25,
+          spread: 360,
+          ticks: 80,
+          origin: { x: Math.random(), y: Math.random() - 0.2 },
+          colors
+        })
+      }, 300)
+
+      // Stage 4: Golden Finale Sparkle (3.5s)
+      setTimeout(() => {
+        confetti({
+          particleCount: 120,
+          spread: 120,
+          origin: { x: 0.5, y: 0.5 },
+          colors: ["#f59e0b", "#fbbf24", "#ffffff"],
+          scalar: 1.3
+        })
+      }, 3500)
     } catch { /* ignore */ }
   }, [])
 
@@ -122,10 +178,10 @@ export default function PaymentSuccessPage() {
       description: "Your subscription has been activated successfully.",
     })
 
-    console.log(`[Frontend] Redirecting Dashboard in 2.5s`)
+    console.log(`[Frontend] Redirecting Dashboard in 4.5s`)
     setTimeout(() => {
       router.push("/owner")
-    }, 2500)
+    }, 4500)
   }, [launchConfetti, router, toast])
 
   // Active Verification Endpoint Execution
