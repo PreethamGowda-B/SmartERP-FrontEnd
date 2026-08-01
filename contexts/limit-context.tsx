@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { useSubscription } from "@/contexts/subscription-context"
-import { PlanLimitModal, LimitModalData } from "@/components/plan-limit-modal"
+import { PlanLimitModal, LimitModalData } from "../components/plan-limit-modal"
 
 interface LimitContextType {
   triggerLimitModal: (data: LimitModalData) => void
