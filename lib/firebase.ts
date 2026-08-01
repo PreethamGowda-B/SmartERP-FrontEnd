@@ -44,8 +44,12 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
 let messaging: any = null;
 
-if (typeof window !== "undefined") {
-  messaging = getMessaging(app);
+if (typeof window !== "undefined" && requiredEnvVars.projectId) {
+  try {
+    messaging = getMessaging(app);
+  } catch (err) {
+    console.warn("⚠️ Firebase Messaging initialization skipped:", err);
+  }
 }
 
 export { app, messaging };

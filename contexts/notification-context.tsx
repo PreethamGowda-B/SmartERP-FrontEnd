@@ -73,6 +73,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         const { messaging, VAPID_KEY } = await import("@/lib/firebase");
+        if (!messaging) {
+          logger.log("FCM messaging disabled (missing firebaseConfig.projectId)");
+          return;
+        }
         const { getToken: getFCMToken, onMessage } = await import("firebase/messaging");
 
         // Explicitly register service worker for reliability
