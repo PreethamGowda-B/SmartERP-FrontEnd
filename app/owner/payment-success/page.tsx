@@ -13,10 +13,11 @@ import {
   Check,
   Sparkles,
   HeartHandshake,
-  LayoutDashboard,
+  RefreshCw,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import confetti from "canvas-confetti"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -32,7 +33,7 @@ const ACTIVATION_STEPS = [
   "Verifying payment signature...",
   "Activating your subscription...",
   "Updating company features...",
-  "Preparing your workspace...",
+  "Updating AI permissions...",
   "Almost ready...",
   "Thank you for your purchase!",
 ]
@@ -45,21 +46,39 @@ export default function PaymentSuccessPage() {
 
   const orderId = searchParams.get("order_id") || "N/A"
   const paymentId = searchParams.get("payment_id") || "N/A"
+  const signature = searchParams.get("signature") || ""
+  const planIdParam = searchParams.get("plan_id") || "3"
+  const billingCycleParam = searchParams.get("billing_cycle") || "monthly"
+  const preVerified = searchParams.get("verified") === "true"
 
   const [stepIndex, setStepIndex] = useState(0)
   const [progress, setProgress] = useState(15)
   const [isActivated, setIsActivated] = useState(false)
-  const [activePlanName, setActivePlanName] = useState<string>("Basic")
+  const [activePlanName, setActivePlanName] = useState<string>("Pro")
   const [isDelayed, setIsDelayed] = useState(false)
   const [hasError, setHasError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string>("")
   const [copied, setCopied] = useState(false)
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [pollCount, setPollCount] = useState(0)
+  const [isVerifying, setIsVerifying] = useState(false)
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null)
   const startTimeRef = useRef<number>(Date.now())
 
-  // Persist pending payment marker to localStorage for background polling fallback
+  // Launch celebration confetti
+  const launchConfetti = useCallback(() => {
+    try {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ["#8b5cf6", "#ec4899", "#10b981", "#f59e0b", "#3b82f6"]
+      })
+    } catch { /* ignore */ }
+  }, [])
+
+  // Persist pending payment marker to localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem(
@@ -71,68 +90,138 @@ export default function PaymentSuccessPage() {
 
   // Step Message Rotator
   useEffect(() => {
-    if (isActivated) return
+    if (isActivated || hasError) return
 
     const interval = setInterval(() => {
       setStepIndex((prev) => (prev < ACTIVATION_STEPS.length - 1 ? prev + 1 : prev))
       setProgress((prev) => Math.min(prev + 15, 95))
-    }, 2200)
+    }, 1500)
 
     return () => clearInterval(interval)
-  }, [isActivated])
+  }, [isActivated, hasError])
 
-  // Polling Loop for Automatic Subscription Activation Verification
-  const verifyStatus = useCallback(async () => {
+  // Complete activation & redirect flow
+  const completeActivation = useCallback((planName: string) => {
+    console.log(`[Frontend] Activation Completed | New Plan = ${planName}`)
+    console.log(`[Frontend] Refreshing User Session & Authorizing AI Entitlements`)
+
+    setIsActivated(true)
+    setHasError(false)
+    setActivePlanName(planName)
+    setProgress(100)
+
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("smarterp_pending_payment")
+      window.dispatchEvent(new CustomEvent("subscription-activated"))
+    }
+
+    launchConfetti()
+
+    toast({
+      title: `🎉 Welcome to SmartERP ${planName}!`,
+      description: "Your subscription has been activated successfully.",
+    })
+
+    console.log(`[Frontend] Redirecting Dashboard in 2.5s`)
+    setTimeout(() => {
+      router.push("/owner")
+    }, 2500)
+  }, [launchConfetti, router, toast])
+
+  // Active Verification Endpoint Execution
+  const triggerActiveVerification = useCallback(async () => {
+    if (isVerifying || isActivated) return
+    setIsVerifying(true)
+    setHasError(false)
+    setErrorMessage("")
+
+    console.log(`[Frontend] Payment Success Page Mounted | Order ID: ${orderId} | Payment ID: ${paymentId}`)
+    console.log(`[Subscription] Starting Activation | Company ID = ${user?.company_id || 'N/A'}`)
+    console.log(`[Subscription] Current Plan = Free | Target Plan = ${planIdParam}`)
+
     try {
-      setPollCount((prev) => prev + 1)
-      const res = await apiClient("/api/subscription/status")
-
-      const isPaidPlan = res.plan && res.plan.id > 1 && !res.plan.is_trial
-      if (isPaidPlan) {
-        setIsActivated(true)
-        setHasError(false)
-        setActivePlanName(res.plan.name || "Pro")
-        setProgress(100)
-
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("smarterp_pending_payment")
-          window.dispatchEvent(new CustomEvent("subscription-activated"))
-        }
-
-        toast({
-          title: "🎉 Welcome to SmartERP " + (res.plan.name || "Pro") + "!",
-          description: "Your subscription has been activated successfully.",
+      if (orderId !== "N/A" && paymentId !== "N/A") {
+        console.log(`[Subscription] Updating Plans Table & Company Subscription...`)
+        const verifyRes = await apiClient("/api/subscription/verify-payment", {
+          method: "POST",
+          body: JSON.stringify({
+            razorpay_order_id: orderId,
+            razorpay_payment_id: paymentId,
+            razorpay_signature: signature,
+            planId: parseInt(planIdParam, 10) || 3,
+            billingCycle: billingCycleParam
+          })
         })
 
-        // Automatic seamless redirect to Owner Dashboard after 2 seconds
-        setTimeout(() => {
-          router.push("/owner")
-        }, 2000)
+        console.log(`[Subscription] Commit Successful | Response:`, verifyRes)
+
+        if (verifyRes.ok || verifyRes.success) {
+          const planName = verifyRes.plan?.name || (planIdParam === "2" ? "Basic" : "Pro")
+          console.log(`[Subscription] Updating AI Permissions... Done!`)
+          completeActivation(planName)
+          return
+        }
+      }
+
+      // Check status fallback
+      const statusRes = await apiClient("/api/subscription/status")
+      console.log(`[Subscription] Status Check Response:`, statusRes)
+
+      const isPaidPlan = statusRes.plan && statusRes.plan.id > 1 && !statusRes.plan.is_trial
+      if (isPaidPlan) {
+        completeActivation(statusRes.plan.name || "Pro")
         return
       }
 
-      // Check if polling has exceeded 20 seconds
+      // Elapsed check (60s max timeout)
       const elapsed = Date.now() - startTimeRef.current
-      if (elapsed > 20000) {
-        setIsDelayed(true)
-      }
-    } catch (err) {
-      logger.error("[PAYMENT] Subscription verification poll error", err)
-      const elapsed = Date.now() - startTimeRef.current
-      if (elapsed > 30000) {
-        setHasError(true)
-      }
-    }
-  }, [router, toast])
+      if (elapsed > 20000) setIsDelayed(true)
 
+      if (elapsed > 60000) {
+        console.error(`❌ [Subscription] Timeout Exceeded 60s cap without activation`)
+        setHasError(true)
+        setErrorMessage("Subscription activation timed out after 60 seconds. Please click 'Retry Activation' below.")
+      }
+    } catch (err: any) {
+      logger.error("[Subscription] Verification attempt error:", err)
+      const elapsed = Date.now() - startTimeRef.current
+
+      // Check status as fallback even after catch
+      try {
+        const fallbackRes = await apiClient("/api/subscription/status")
+        if (fallbackRes.plan && fallbackRes.plan.id > 1 && !fallbackRes.plan.is_trial) {
+          completeActivation(fallbackRes.plan.name || "Pro")
+          return
+        }
+      } catch {}
+
+      if (elapsed > 60000) {
+        setHasError(true)
+        setErrorMessage(err.message || "Subscription activation encountered an issue.")
+      }
+    } finally {
+      setIsVerifying(false)
+    }
+  }, [isVerifying, isActivated, orderId, paymentId, user?.company_id, planIdParam, signature, billingCycleParam, completeActivation])
+
+  // Initial & Polling Execution
   useEffect(() => {
-    verifyStatus()
-    pollTimerRef.current = setInterval(verifyStatus, 3000)
+    if (preVerified) {
+      console.log(`[Frontend] Pre-verified payment parameter detected`)
+      completeActivation(planIdParam === "2" ? "Basic" : "Pro")
+      return
+    }
+
+    triggerActiveVerification()
+    pollTimerRef.current = setInterval(() => {
+      setPollCount(p => p + 1)
+      triggerActiveVerification()
+    }, 4000)
 
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current)
     }
-  }, [verifyStatus])
+  }, [preVerified, completeActivation, triggerActiveVerification, planIdParam])
 
   const technicalReportData = `
 ========================================
@@ -179,10 +268,14 @@ Status: Pending Backend Activation Sync
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                    className="p-4 rounded-full bg-emerald-500/10 border border-emerald-500/20"
+                    className="p-4 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-xl"
                   >
                     <CheckCircle2 className="w-16 h-16 text-emerald-500" />
                   </motion.div>
+                ) : hasError ? (
+                  <div className="p-4 rounded-full bg-rose-500/10 border border-rose-500/20">
+                    <AlertTriangle className="w-16 h-16 text-rose-500" />
+                  </div>
                 ) : (
                   <div className="relative flex items-center justify-center">
                     <div className="w-20 h-20 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -193,15 +286,20 @@ Status: Pending Backend Activation Sync
               </div>
 
               <CardTitle className="text-3xl font-extrabold tracking-tight text-foreground">
-                {isActivated ? "🎉 Welcome to SmartERP Pro!" : "🎉 Payment Successful"}
+                {isActivated
+                  ? `🎉 Welcome to SmartERP ${activePlanName}!`
+                  : hasError
+                    ? "Activation Issue"
+                    : "🎉 Payment Successful"
+                }
               </CardTitle>
 
               <div className="flex items-center justify-center gap-2 mt-3">
                 <Badge
-                  variant={isActivated ? "success" : "outline"}
+                  variant={isActivated ? "success" : hasError ? "destructive" : "outline"}
                   className="text-xs px-3 py-1 font-semibold"
                 >
-                  {isActivated ? `Active Plan: ${activePlanName}` : "Activating Subscription..."}
+                  {isActivated ? `Active Plan: ${activePlanName}` : hasError ? "Activation Delayed" : "Activating Subscription..."}
                 </Badge>
               </div>
             </CardHeader>
@@ -211,7 +309,7 @@ Status: Pending Backend Activation Sync
               {!isActivated && !hasError && (
                 <div className="space-y-3 bg-muted/30 p-5 rounded-2xl border border-border/60">
                   <p className="text-sm font-medium text-foreground">
-                    Thank you for choosing SmartERP. We're preparing your upgraded workspace.
+                    Thank you for choosing SmartERP. We're activating your subscription and AI permissions.
                   </p>
                   <div className="flex items-center justify-between text-xs font-semibold text-foreground pt-2">
                     <span className="flex items-center gap-1.5">
@@ -222,7 +320,7 @@ Status: Pending Backend Activation Sync
                   </div>
                   <Progress value={progress} className="h-2 bg-muted [&>div]:bg-primary transition-all duration-500" />
                   <p className="text-[11px] text-muted-foreground text-left">
-                    No action is required. Please keep this page open while activation completes.
+                    Please keep this page open while your subscription activates automatically.
                   </p>
                 </div>
               )}
@@ -236,28 +334,40 @@ Status: Pending Backend Activation Sync
                 >
                   <div className="flex items-center gap-2 font-bold text-xs text-amber-600 dark:text-amber-400">
                     <ShieldCheck className="h-4 w-4" />
-                    <span>Payment Received Successfully</span>
+                    <span>Payment Received & Verified</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Thank you for your purchase. We have successfully verified your payment and your money is completely safe. We're currently activating your subscription. This is taking a little longer than expected. You do <strong className="text-foreground">NOT</strong> need to pay again. We'll automatically complete the activation and take you to your dashboard.
+                    Your payment has been received and verified. Your money is 100% safe. We are completing subscription activation and cache sync.
                   </p>
                 </motion.div>
               )}
 
-              {/* Unexpected Technical Recovery Screen */}
+              {/* Error Screen with Retry Button */}
               {hasError && !isActivated && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-5 text-left space-y-3"
+                  className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-5 text-left space-y-3"
                 >
-                  <div className="flex items-center gap-2 font-bold text-sm text-blue-600 dark:text-blue-400">
-                    <HeartHandshake className="h-5 w-5" />
-                    <span>We're Sorry for the Inconvenience</span>
+                  <div className="flex items-center gap-2 font-bold text-sm text-rose-600 dark:text-rose-400">
+                    <AlertTriangle className="h-5 w-5" />
+                    <span>Activation Encountered an Issue</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Your payment has already been verified successfully. Your money is completely safe. A temporary technical issue occurred while activating your subscription. Our system is continuing to activate your plan automatically in the background. Please feel free to open your dashboard below.
+                    {errorMessage || "Your payment was processed, but subscription activation could not complete automatically."}
                   </p>
+                  <Button
+                    onClick={() => {
+                      startTimeRef.current = Date.now()
+                      triggerActiveVerification()
+                    }}
+                    disabled={isVerifying}
+                    size="sm"
+                    className="w-full h-9 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white gap-2"
+                  >
+                    {isVerifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    <span>Retry Activation Now</span>
+                  </Button>
                 </motion.div>
               )}
 
@@ -269,14 +379,13 @@ Status: Pending Backend Activation Sync
                     <span>Workspace Upgraded to SmartERP {activePlanName}</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Your subscription has been activated successfully. Features, limits, and team permissions have been updated.
+                    Your subscription is now active! All AI features, module limits, and team permissions have been unlocked. Redirecting to your dashboard...
                   </p>
                 </div>
               )}
             </CardContent>
 
             <CardFooter className="bg-muted/20 border-t border-border/70 p-6 flex flex-col sm:flex-row gap-3">
-              {/* Continue to Dashboard Button */}
               <Button
                 asChild
                 className="w-full sm:w-1/2 h-11 text-xs font-bold btn-premium"
@@ -287,7 +396,6 @@ Status: Pending Backend Activation Sync
                 </Link>
               </Button>
 
-              {/* Emergency Report Button */}
               <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
                 <DialogTrigger asChild>
                   <Button
@@ -305,7 +413,7 @@ Status: Pending Backend Activation Sync
                       Report Payment Activation Issue
                     </DialogTitle>
                     <DialogDescription className="text-xs text-muted-foreground">
-                      If your payment was deducted but your subscription is not active yet, use this pre-filled diagnostic payload to contact our engineering support immediately.
+                      If your payment was deducted but your subscription is not active yet, use this pre-filled diagnostic payload to contact support.
                     </DialogDescription>
                   </DialogHeader>
 

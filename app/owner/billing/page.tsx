@@ -165,6 +165,9 @@ export default function BillingPage() {
         },
         handler: async function (response: any) {
           try {
+            console.log(`[Razorpay] Checkout Success | Order ID: ${response.razorpay_order_id} | Payment ID: ${response.razorpay_payment_id}`)
+            console.log(`[Razorpay] Triggering Payment Verification Endpoint...`)
+
             // 3. Verify Payment on Backend
             const verifyRes = await apiClient("/api/subscription/verify-payment", {
               method: "POST",
@@ -177,19 +180,21 @@ export default function BillingPage() {
               })
             })
 
-            if (verifyRes.ok) {
+            console.log(`[Razorpay] Verification Endpoint Response:`, verifyRes)
+
+            if (verifyRes.ok || verifyRes.success) {
+              console.log(`[Razorpay] Payment Verified Successfully`)
               toast({
                 title: "Upgrade Successful! 🎉",
                 description: `Your plan has been upgraded. Redirecting...`,
               })
-              router.push(`/owner/payment-success?order_id=${response.razorpay_order_id}&payment_id=${response.razorpay_payment_id}`)
+              router.push(`/owner/payment-success?order_id=${response.razorpay_order_id}&payment_id=${response.razorpay_payment_id}&plan_id=${planId}&billing_cycle=${billingCycle}&verified=true`)
             } else {
               throw new Error(verifyRes.message || "Verification failed")
             }
           } catch (err: any) {
-            logger.error("Payment verification failed", err)
-            // Background webhook will finalize it if direct verification fails
-            router.push(`/owner/payment-success?order_id=${response?.razorpay_order_id || 'N/A'}&payment_id=${response?.razorpay_payment_id || 'N/A'}`)
+            logger.error("[Razorpay] Payment verification handler catch:", err)
+            router.push(`/owner/payment-success?order_id=${response?.razorpay_order_id || 'N/A'}&payment_id=${response?.razorpay_payment_id || 'N/A'}&plan_id=${planId}&billing_cycle=${billingCycle}&signature=${response?.razorpay_signature || ''}`)
           } finally {
             setUpgrading(false)
           }
