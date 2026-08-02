@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Activity, AlertCircle, Loader2,
   Receipt, Package, User, Clock, CheckCircle, XCircle,
-  Calendar, Download, Info, MessageCircle, Send, Star,
+  Calendar, Download, Info, MessageCircle, Send, Star, AlertTriangle, ChevronDown,
 } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { JobStatusBadge } from '@/components/customer/ui/JobStatusBadge';
@@ -79,6 +79,14 @@ export default function JobDetailPage() {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
+  // Dispute / invoice issue state
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [disputeCategory, setDisputeCategory] = useState('discount_request');
+  const [disputeDescription, setDisputeDescription] = useState('');
+  const [disputeLoading, setDisputeLoading] = useState(false);
+  const [disputeSuccess, setDisputeSuccess] = useState(false);
+  const [disputeError, setDisputeError] = useState('');
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.push('/customer/login');
@@ -710,6 +718,93 @@ export default function JobDetailPage() {
                       <Download className="h-4 w-4 text-green-600" />
                       Download Official Invoice (PDF)
                     </button>
+
+                    {/* Raise Invoice Issue */}
+                    {!disputeSuccess ? (
+                      <button
+                        onClick={() => setShowDisputeModal(!showDisputeModal)}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-orange-200 text-xs font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 transition-colors"
+                      >
+                        <AlertTriangle className="h-4 w-4 text-orange-500" />
+                        Raise Invoice Issue / Request Discount
+                        <ChevronDown className={`h-3 w-3 ml-auto transition-transform ${showDisputeModal ? 'rotate-180' : ''}`} />
+                      </button>
+                    ) : (
+                      <div className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-emerald-200 text-xs font-semibold text-emerald-700 bg-emerald-50">
+                        ✅ Issue submitted — owner will review and update your invoice.
+                      </div>
+                    )}
+
+                    {/* Dispute Modal (inline) */}
+                    {showDisputeModal && !disputeSuccess && (
+                      <div className="mt-2 p-4 rounded-xl border border-orange-200 bg-orange-50/60 space-y-3">
+                        <p className="text-xs font-bold text-orange-800">Describe your issue or discount request</p>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wide text-orange-700">Category</label>
+                          <select
+                            value={disputeCategory}
+                            onChange={(e) => setDisputeCategory(e.target.value)}
+                            className="w-full text-xs rounded-lg border border-orange-200 bg-white px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                          >
+                            <option value="discount_request">Discount Request</option>
+                            <option value="incorrect_hours">Incorrect Hours Billed</option>
+                            <option value="rate_dispute">Rate Dispute</option>
+                            <option value="material_mismatch">Material Mismatch</option>
+                            <option value="gst_error">GST Calculation Error</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wide text-orange-700">Description</label>
+                          <textarea
+                            rows={3}
+                            value={disputeDescription}
+                            onChange={(e) => setDisputeDescription(e.target.value)}
+                            placeholder="Describe exactly what needs to be changed or why you are requesting a discount..."
+                            className="w-full text-xs rounded-lg border border-orange-200 bg-white px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"
+                          />
+                        </div>
+
+                        {disputeError && (
+                          <p className="text-xs text-red-600">{disputeError}</p>
+                        )}
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setShowDisputeModal(false)}
+                            className="flex-1 py-2 rounded-lg text-xs font-semibold border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            disabled={disputeLoading || !disputeDescription.trim()}
+                            onClick={async () => {
+                              if (!disputeDescription.trim()) { setDisputeError('Please describe your issue.'); return; }
+                              setDisputeLoading(true);
+                              setDisputeError('');
+                              try {
+                                await customerApi.post(`/api/invoices/${invoice.id}/dispute`, {
+                                  issue_category: disputeCategory,
+                                  description: disputeDescription.trim(),
+                                });
+                                setDisputeSuccess(true);
+                                setShowDisputeModal(false);
+                              } catch (err: any) {
+                                setDisputeError(err?.response?.data?.error || 'Failed to submit. Please try again.');
+                              } finally {
+                                setDisputeLoading(false);
+                              }
+                            }}
+                            className="flex-1 py-2 rounded-lg text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                          >
+                            {disputeLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                            {disputeLoading ? 'Submitting...' : 'Submit Issue'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </motion.div>
