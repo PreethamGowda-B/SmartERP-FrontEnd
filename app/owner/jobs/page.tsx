@@ -381,32 +381,82 @@ export default function OwnerJobsPage() {
                         </div>
                       </div>
 
+                      {/* Invoice Badge & Customer Activity Tracking */}
+                      {(job as any).invoice_number && (
+                        <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            📄 {(job as any).invoice_number}
+                          </span>
+                          {(job as any).invoice_downloaded_at ? (
+                            <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                              📥 PDF Downloaded
+                            </span>
+                          ) : (job as any).invoice_viewed_at ? (
+                            <span className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                              👁️ Viewed by Customer
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+                              ⏳ Sent to Customer
+                            </span>
+                          )}
+                        </div>
+                      )}
+
                       {/* Job Actions Footer */}
                       <div className="pt-4 border-t border-border/40 flex flex-wrap gap-2 items-center justify-end">
                         {isCompleted && (
                           <>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs text-xs px-3 py-1.5"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.location.href = `/owner/jobs/${job.id}/invoice-editor`;
-                              }}
-                            >
-                              Generate Invoice
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold px-3 py-1.5"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.location.href = `/owner/jobs/${job.id}/invoice-editor`;
-                              }}
-                            >
-                              Create Revised Invoice
-                            </Button>
+                            {(job as any).invoice_number ? (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold px-2.5 py-1.5"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
+                                    window.open(`${baseUrl}/api/invoices/${(job as any).invoice_id}/pdf`, '_blank');
+                                  }}
+                                >
+                                  Download PDF
+                                </Button>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs text-xs px-2.5 py-1.5"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.location.href = `/owner/finance/invoices`;
+                                  }}
+                                >
+                                  View Invoice
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs border-slate-200 text-slate-700 hover:bg-slate-50 font-medium px-2.5 py-1.5"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.location.href = `/owner/jobs/${job.id}/invoice-editor`;
+                                  }}
+                                >
+                                  Create Revised Invoice
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs text-xs px-3 py-1.5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.location.href = `/owner/jobs/${job.id}/invoice-editor`;
+                                }}
+                              >
+                                Generate Invoice
+                              </Button>
+                            )}
                           </>
                         )}
                       </div>
