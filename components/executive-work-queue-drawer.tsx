@@ -105,11 +105,16 @@ export function ExecutiveWorkQueueDrawer({ trigger }: { trigger?: React.ReactNod
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         {trigger || (
-          <Button variant="outline" size="sm" className="relative h-9 px-3 gap-2 border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 font-bold dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800">
-            <Zap className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-            <span className="hidden sm:inline">Executive Work Queue</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="relative h-8 px-2 gap-1.5 border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 font-bold dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800 shrink-0"
+            title="Executive Work Queue"
+          >
+            <Zap className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <span className="hidden 2xl:inline text-[11px]">Work Queue</span>
             {pendingCount > 0 && (
-              <span className="h-5 min-w-[20px] px-1.5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center animate-pulse">
+              <span className="h-4 min-w-[16px] px-1 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center animate-pulse">
                 {pendingCount}
               </span>
             )}
