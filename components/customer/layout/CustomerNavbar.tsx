@@ -8,6 +8,7 @@ import { LayoutDashboard, PlusCircle, User, LogOut, Menu, X, Bell, List, History
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { useCustomerNotifications } from '@/contexts/CustomerNotificationContext';
 import { NotificationCenterDrawer } from '@/components/notification-center-drawer';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const MAIN_NAV_ITEMS = [
   { href: '/customer/dashboard',  label: 'Dashboard',   icon: LayoutDashboard },
