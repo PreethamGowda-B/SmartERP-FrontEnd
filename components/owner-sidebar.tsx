@@ -34,7 +34,15 @@ import {
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationCenterDrawer } from "@/components/notification-center-drawer"
+import { ExecutiveWorkQueueDrawer } from "@/components/executive-work-queue-drawer"
 import { logger } from "@/lib/logger"
+
+// inside component mobile header:
+// <div className="flex items-center gap-2">
+//   <ExecutiveWorkQueueDrawer />
+//   <NotificationCenterDrawer />
+//   <ThemeToggle compact />
+// </div>
 
 const navCategories = [
   {
@@ -155,6 +163,7 @@ export function OwnerSidebar() {
           <span className="font-extrabold text-sm tracking-tight text-foreground">SmartERP</span>
         </div>
         <div className="flex items-center gap-2">
+          <ExecutiveWorkQueueDrawer />
           <NotificationCenterDrawer />
           <ThemeToggle compact />
         </div>
@@ -181,6 +190,7 @@ export function OwnerSidebar() {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <ExecutiveWorkQueueDrawer />
             <NotificationCenterDrawer />
             <ThemeToggle compact />
           </div>

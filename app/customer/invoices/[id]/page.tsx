@@ -109,6 +109,22 @@ export default function CustomerInvoiceDetailPage() {
 
     try {
       setSubmittingDispute(true);
+      // 1. Post to Canonical Approval Engine (/api/work-requests)
+      await apiClient('/api/work-requests', {
+        method: 'POST',
+        body: JSON.stringify({
+          request_type: 'invoice_discount',
+          category: 'finance',
+          urgency: 'high',
+          invoice_id: invoiceId,
+          job_id: invoice?.job_id,
+          title: `Customer Discount Request: ${invoice?.invoice_number || invoiceId}`,
+          reason: `${issueCategory}: ${issueDescription}`,
+          payload: { category: issueCategory, invoice_number: invoice?.invoice_number }
+        }),
+      }).catch(() => {});
+
+      // 2. Log to legacy dispute endpoint for backward compatibility
       const res = await apiClient<{ success: boolean }>(`/api/invoices/${invoiceId}/dispute`, {
         method: 'POST',
         body: JSON.stringify({

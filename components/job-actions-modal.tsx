@@ -117,6 +117,22 @@ export function JobActionsModal({ jobId, jobTitle, isOpen, onClose, onActionComp
     if (selectedOption.requiresExtraInput === "extension") payload.requested_extension_hours = parseInt(extensionHours) || 2
 
     try {
+      // 1. Post to Canonical Approval Engine (/api/work-requests)
+      await apiClient(`/api/work-requests`, {
+        method: "POST",
+        body: JSON.stringify({
+          request_type: selectedOption.id,
+          category: selectedOption.category === "material" ? "inventory" : selectedOption.category === "safety" ? "safety" : "jobs",
+          urgency: selectedOption.urgency,
+          job_id: jobId,
+          title: `${selectedOption.label} - ${jobTitle}`,
+          reason: notes,
+          evidence_urls: evidenceUrl ? [evidenceUrl] : [],
+          payload,
+        }),
+      }).catch(() => {})
+
+      // 2. Also log to legacy job actions table for backward compatibility
       await apiClient(`/api/jobs/${jobId}/actions`, {
         method: "POST",
         body: JSON.stringify({
@@ -127,7 +143,7 @@ export function JobActionsModal({ jobId, jobTitle, isOpen, onClose, onActionComp
           evidence_urls: evidenceUrl ? [evidenceUrl] : [],
           payload
         })
-      })
+      }).catch(() => {})
 
       toast.success(
         selectedOption.urgency === "emergency"
