@@ -126,11 +126,19 @@ export function getAuthToken() {
   const altAt = at === ADMIN_AT ? USER_AT : ADMIN_AT
   
   // 1. Check sessionStorage
-  const fromSession = sessionStorage.getItem(at) || sessionStorage.getItem(altAt)
+  const fromSession = sessionStorage.getItem(at) || 
+                      sessionStorage.getItem(altAt) || 
+                      sessionStorage.getItem("accessToken") || 
+                      sessionStorage.getItem(USER_AT) || 
+                      sessionStorage.getItem(ADMIN_AT)
   if (fromSession) return fromSession
   
   // 2. Fallback to localStorage (persistent login)
-  return localStorage.getItem(at) || localStorage.getItem(altAt) || localStorage.getItem("accessToken")
+  return localStorage.getItem(at) || 
+         localStorage.getItem(altAt) || 
+         localStorage.getItem("accessToken") || 
+         localStorage.getItem(USER_AT) || 
+         localStorage.getItem(ADMIN_AT)
 }
 
 export function getAccessToken() {
@@ -143,11 +151,19 @@ export function getRefreshToken(): string | null {
     const altRt = rt === ADMIN_RT ? USER_RT : ADMIN_RT
     
     // 1. Check sessionStorage
-    const fromSession = sessionStorage.getItem(rt) || sessionStorage.getItem(altRt)
+    const fromSession = sessionStorage.getItem(rt) || 
+                        sessionStorage.getItem(altRt) || 
+                        sessionStorage.getItem("refreshToken") || 
+                        sessionStorage.getItem(USER_RT) || 
+                        sessionStorage.getItem(ADMIN_RT)
     if (fromSession) return fromSession
     
     // 2. Fallback to localStorage (persistent login)
-    return localStorage.getItem(rt) || localStorage.getItem(altRt) || localStorage.getItem("refreshToken")
+    return localStorage.getItem(rt) || 
+           localStorage.getItem(altRt) || 
+           localStorage.getItem("refreshToken") || 
+           localStorage.getItem(USER_RT) || 
+           localStorage.getItem(ADMIN_RT)
   }
   return null
 }
