@@ -3,46 +3,19 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useJobs } from "@/contexts/job-context"
 import { useAuth } from "@/contexts/auth-context"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import {
-  Calendar, Users, Briefcase, Clock, CheckCircle2, AlertCircle,
-  XCircle, RefreshCw, UserRound,
+  Briefcase, Clock, CheckCircle2, AlertCircle, XCircle, RefreshCw, Search, Filter, TrendingUp
 } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { cn } from "@/lib/utils"
 import { ErrorView } from "@/components/ui/error-view"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonList } from "@/components/ui/skeleton-card"
-import { toast } from "sonner"
 import { ExecutiveJobCard } from "@/components/executive-job-card"
-
-
-import { apiClient } from "@/lib/apiClient"
-
-function getStatusIcon(status?: string) {
-  switch (status?.toLowerCase() || "pending") {
-    case "completed": return <CheckCircle2 className="w-4 h-4 text-green-600" />
-    case "active":
-    case "in progress": return <Clock className="w-4 h-4 text-blue-600" />
-    case "pending": return <AlertCircle className="w-4 h-4 text-yellow-600" />
-    default: return null
-  }
-}
-
-function formatDate(dateString?: string) {
-  if (!dateString) return "Date unknown"
-  try {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short", day: "numeric", year: "numeric",
-    })
-  } catch {
-    return "Date unknown"
-  }
-}
 
 function formatLastUpdated(date: Date | null) {
   if (!date) return "Never"
@@ -52,11 +25,16 @@ function formatLastUpdated(date: Date | null) {
 export default function EmployeeJobsPage() {
   const { jobs: allJobs, refreshJobs } = useJobs()
   const { user: currentUser } = useAuth()
+  const [activeTab, setActiveTab] = useState<"active" | "pending" | "completed" | "all">("active")
+  const [searchTerm, setSearchTerm] = useState("")
 
-  // Secondary guard: employees should only see jobs assigned to them or visible to all.
-  // The backend already filters this, but stale localStorage cache from an owner session
-  // could leak all-company jobs. This ensures the employee view is always scoped correctly.
-  const jobs = currentUser?.role === 'employee'
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [error, setError] = useState<{ title: string; message: string } | null>(null)
+  const isRefreshingRef = useRef(false)
+
+  // Scope jobs to employee
+  const jobs = currentUser?.role === "employee"
     ? allJobs.filter((job: any) => {
         const userId = String(currentUser.id || "")
         const assignedTo = job.assigned_to ? String(job.assigned_to) : null
@@ -70,18 +48,6 @@ export default function EmployeeJobsPage() {
         )
       })
     : allJobs
-  const [updatingJobId, setUpdatingJobId] = useState<string | null>(null)
-  const [activeActionsJob, setActiveActionsJob] = useState<{ id: string; title: string } | null>(null)
-  const [progressValues, setProgressValues] = useState<Record<string, number>>({})
-  const [error, setError] = useState<{ title: string; message: string } | null>(null)
-  // Per-job lock: tracks jobs whose accept request is currently in-flight.
-  // Prevents duplicate requests from double-clicks surviving the updatingJobId loading state.
-  const acceptingJobsRef = useRef<Set<string>>(new Set())
-
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const isRefreshingRef = useRef(false)
-
 
   const handleRefresh = useCallback(async () => {
     if (isRefreshingRef.current) return
@@ -94,7 +60,7 @@ export default function EmployeeJobsPage() {
     } catch (err: any) {
       setError({
         title: "Could not load jobs",
-        message: err.message || "There was a problem connecting to the server. Please try again."
+        message: err.message || "There was a problem connecting to the server. Please try again.",
       })
     } finally {
       setIsRefreshing(false)
@@ -102,233 +68,146 @@ export default function EmployeeJobsPage() {
     }
   }, [refreshJobs])
 
-  // Initial fetch on mount only.
-  // NOTE: job-context already polls every 30s globally — we do NOT add another
-  // setInterval here to avoid double-polling (which caused ERR_CONNECTION_CLOSED).
   useEffect(() => {
     handleRefresh()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Refresh immediately when a push notification arrives (new job assigned)
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      try {
-        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data
-        if (data?.type === "job" || data?.type === "job_assigned" || data?.type === "new_job") {
-          handleRefresh()
-        }
-      } catch { /* ignore */ }
-    }
-    if (typeof navigator !== "undefined" && navigator.serviceWorker) {
-      navigator.serviceWorker.addEventListener("message", handler)
-      return () => navigator.serviceWorker.removeEventListener("message", handler)
-    }
-  }, [handleRefresh])
+  // Filter jobs by search and view tab
+  const filteredJobs = jobs.filter((job: any) => {
+    const status = (job.status || "open").toLowerCase()
+    const empStatus = (job.employee_status || "pending").toLowerCase()
 
-  const handleAcceptJob = async (jobId: string) => {
-    // Hard lock: if a request for this job is already in-flight, ignore the click
-    if (acceptingJobsRef.current.has(jobId)) return
-    acceptingJobsRef.current.add(jobId)
-    setUpdatingJobId(jobId)
-    try {
-      await apiClient(`/api/jobs/${jobId}/accept`, { method: "POST" })
-      toast.success("Job accepted! It has been added to your active workstream.")
-      await refreshJobs()
-      setLastUpdated(new Date())
-    } catch (err: any) {
-      if (err.status === 409) {
-        // Always refresh so the UI reflects the real server state
-        await refreshJobs().catch(() => {})
-        setLastUpdated(new Date())
-        const msg: string = err.message || ""
-        if (msg.includes("another employee")) {
-          toast.info("This job was just taken by another team member.")
-        } else if (msg.includes("completed") || msg.includes("cancelled")) {
-          toast.info(`This job is already ${msg.includes("completed") ? "completed" : "cancelled"}.`)
-        } else {
-          toast.info("Job status has changed. Refreshing your list...")
-        }
-      } else if (err.name !== "AbortError") {
-        toast.error(err.message || "Failed to accept job. Please try again.")
-      }
-    } finally {
-      acceptingJobsRef.current.delete(jobId)
-      setUpdatingJobId(null)
-    }
-  }
+    if (activeTab === "active" && (empStatus === "declined" || status === "completed")) return false
+    if (activeTab === "pending" && empStatus !== "pending") return false
+    if (activeTab === "completed" && status !== "completed") return false
 
-  const handleDeclineJob = async (jobId: string) => {
-    setUpdatingJobId(jobId)
-    try {
-      await apiClient(`/api/jobs/${jobId}/decline`, { method: "POST" })
-      toast.success("Job declined.")
-      await refreshJobs()
-      setLastUpdated(new Date())
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        toast.error(err.message || "Failed to decline job. Please try again.")
-      }
-    } finally {
-      setUpdatingJobId(null)
-    }
-  }
+    const matchesSearch =
+      (job.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (job.location || "").toLowerCase().includes(searchTerm.toLowerCase())
 
-  const handleProgressUpdate = async (jobId: string, progress: number) => {
-    setUpdatingJobId(jobId)
-    try {
-      await apiClient(`/api/jobs/${jobId}/progress`, {
-        method: "POST",
-        body: JSON.stringify({ progress }),
-      })
-      toast.success(`Progress updated to ${progress}%`)
-      await refreshJobs()
-      setLastUpdated(new Date())
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        toast.error(err.message || "Failed to update progress. Please try again.")
-      }
-    } finally {
-      setUpdatingJobId(null)
-    }
-  }
+    return matchesSearch
+  })
 
-  if (isRefreshing && jobs.length === 0) {
-    return (
-      <EmployeeLayout>
-        <div className="p-8 max-w-7xl mx-auto space-y-10">
-          <div className="h-24 w-1/2 bg-muted/20 animate-pulse rounded-xl" />
-          <SkeletonList count={6} />
-        </div>
-      </EmployeeLayout>
-    )
-  }
-
-  if (error && jobs.length === 0) {
-    return (
-      <EmployeeLayout>
-        <div className="p-8 max-w-7xl mx-auto">
-          <ErrorView 
-            title={error.title} 
-            message={error.message} 
-            onRetry={handleRefresh} 
-          />
-        </div>
-      </EmployeeLayout>
-    )
-  }
-
-  if (jobs.length === 0) {
-    return (
-      <EmployeeLayout>
-      <div className="p-8 max-w-7xl mx-auto space-y-12">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
-          <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-              Available <span className="text-primary">Assignments</span>
-            </h1>
-            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
-              Review and manage your project load. Only accepted assignments will appear in your active workstream.
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="gap-2 btn-premium h-10 px-4">
-              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-              Sync Directory
-            </Button>
-            {lastUpdated && (
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 flex items-center gap-1.5">
-                <Clock className="h-3 w-3" />
-                Updated {formatLastUpdated(lastUpdated)}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <EmptyState 
-          icon={Briefcase}
-          title="No jobs available yet"
-          description="New projects will appear here when they are assigned to you by the owner."
-          actionLabel="Refresh Directory"
-          onAction={handleRefresh}
-        />
-      </div>
-    </EmployeeLayout>
-    )
-  }
+  const activeCount = jobs.filter((j: any) => j.employee_status === "accepted" || j.status === "in_progress").length
+  const pendingCount = jobs.filter((j: any) => j.employee_status === "pending" || !j.employee_status).length
+  const completedCount = jobs.filter((j: any) => j.status === "completed").length
 
   return (
     <EmployeeLayout>
-      <div className="p-8 max-w-7xl mx-auto space-y-12">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-              Available <span className="text-primary">Assignments</span>
-            </h1>
-            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
-              Review and manage your project load. Only accepted assignments will appear in your active workstream.
+            <h1 className="text-2xl font-black tracking-tight text-foreground">My Assigned Tasks & Jobs</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Review field assignments, update execution progress, log work notes, and raise material requests.
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing} className="gap-2 btn-premium h-10 px-4">
-              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-              Sync Directory
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <span className="text-[10px] text-muted-foreground hidden lg:flex items-center gap-1 font-mono">
+              <Clock className="h-3 w-3 text-primary" />
+              LAST SYNC: {formatLastUpdated(lastUpdated)}
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="h-9 text-xs font-bold rounded-xl"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", isRefreshing && "animate-spin")} />
+              Refresh Tasks
             </Button>
-            {lastUpdated && (
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 flex items-center gap-1.5">
-                <Clock className="h-3 w-3" />
-                Updated {formatLastUpdated(lastUpdated)}
-              </span>
-            )}
           </div>
         </div>
 
-        {/* Jobs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {jobs.map((job) => {
-            const status = job.status
-            const employeeStatus = job.employee_status
-            const progress = progressValues[job.id] ?? (job.progress || 0)
-            const createdDate = job.created_at || job.createdAt
-            
-            const isPending = (employeeStatus as string) === "pending" || (employeeStatus as string) === "assigned"
-            const isAccepted = employeeStatus === "accepted"
-            const isDeclined = employeeStatus === "declined"
-            // Treat as completed if status is completed
-            const isCompleted = status?.toLowerCase() === "completed"
-            const displayStatus = isCompleted ? "completed" : status
-            const acceptedByOther = isAccepted && (job as any).assigned_to && String((job as any).assigned_to) !== String(currentUser?.id)
-            const assignedEmployeeName = (job as any).assigned_employee_name
-            const isCustomerJob = (job as any).source === "customer"
+        {/* Executive View Switcher Toolbar */}
+        <div className="flex items-center gap-1.5 p-1.5 bg-card rounded-2xl border border-border/70 shadow-xs overflow-x-auto no-scrollbar">
+          <Button
+            variant={activeTab === "active" ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-8 text-xs font-bold rounded-xl px-3.5", activeTab === "active" && "shadow-xs")}
+            onClick={() => setActiveTab("active")}
+          >
+            <Briefcase className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+            Active Tasks ({activeCount})
+          </Button>
 
-            return (
+          <Button
+            variant={activeTab === "pending" ? "default" : "ghost"}
+            size="sm"
+            className={cn(
+              "h-8 text-xs font-bold rounded-xl px-3.5 relative",
+              activeTab === "pending" ? "bg-amber-600 text-white hover:bg-amber-700 shadow-xs" : "text-amber-600 hover:bg-amber-50 dark:text-amber-400"
+            )}
+            onClick={() => setActiveTab("pending")}
+          >
+            <AlertCircle className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+            Pending Acceptance
+            {pendingCount > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-black animate-pulse">
+                {pendingCount}
+              </span>
+            )}
+          </Button>
+
+          <Button
+            variant={activeTab === "completed" ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-8 text-xs font-bold rounded-xl px-3.5", activeTab === "completed" && "shadow-xs")}
+            onClick={() => setActiveTab("completed")}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 shrink-0 text-emerald-500" />
+            Completed ({completedCount})
+          </Button>
+
+          <Button
+            variant={activeTab === "all" ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-8 text-xs font-bold rounded-xl px-3.5", activeTab === "all" && "shadow-xs")}
+            onClick={() => setActiveTab("all")}
+          >
+            All Tasks ({jobs.length})
+          </Button>
+        </div>
+
+        {/* Search & Filter Bar */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search assigned tasks by title or location..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 h-9 text-xs rounded-xl"
+          />
+        </div>
+
+        {/* Task Cards Grid */}
+        {isRefreshing && jobs.length === 0 ? (
+          <SkeletonList count={4} />
+        ) : error && jobs.length === 0 ? (
+          <ErrorView title={error.title} message={error.message} onRetry={handleRefresh} />
+        ) : filteredJobs.length === 0 ? (
+          <EmptyState
+            icon={Briefcase}
+            title="No tasks found"
+            description="No assigned tasks match your selected view tab or search query."
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {filteredJobs.map((job: any) => (
               <ExecutiveJobCard
                 key={job.id}
-                job={{
-                  ...job,
-                  progress,
-                  assigned_crew: assignedEmployeeName ? [{ id: "crew", name: assignedEmployeeName }] : [],
-                }}
+                job={job}
                 role="employee"
                 onActionComplete={handleRefresh}
               />
-            )
-          })}
-        </div>
-
-        {activeActionsJob && (
-          <JobActionsModal
-            jobId={activeActionsJob.id}
-            jobTitle={activeActionsJob.title}
-            isOpen={!!activeActionsJob}
-            onClose={() => setActiveActionsJob(null)}
-            onActionComplete={() => refreshJobs()}
-          />
+            ))}
+          </div>
         )}
       </div>
     </EmployeeLayout>
   )
 }
-
-import { JobActionsModal } from "@/components/job-actions-modal"
-import { Zap } from "lucide-react"

@@ -1,29 +1,20 @@
-'use me';
-'use client';
+"use client"
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  DollarSign, 
-  FileText, 
-  CreditCard, 
-  Clock, 
-  TrendingUp, 
-  AlertCircle, 
-  CheckCircle2, 
-  ShieldCheck,
-  ArrowRight,
-  Loader2 
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { apiClient } from '@/lib/apiClient';
+import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { OwnerLayout } from "@/components/owner-layout"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { apiClient } from "@/lib/apiClient"
+import {
+  DollarSign, FileText, CreditCard, Clock, TrendingUp, AlertCircle, CheckCircle2,
+  ShieldCheck, ArrowRight, Loader2, RefreshCw
+} from "lucide-react"
 
 export default function FinanceDashboardPage() {
-  const router = useRouter();
-
-  const [loading, setLoading] = useState(true);
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState<any>({
     total_invoiced: 0,
     total_paid: 0,
@@ -34,155 +25,160 @@ export default function FinanceDashboardPage() {
     disputed_count: 0,
     overdue_count: 0,
     overdue_amount: 0,
-  });
+  })
 
   useEffect(() => {
-    fetchSummary();
-  }, []);
+    fetchSummary()
+  }, [])
 
   const fetchSummary = async () => {
     try {
-      setLoading(true);
-      const res = await apiClient<{ success: boolean; summary: any }>('/api/finance/summary');
+      setLoading(true)
+      const res = await apiClient<{ success: boolean; summary: any }>("/api/finance/summary")
       if (res && res.success) {
-        setSummary(res.summary);
+        setSummary(res.summary)
       }
     } catch (err: any) {
-      console.error('Error fetching finance summary:', err);
+      console.error("Error fetching finance summary:", err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-        <span className="ml-3 text-slate-600 font-medium">Loading Finance Dashboard...</span>
-      </div>
-    );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center border-b pb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <DollarSign className="h-6 w-6 text-indigo-600" /> Finance Overview
-          </h1>
-          <p className="text-sm text-slate-500">
-            Enterprise Financial Hub: Invoices, Accounts Receivable, GST Compliance & Payment Ledger.
-          </p>
+    <OwnerLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center border-b border-border/60 pb-4">
+          <div>
+            <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
+              <DollarSign className="h-6 w-6 text-indigo-600 dark:text-indigo-400" /> Executive Finance Command Center
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Consolidated enterprise financial architecture: Invoices, Billing, Accounts Receivable, and GST Compliance.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={fetchSummary} className="h-9 text-xs font-bold rounded-xl">
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh Financials
+          </Button>
         </div>
-      </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-indigo-600">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center text-slate-500 text-xs font-semibold uppercase">
+        {/* KPI Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="rounded-2xl border-l-4 border-l-indigo-600 border-border/70 p-4 bg-card shadow-xs">
+            <div className="flex justify-between items-center text-muted-foreground text-[10px] font-extrabold uppercase">
               <span>Total Invoiced</span>
               <FileText className="h-4 w-4 text-indigo-600" />
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">
-              ₹{Number(summary.total_invoiced).toLocaleString('en-IN')}
+            <div className="text-2xl font-black text-foreground mt-2">
+              ₹{Number(summary.total_invoiced || 0).toLocaleString("en-IN")}
             </div>
-            <div className="text-xs text-slate-500 mt-1">Across all finalized customer job invoices</div>
-          </CardContent>
-        </Card>
+            <div className="text-[10px] text-muted-foreground mt-1">Across all finalized customer job invoices</div>
+          </Card>
 
-        <Card className="border-l-4 border-l-emerald-600">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center text-slate-500 text-xs font-semibold uppercase">
+          <Card className="rounded-2xl border-l-4 border-l-emerald-600 border-border/70 p-4 bg-card shadow-xs">
+            <div className="flex justify-between items-center text-muted-foreground text-[10px] font-extrabold uppercase">
               <span>Collected Revenue</span>
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             </div>
-            <div className="text-2xl font-extrabold text-emerald-700 mt-2">
-              ₹{Number(summary.total_paid).toLocaleString('en-IN')}
+            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-2">
+              ₹{Number(summary.total_paid || 0).toLocaleString("en-IN")}
             </div>
-            <div className="text-xs text-emerald-600 mt-1">{summary.paid_count} invoices paid in full</div>
-          </CardContent>
-        </Card>
+            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1">{summary.paid_count || 0} invoices paid in full</div>
+          </Card>
 
-        <Card className="border-l-4 border-l-amber-500">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center text-slate-500 text-xs font-semibold uppercase">
+          <Card className="rounded-2xl border-l-4 border-l-amber-500 border-border/70 p-4 bg-card shadow-xs">
+            <div className="flex justify-between items-center text-muted-foreground text-[10px] font-extrabold uppercase">
               <span>Outstanding AR</span>
               <Clock className="h-4 w-4 text-amber-500" />
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">
-              ₹{Number(summary.total_outstanding).toLocaleString('en-IN')}
+            <div className="text-2xl font-black text-foreground mt-2">
+              ₹{Number(summary.total_outstanding || 0).toLocaleString("en-IN")}
             </div>
-            <div className="text-xs text-amber-600 mt-1">{summary.pending_count} pending invoices</div>
-          </CardContent>
-        </Card>
+            <div className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">{summary.pending_count || 0} pending invoices</div>
+          </Card>
 
-        <Card className="border-l-4 border-l-purple-600">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center text-slate-500 text-xs font-semibold uppercase">
-              <span>GST Collected</span>
+          <Card className="rounded-2xl border-l-4 border-l-purple-600 border-border/70 p-4 bg-card shadow-xs">
+            <div className="flex justify-between items-center text-muted-foreground text-[10px] font-extrabold uppercase">
+              <span>GST Liabilities</span>
               <ShieldCheck className="h-4 w-4 text-purple-600" />
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 mt-2">
-              ₹{Number(summary.total_tax_collected).toLocaleString('en-IN')}
+            <div className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-2">
+              ₹{Number(summary.total_tax_collected || 0).toLocaleString("en-IN")}
             </div>
-            <div className="text-xs text-purple-600 mt-1">CGST / SGST / IGST liabilities</div>
-          </CardContent>
-        </Card>
+            <div className="text-[10px] text-purple-600 dark:text-purple-400 mt-1">CGST / SGST / IGST Statutory Tax</div>
+          </Card>
+        </div>
+
+        {/* Unified 4-Module Navigation Grid */}
+        <div className="space-y-3 pt-2">
+          <h2 className="text-base font-black text-foreground">Core Financial Modules</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <Card
+              className="rounded-2xl border border-border/70 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer bg-card"
+              onClick={() => router.push("/owner/finance/invoices")}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-bold flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-indigo-600" /> Invoices & Billing
+                  </span>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </CardTitle>
+                <CardDescription className="text-xs">Dispatch, track, and process customer invoices and billing disputes.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex justify-between"><span>Pending / Issued:</span> <strong className="text-foreground">{summary.pending_count || 0}</strong></div>
+                  <div className="flex justify-between"><span>Disputed Issues:</span> <strong className="text-amber-600">{summary.disputed_count || 0}</strong></div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="rounded-2xl border border-border/70 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer bg-card"
+              onClick={() => router.push("/owner/finance/payments")}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-bold flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-amber-600" /> Payments & Accounts Receivable
+                  </span>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </CardTitle>
+                <CardDescription className="text-xs">Collection ledger, payment receipts, and AR aging schedules.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex justify-between"><span>Overdue Invoices:</span> <strong className="text-rose-600">{summary.overdue_count || 0}</strong></div>
+                  <div className="flex justify-between"><span>Overdue Amount:</span> <strong className="text-rose-600">₹{Number(summary.overdue_amount || 0).toLocaleString("en-IN")}</strong></div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="rounded-2xl border border-border/70 hover:border-purple-400 hover:shadow-md transition-all cursor-pointer bg-card"
+              onClick={() => router.push("/owner/finance/gst")}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-bold flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-purple-600" /> GST & Tax Compliance
+                  </span>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </CardTitle>
+                <CardDescription className="text-xs">Single source of truth for GSTR-1, GSTR-2B reconciliation, and statutory filing.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex justify-between"><span>GST Filing Status:</span> <strong className="text-emerald-600">Active</strong></div>
+                  <div className="flex justify-between"><span>Total Tax Liability:</span> <strong className="text-purple-600">₹{Number(summary.total_tax_collected || 0).toLocaleString("en-IN")}</strong></div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
-
-      {/* Navigation Quick Access Modules */}
-      <h2 className="text-lg font-bold text-slate-900 pt-2">Financial Sub-Modules</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push('/owner/finance/invoices')}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center justify-between">
-              <span className="flex items-center gap-2"><FileText className="h-5 w-5 text-indigo-600" /> Invoices</span>
-              <ArrowRight className="h-4 w-4 text-slate-400" />
-            </CardTitle>
-            <CardDescription className="text-xs">Manage, track, download, and dispatch issued job invoices.</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-2">
-            <div className="text-xs text-slate-600 space-y-1">
-              <div className="flex justify-between"><span>Pending / Issued:</span> <strong>{summary.pending_count}</strong></div>
-              <div className="flex justify-between"><span>Disputed Issues:</span> <strong className="text-amber-600">{summary.disputed_count}</strong></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push('/owner/finance/accounts-receivable')}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center justify-between">
-              <span className="flex items-center gap-2"><Clock className="h-5 w-5 text-amber-600" /> Accounts Receivable</span>
-              <ArrowRight className="h-4 w-4 text-slate-400" />
-            </CardTitle>
-            <CardDescription className="text-xs">AR Aging analysis (0-30, 31-60, 60+ days) and collection schedules.</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-2">
-            <div className="text-xs text-slate-600 space-y-1">
-              <div className="flex justify-between"><span>Overdue Invoices:</span> <strong className="text-red-600">{summary.overdue_count}</strong></div>
-              <div className="flex justify-between"><span>Overdue Amount:</span> <strong className="text-red-600">₹{Number(summary.overdue_amount).toLocaleString('en-IN')}</strong></div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push('/owner/finance/gst-reports')}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center justify-between">
-              <span className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-purple-600" /> GST Reports</span>
-              <ArrowRight className="h-4 w-4 text-slate-400" />
-            </CardTitle>
-            <CardDescription className="text-xs">GSTR-1 sales summary and CGST/SGST/IGST tax liability reports.</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-2">
-            <div className="text-xs text-slate-600 space-y-1">
-              <div className="flex justify-between"><span>GSTR-1 Ready:</span> <strong>Active</strong></div>
-              <div className="flex justify-between"><span>Total Tax Liability:</span> <strong className="text-purple-700">₹{Number(summary.total_tax_collected).toLocaleString('en-IN')}</strong></div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+    </OwnerLayout>
+  )
 }

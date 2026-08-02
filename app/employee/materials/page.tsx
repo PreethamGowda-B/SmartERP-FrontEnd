@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
   DialogContent,
@@ -15,10 +17,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Package, Plus, Loader2, AlertTriangle, CheckCircle2, Clock, XCircle, RefreshCw } from "lucide-react"
+import { Package, Plus, Loader2, AlertTriangle, CheckCircle2, Clock, XCircle, RefreshCw, Box } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { apiClient } from "@/lib/apiClient"
-import { logger } from "@/lib/logger"
+import InventoryTable from "@/components/inventory-table"
+import { cn } from "@/lib/utils"
 
 interface MaterialRequest {
   id: number
@@ -41,89 +44,78 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; clas
   pending: {
     label: "Pending",
     icon: <Clock className="h-3 w-3" />,
-    className: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+    className: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
   },
   accepted: {
     label: "Accepted",
     icon: <CheckCircle2 className="h-3 w-3" />,
-    className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+    className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
   },
   declined: {
     label: "Declined",
     icon: <XCircle className="h-3 w-3" />,
-    className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+    className: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
   },
 }
 
-const EMPTY_FORM = { item_name: "", quantity: "", urgency: "Medium", description: "" }
-
-export default function EmployeeMaterialsPage() {
+function EmployeeMaterialsPageContent() {
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get("tab") === "inventory" ? "inventory" : "requests"
+  const [activeTab, setActiveTab] = useState<"requests" | "inventory">(initialTab as any)
   const [requests, setRequests] = useState<MaterialRequest[]>([])
   const [loading, setLoading] = useState(true)
-  const [fetchError, setFetchError] = useState<string | null>(null)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [form, setForm] = useState(EMPTY_FORM)
+  const [refreshing, setRefreshing] = useState(false)
+  const [isFormOpen, setIsFormOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
-  const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  const loadRequests = useCallback(async () => {
-    setLoading(true)
-    setFetchError(null)
+  // Form state
+  const [itemName, setItemName] = useState("")
+  const [quantity, setQuantity] = useState("1")
+  const [urgency, setUrgency] = useState<"Low" | "Medium" | "High">("Medium")
+  const [description, setDescription] = useState("")
+
+  const fetchRequests = useCallback(async () => {
     try {
-      const data = await apiClient("/api/material-requests")
+      setRefreshing(true)
+      const data = await apiClient<MaterialRequest[]>("/api/material-requests")
       setRequests(Array.isArray(data) ? data : [])
     } catch (err: any) {
-      logger.error("Material requests fetch error:", err)
-      setFetchError(err.message || "Failed to load requests. Please try again.")
+      console.error("Error fetching material requests:", err)
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [])
 
   useEffect(() => {
-    loadRequests()
-  }, [loadRequests])
-
-  const handleFieldChange = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
-    setSubmitError(null)
-  }
+    fetchRequests()
+  }, [fetchRequests])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.item_name.trim()) {
-      setSubmitError("Item name is required.")
-      return
-    }
-    if (!form.quantity || Number(form.quantity) <= 0) {
-      setSubmitError("Please enter a valid quantity.")
-      return
-    }
+    if (!itemName.trim() || !quantity) return
 
     setSubmitting(true)
-    setSubmitError(null)
-
     try {
       await apiClient("/api/material-requests", {
         method: "POST",
         body: JSON.stringify({
-          item_name: form.item_name.trim(),
-          quantity: Number(form.quantity),
-          urgency: form.urgency,
-          description: form.description.trim() || null,
+          item_name: itemName.trim(),
+          quantity: parseInt(quantity, 10) || 1,
+          urgency,
+          description: description.trim() || null,
         }),
       })
-      setSubmitSuccess(true)
-      setForm(EMPTY_FORM)
-      await loadRequests()
-      // Auto-close dialog after 1s
-      setTimeout(() => {
-        setDialogOpen(false)
-        setSubmitSuccess(false)
-      }, 1200)
+
+      // Reset form & reload
+      setItemName("")
+      setQuantity("1")
+      setUrgency("Medium")
+      setDescription("")
+      setIsFormOpen(false)
+      fetchRequests()
     } catch (err: any) {
-      setSubmitError(err.message || "Failed to submit request.")
+      console.error("Error creating material request:", err)
     } finally {
       setSubmitting(false)
     }
@@ -136,204 +128,188 @@ export default function EmployeeMaterialsPage() {
     <EmployeeLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Package className="h-6 w-6 text-primary" />
-              Material Requests
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Request materials needed for your work
+            <h1 className="text-2xl font-black tracking-tight text-foreground">Materials & Supplies Command Center</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Request field tools, track fulfillment status, and inspect live company inventory levels.
             </p>
           </div>
-          <Button onClick={() => { setDialogOpen(true); setSubmitError(null); setSubmitSuccess(false) }}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Request
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={fetchRequests} disabled={refreshing} className="h-9 text-xs font-bold rounded-xl">
+              <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", refreshing && "animate-spin")} />
+              Sync Supplies
+            </Button>
+            <Button size="sm" onClick={() => setIsFormOpen(true)} className="h-9 text-xs font-bold rounded-xl bg-primary text-primary-foreground">
+              <Plus className="h-4 w-4 mr-1.5" />
+              New Material Request
+            </Button>
+          </div>
+        </div>
+
+        {/* Tab Navigation Switcher */}
+        <div className="flex items-center gap-1.5 p-1.5 bg-card rounded-2xl border border-border/70 shadow-xs">
+          <Button
+            variant={activeTab === "requests" ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-8 text-xs font-bold rounded-xl px-4", activeTab === "requests" && "shadow-xs")}
+            onClick={() => setActiveTab("requests")}
+          >
+            <Package className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+            Material Requests ({requests.length})
+            {pendingCount > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-amber-600 text-white text-[9px] font-black">
+                {pendingCount} pending
+              </span>
+            )}
+          </Button>
+
+          <Button
+            variant={activeTab === "inventory" ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-8 text-xs font-bold rounded-xl px-4", activeTab === "inventory" && "shadow-xs")}
+            onClick={() => setActiveTab("inventory")}
+          >
+            <Box className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+            Stock Viewer (Live Inventory)
           </Button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-sm text-muted-foreground">Total Requests</p>
-              <p className="text-3xl font-bold">{requests.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-sm text-muted-foreground">Pending</p>
-              <p className="text-3xl font-bold text-orange-600">{pendingCount}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-5">
-              <p className="text-sm text-muted-foreground">Accepted</p>
-              <p className="text-3xl font-bold text-green-600">{acceptedCount}</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* TAB 1: Material Requests */}
+        {activeTab === "requests" && (
+          <div className="space-y-4">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card className="rounded-2xl border border-border/70 p-4">
+                <div className="text-[10px] font-extrabold uppercase text-muted-foreground">Total Requests</div>
+                <div className="text-2xl font-black text-foreground mt-1">{requests.length}</div>
+              </Card>
 
-        {/* Requests List */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>My Requests</CardTitle>
-            <Button variant="ghost" size="sm" onClick={loadRequests} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            </Button>
-          </CardHeader>
-          <CardContent>
+              <Card className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/20 p-4">
+                <div className="text-[10px] font-extrabold uppercase text-amber-800 dark:text-amber-300">Pending Approvals</div>
+                <div className="text-2xl font-black text-amber-700 dark:text-amber-400 mt-1">{pendingCount}</div>
+              </Card>
+
+              <Card className="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20 p-4">
+                <div className="text-[10px] font-extrabold uppercase text-emerald-800 dark:text-emerald-300">Fulfilled & Accepted</div>
+                <div className="text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-1">{acceptedCount}</div>
+              </Card>
+            </div>
+
+            {/* Request Cards List */}
             {loading ? (
-              <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Loading requests...</span>
-              </div>
-            ) : fetchError ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <AlertTriangle className="h-8 w-8 text-red-500" />
-                <p className="text-sm text-red-600 dark:text-red-400 text-center max-w-xs">{fetchError}</p>
-                <Button variant="outline" size="sm" onClick={loadRequests}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Try Again
-                </Button>
-              </div>
+              <div className="p-12 text-center text-xs font-bold text-muted-foreground">Loading material requests...</div>
             ) : requests.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
-                <Package className="h-10 w-10 opacity-30" />
-                <p className="text-sm">No requests yet. Create your first one!</p>
-                <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Request
-                </Button>
-              </div>
+              <Card className="rounded-2xl border border-border/70 p-12 text-center space-y-2">
+                <Package className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+                <p className="text-sm font-bold text-foreground">No material requests submitted yet</p>
+                <p className="text-xs text-muted-foreground">Click "New Material Request" above to request job tools or stock.</p>
+              </Card>
             ) : (
-              <div className="divide-y">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {requests.map((req) => {
-                  const status = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending
+                  const statusCfg = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending
                   return (
-                    <div key={req.id} className="py-4 flex items-start justify-between gap-4">
-                      <div className="space-y-1 flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium truncate">{req.item_name}</p>
-                          <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${URGENCY_COLORS[req.urgency] || URGENCY_COLORS.Medium}`}>
-                            {req.urgency}
-                          </span>
+                    <Card key={req.id} className="rounded-2xl border border-border/70 bg-card p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-extrabold text-sm text-foreground">{req.item_name}</h3>
+                          <Badge variant="outline" className="text-[10px] font-bold">Qty: {req.quantity}</Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          Qty: <strong>{req.quantity}</strong>
-                          {req.description && <> · {req.description}</>}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(req.created_at).toLocaleDateString("en-IN", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
+                        <Badge className={cn("text-[10px] font-bold uppercase px-2 py-0.5 flex items-center gap-1", statusCfg.className)}>
+                          {statusCfg.icon}
+                          {statusCfg.label}
+                        </Badge>
                       </div>
-                      <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap ${status.className}`}>
-                        {status.icon}
-                        {status.label}
-                      </span>
-                    </div>
+
+                      {req.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">{req.description}</p>
+                      )}
+
+                      <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground pt-2 border-t border-border/40">
+                        <span>Urgency: <span className={cn("px-1.5 py-0.2 rounded font-extrabold", URGENCY_COLORS[req.urgency])}>{req.urgency}</span></span>
+                        <span>Requested {new Date(req.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </Card>
                   )
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        )}
 
-      {/* New Request Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setSubmitError(null); setSubmitSuccess(false) } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New Material Request</DialogTitle>
-            <DialogDescription>
-              Fill in the details below. Your owner will review and approve or decline.
-            </DialogDescription>
-          </DialogHeader>
-
-          {submitSuccess ? (
-            <div className="flex flex-col items-center py-6 gap-3 text-green-600">
-              <CheckCircle2 className="h-10 w-10" />
-              <p className="font-medium">Request submitted successfully!</p>
+        {/* TAB 2: Live Stock Viewer */}
+        {activeTab === "inventory" && (
+          <Card className="rounded-2xl border border-border/70 p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-base text-foreground">Live Company Inventory Stock</h3>
+                <p className="text-xs text-muted-foreground">Read-only view of stock quantities available in warehouse for dispatch.</p>
+              </div>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {submitError && (
-                <div className="flex items-start gap-2 text-sm text-red-700 bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg px-3 py-2">
-                  <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>{submitError}</span>
-                </div>
-              )}
+            <InventoryTable role="employee" refreshTrigger={0} onEdit={() => {}} />
+          </Card>
+        )}
 
-              <div className="space-y-1">
-                <Label htmlFor="item_name">Item Name *</Label>
-                <Input
-                  id="item_name"
-                  placeholder="e.g. Safety gloves, Paint brushes..."
-                  value={form.item_name}
-                  onChange={(e) => handleFieldChange("item_name", e.target.value)}
-                  required
-                />
+        {/* Request Dialog */}
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogContent className="rounded-2xl max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-extrabold text-lg">New Material & Tool Request</DialogTitle>
+              <DialogDescription className="text-xs">Submit a request for job-site tools, safety gear, or consumables.</DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Item Name / Tool Model</Label>
+                <Input placeholder="e.g. Copper Wiring Coil 50m" value={itemName} onChange={(e) => setItemName(e.target.value)} required className="h-9 text-xs rounded-xl" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="quantity">Quantity *</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    min="1"
-                    placeholder="10"
-                    value={form.quantity}
-                    onChange={(e) => handleFieldChange("quantity", e.target.value)}
-                    required
-                  />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Quantity</Label>
+                  <Input type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} required className="h-9 text-xs rounded-xl" />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="urgency">Urgency</Label>
-                  <Select value={form.urgency} onValueChange={(v) => handleFieldChange("urgency", v)}>
-                    <SelectTrigger id="urgency">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Urgency</Label>
+                  <Select value={urgency} onValueChange={(val: any) => setUrgency(val)}>
+                    <SelectTrigger className="h-9 text-xs rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Low">Low</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="High">High</SelectItem>
+                      <SelectItem value="Low">Low Priority</SelectItem>
+                      <SelectItem value="Medium">Medium Priority</SelectItem>
+                      <SelectItem value="High">High Priority (Urgent)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="description">Description (optional)</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Any specifications or special requirements..."
-                  value={form.description}
-                  onChange={(e) => handleFieldChange("description", e.target.value)}
-                  rows={3}
-                />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Job Reason / Notes</Label>
+                <Textarea placeholder="Explain which job or site requires this material..." value={description} onChange={(e) => setDescription(e.target.value)} className="text-xs rounded-xl min-h-[80px]" />
               </div>
 
-              <Button type="submit" className="w-full" disabled={submitting}>
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  "Submit Request"
-                )}
-              </Button>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setIsFormOpen(false)} className="h-8 text-xs">Cancel</Button>
+                <Button type="submit" size="sm" disabled={submitting} className="h-8 text-xs font-bold bg-primary text-primary-foreground px-4">
+                  {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                  Submit Request
+                </Button>
+              </div>
             </form>
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </div>
     </EmployeeLayout>
+  )
+}
+
+export default function EmployeeMaterialsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs font-bold text-muted-foreground">Loading materials & supplies...</div>}>
+      <EmployeeMaterialsPageContent />
+    </Suspense>
   )
 }

@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { Send, MessageSquare, Loader2, ChevronLeft, Clock, Users } from "lucide-react"
 import { apiClient, getAuthToken } from "@/lib/apiClient"
@@ -317,23 +319,82 @@ function InternalMessagesTab() {
   )
 }
 
+function NotificationsTab() {
+  const { notifications, markAsRead, markAllAsRead } = useNotifications()
+  const unreadCount = notifications.filter((n) => !n.read).length
+
+  return (
+    <div className="p-6 space-y-4 overflow-y-auto h-full">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-extrabold text-foreground">System Alerts & Workflow Notifications</h2>
+          {unreadCount > 0 && (
+            <Badge variant="destructive" className="rounded-full font-bold">
+              {unreadCount} unread
+            </Badge>
+          )}
+        </div>
+        <Button size="sm" onClick={() => markAllAsRead()} disabled={unreadCount === 0} className="h-8 text-xs">
+          Mark All Read
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {notifications.map((n) => (
+          <div
+            key={n.id}
+            className={cn(
+              "p-4 rounded-xl border transition-all flex items-start gap-3",
+              !n.read ? "bg-primary/5 border-primary/40" : "bg-card border-border/60"
+            )}
+          >
+            <div className="p-2 rounded-lg bg-muted text-foreground shrink-0 mt-0.5">
+              <Clock className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-sm text-foreground">{n.title}</h4>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+              <span className="text-[10px] text-muted-foreground font-mono mt-1 block">
+                {new Date(n.created_at).toLocaleString()}
+              </span>
+            </div>
+            {!n.read && (
+              <Button variant="ghost" size="sm" onClick={() => markAsRead(n.id)} className="h-7 text-xs">
+                Mark read
+              </Button>
+            )}
+          </div>
+        ))}
+
+        {notifications.length === 0 && (
+          <div className="p-12 text-center text-xs font-bold text-muted-foreground">
+            No system notifications recorded.
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function EmployeeMessagesPage() {
-  const [activeTab, setActiveTab] = useState<"internal" | "jobs">("internal")
+function EmployeeMessagesPageContent() {
+  const searchParams = useSearchParams()
+  const initialTab = searchParams?.get("tab") === "notifications" ? "notifications" : "internal"
+  const [activeTab, setActiveTab] = useState<"internal" | "jobs" | "notifications">(initialTab as any)
 
   return (
     <EmployeeLayout>
       <MessagingProvider>
         <div className="flex flex-col h-[calc(100vh-4rem)]">
           {/* Tab bar */}
-          <div className="flex border-b bg-background shrink-0">
+          <div className="flex border-b bg-background shrink-0 overflow-x-auto no-scrollbar">
             <button
               onClick={() => setActiveTab("internal")}
               className={cn(
                 "flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors",
                 activeTab === "internal"
-                  ? "border-primary text-primary"
+                  ? "border-primary text-primary font-bold"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
@@ -345,21 +406,47 @@ export default function EmployeeMessagesPage() {
               className={cn(
                 "flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors",
                 activeTab === "jobs"
-                  ? "border-primary text-primary"
+                  ? "border-primary text-primary font-bold"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
               <MessageSquare className="h-4 w-4" />
               Customer Jobs
             </button>
+            <button
+              onClick={() => setActiveTab("notifications")}
+              className={cn(
+                "flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors",
+                activeTab === "notifications"
+                  ? "border-primary text-primary font-bold"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Clock className="h-4 w-4" />
+              System Alerts & Notifications
+            </button>
           </div>
 
           {/* Tab content */}
           <div className="flex-1 overflow-hidden">
-            {activeTab === "internal" ? <InternalMessagesTab /> : <JobMessagesTab />}
+            {activeTab === "internal" ? (
+              <InternalMessagesTab />
+            ) : activeTab === "jobs" ? (
+              <JobMessagesTab />
+            ) : (
+              <NotificationsTab />
+            )}
           </div>
         </div>
       </MessagingProvider>
     </EmployeeLayout>
+  )
+}
+
+export default function EmployeeMessagesPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs font-bold text-muted-foreground">Loading messaging hub...</div>}>
+      <EmployeeMessagesPageContent />
+    </Suspense>
   )
 }

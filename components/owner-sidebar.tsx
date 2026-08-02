@@ -71,12 +71,9 @@ const navCategories = [
     title: "Finance & Accounting",
     items: [
       { name: "Finance Hub", href: "/owner/finance", icon: DollarSign },
-      { name: "Invoices", href: "/owner/finance/invoices", icon: Files },
-      { name: "Invoice Issues", href: "/owner/invoice-issues", icon: ShieldCheck },
-      { name: "Payments", href: "/owner/finance/payments", icon: CreditCard },
-      { name: "AR Aging", href: "/owner/finance/accounts-receivable", icon: Clock },
-      { name: "GST Reports", href: "/owner/finance/gst-reports", icon: ShieldCheck },
-      { name: "GST Reconcile", href: "/owner/finance/gst-reconciliation", icon: Files },
+      { name: "Invoices & Billing", href: "/owner/finance/invoices", icon: Files },
+      { name: "Payments & AR", href: "/owner/finance/payments", icon: CreditCard },
+      { name: "GST & Tax", href: "/owner/finance/gst", icon: ShieldCheck },
     ],
   },
   {

@@ -11,6 +11,22 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [
+      // ── Finance GST backward-compat redirects ─────────────────────────────
+      // All old GST/reconciliation routes → unified GST & Tax module
+      { source: "/owner/gst-reconciliation", destination: "/owner/finance/gst", permanent: false },
+      { source: "/owner/finance/gst-reports", destination: "/owner/finance/gst", permanent: false },
+      { source: "/owner/finance/gst-reconciliation", destination: "/owner/finance/gst", permanent: false },
+      // ── Finance sub-page backward-compat ──────────────────────────────────
+      { source: "/owner/invoice-issues", destination: "/owner/finance/invoices?tab=issues", permanent: false },
+      { source: "/owner/ar-collections", destination: "/owner/finance/payments?tab=ar", permanent: false },
+      { source: "/owner/finance/accounts-receivable", destination: "/owner/finance/payments?tab=ar", permanent: false },
+      // ── Employee portal backward-compat ───────────────────────────────────
+      { source: "/employee/inventory", destination: "/employee/materials?tab=inventory", permanent: false },
+      { source: "/employee/notifications", destination: "/employee/messages?tab=notifications", permanent: false },
+    ]
+  },
   async headers() {
     return [
       {

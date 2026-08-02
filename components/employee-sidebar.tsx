@@ -33,13 +33,11 @@ const navigation = [
   { name: "Dashboard", href: "/employee", icon: LayoutDashboard },
   { name: "My Tasks", href: "/employee/jobs", icon: Briefcase },
   { name: "Time Tracking", href: "/employee/time-tracking", icon: Clock },
-  { name: "Material Requests", href: "/employee/materials", icon: Package },
-  { name: "Inventory", href: "/employee/inventory", icon: Package2 },
+  { name: "Materials & Supplies", href: "/employee/materials", icon: Package },
   { name: "Payroll", href: "/employee/payroll", icon: DollarSign },
-  { name: "Messages", href: "/employee/messages", icon: MessageSquare },
-  { name: "Notifications", href: "/employee/notifications", icon: Bell },
+  { name: "Messages & Alerts", href: "/employee/messages", icon: MessageSquare },
   { name: "Reports", href: "/employee/reports", icon: BarChart3 },
-  { name: "Workplace", href: "/employee/hr-hub", icon: Megaphone },
+  { name: "HR & Leaves", href: "/employee/hr-hub", icon: Megaphone },
   { name: "Settings", href: "/employee/settings", icon: Settings },
 ]
 
@@ -115,7 +113,7 @@ export function EmployeeSidebar() {
           {/* Navigation */}
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
             {navigation.filter((item) => {
-              if (item.name === "Messages" && !features.messages) return false;
+              if (item.name.startsWith("Messages") && !features.messages) return false;
               if (item.name === "Payroll" && !features.payroll) return false;
               if (item.name === "Time Tracking" && !features.location_tracking) return false;
               return true;
@@ -137,7 +135,7 @@ export function EmployeeSidebar() {
                     <item.icon className={cn("h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110", isActive && "text-primary")} />
                     <span>{item.name}</span>
                   </div>
-                  {item.name === "Notifications" && unreadCount > 0 && (
+                  {item.name.startsWith("Messages") && unreadCount > 0 && (
                     <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center">
                       {unreadCount}
                     </span>
