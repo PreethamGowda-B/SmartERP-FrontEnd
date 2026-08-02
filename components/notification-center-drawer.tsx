@@ -11,15 +11,18 @@ import {
   Briefcase,
   Info,
   RefreshCw,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useNotifications, Notification } from "@/contexts/notification-context"
@@ -40,6 +43,7 @@ function formatRelativeTime(dateString: string): string {
 
 export function NotificationCenterDrawer() {
   const router = useRouter()
+  const [isOpen, setIsOpen] = React.useState(false)
   const {
     notifications,
     markAsRead,
@@ -82,145 +86,161 @@ export function NotificationCenterDrawer() {
   }
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-9 w-9 rounded-full shrink-0"
+          className="relative h-9 w-9 rounded-full shrink-0 hover:bg-muted"
           aria-label="Open notifications"
         >
           <Bell className="h-5 w-5 text-muted-foreground" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground animate-pulse">
+            <span className="absolute -top-0.5 -right-0.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground animate-pulse shadow-xs">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
         </Button>
-      </PopoverTrigger>
+      </SheetTrigger>
 
-      <PopoverContent className="w-96 p-0 border border-border/80 shadow-2xl z-[9999]" align="end">
+      <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col bg-background z-[9999]">
         {/* Header */}
-        <div className="p-4 border-b border-border/70 flex items-center justify-between bg-muted/30">
-          <div className="flex items-center gap-2">
-            <h3 className="font-bold text-sm text-foreground">Notifications</h3>
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                {unreadCount} new
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-              onClick={handleManualRefresh}
-              title="Refresh notifications"
-            >
-              <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-            </Button>
-            {unreadCount > 0 && (
+        <SheetHeader className="p-4 border-b border-border/70 flex flex-col gap-2 bg-muted/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                <Bell className="h-5 w-5" />
+              </div>
+              <div>
+                <SheetTitle className="text-base font-bold tracking-tight">Enterprise Notifications</SheetTitle>
+                <p className="text-xs text-muted-foreground">Real-time alerts across all SmartERP modules</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
-                onClick={() => markAllAsRead()}
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={handleManualRefresh}
+                title="Refresh notifications"
               >
-                <CheckCheck className="h-3.5 w-3.5 text-emerald-500" /> Read all
+                <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
               </Button>
-            )}
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
+                  onClick={() => markAllAsRead()}
+                >
+                  <CheckCheck className="h-3.5 w-3.5 text-emerald-500" /> Read all
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Filter Controls */}
-        <div className="p-2.5 border-b border-border/60 bg-background space-y-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          {/* Search Bar */}
+          <div className="relative pt-1">
+            <Search className="h-3.5 w-3.5 absolute left-3 top-3 text-muted-foreground" />
             <Input
               placeholder="Search notifications..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 pl-8 text-xs"
+              className="pl-8 h-8 text-xs rounded-xl"
             />
           </div>
-          <div className="flex gap-1 overflow-x-auto text-xs pb-1 scrollbar-none">
-            {["all", "job", "inventory", "attendance", "payroll"].map((cat) => (
+
+          {/* Category Filter Pills */}
+          <div className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar">
+            {[
+              { id: "all", label: "All" },
+              { id: "task", label: "Jobs" },
+              { id: "inventory", label: "Inventory" },
+              { id: "payroll", label: "Payroll" },
+              { id: "attendance", label: "Attendance" },
+            ].map((cat) => (
               <Badge
-                key={cat}
-                variant={filterCategory === cat ? "default" : "outline"}
-                className="cursor-pointer capitalize text-[10px] px-2 py-0.5 shrink-0"
-                onClick={() => setFilterCategory(cat)}
+                key={cat.id}
+                variant={filterCategory === cat.id ? "default" : "outline"}
+                className={cn(
+                  "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg cursor-pointer whitespace-nowrap transition-colors",
+                  filterCategory === cat.id ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"
+                )}
+                onClick={() => setFilterCategory(cat.id)}
               >
-                {cat}
+                {cat.label}
               </Badge>
             ))}
           </div>
-        </div>
+        </SheetHeader>
 
-        {/* Notification Stream */}
-        <div className="max-h-80 overflow-y-auto divide-y divide-border/50">
+        {/* Notifications List */}
+        <div className="flex-1 overflow-y-auto divide-y divide-border/40">
           {filteredNotifications.length === 0 ? (
-            <div className="p-8 text-center text-xs text-muted-foreground">
-              {notifications.length === 0
-                ? "No notifications yet."
-                : "No notifications matching your criteria."}
+            <div className="p-8 text-center space-y-2">
+              <Bell className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+              <p className="text-xs font-bold text-muted-foreground">No notifications found</p>
+              <p className="text-[11px] text-muted-foreground/70">System alerts and workflow updates will appear here.</p>
             </div>
           ) : (
             filteredNotifications.map((notif) => {
               const handleNotificationClick = () => {
-                if (!notif.read) markAsRead(notif.id);
-
-                // Deep Link Navigation (Issue 12 Requirement 4)
-                if (notif.data?.url) {
-                  router.push(notif.data.url);
-                } else if (notif.type?.includes('action') || notif.type?.includes('job')) {
-                  router.push('/owner/jobs');
-                } else if (notif.type?.includes('dispute') || notif.type?.includes('issue')) {
-                  router.push('/owner/invoice-issues');
-                } else if (notif.type?.includes('invoice')) {
-                  router.push('/owner/finance/invoices');
-                } else if (notif.type?.includes('payment')) {
-                  router.push('/owner/finance/payments');
-                } else if (notif.type?.includes('material') || notif.type?.includes('inventory')) {
-                  router.push('/owner/inventory/forecasts');
-                } else if (notif.type?.includes('attendance')) {
-                  router.push('/owner/attendance');
+                if (!notif.read) {
+                  markAsRead(notif.id)
                 }
-              };
+                setIsOpen(false)
+
+                // Deep-link routing
+                if (notif.data?.url) {
+                  router.push(notif.data.url)
+                } else if (notif.type?.includes('job_action') || notif.type?.includes('work_request')) {
+                  router.push('/owner/jobs')
+                } else if (notif.type?.includes('dispute') || notif.type?.includes('issue')) {
+                  router.push('/owner/invoice-issues')
+                } else if (notif.type?.includes('invoice')) {
+                  router.push('/owner/finance/invoices')
+                } else if (notif.type?.includes('payment')) {
+                  router.push('/owner/finance/payments')
+                } else if (notif.type?.includes('material') || notif.type?.includes('inventory')) {
+                  router.push('/owner/inventory/forecasts')
+                } else if (notif.type?.includes('attendance')) {
+                  router.push('/owner/attendance')
+                }
+              }
 
               return (
                 <div
                   key={notif.id}
                   className={cn(
-                    "p-3 flex items-start gap-3 transition-colors hover:bg-muted/40 cursor-pointer",
+                    "p-3.5 flex items-start gap-3 transition-colors hover:bg-muted/40 cursor-pointer group",
                     !notif.read && "bg-primary/5 font-medium"
                   )}
                   onClick={handleNotificationClick}
                 >
-                  <div className="p-2 rounded-lg bg-muted shrink-0 mt-0.5">
+                  <div className="p-2 rounded-xl bg-muted shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
                     {getCategoryIcon(notif.type)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <span className="font-semibold text-xs text-foreground truncate">
+                      <span className="font-bold text-xs text-foreground truncate">
                         {notif.title}
                       </span>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
+                      <span className="text-[10px] text-muted-foreground shrink-0 font-medium">
                         {formatRelativeTime(notif.created_at)}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{notif.message}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{notif.message}</p>
                   </div>
                   {!notif.read && (
                     <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5" />
                   )}
                 </div>
-              );
+              )
             })
           )}
         </div>
-      </PopoverContent>
-    </Popover>
+      </SheetContent>
+    </Sheet>
   )
 }
