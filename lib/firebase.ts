@@ -29,13 +29,8 @@ if (typeof window !== "undefined") {
     .filter(([, v]) => !v)
     .map(([k]) => KEY_MAP[k] || k);
 
-  if (missing.length > 0) {
-    const msg = `Firebase config missing env vars: ${missing.join(", ")}`;
-    if (process.env.NODE_ENV === "development") {
-      console.warn("⚠️ " + msg);
-    } else {
-      console.warn("⚠️ " + msg);
-    }
+  if (missing.length > 0 && process.env.NODE_ENV === "development") {
+    console.debug(`Firebase Web Push is not configured (${missing.length} vars missing).`);
   }
 }
 
