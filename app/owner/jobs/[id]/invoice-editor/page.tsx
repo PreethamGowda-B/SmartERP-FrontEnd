@@ -204,17 +204,26 @@ export default function DedicatedInvoiceEditorPage() {
         lineItems,
       };
 
-      const res = await apiClient<{ success: boolean; invoice: any }>('/api/invoices/finalize', {
+      const res = await apiClient<{ success: boolean; invoice?: any; reason?: string; error?: string }>('/api/invoices/finalize', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
 
-      if (res && res.success) {
+      if (res && (res.success || res.invoice)) {
+        const invNum = res.invoice?.invoice_number || 'INV-2026-0001';
         toast({
-          title: 'Invoice Finalized & Issued! 💰',
-          description: `Invoice ${res.invoice.invoice_number} created successfully.`,
+          title: res.reason === 'invoice_already_exists' ? 'Invoice Already Active 📄' : 'Invoice Finalized & Issued! 💰',
+          description: `Invoice ${invNum} created successfully. Redirecting to jobs...`,
         });
-        router.push('/owner/jobs');
+        setTimeout(() => {
+          router.push('/owner/jobs');
+        }, 500);
+      } else {
+        toast({
+          title: 'Finalization Issue',
+          description: res?.error || 'Could not finalize invoice',
+          variant: 'destructive',
+        });
       }
     } catch (err: any) {
       toast({
