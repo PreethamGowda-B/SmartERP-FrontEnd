@@ -18,6 +18,7 @@ import { ErrorView } from "@/components/ui/error-view"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonList } from "@/components/ui/skeleton-card"
 import { toast } from "sonner"
+import { ExecutiveJobCard } from "@/components/executive-job-card"
 
 
 import { apiClient } from "@/lib/apiClient"
@@ -309,138 +310,14 @@ export default function EmployeeJobsPage() {
                   isCustomerJob && "ring-1 ring-teal-400/30"
                 )}
               >
-                <div className={cn(
-                  "h-1.5 w-full transition-colors",
-                  isCustomerJob ? "bg-teal-500" :
-                  isCompleted ? "bg-green-500" : isAccepted ? "bg-primary" : "bg-orange-500"
-                )} />
-                
-                <CardHeader className="p-6 pb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest px-2 py-0">
-                      {displayStatus}
-                    </Badge>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
-                      ID: #{job.id.toString().slice(-4)}
-                    </span>
-                  </div>
-                  <CardTitle className="text-xl font-black tracking-tight group-hover:text-primary transition-colors leading-tight">
-                    {job.title}
-                  </CardTitle>
-                  {isCustomerJob && (
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
-                        <UserRound className="h-2.5 w-2.5" />
-                        Customer Request
-                      </span>
-                    </div>
-                  )}
-                </CardHeader>
-
-                <CardContent className="p-6 pt-0 space-y-6">
-                  <p className="text-meta line-clamp-2 min-h-[40px]">
-                    {job.description || "Project parameters and execution guidelines not specified."}
-                  </p>
-
-                  {isAccepted && (
-                    <div className="space-y-3 pt-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Execution Progress</span>
-                        <span className="text-sm font-black text-primary">{progress}%</span>
-                      </div>
-                      <Progress value={progress} className="h-2" />
-                      {!isCompleted && (
-                        <div className="space-y-4 pt-2">
-                          <Slider
-                            value={[progress]}
-                            onValueChange={(v) => setProgressValues({ ...progressValues, [job.id]: v[0] })}
-                            max={100}
-                            step={5}
-                            disabled={updatingJobId === job.id}
-                          />
-                          {progress !== (job.progress || 0) && (
-                            <Button
-                              size="sm"
-                              className="w-full btn-premium h-9 font-bold"
-                              onClick={() => handleProgressUpdate(job.id, progress)}
-                              disabled={updatingJobId === job.id}
-                            >
-                              Update Status
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="space-y-3 pt-2 border-t border-dashed border-border/60">
-                    <div className="flex items-center gap-2.5 text-xs font-bold text-muted-foreground/70 uppercase tracking-widest">
-                      <Users className="h-3.5 w-3.5 text-primary" />
-                      {job.visible_to_all ? "Broadcast Group" : "Personal Assignment"}
-                    </div>
-                    <div className="flex items-center gap-2.5 text-xs font-bold text-muted-foreground/70 uppercase tracking-widest">
-                      <Calendar className="h-3.5 w-3.5 text-primary" />
-                      Issued {formatDate(createdDate)}
-                    </div>                  </div>
-
-                  {isPending && !acceptedByOther && (
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        className="flex-1 btn-premium h-11 font-black tracking-tight"
-                        onClick={() => handleAcceptJob(job.id)}
-                        disabled={updatingJobId === job.id}
-                      >
-                        Accept
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="flex-1 h-11 font-bold text-muted-foreground hover:text-red-500 hover:bg-red-50"
-                        onClick={() => handleDeclineJob(job.id)}
-                        disabled={updatingJobId === job.id}
-                      >
-                        Decline
-                      </Button>
-                    </div>
-                  )}
-
-                  {isAccepted && !isCompleted && (
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11 rounded-2xl"
-                        onClick={() => setActiveActionsJob({ id: job.id, title: job.title })}
-                      >
-                        <Zap className="h-4 w-4 mr-2" />
-                        Job Actions
-                      </Button>
-                    </div>
-                  )}
-
-                  {acceptedByOther && !isCompleted && (
-                    <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                        {assignedEmployeeName?.[0] || "O"}
-                      </div>
-                      <span className="text-xs font-bold text-primary tracking-tight">
-                        Secured by {assignedEmployeeName || "Team Member"}
-                      </span>
-                    </div>
-                  )}
-
-                  {isCompleted && (
-                    <div className="p-4 rounded-2xl bg-green-500/5 border border-green-500/10 flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      <span className="text-xs font-bold text-green-600 uppercase tracking-widest">Project Finalized</span>
-                    </div>
-                  )}
-
-                  {isDeclined && (
-                    <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/10 flex items-center gap-3">
-                      <XCircle className="h-5 w-5 text-red-500" />
-                      <span className="text-xs font-bold text-red-600 uppercase tracking-widest">Assignment Declined</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                job={{
+                  ...job,
+                  progress,
+                  assigned_crew: assignedEmployeeName ? [{ id: "crew", name: assignedEmployeeName }] : [],
+                }}
+                role="employee"
+                onActionComplete={handleRefresh}
+              />
             )
           })}
         </div>
