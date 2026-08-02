@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useNotifications } from "@/contexts/notification-context"
 import { apiClient } from "@/lib/apiClient"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { NotificationCenterDrawer } from "@/components/notification-center-drawer"
 import { logger } from "@/lib/logger"
 import {
   HardHat,
@@ -105,7 +106,10 @@ export function EmployeeSidebar() {
                 </span>
               </div>
             </div>
-            <ThemeToggle compact />
+            <div className="flex items-center gap-1">
+              <NotificationCenterDrawer />
+              <ThemeToggle compact />
+            </div>
           </div>
 
           {/* Navigation */}

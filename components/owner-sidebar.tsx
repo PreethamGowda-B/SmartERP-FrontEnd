@@ -146,11 +146,18 @@ export function OwnerSidebar() {
 
   return (
     <>
-      {/* Mobile menu toggle */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button variant="outline" size="icon" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-        </Button>
+      {/* Mobile Header Bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-card/95 backdrop-blur border-b px-4 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+            {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </Button>
+          <span className="font-extrabold text-sm tracking-tight text-foreground">SmartERP</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <NotificationCenterDrawer />
+          <ThemeToggle compact />
+        </div>
       </div>
 
       {/* Sidebar */}
