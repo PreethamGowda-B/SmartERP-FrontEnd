@@ -302,14 +302,8 @@ export default function EmployeeJobsPage() {
             const isCustomerJob = (job as any).source === "customer"
 
             return (
-              <Card
+              <ExecutiveJobCard
                 key={job.id}
-                className={cn(
-                  "premium-card hover-lift group border-none shadow-sm hover:shadow-xl overflow-hidden",
-                  isDeclined && "opacity-60 grayscale-[0.5]",
-                  isCustomerJob && "ring-1 ring-teal-400/30"
-                )}
-              >
                 job={{
                   ...job,
                   progress,
