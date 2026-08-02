@@ -24,10 +24,10 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
 
 
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== "owner")) {
+    if (!isLoading && !user) {
       router.push("/")
     }
-  }, [user?.id, user?.role, isLoading, router])
+  }, [user?.id, isLoading, router])
 
   if (isLoading) {
     return (
@@ -39,10 +39,7 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
     )
   }
 
-  if (!user || user.role !== "owner") {
-    // User is not authorized for this layout. The useEffect will redirect to
-    // the home page — return null here to avoid showing a full-screen loader
-    // or blank centered content during the redirect.
+  if (!user) {
     return null
   }
 

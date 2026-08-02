@@ -28,10 +28,10 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   // ───────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== "employee")) {
+    if (!isLoading && !user) {
       router.push("/")
     }
-  }, [user?.id, user?.role, isLoading, router])
+  }, [user?.id, isLoading, router])
 
   if (isLoading) {
     return (
@@ -43,10 +43,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     )
   }
 
-  if (!user || user.role !== "employee") {
-    // User is not authorized for this layout. The useEffect will redirect to
-    // the home page — return null here to avoid showing a full-screen loader
-    // or blank centered content during the redirect.
+  if (!user) {
     return null
   }
 
