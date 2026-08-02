@@ -24,6 +24,7 @@ import { GlobalCommandPalette } from "@/components/global-command-palette"
 import { BackgroundSubscriptionPoller } from "@/components/background-subscription-poller"
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal"
 import { OnboardingTourModal } from "@/components/onboarding-tour-modal"
+import { ServerPrewarmer } from "@/components/server-prewarmer"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import "./globals.css"
 
@@ -158,6 +159,7 @@ export default function RootLayout({
                         <FloatingActionHub />
                         <GlobalCommandPalette />
                         <BackgroundSubscriptionPoller />
+                        <ServerPrewarmer />
                         <KeyboardShortcutsModal />
                         <OnboardingTourModal />
                       </CommandRegistryProvider>
