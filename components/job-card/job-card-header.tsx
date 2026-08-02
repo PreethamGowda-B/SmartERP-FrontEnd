@@ -98,16 +98,50 @@ export function JobCardHeader({
           )}
 
           {role === "owner" && (onEdit || onDelete || onView) && (
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label="Job options"
+                >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
-                {onView && <DropdownMenuItem onClick={onView}>View Details</DropdownMenuItem>}
-                {onEdit && <DropdownMenuItem onClick={onEdit}>Edit Job</DropdownMenuItem>}
-                {onDelete && <DropdownMenuItem onClick={onDelete} className="text-destructive">Delete Job</DropdownMenuItem>}
+              <DropdownMenuContent align="end" className="w-40 z-50">
+                {onView && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      React.startTransition(() => onView())
+                    }}
+                  >
+                    View Details
+                  </DropdownMenuItem>
+                )}
+                {onEdit && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      React.startTransition(() => onEdit())
+                    }}
+                  >
+                    Edit Job
+                  </DropdownMenuItem>
+                )}
+                {onDelete && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      React.startTransition(() => onDelete())
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    Delete Job
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
