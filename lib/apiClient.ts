@@ -71,20 +71,19 @@ export function setTokens(accessToken: string, refreshToken: string, isAdmin = f
   if (typeof window !== "undefined") {
     const { at, rt } = isAdmin ? { at: ADMIN_AT, rt: ADMIN_RT } : { at: USER_AT, rt: USER_RT }
     
-    // Always use sessionStorage for web (tab-scoped, not XSS-persistent)
+    // Store in both sessionStorage and localStorage for persistent cross-tab & cross-session logins
     sessionStorage.setItem(at, accessToken)
     sessionStorage.setItem(rt, refreshToken)
+    localStorage.setItem(at, accessToken)
+    localStorage.setItem(rt, refreshToken)
 
-    // Android WebView bridge — must keep localStorage for native token handoff
-    const isAndroid = !!(window as any).Android
-    if (isAndroid) {
-      localStorage.setItem(at, accessToken)
-      localStorage.setItem(rt, refreshToken)
-      if (!isAdmin) {
-        localStorage.setItem("accessToken", accessToken)
-        localStorage.setItem("refreshToken", refreshToken)
-      }
-      // Notify Android APK Bridge
+    if (!isAdmin) {
+      localStorage.setItem("accessToken", accessToken)
+      localStorage.setItem("refreshToken", refreshToken)
+    }
+
+    // Android WebView bridge — native token handoff
+    if (!!(window as any).Android) {
       try {
         if ((window as any).Android.saveToken) {
           (window as any).Android.saveToken(accessToken, refreshToken)
@@ -118,7 +117,7 @@ export function clearTokens(isAdmin?: boolean) {
 
 /**
  * SINGLE SOURCE OF TRUTH FOR AUTH TOKEN
- * Requirement 1.1: Read from localStorage or Cookie (session fallback)
+ * Requirement 1.1: Read from sessionStorage or localStorage fallback
  */
 export function getAuthToken() {
   if (typeof window === "undefined") return null
@@ -126,16 +125,12 @@ export function getAuthToken() {
   const { at } = getStorageKeys()
   const altAt = at === ADMIN_AT ? USER_AT : ADMIN_AT
   
-  // 1. Preferred key in sessionStorage
+  // 1. Check sessionStorage
   const fromSession = sessionStorage.getItem(at) || sessionStorage.getItem(altAt)
   if (fromSession) return fromSession
   
-  const isAndroid = typeof window !== "undefined" && !!(window as any).Android
-  if (isAndroid) {
-    return localStorage.getItem(at) || localStorage.getItem(altAt) || localStorage.getItem("accessToken")
-  }
-  
-  return null
+  // 2. Fallback to localStorage (persistent login)
+  return localStorage.getItem(at) || localStorage.getItem(altAt) || localStorage.getItem("accessToken")
 }
 
 export function getAccessToken() {
@@ -146,14 +141,13 @@ export function getRefreshToken(): string | null {
   if (typeof window !== "undefined") {
     const { rt } = getStorageKeys()
     const altRt = rt === ADMIN_RT ? USER_RT : ADMIN_RT
+    
+    // 1. Check sessionStorage
     const fromSession = sessionStorage.getItem(rt) || sessionStorage.getItem(altRt)
     if (fromSession) return fromSession
     
-    const isAndroid = !!(window as any).Android
-    if (isAndroid) {
-      return localStorage.getItem(rt) || localStorage.getItem(altRt) || localStorage.getItem("refreshToken")
-    }
-    return null
+    // 2. Fallback to localStorage (persistent login)
+    return localStorage.getItem(rt) || localStorage.getItem(altRt) || localStorage.getItem("refreshToken")
   }
   return null
 }
