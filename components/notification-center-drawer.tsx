@@ -192,21 +192,32 @@ export function NotificationCenterDrawer() {
                 setIsOpen(false)
 
                 // Deep-link routing
+                let deepLinkUrl = ""
                 if (notif.data?.url) {
-                  router.push(notif.data.url)
-                } else if (notif.type?.includes('job_action') || notif.type?.includes('work_request')) {
-                  router.push('/owner/jobs')
-                } else if (notif.type?.includes('dispute') || notif.type?.includes('issue')) {
-                  router.push('/owner/invoice-issues')
-                } else if (notif.type?.includes('invoice')) {
-                  router.push('/owner/finance/invoices')
-                } else if (notif.type?.includes('payment')) {
-                  router.push('/owner/finance/payments')
+                  deepLinkUrl = notif.data.url
+                } else if (notif.type?.includes('work_request') || notif.type?.includes('job_action') || notif.type?.includes('approval')) {
+                  deepLinkUrl = `/owner/jobs?view=approvals&category=${notif.data?.category || "all"}`
+                } else if (notif.type?.includes('discount_request') || notif.type?.includes('customer_request')) {
+                  deepLinkUrl = "/owner/jobs?view=approvals&category=customers"
+                } else if (notif.type?.includes('leave') || notif.type?.includes('hr')) {
+                  deepLinkUrl = "/owner/jobs?view=approvals&category=hr"
+                } else if (notif.type?.includes('safety') || notif.type?.includes('incident')) {
+                  deepLinkUrl = "/owner/jobs?view=approvals&category=safety"
                 } else if (notif.type?.includes('material') || notif.type?.includes('inventory')) {
-                  router.push('/owner/inventory/forecasts')
+                  deepLinkUrl = "/owner/jobs?view=approvals&category=inventory"
+                } else if (notif.type?.includes('dispute') || notif.type?.includes('issue')) {
+                  deepLinkUrl = "/owner/invoice-issues"
+                } else if (notif.type?.includes('invoice')) {
+                  deepLinkUrl = "/owner/finance/invoices"
+                } else if (notif.type?.includes('payment')) {
+                  deepLinkUrl = "/owner/finance/payments"
                 } else if (notif.type?.includes('attendance')) {
-                  router.push('/owner/attendance')
+                  deepLinkUrl = "/owner/attendance"
+                } else if (notif.type?.includes('job') || notif.type?.includes('task')) {
+                  deepLinkUrl = "/owner/jobs"
                 }
+
+                if (deepLinkUrl) router.push(deepLinkUrl)
               }
 
               return (

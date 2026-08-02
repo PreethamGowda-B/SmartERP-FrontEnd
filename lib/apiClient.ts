@@ -192,8 +192,21 @@ function handleLogout() {
   }
 }
 
-// Lock to prevent multiple concurrent refresh attempts
+// ── Session Refresh Queue Mutex ──────────────────────────────────────────────
+// Prevents concurrent 401s from each spawning a refresh, which causes
+// replay-protection to terminate the session. Instead, all parallel requests
+// subscribe to a single in-flight refresh and retry when it resolves.
 let refreshPromise: Promise<any> | null = null
+let refreshSubscribers: Array<(token: string | null) => void> = []
+
+function subscribeTokenRefresh(cb: (token: string | null) => void) {
+  refreshSubscribers.push(cb)
+}
+
+function notifySubscribers(newToken: string | null) {
+  refreshSubscribers.forEach((cb) => cb(newToken))
+  refreshSubscribers = []
+}
 
 export async function apiClient<T = any>(path: string, options: RequestInit = {}, retries = 2): Promise<T> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
@@ -258,51 +271,75 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
       throw new Error("Unable to connect to the server. Please check your internet connection and try again.")
     }
 
-    // Refresh token logic
+    // ── 401 Interception with Subscriber Queue ────────────────────────────────
     if (res.status === 401) {
-      if (!refreshPromise) {
-        const storedRefreshToken = getRefreshToken()
+      const storedRefreshToken = getRefreshToken()
+      if (!storedRefreshToken) {
+        // No refresh token at all — hard logout
+        handleLogout()
+        throw new Error("Session expired. Please log in again.")
+      }
+
+      if (refreshPromise) {
+        // Another request is already refreshing — subscribe and wait for the new token
+        const newToken = await new Promise<string | null>((resolve) => {
+          subscribeTokenRefresh(resolve)
+        })
+        if (newToken) {
+          headers["Authorization"] = `Bearer ${newToken}`
+          res = await fetch(`${baseUrl}${path}`, { ...options, headers, credentials: "include" })
+        } else {
+          throw new Error("Session refresh failed. Please log in again.")
+        }
+      } else {
+        // This request owns the refresh — all subsequent 401s will queue
         refreshPromise = fetch(`${baseUrl}/api/auth/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
+          body: JSON.stringify({ refreshToken: storedRefreshToken }),
         }).then(async (r) => {
           if (r.ok) {
             const data = await r.json()
             if (data.accessToken) {
               setTokens(data.accessToken, data.refreshToken || storedRefreshToken || "", data.isSuperAdmin)
               syncWithAndroid(data.accessToken, data.refreshToken)
+              notifySubscribers(data.accessToken) // wake up all waiting requests
+            } else {
+              notifySubscribers(null)
             }
             return data
           }
+          notifySubscribers(null)
           throw new Error("Refresh failed")
+        }).catch((err) => {
+          notifySubscribers(null)
+          throw err
         }).finally(() => {
           refreshPromise = null
         })
-      }
 
-      try {
-        await refreshPromise
-        const newToken = getAccessToken()
-        if (newToken) {
-          headers["Authorization"] = `Bearer ${newToken}`
-        }
-        res = await fetch(`${baseUrl}${path}`, { ...options, headers, credentials: "include" })
+        try {
+          await refreshPromise
+          const newToken = getAccessToken()
+          if (newToken) {
+            headers["Authorization"] = `Bearer ${newToken}`
+          }
+          res = await fetch(`${baseUrl}${path}`, { ...options, headers, credentials: "include" })
 
-        if (res.status === 401) {
-          // Stale request — throw error but do NOT nuke session unless refresh token is missing
+          if (res.status === 401) {
+            // Still 401 after a fresh access token — session is genuinely invalid
+            if (!getRefreshToken()) {
+              handleLogout()
+            }
+            throw new Error("Authentication required. Please log in again.")
+          }
+        } catch (refreshErr) {
           if (!getRefreshToken()) {
             handleLogout()
           }
-          throw new Error("Authentication required")
+          throw refreshErr
         }
-      } catch (refreshErr) {
-        // Refresh error could be network/timeout — only logout if explicit 401/403 with no refresh token
-        if (!getRefreshToken()) {
-          handleLogout()
-        }
-        throw refreshErr
       }
     }
 

@@ -34,15 +34,8 @@ import {
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationCenterDrawer } from "@/components/notification-center-drawer"
-import { ExecutiveWorkQueueDrawer } from "@/components/executive-work-queue-drawer"
 import { logger } from "@/lib/logger"
 
-// inside component mobile header:
-// <div className="flex items-center gap-2">
-//   <ExecutiveWorkQueueDrawer />
-//   <NotificationCenterDrawer />
-//   <ThemeToggle compact />
-// </div>
 
 const navCategories = [
   {
@@ -163,7 +156,6 @@ export function OwnerSidebar() {
           <span className="font-extrabold text-sm tracking-tight text-foreground">SmartERP</span>
         </div>
         <div className="flex items-center gap-2">
-          <ExecutiveWorkQueueDrawer />
           <NotificationCenterDrawer />
           <ThemeToggle compact />
         </div>
@@ -178,19 +170,18 @@ export function OwnerSidebar() {
       >
         {/* Header */}
         <div className="p-4 border-b border-sidebar-border/80 flex items-center justify-between shrink-0 bg-sidebar/50 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-xl border border-primary/20 shadow-xs">
+          <div className="flex items-center gap-2.5 flex-nowrap whitespace-nowrap shrink-0 min-w-0">
+            <div className="p-2 bg-primary/10 rounded-xl border border-primary/20 shadow-xs shrink-0">
               <Building2 className="h-5 w-5 text-primary" />
             </div>
-            <div>
-              <h1 className="text-sm font-extrabold tracking-tight text-foreground">SmartERP</h1>
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+            <div className="flex flex-col min-w-0 flex-nowrap whitespace-nowrap">
+              <h1 className="text-sm font-black tracking-tight text-foreground truncate flex-nowrap whitespace-nowrap">SmartERP</h1>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 flex-nowrap whitespace-nowrap w-fit">
                 Owner Portal
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <ExecutiveWorkQueueDrawer />
+          <div className="flex items-center gap-1 shrink-0">
             <NotificationCenterDrawer />
             <ThemeToggle compact />
           </div>

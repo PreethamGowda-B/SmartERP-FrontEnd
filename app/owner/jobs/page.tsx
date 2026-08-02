@@ -1,312 +1,346 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback, useEffect, useRef, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { OwnerLayout } from "@/components/owner-layout"
 import { JobForm } from "@/components/job-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import type { Job } from "@/lib/data"
 import { useJobs } from "@/contexts/job-context"
 import { ExportButton } from "@/components/export-button"
 import { apiClient } from "@/lib/apiClient"
 import {
-  Plus, Search, Filter, Calendar, Users, CheckCircle2, Clock,
-  XCircle, AlertCircle, TrendingUp, Edit, Trash2, RefreshCw, Briefcase, UserRound,
+  Plus, Search, Filter, CheckCircle2, Clock,
+  XCircle, TrendingUp, RefreshCw, Briefcase, Zap
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ErrorView } from "@/components/ui/error-view"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonList } from "@/components/ui/skeleton-card"
 import { ExecutiveJobCard } from "@/components/executive-job-card"
+import { ApprovalCenterView } from "@/components/approval-center-view"
 
 const AUTO_REFRESH_MS = 30_000
-
-function formatDate(dateString?: string) {
-  if (!dateString) return "Not set"
-  try {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short", day: "numeric", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    })
-  } catch {
-    return "Invalid date"
-  }
-}
 
 function formatLastUpdated(date: Date | null) {
   if (!date) return "Never"
   return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
 }
 
-function getEmployeeStatusBadge(employeeStatus?: string) {
-  const status = employeeStatus?.toLowerCase() || "pending"
-  switch (status) {
-    case "completed":
-      return (
-        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-          <CheckCircle2 className="w-3 h-3 mr-1" />Completed
-        </Badge>
-      )
-    case "accepted":
-      return (
-        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-          <CheckCircle2 className="w-3 h-3 mr-1" />Accepted
-        </Badge>
-      )
-    case "declined":
-      return (
-        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-          <XCircle className="w-3 h-3 mr-1" />Declined
-        </Badge>
-      )
-    default:
-      return (
-        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-          <Clock className="w-3 h-3 mr-1" />Pending
-        </Badge>
-      )
-  }
-}
-
-export default function OwnerJobsPage() {
+function OwnerJobsPageContent() {
   const { jobs, addJob, updateJob, deleteJob, refreshJobs } = useJobs()
+  const searchParams = useSearchParams()
+
+  // Tab switcher state: all | customer | approvals | completed | archived
+  const initialView = searchParams.get("view") === "approvals" ? "approvals" : "all"
+  const [activeTab, setActiveTab] = useState<"all" | "customer" | "approvals" | "completed" | "archived">(initialView as any)
+
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [priorityFilter, setPriorityFilter] = useState("all")
   const [employeeStatusFilter, setEmployeeStatusFilter] = useState("all")
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingJob, setEditingJob] = useState<Job | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
 
-  // ── Refresh state ─────────────────────────────────────────────────────────
+  // Refresh state
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const isRefreshingRef = useRef(false) // guard against duplicate concurrent calls
+  const isRefreshingRef = useRef(false)
+
+  const fetchPendingCount = useCallback(async () => {
+    try {
+      const res = await apiClient("/api/work-requests?status=pending")
+      if (res?.success) {
+        setPendingRequestsCount(res.requests?.length || 0)
+      }
+    } catch (_) {}
+  }, [])
 
   const handleRefresh = useCallback(async () => {
-    if (isRefreshingRef.current) return // duplicate call guard
+    if (isRefreshingRef.current) return
     isRefreshingRef.current = true
     setIsRefreshing(true)
     try {
       setError(null)
       await refreshJobs()
+      await fetchPendingCount()
       setLastUpdated(new Date())
     } catch (err: any) {
-      setError({
-        title: "Could not load jobs",
-        message: err.message || "Something went wrong while fetching the projects. Please check your connection."
-      })
+      if (err.name !== "AbortError") {
+        setError({
+          title: "Failed to Refresh Jobs",
+          message: err.message || "An unexpected error occurred while fetching your jobs. Please try again.",
+        })
+      }
     } finally {
       setIsRefreshing(false)
       isRefreshingRef.current = false
     }
-  }, [refreshJobs])
+  }, [refreshJobs, fetchPendingCount])
 
-  // Initial fetch + 30-second auto-refresh with proper cleanup
   useEffect(() => {
     handleRefresh()
-    const intervalId = setInterval(handleRefresh, AUTO_REFRESH_MS)
-    return () => clearInterval(intervalId)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Filters ───────────────────────────────────────────────────────────────
-  const filteredJobs = jobs.filter((job) => {
-    const matchesSearch =
-      job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      false
-    const matchesStatus = statusFilter === "all" || job.status === statusFilter
-    const matchesPriority = priorityFilter === "all" || job.priority === priorityFilter
-    const matchesEmployeeStatus = employeeStatusFilter === "all" || job.employee_status === employeeStatusFilter
-    return matchesSearch && matchesStatus && matchesPriority && matchesEmployeeStatus
-  })
-
-  // ── Job CRUD handlers ─────────────────────────────────────────────────────
-  const handleCreateJob = () => { setEditingJob(null); setIsFormOpen(true) }
-  const handleEditJob = (job: Job) => { setEditingJob(job); setIsFormOpen(true) }
-  const handleDeleteJob = (job: Job) => {
-    if (confirm("Are you sure you want to delete this job?")) deleteJob(job.id)
+  const handleCreateJob = () => {
+    setEditingJob(null)
+    setIsFormOpen(true)
   }
+
+  const handleEditJob = (job: Job) => {
+    setEditingJob(job)
+    setIsFormOpen(true)
+  }
+
+  const handleDeleteJob = async (job: Job) => {
+    if (confirm(`Are you sure you want to delete "${job.title}"?`)) {
+      try {
+        await deleteJob(job.id)
+        setLastUpdated(new Date())
+      } catch (err: any) {
+        setError({
+          title: "Failed to Delete Job",
+          message: err.message || "Could not delete the job. Please try again.",
+        })
+      }
+    }
+  }
+
   const handleSubmitJob = async (jobData: Partial<Job>) => {
     setIsSubmitting(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    if (editingJob) {
-      updateJob(editingJob.id, jobData)
-    } else {
-      addJob({ id: Date.now().toString(), spent: 0, ...jobData } as Job)
+    try {
+      if (editingJob) {
+        await updateJob(editingJob.id, jobData)
+      } else {
+        await addJob(jobData as Job)
+      }
+      setIsFormOpen(false)
+      setEditingJob(null)
+      setLastUpdated(new Date())
+    } catch (err: any) {
+      setError({
+        title: editingJob ? "Failed to Update Job" : "Failed to Create Job",
+        message: err.message || "An error occurred while saving the job. Please try again.",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
-    setIsSubmitting(false)
-    setIsFormOpen(false)
-    setEditingJob(null)
   }
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
-  const acceptedJobs = jobs.filter(j => j.employee_status === "accepted").length
-  const pendingJobs = jobs.filter(j => j.employee_status === "pending").length
-  const declinedJobs = jobs.filter(j => j.employee_status === "declined").length
-  const completedJobs = jobs.filter(j => j.status === "completed").length
+  // Filter jobs by search, filters, and active tab
+  const filteredJobs = jobs.filter((job) => {
+    const isCustomerJob = (job as any).source === "customer"
+    const isCompleted = job.status?.toLowerCase() === "completed"
+
+    if (activeTab === "customer" && !isCustomerJob) return false
+    if (activeTab === "completed" && !isCompleted) return false
+    if (activeTab === "archived" && job.status?.toLowerCase() !== "cancelled") return false
+
+    const matchesSearch =
+      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (job as any).client?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesStatus = statusFilter === "all" || job.status?.toLowerCase() === statusFilter.toLowerCase()
+    const matchesEmployeeStatus =
+      employeeStatusFilter === "all" ||
+      job.employee_status?.toLowerCase() === employeeStatusFilter.toLowerCase()
+
+    return matchesSearch && matchesStatus && matchesEmployeeStatus
+  })
+
+  const acceptedJobs = jobs.filter((j) => j.employee_status?.toLowerCase() === "accepted").length
+  const pendingJobs = jobs.filter((j) => j.employee_status?.toLowerCase() === "pending" || !j.employee_status).length
+  const completedJobs = jobs.filter((j) => j.status?.toLowerCase() === "completed").length
+  const declinedJobs = jobs.filter((j) => j.employee_status?.toLowerCase() === "declined").length
+  const customerJobsCount = jobs.filter((j) => (j as any).source === "customer").length
 
   return (
     <OwnerLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+        {/* Top Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-              Job <span className="text-primary">Management</span>
-            </h1>
-            <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
-              Monitor project lifecycles, track employee availability, and drive operational excellence.
+            <h1 className="text-2xl font-black tracking-tight text-foreground">Task & Job Operations</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Monitor field lifecycles, action team requests, and drive operational excellence.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex flex-col items-end gap-0.5 text-right mr-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">Auto-refresh Active</span>
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {formatLastUpdated(lastUpdated)}
-              </span>
-            </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <span className="text-[10px] text-muted-foreground hidden lg:flex items-center gap-1 font-mono">
+              <Clock className="h-3 w-3 text-primary" />
+              AUTO-REFRESH: {formatLastUpdated(lastUpdated)}
+            </span>
 
             <Button
-              variant="secondary"
+              variant="outline"
               size="sm"
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="gap-2 h-10 px-4 btn-premium"
+              className="h-9 text-xs font-bold rounded-xl"
             >
-              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-              {isRefreshing ? "Refreshing" : "Refresh"}
+              <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", isRefreshing && "animate-spin")} />
+              Refresh
             </Button>
 
             <ExportButton
-              filename="Jobs_Report"
               title="Job Management Report"
-              subtitle="Overview of Active Projects & Service Requests"
+              filename="smarterp-jobs-export"
               data={filteredJobs}
-              orientation="landscape"
               columns={[
                 { header: "Job Title", dataKey: "title" },
-                { header: "Client", dataKey: "client" },
                 { header: "Location", dataKey: "location" },
                 { header: "Status", dataKey: "status", type: "status" },
                 { header: "Priority", dataKey: "priority", type: "priority" },
                 { header: "Progress", dataKey: "progress", type: "number" },
                 { header: "Budget", dataKey: "budget", type: "currency" },
-                { header: "Spent", dataKey: "spent", type: "currency" },
               ]}
             />
 
-            <Button onClick={handleCreateJob} size="lg" className="h-10 px-6 shadow-lg shadow-primary/20 btn-premium">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={handleCreateJob} size="sm" className="h-9 px-4 text-xs font-bold rounded-xl bg-primary text-primary-foreground shadow-xs">
+              <Plus className="h-4 w-4 mr-1.5" />
               New Job
             </Button>
           </div>
         </div>
 
-        {/* Mobile Last Updated */}
-        <p className="sm:hidden text-xs text-muted-foreground flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          Last updated: {formatLastUpdated(lastUpdated)}
-        </p>
+        {/* Executive View Switcher Toolbar */}
+        <div className="flex items-center gap-1.5 p-1.5 bg-card rounded-2xl border border-border/70 shadow-xs overflow-x-auto no-scrollbar">
+          <Button
+            variant={activeTab === "all" ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-8 text-xs font-bold rounded-xl px-3.5", activeTab === "all" && "shadow-xs")}
+            onClick={() => setActiveTab("all")}
+          >
+            All Jobs ({jobs.length})
+          </Button>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { label: "Accepted", value: acceptedJobs, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-500/10", border: "border-green-500/20" },
-            { label: "Pending", value: pendingJobs, icon: Clock, color: "text-yellow-600", bg: "bg-yellow-500/10", border: "border-yellow-500/20" },
-            { label: "Completed", value: completedJobs, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-            { label: "Declined", value: declinedJobs, icon: XCircle, color: "text-red-600", bg: "bg-red-500/10", border: "border-red-500/20" },
-          ].map((stat, i) => (
-            <Card key={i} className={cn("premium-card hover-lift-subtle border", stat.border)}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">{stat.label}</p>
-                    <div className="text-3xl font-bold tracking-tight">{stat.value}</div>
-                  </div>
-                  <div className={cn("p-3 rounded-2xl", stat.bg)}>
-                    <stat.icon className={cn("h-6 w-6", stat.color)} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          <Button
+            variant={activeTab === "customer" ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-8 text-xs font-bold rounded-xl px-3.5", activeTab === "customer" && "shadow-xs")}
+            onClick={() => setActiveTab("customer")}
+          >
+            Customer Requests ({customerJobsCount})
+          </Button>
+
+          <Button
+            variant={activeTab === "approvals" ? "default" : "ghost"}
+            size="sm"
+            className={cn(
+              "h-8 text-xs font-bold rounded-xl px-3.5 relative",
+              activeTab === "approvals" ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-xs" : "text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400"
+            )}
+            onClick={() => setActiveTab("approvals")}
+          >
+            <Zap className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+            Approval Center
+            {pendingRequestsCount > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-black animate-pulse">
+                {pendingRequestsCount}
+              </span>
+            )}
+          </Button>
+
+          <Button
+            variant={activeTab === "completed" ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-8 text-xs font-bold rounded-xl px-3.5", activeTab === "completed" && "shadow-xs")}
+            onClick={() => setActiveTab("completed")}
+          >
+            Completed ({completedJobs})
+          </Button>
+
+          <Button
+            variant={activeTab === "archived" ? "default" : "ghost"}
+            size="sm"
+            className={cn("h-8 text-xs font-bold rounded-xl px-3.5", activeTab === "archived" && "shadow-xs")}
+            onClick={() => setActiveTab("archived")}
+          >
+            Archived
+          </Button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search jobs, clients, or locations..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-40">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={employeeStatusFilter} onValueChange={setEmployeeStatusFilter}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Employee Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Responses</SelectItem>
-              <SelectItem value="accepted">Accepted</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="declined">Declined</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* ── TAB CONTENT ── */}
+        {activeTab === "approvals" ? (
+          <ApprovalCenterView initialCategory={searchParams.get("category") || "all"} />
+        ) : (
+          <>
+            {/* KPI Stats Strip */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: "Accepted Jobs", value: acceptedJobs, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/40" },
+                { label: "Pending Acceptance", value: pendingJobs, icon: Clock, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/40" },
+                { label: "Completed", value: completedJobs, icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50 dark:bg-indigo-950/40" },
+                { label: "Declined Jobs", value: declinedJobs, icon: XCircle, color: "text-rose-600", bg: "bg-rose-50 dark:bg-rose-950/40" },
+              ].map((stat, i) => (
+                <Card key={i} className="rounded-2xl border border-border/70 bg-card p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-muted-foreground">{stat.label}</p>
+                      <div className="text-2xl font-black tracking-tight text-foreground mt-0.5">{stat.value}</div>
+                    </div>
+                    <div className={cn("p-2.5 rounded-xl", stat.bg)}>
+                      <stat.icon className={cn("h-5 w-5", stat.color)} />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
 
-        <div className="space-y-6">
-          {isRefreshing && jobs.length === 0 ? (
-            <SkeletonList count={6} />
-          ) : error && jobs.length === 0 ? (
-            <ErrorView title={error.title} message={error.message} onRetry={handleRefresh} />
-          ) : filteredJobs.length === 0 ? (
-            <EmptyState 
-              icon={Briefcase}
-              title="No jobs found"
-              description="We couldn't find any jobs matching your current filters. Try adjusting them or create a new project."
-              actionLabel="Create New Job"
-              onAction={handleCreateJob}
-            />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredJobs.map((job) => {
-                const employeeStatus = job.employee_status
-                const empStatusStr = String(employeeStatus)
-                const isCompleted = job.status?.toLowerCase() === "completed"
-                const isInProgress = job.status?.toLowerCase() === "in_progress"
-                const displayProgress = isCompleted ? 100 : (job.progress || 0)
-                const isCustomerJob = (job as any).source === "customer"
+            {/* Filters Bar */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search jobs, clients, or locations..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-9 text-xs rounded-xl"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-36 h-9 text-xs rounded-xl">
+                  <Filter className="h-3.5 w-3.5 mr-1.5" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                return (
+            {/* Job Grid */}
+            {isRefreshing && jobs.length === 0 ? (
+              <SkeletonList count={6} />
+            ) : error && jobs.length === 0 ? (
+              <ErrorView title={error.title} message={error.message} onRetry={handleRefresh} />
+            ) : filteredJobs.length === 0 ? (
+              <EmptyState
+                icon={Briefcase}
+                title="No jobs found"
+                description="We couldn't find any jobs matching your current view or filters. Try adjusting them or create a new project."
+                actionLabel="Create New Job"
+                onAction={handleCreateJob}
+              />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {filteredJobs.map((job) => (
                   <ExecutiveJobCard
                     key={job.id}
                     job={{
                       ...job,
-                      progress: displayProgress,
                       invoice: (job as any).invoice_number ? {
                         id: (job as any).invoice_id,
                         invoice_number: (job as any).invoice_number,
@@ -320,23 +354,23 @@ export default function OwnerJobsPage() {
                     onEdit={handleEditJob}
                     onDelete={handleDeleteJob}
                     onView={(j) => handleEditJob(j)}
-                    onActionComplete={() => refreshJobs()}
+                    onActionComplete={handleRefresh}
                   />
-                )
-              })}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
         {/* Job Form Dialog */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
             <DialogHeader>
-              <DialogTitle>{editingJob ? "Edit Job" : "Create New Job"}</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="font-extrabold text-xl">{editingJob ? "Edit Job Parameters" : "Create New Enterprise Job"}</DialogTitle>
+              <DialogDescription className="text-xs">
                 {editingJob
-                  ? "Update the details and assignments for this existing job."
-                  : "Fill out the form below to create a new job and assign it to employees."}
+                  ? "Update job details, SLA parameters, and technician assignments."
+                  : "Fill out the form below to initiate a job and dispatch it to technicians."}
               </DialogDescription>
             </DialogHeader>
             <JobForm
@@ -351,3 +385,12 @@ export default function OwnerJobsPage() {
     </OwnerLayout>
   )
 }
+
+export default function OwnerJobsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground text-sm">Loading jobs...</div>}>
+      <OwnerJobsPageContent />
+    </Suspense>
+  )
+}
+

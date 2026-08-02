@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   Building2, Users, Clock, DollarSign, TrendingUp,
   AlertTriangle, CheckCircle, Calendar, Loader2, Briefcase,
-  RefreshCw
+  RefreshCw, Zap, ArrowRight, FileText, Package, UserCheck
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DateTimeWeather } from "@/components/date-time-weather"
@@ -68,18 +68,30 @@ export default function OwnerDashboard() {
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
+  const [pendingApprovals, setPendingApprovals] = useState(0)
+  const [approvalCounts, setApprovalCounts] = useState({ employee: 0, customer: 0, invoice: 0, inventory: 0 })
 
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const [metricsData, activityData] = await Promise.all([
+      const [metricsData, activityData, approvalData] = await Promise.all([
         apiClient("/api/dashboard/owner/metrics"),
         apiClient("/api/dashboard/owner/recent-activity"),
+        apiClient("/api/work-requests?status=pending").catch(() => ({ requests: [] })),
       ])
 
       setMetrics(metricsData)
       setRecentActivity(Array.isArray(activityData) ? activityData : [])
+
+      const reqs = approvalData?.requests || []
+      setPendingApprovals(reqs.length)
+      setApprovalCounts({
+        employee: reqs.filter((r: any) => r.category === "jobs").length,
+        customer: reqs.filter((r: any) => r.category === "customers").length,
+        invoice: reqs.filter((r: any) => r.category === "finance").length,
+        inventory: reqs.filter((r: any) => r.category === "inventory").length,
+      })
     } catch (err: any) {
       logger.error("Error fetching dashboard data:", err)
       setError({
@@ -207,6 +219,51 @@ export default function OwnerDashboard() {
             </Card>
           ))}
         </div>
+
+        {/* Executive Approval Command Center KPI Strip */}
+        {pendingApprovals > 0 && (
+          <div className="rounded-2xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50/80 dark:bg-indigo-950/30 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+                <span className="text-sm font-black text-indigo-900 dark:text-indigo-200">Executive Approval Center</span>
+                <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black animate-pulse">
+                  {pendingApprovals} pending
+                </span>
+              </div>
+              <Button
+                size="sm"
+                className="h-7 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-3 rounded-xl"
+                onClick={() => router.push("/owner/jobs?view=approvals")}
+              >
+                Open Approval Center <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Employee Field Requests", count: approvalCounts.employee, icon: UserCheck, color: "text-purple-600", bg: "bg-purple-100 dark:bg-purple-950/50", href: "/owner/jobs?view=approvals&category=jobs" },
+                { label: "Customer Requests", count: approvalCounts.customer, icon: Users, color: "text-sky-600", bg: "bg-sky-100 dark:bg-sky-950/50", href: "/owner/jobs?view=approvals&category=customers" },
+                { label: "Invoice & Finance", count: approvalCounts.invoice, icon: FileText, color: "text-emerald-600", bg: "bg-emerald-100 dark:bg-emerald-950/50", href: "/owner/jobs?view=approvals&category=finance" },
+                { label: "Inventory & Materials", count: approvalCounts.inventory, icon: Package, color: "text-amber-600", bg: "bg-amber-100 dark:bg-amber-950/50", href: "/owner/jobs?view=approvals&category=inventory" },
+              ].map((kpi) => (
+                <button
+                  key={kpi.label}
+                  className="group flex items-center gap-3 p-3 rounded-xl bg-background border border-border/60 hover:border-indigo-400 hover:shadow-sm transition-all cursor-pointer text-left"
+                  onClick={() => router.push(kpi.href)}
+                >
+                  <div className={cn("p-2 rounded-lg shrink-0", kpi.bg)}>
+                    <kpi.icon className={cn("h-4 w-4", kpi.color)} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xl font-black text-foreground leading-none">{kpi.count}</div>
+                    <div className="text-[10px] text-muted-foreground font-semibold mt-0.5 leading-tight">{kpi.label}</div>
+                  </div>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground ml-auto shrink-0 group-hover:text-indigo-600 transition-colors" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Active Projects + Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
