@@ -79,25 +79,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem("company_code", freshUser.company_code)
                   }
                   logger.log("[v0] ✅ Profile synced with latest DB state")
-                } else if (isMounted) {
-                  logger.warn("[v0] Profile sync failed - clearing session")
-                  signOut()
-                  setUser(null)
+                } else {
+                  logger.warn("[v0] Profile sync returned non-ok — keeping cached session")
                 }
               } catch {
                 // /me failed — keep the cached user, not a hard failure
               }
             }
-          } else if (isMounted) {
-            logger.warn("[v0] Token refresh failed - clearing stale session")
+          } else if (isMounted && refreshRes.status === 401) {
+            logger.warn("[v0] Token refresh 401 — clearing session")
             signOut()
             setUser(null)
           }
         } catch (fetchErr: any) {
-          logger.warn("[v0] Token refresh network error:", fetchErr)
-          // Network error (cold start, offline) — keep the cached user so the
-          // app still works offline, but don't redirect to protected routes
-          // (page.tsx waits for authVerified which requires this to complete)
+          logger.warn("[v0] Token refresh network error — keeping cached user session:", fetchErr)
         }
 
         // 4. Auth check done — allow the rest of the app to render

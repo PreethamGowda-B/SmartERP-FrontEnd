@@ -291,11 +291,17 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
         res = await fetch(`${baseUrl}${path}`, { ...options, headers, credentials: "include" })
 
         if (res.status === 401) {
-          handleLogout()
-          throw new Error("Session expired")
+          // Stale request — throw error but do NOT nuke session unless refresh token is missing
+          if (!getRefreshToken()) {
+            handleLogout()
+          }
+          throw new Error("Authentication required")
         }
       } catch (refreshErr) {
-        handleLogout()
+        // Refresh error could be network/timeout — only logout if explicit 401/403 with no refresh token
+        if (!getRefreshToken()) {
+          handleLogout()
+        }
         throw refreshErr
       }
     }

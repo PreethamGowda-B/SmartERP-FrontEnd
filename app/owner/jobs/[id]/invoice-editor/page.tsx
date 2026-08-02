@@ -211,9 +211,10 @@ export default function DedicatedInvoiceEditorPage() {
 
       if (res && (res.success || res.invoice)) {
         const invNum = res.invoice?.invoice_number || 'INV-2026-0001';
+        const isEdit = res.reason === 'invoice_updated';
         toast({
-          title: res.reason === 'invoice_already_exists' ? 'Invoice Already Active 📄' : 'Invoice Finalized & Issued! 💰',
-          description: `Invoice ${invNum} created successfully. Redirecting to jobs...`,
+          title: isEdit ? `Invoice Updated (Edited ${res.edited_count || 1}x) 📄` : 'Invoice Finalized & Issued! 💰',
+          description: `Invoice ${invNum} saved successfully. Returning to jobs...`,
         });
         setTimeout(() => {
           router.push('/owner/jobs');
@@ -250,7 +251,12 @@ export default function DedicatedInvoiceEditorPage() {
       {/* Header Bar */}
       <div className="flex items-center justify-between border-b pb-4">
         <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold"
+            onClick={() => router.push('/owner/jobs')}
+          >
             <ArrowLeft className="h-4 w-4 mr-1" /> Back to Jobs
           </Button>
           <div>

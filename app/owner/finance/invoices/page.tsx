@@ -59,25 +59,27 @@ export default function OwnerInvoicesListPage() {
 
   const handleSendWhatsApp = async (invId: string) => {
     try {
-      const res = await apiClient<{ success: boolean }>(`/api/invoices/${invId}/send-whatsapp`, { method: 'POST' });
+      toast({ title: 'Sending WhatsApp... 📱', description: 'Dispatching template message to customer' });
+      const res = await apiClient<{ success: boolean; message?: string; recipient?: string }>(`/api/invoices/${invId}/send-whatsapp`, { method: 'POST' });
       if (res && res.success) {
-        toast({ title: 'Invoice Sent via WhatsApp! 📱', description: 'Template message dispatched.' });
+        toast({ title: 'Success! 📱', description: res.message || `Dispatched to ${res.recipient || 'customer'}` });
         fetchInvoices();
       }
     } catch (err: any) {
-      toast({ title: 'WhatsApp dispatch failed', description: err.message, variant: 'destructive' });
+      toast({ title: 'WhatsApp dispatch failed ❌', description: err.message || 'Could not send WhatsApp message', variant: 'destructive' });
     }
   };
 
   const handleSendEmail = async (invId: string) => {
     try {
-      const res = await apiClient<{ success: boolean }>(`/api/invoices/${invId}/send-email`, { method: 'POST' });
+      toast({ title: 'Sending Email... 📧', description: 'Queuing tax invoice PDF to customer' });
+      const res = await apiClient<{ success: boolean; message?: string; recipient?: string }>(`/api/invoices/${invId}/send-email`, { method: 'POST' });
       if (res && res.success) {
-        toast({ title: 'Invoice Email Queued! 📧', description: 'Sent via Resend.' });
+        toast({ title: 'Email Sent! 📧', description: res.message || `Sent to ${res.recipient || 'customer'}` });
         fetchInvoices();
       }
     } catch (err: any) {
-      toast({ title: 'Email dispatch failed', description: err.message, variant: 'destructive' });
+      toast({ title: 'Email dispatch failed ❌', description: err.message || 'Could not send email', variant: 'destructive' });
     }
   };
 
@@ -102,6 +104,14 @@ export default function OwnerInvoicesListPage() {
             View, track customer views/downloads, dispatch via WhatsApp/Email, and record payments.
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold"
+          onClick={() => router.push('/owner/jobs')}
+        >
+          ← Back to Jobs
+        </Button>
       </div>
 
       {/* Filters Bar */}
@@ -161,7 +171,12 @@ export default function OwnerInvoicesListPage() {
                       <td className="p-4">
                         <div className="font-bold text-slate-900 font-mono">{inv.invoice_number}</div>
                         <div className="text-xs text-slate-500 font-sans">
-                          v{inv.version_number || 1}.0 · {new Date(inv.created_at).toLocaleDateString()}
+                          v{inv.version_number || 1}.{inv.edited_count || 0} · {new Date(inv.created_at).toLocaleDateString()}
+                          {inv.edited_count > 0 && (
+                            <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-indigo-100 text-indigo-800 rounded font-bold">
+                              Edited {inv.edited_count}x
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -210,7 +225,10 @@ export default function OwnerInvoicesListPage() {
                           size="icon"
                           variant="ghost"
                           title="View Invoice"
-                          onClick={() => window.open(`/api/invoices/${inv.id}/pdf`, '_blank')}
+                          onClick={() => {
+                            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
+                            window.open(`${baseUrl}/api/invoices/${inv.id}/pdf`, '_blank');
+                          }}
                         >
                           <Eye className="h-4 w-4 text-slate-600" />
                         </Button>

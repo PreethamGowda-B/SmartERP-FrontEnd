@@ -90,7 +90,8 @@ export default function CustomerInvoiceDetailPage() {
         }),
       }).catch(() => {});
 
-      window.open(`/api/invoices/${invoiceId}/pdf`, '_blank');
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
+      window.open(`${baseUrl}/api/invoices/${invoiceId}/pdf`, '_blank');
     } catch (err: any) {
       toast({
         title: 'Download failed',
