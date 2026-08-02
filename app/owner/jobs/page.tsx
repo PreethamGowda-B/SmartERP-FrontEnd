@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils"
 import { ErrorView } from "@/components/ui/error-view"
 import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonList } from "@/components/ui/skeleton-card"
+import { ExecutiveJobCard } from "@/components/executive-job-card"
 
 const AUTO_REFRESH_MS = 30_000
 
@@ -301,167 +302,25 @@ export default function OwnerJobsPage() {
                 const isCustomerJob = (job as any).source === "customer"
 
                 return (
-                  <Card
+                  <ExecutiveJobCard
                     key={job.id}
-                    className={cn(
-                      "premium-card hover-lift group overflow-hidden border-none shadow-sm hover:shadow-xl",
-                      isCustomerJob && "ring-1 ring-teal-400/30"
-                    )}
-                  >
-                    <div className={cn(
-                      "h-1.5 w-full",
-                      isCustomerJob ? "bg-teal-500" :
-                      isCompleted ? "bg-green-500" : 
-                      empStatusStr === "accepted" ? "bg-primary" : 
-                      empStatusStr === "declined" ? "bg-red-500" : "bg-yellow-500"
-                    )} />
-                    
-                    <CardHeader className="p-6 pb-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0">
-                          {job.status}
-                        </Badge>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditJob(job)} className="h-7 w-7 rounded-full hover:bg-primary/10 hover:text-primary">
-                            <Edit className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteJob(job)} className="h-7 w-7 rounded-full hover:bg-red-50 hover:text-red-600">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                      <CardTitle className="text-xl font-bold leading-tight group-hover:text-primary transition-colors cursor-pointer" onClick={() => handleEditJob(job)}>
-                        {job.title}
-                      </CardTitle>
-                      {isCustomerJob && (
-                        <div className="flex items-center gap-1.5 mt-2 mb-1">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
-                            <UserRound className="h-2.5 w-2.5" />
-                            Customer Request
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 mt-1">
-                        {getEmployeeStatusBadge(employeeStatus)}
-                        <span className="text-meta">ID: {job.id.substring(0, 8)}</span>
-                      </div>
-                    </CardHeader>
-
-                    <CardContent className="p-6 pt-0 space-y-6">
-                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                        {job.description || "Project parameters and execution details have been formalized for this assignment."}
-                      </p>
-
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-end">
-                          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Execution Progress</span>
-                          <span className="text-sm font-black text-primary">{displayProgress}%</span>
-                        </div>
-                        <Progress value={displayProgress} className="h-2 bg-secondary rounded-full overflow-hidden" />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/40">
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Technician</p>
-                          <div className="flex items-center gap-2">
-                            <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold">
-                              {(job as any).employee_name?.[0] || job.employee_email?.[0] || "?"}
-                            </div>
-                            <p className="text-xs font-semibold truncate max-w-[100px]">
-                              {(job as any).employee_name || job.employee_email || "Unassigned"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="space-y-1 text-right">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Timeline</p>
-                          <div className="flex items-center justify-end gap-1.5 text-xs font-semibold">
-                            <Calendar className="h-3 w-3 text-primary" />
-                            {formatDate(job.deadline).split(',')[0]}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Invoice Badge & Customer Activity Tracking */}
-                      {(job as any).invoice_number && (
-                        <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2 flex-wrap">
-                          <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                            📄 {(job as any).invoice_number}
-                          </span>
-                          {(job as any).invoice_downloaded_at ? (
-                            <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
-                              📥 PDF Downloaded
-                            </span>
-                          ) : (job as any).invoice_viewed_at ? (
-                            <span className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
-                              👁️ Viewed by Customer
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
-                              ⏳ Sent to Customer
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Job Actions Footer */}
-                      <div className="pt-4 border-t border-border/40 flex flex-wrap gap-2 items-center justify-end">
-                        {isCompleted && (
-                          <>
-                            {(job as any).invoice_number ? (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold px-2.5 py-1.5"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
-                                    window.open(`${baseUrl}/api/invoices/${(job as any).invoice_id}/pdf`, '_blank');
-                                  }}
-                                >
-                                  Download PDF
-                                </Button>
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs text-xs px-2.5 py-1.5"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.location.href = `/owner/finance/invoices`;
-                                  }}
-                                >
-                                  View Invoice
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs border-slate-200 text-slate-700 hover:bg-slate-50 font-medium px-2.5 py-1.5"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.location.href = `/owner/jobs/${job.id}/invoice-editor`;
-                                  }}
-                                >
-                                  Create Revised Invoice
-                                </Button>
-                              </>
-                            ) : (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs text-xs px-3 py-1.5"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.location.href = `/owner/jobs/${job.id}/invoice-editor`;
-                                }}
-                              >
-                                Generate Invoice
-                              </Button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                    job={{
+                      ...job,
+                      progress: displayProgress,
+                      invoice: (job as any).invoice_number ? {
+                        id: (job as any).invoice_id,
+                        invoice_number: (job as any).invoice_number,
+                        total_amount: (job as any).invoice_total_amount || job.budget || 0,
+                        status: (job as any).invoice_status || 'sent',
+                        viewed_at: (job as any).invoice_viewed_at,
+                        downloaded_at: (job as any).invoice_downloaded_at,
+                      } : null,
+                    }}
+                    role="owner"
+                    onEdit={handleEditJob}
+                    onDelete={handleDeleteJob}
+                    onView={(j) => handleEditJob(j)}
+                  />
                 )
               })}
             </div>
