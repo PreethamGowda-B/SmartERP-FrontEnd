@@ -380,6 +380,36 @@ export default function OwnerJobsPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Job Actions Footer */}
+                      <div className="pt-4 border-t border-border/40 flex flex-wrap gap-2 items-center justify-end">
+                        {isCompleted && (
+                          <>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-xs text-xs px-3 py-1.5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.location.href = `/owner/jobs/${job.id}/invoice-editor`;
+                              }}
+                            >
+                              Generate Invoice
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold px-3 py-1.5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.location.href = `/owner/jobs/${job.id}/invoice-editor`;
+                              }}
+                            >
+                              Create Revised Invoice
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 )
