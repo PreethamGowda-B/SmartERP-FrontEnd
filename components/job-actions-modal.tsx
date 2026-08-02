@@ -101,10 +101,19 @@ export function JobActionsModal({ jobId, jobTitle, isOpen, onClose, onActionComp
   const [evidenceUrl, setEvidenceUrl] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
+  const handleClose = () => {
+    React.startTransition(() => {
+      setSelectedOption(null)
+      onClose()
+    })
+  }
+
   const handleSelectOption = (opt: ActionOption) => {
-    setSelectedOption(opt)
-    setNotes("")
-    setEvidenceUrl("")
+    React.startTransition(() => {
+      setSelectedOption(opt)
+      setNotes("")
+      setEvidenceUrl("")
+    })
   }
 
   const handleSubmitAction = async () => {
@@ -151,9 +160,11 @@ export function JobActionsModal({ jobId, jobTitle, isOpen, onClose, onActionComp
           : `${selectedOption.label} submitted successfully`
       )
 
-      setSelectedOption(null)
-      onClose()
-      if (onActionComplete) onActionComplete()
+      React.startTransition(() => {
+        setSelectedOption(null)
+        onClose()
+        if (onActionComplete) onActionComplete()
+      })
     } catch (err: any) {
       toast.error(err?.message || "Failed to submit job action")
     } finally {
@@ -162,7 +173,7 @@ export function JobActionsModal({ jobId, jobTitle, isOpen, onClose, onActionComp
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-6 rounded-3xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
