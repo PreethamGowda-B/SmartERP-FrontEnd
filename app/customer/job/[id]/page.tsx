@@ -105,7 +105,7 @@ export default function JobDetailPage() {
       const invData = res.data.data ?? null;
       setInvoice(invData);
       if (invData && invData.id) {
-        apiClient.post(`/api/invoices/${invData.id}/track`, { actionType: 'viewed' }).catch(() => {});
+        customerApi.post(`/api/invoices/${invData.id}/track`, { actionType: 'viewed' }).catch(() => {});
       }
     } catch {
       setInvoice(null);
@@ -701,7 +701,7 @@ export default function JobDetailPage() {
                     {/* Download Invoice PDF Button */}
                     <button
                       onClick={() => {
-                        apiClient.post(`/api/invoices/${invoice.id}/track`, { actionType: 'downloaded' }).catch(() => {});
+                        customerApi.post(`/api/invoices/${invoice.id}/track`, { actionType: 'downloaded' }).catch(() => {});
                         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
                         window.open(`${baseUrl}/api/invoices/${invoice.id}/pdf`, '_blank');
                       }}
