@@ -151,25 +151,30 @@ export function JobCard({ job, onEdit, onDelete, onView, showActions = true }: J
               </Button>
             )}
             {job.status === "completed" && (
-              <Button
-                variant="default"
-                size="sm"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
-                onClick={async () => {
-                  try {
-                    const res = await (await import("@/lib/apiClient")).apiClient(`/api/jobs/${job.id}/invoice`, { method: "POST" })
-                    const { toast } = await import("sonner")
-                    toast.success(`Invoice ${res.invoice?.invoice_number || ''} generated successfully!`)
-                  } catch (err: any) {
-                    const { toast } = await import("sonner")
-                    toast.error(err?.message || "Failed to generate invoice")
-                  }
-                }}
-              >
-                Generate Invoice
-              </Button>
+              <>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                  onClick={() => {
+                    window.location.href = `/owner/jobs/${job.id}/invoice-editor`;
+                  }}
+                >
+                  Generate Invoice
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold"
+                  onClick={() => {
+                    window.location.href = `/owner/jobs/${job.id}/invoice-editor`;
+                  }}
+                >
+                  Create Revised Invoice
+                </Button>
+              </>
             )}
-            {onEdit && (
+            {onEdit && job.status !== "completed" && (
               <Button variant="outline" size="sm" onClick={() => onEdit(job)}>
                 <Edit className="h-4 w-4 mr-1" />
                 Edit

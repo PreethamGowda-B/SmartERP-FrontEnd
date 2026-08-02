@@ -185,7 +185,7 @@ function handleLogout() {
 // Lock to prevent multiple concurrent refresh attempts
 let refreshPromise: Promise<any> | null = null
 
-export async function apiClient(path: string, options: RequestInit = {}, retries = 2) {
+export async function apiClient<T = any>(path: string, options: RequestInit = {}, retries = 2): Promise<T> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
   
   const isFormData = options.body instanceof FormData

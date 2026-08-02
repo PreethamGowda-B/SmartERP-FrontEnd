@@ -41,6 +41,7 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
     endDate: job?.endDate ? new Date(job.endDate) : undefined,
     assignedEmployees: job?.assignedEmployees || [],
     visible_to_all: (job as any)?.visible_to_all ?? true,  // Default to true so employees can see jobs
+    is_billable: (job as any)?.is_billable ?? Boolean(job?.client),
   })
 
   const [employees, setEmployees] = useState<any[]>([])
@@ -79,6 +80,14 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
       assignedEmployees: prev.assignedEmployees.includes(employeeId)
         ? prev.assignedEmployees.filter((id: string) => id !== employeeId)
         : [...prev.assignedEmployees, employeeId],
+    }))
+  }
+
+  const handleClientChange = (clientName: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      client: clientName,
+      is_billable: clientName.trim().length > 0 ? true : prev.is_billable,
     }))
   }
 
