@@ -204,7 +204,7 @@ export default function DedicatedInvoiceEditorPage() {
         lineItems,
       };
 
-      const res = await apiClient<{ success: boolean; invoice?: any; reason?: string; error?: string }>('/api/invoices/finalize', {
+      const res = await apiClient<{ success: boolean; invoice?: any; reason?: string; error?: string; edited_count?: number }>('/api/invoices/finalize', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
