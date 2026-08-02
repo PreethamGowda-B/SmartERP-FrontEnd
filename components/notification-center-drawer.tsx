@@ -21,6 +21,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
 import { useNotifications, Notification } from "@/contexts/notification-context"
 
 function formatRelativeTime(dateString: string): string {
@@ -38,6 +39,7 @@ function formatRelativeTime(dateString: string): string {
 }
 
 export function NotificationCenterDrawer() {
+  const router = useRouter()
   const {
     notifications,
     markAsRead,
@@ -165,36 +167,57 @@ export function NotificationCenterDrawer() {
                 : "No notifications matching your criteria."}
             </div>
           ) : (
-            filteredNotifications.map((notif) => (
-              <div
-                key={notif.id}
-                className={cn(
-                  "p-3 flex items-start gap-3 transition-colors hover:bg-muted/40 cursor-pointer",
-                  !notif.read && "bg-primary/5 font-medium"
-                )}
-                onClick={() => {
-                  if (!notif.read) markAsRead(notif.id)
-                }}
-              >
-                <div className="p-2 rounded-lg bg-muted shrink-0 mt-0.5">
-                  {getCategoryIcon(notif.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1 mb-0.5">
-                    <span className="font-semibold text-xs text-foreground truncate">
-                      {notif.title}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground shrink-0">
-                      {formatRelativeTime(notif.created_at)}
-                    </span>
+            filteredNotifications.map((notif) => {
+              const handleNotificationClick = () => {
+                if (!notif.read) markAsRead(notif.id);
+
+                // Deep Link Navigation (Issue 12 Requirement 4)
+                if (notif.data?.url) {
+                  router.push(notif.data.url);
+                } else if (notif.type?.includes('action') || notif.type?.includes('job')) {
+                  router.push('/owner/jobs');
+                } else if (notif.type?.includes('dispute') || notif.type?.includes('issue')) {
+                  router.push('/owner/invoice-issues');
+                } else if (notif.type?.includes('invoice')) {
+                  router.push('/owner/finance/invoices');
+                } else if (notif.type?.includes('payment')) {
+                  router.push('/owner/finance/payments');
+                } else if (notif.type?.includes('material') || notif.type?.includes('inventory')) {
+                  router.push('/owner/inventory/forecasts');
+                } else if (notif.type?.includes('attendance')) {
+                  router.push('/owner/attendance');
+                }
+              };
+
+              return (
+                <div
+                  key={notif.id}
+                  className={cn(
+                    "p-3 flex items-start gap-3 transition-colors hover:bg-muted/40 cursor-pointer",
+                    !notif.read && "bg-primary/5 font-medium"
+                  )}
+                  onClick={handleNotificationClick}
+                >
+                  <div className="p-2 rounded-lg bg-muted shrink-0 mt-0.5">
+                    {getCategoryIcon(notif.type)}
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{notif.message}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <span className="font-semibold text-xs text-foreground truncate">
+                        {notif.title}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground shrink-0">
+                        {formatRelativeTime(notif.created_at)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{notif.message}</p>
+                  </div>
+                  {!notif.read && (
+                    <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5" />
+                  )}
                 </div>
-                {!notif.read && (
-                  <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5" />
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </PopoverContent>

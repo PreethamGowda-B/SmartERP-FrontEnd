@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, PlusCircle, User, LogOut, Menu, X, Bell, List, History, Repeat } from 'lucide-react';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { useCustomerNotifications } from '@/contexts/CustomerNotificationContext';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { NotificationCenterDrawer } from '@/components/notification-center-drawer';
 
 const MAIN_NAV_ITEMS = [
   { href: '/customer/dashboard',  label: 'Dashboard',   icon: LayoutDashboard },
@@ -77,21 +77,8 @@ export function CustomerNavbar() {
           {/* Right Utilities (Notifications Bell, Theme, Profile Pill, Sign Out) */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             
-            {/* Notification Bell Icon */}
-            <Link
-              href="/customer/notifications"
-              className={`relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all shrink-0 ${
-                pathname === '/customer/notifications' ? 'bg-primary/10 text-primary' : ''
-              }`}
-              title="Notifications"
-            >
-              <Bell className="h-4 w-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[10px] font-bold h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center border-2 border-background animate-pulse">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </Link>
+            {/* Enterprise Notification Center Popover */}
+            <NotificationCenterDrawer />
 
             <ThemeToggle compact />
 
