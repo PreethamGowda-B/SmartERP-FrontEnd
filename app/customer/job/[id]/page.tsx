@@ -694,21 +694,17 @@ export default function JobDetailPage() {
 
                     <p className="text-xs text-gray-400">Generated {formatDate(invoice.generated_at)}</p>
 
-                    {/* Download button — disabled with tooltip */}
-                    <div className="relative group/dl">
-                      <button
-                        disabled
-                        className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-gray-200 text-xs font-medium text-gray-400 bg-gray-50 cursor-not-allowed"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        Download Invoice
-                      </button>
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/dl:flex items-center gap-1.5 bg-gray-900 text-white text-xs px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-lg z-10">
-                        <Info className="h-3 w-3" />
-                        PDF export coming soon
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
-                      </div>
-                    </div>
+                    {/* Download Invoice PDF Button */}
+                    <button
+                      onClick={() => {
+                        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
+                        window.open(`${baseUrl}/api/invoices/${invoice.id}/pdf`, '_blank');
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-green-200 text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 transition-colors shadow-xs"
+                    >
+                      <Download className="h-4 w-4 text-green-600" />
+                      Download Official Invoice (PDF)
+                    </button>
                   </div>
                 )}
               </motion.div>
