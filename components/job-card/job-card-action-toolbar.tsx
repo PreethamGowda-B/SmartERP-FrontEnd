@@ -11,6 +11,7 @@ interface JobCardActionToolbarProps {
   onEdit?: (job: any) => void
   onDelete?: (job: any) => void
   onActionComplete?: () => void
+  onOpenJobActions?: () => void
 }
 
 export function JobCardActionToolbar({
@@ -20,14 +21,19 @@ export function JobCardActionToolbar({
   onEdit,
   onDelete,
   onActionComplete,
+  onOpenJobActions,
 }: JobCardActionToolbarProps) {
   const status = (job.status || "open").toLowerCase()
 
   const handleOpenJobActions = () => {
-    const evt = new CustomEvent("openJobActions", {
-      detail: { jobId: job.id, jobTitle: job.title },
-    })
-    window.dispatchEvent(evt)
+    if (onOpenJobActions) {
+      onOpenJobActions()
+    } else {
+      const evt = new CustomEvent("openJobActions", {
+        detail: { jobId: job.id, jobTitle: job.title },
+      })
+      window.dispatchEvent(evt)
+    }
   }
 
   const handleOpenInvoiceEditor = () => {

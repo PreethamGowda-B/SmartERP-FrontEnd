@@ -320,6 +320,7 @@ export default function OwnerJobsPage() {
                     onEdit={handleEditJob}
                     onDelete={handleDeleteJob}
                     onView={(j) => handleEditJob(j)}
+                    onActionComplete={() => refreshJobs()}
                   />
                 )
               })}

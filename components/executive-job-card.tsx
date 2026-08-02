@@ -7,6 +7,7 @@ import { JobCardExecution } from "@/components/job-card/job-card-execution"
 import { JobCardFinancials } from "@/components/job-card/job-card-financials"
 import { JobCardActionToolbar } from "@/components/job-card/job-card-action-toolbar"
 import { JobCardDrawer } from "@/components/job-card/job-card-drawer"
+import { JobActionsModal } from "@/components/job-actions-modal"
 
 export interface ExecutiveJobCardProps {
   job: any
@@ -28,6 +29,7 @@ export function ExecutiveJobCard({
   showActions = true,
 }: ExecutiveJobCardProps) {
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
+  const [isActionsOpen, setIsActionsOpen] = React.useState(false)
 
   // Map crew members safely
   const crew = Array.isArray(job.assigned_crew)
@@ -55,13 +57,16 @@ export function ExecutiveJobCard({
           onDelete={() => onDelete?.(job)}
         />
 
-        {/* 2. Execution & SLA Block */}
+        {/* 2. Execution & Interactive Progress Block */}
         <JobCardExecution
+          jobId={job.id}
           status={job.status || "open"}
           progress={job.progress || 0}
           estimatedHours={job.estimated_hours || 8}
           actualHours={job.spent_hours || 0}
           stage={job.stage}
+          role={role}
+          onActionComplete={onActionComplete}
         />
 
         {/* 3. Financial Breakdown Block */}
@@ -80,6 +85,7 @@ export function ExecutiveJobCard({
             onEdit={onEdit}
             onDelete={onDelete}
             onActionComplete={onActionComplete}
+            onOpenJobActions={() => setIsActionsOpen(true)}
           />
         )}
 
@@ -90,6 +96,15 @@ export function ExecutiveJobCard({
           onToggle={() => setIsDrawerOpen(!isDrawerOpen)}
         />
       </CardContent>
+
+      {/* 6. Mounted Job Actions Modal for Employee / Field Requests */}
+      <JobActionsModal
+        jobId={job.id}
+        jobTitle={job.title || "Job Action Request"}
+        isOpen={isActionsOpen}
+        onClose={() => setIsActionsOpen(false)}
+        onActionComplete={onActionComplete}
+      />
     </Card>
   )
 }
