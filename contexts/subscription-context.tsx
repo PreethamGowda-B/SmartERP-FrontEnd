@@ -99,6 +99,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
 
     try {
+      if (!apiClient.getToken()) {
+        setLoading(false)
+        return
+      }
       const res = await apiClient("/api/subscription/status")
       if (res && res.plan) {
         setPlan(res.plan)

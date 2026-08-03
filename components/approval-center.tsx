@@ -81,17 +81,17 @@ export function ApprovalCenter() {
     async function loadFieldActions() {
       try {
         const { apiClient } = await import("@/lib/apiClient")
-        const fieldActions = await apiClient("/api/admin/approvals/field-actions")
-        if (Array.isArray(fieldActions) && fieldActions.length > 0) {
-          const mapped: ApprovalItem[] = fieldActions.map((fa: any) => ({
+        const res = await apiClient<{ success: boolean; requests: any[] }>("/api/work-requests?status=pending")
+        if (res && res.success && Array.isArray(res.requests) && res.requests.length > 0) {
+          const mapped: ApprovalItem[] = res.requests.map((fa: any) => ({
             id: fa.id,
-            title: `Job Action: ${fa.action_type ? fa.action_type.replace(/_/g, ' ').toUpperCase() : 'FIELD REQUEST'} (${fa.job_title || 'Job'})`,
+            title: `Work Request: ${fa.title || 'FIELD REQUEST'}`,
             category: "Job Approval",
-            requester: fa.requester_name || "Field Employee",
+            requester: fa.submitted_by_name || "Field Employee",
             requestedDate: new Date(fa.created_at).toLocaleDateString(),
             amountOrQty: fa.urgency ? fa.urgency.toUpperCase() : "NORMAL",
-            status: fa.status === 'pending_approval' ? 'pending' : (fa.status === 'approved' ? 'approved' : 'rejected'),
-            details: fa.notes || `Module: ${fa.module}, Action: ${fa.action_type}`
+            status: fa.status === 'pending' ? 'pending' : (fa.status === 'approved' ? 'approved' : 'rejected'),
+            details: fa.reason || `Type: ${fa.request_type}`
           }))
           setApprovals((prev) => [...mapped, ...prev.filter(p => !p.id.includes('-'))])
         }
