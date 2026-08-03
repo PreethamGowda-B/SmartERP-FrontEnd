@@ -117,13 +117,14 @@ export function JobCardExecution({
       <div className="space-y-2">
         <Progress value={currentProgress} className="h-2 rounded-full bg-muted" />
 
-        {/* ── CASE 1: EMPLOYEE PORTAL — ACCEPTED BY CURRENT USER ── */}
-        {role === "employee" && isAcceptedByCurrentUser && status !== "completed" && status !== "cancelled" && (
+        {/* ── CASE 1: EMPLOYEE PORTAL — ASSIGNED / ACCEPTED BY CURRENT USER ── */}
+        {role === "employee" && isAcceptedByCurrentUser && status !== "cancelled" && (
           <div className="pt-1 space-y-2">
             <div className="flex justify-between items-center text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-              <span className="flex items-center gap-1">
-                <UserCheck className="h-3.5 w-3.5" /> Accepted Field Technician Workspace
+              <span className="flex items-center gap-1 font-bold">
+                <UserCheck className="h-3.5 w-3.5" /> Field Technician Workspace (Unlocked)
               </span>
+              <span className="text-[10px] text-muted-foreground font-mono">Drag slider to update progress</span>
             </div>
             <Slider
               value={[currentProgress]}
@@ -135,7 +136,7 @@ export function JobCardExecution({
             {isProgressChanged && (
               <Button
                 size="sm"
-                className="w-full h-7 text-[11px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl"
+                className="w-full h-8 text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs transition-all active:scale-[0.99]"
                 onClick={handleSaveProgress}
                 disabled={isUpdating}
               >

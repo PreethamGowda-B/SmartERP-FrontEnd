@@ -33,8 +33,8 @@ export default function EmployeeJobsPage() {
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
   const isRefreshingRef = useRef(false)
 
-  // Scope jobs to employee
-  const jobs = currentUser?.role === "employee"
+  // 1. Deduplicate allJobs by job.id
+  const rawScoped = currentUser?.role === "employee"
     ? allJobs.filter((job: any) => {
         const userId = String(currentUser.id || "")
         const assignedTo = job.assigned_to ? String(job.assigned_to) : null
@@ -48,6 +48,20 @@ export default function EmployeeJobsPage() {
         )
       })
     : allJobs
+
+  const uniqueJobsMap = new Map<string, any>()
+  rawScoped.forEach((job: any) => {
+    if (job?.id && !uniqueJobsMap.has(String(job.id))) {
+      uniqueJobsMap.set(String(job.id), job)
+    }
+  })
+
+  // 2. Sort latest jobs first (created_at DESC)
+  const jobs = Array.from(uniqueJobsMap.values()).sort((a: any, b: any) => {
+    const timeA = new Date(a.created_at || a.startDate || 0).getTime()
+    const timeB = new Date(b.created_at || b.startDate || 0).getTime()
+    return timeB - timeA
+  })
 
   const handleRefresh = useCallback(async () => {
     if (isRefreshingRef.current) return

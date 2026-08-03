@@ -51,13 +51,16 @@ export function ExecutiveJobCard({
     ? job.assignedEmployees.map((e: any) => (typeof e === "object" ? e : { id: e, name: "Crew" }))
     : []
 
-  const currentUserId = currentUser?.id || currentUser?.userId
-  const isAcceptedByCurrentUser =
+  const currentUserId = String(currentUser?.id || currentUser?.userId || "")
+  const isAssignedToCurrentUser =
     Boolean(currentUserId) &&
-    ((job.accepted_by && String(job.accepted_by) === String(currentUserId)) ||
-      (job.assigned_to && String(job.assigned_to) === String(currentUserId) && job.employee_status === "accepted"))
+    (String(job.assigned_to) === currentUserId ||
+      String(job.assigned_employee_id) === currentUserId ||
+      String(job.accepted_by) === currentUserId ||
+      (Array.isArray(job.assignedEmployees) && job.assignedEmployees.some((e: any) => String(typeof e === "object" ? e.id : e) === currentUserId)))
 
-  const acceptedByName = job.accepted_by_name || job.assigned_employee_name || (job.employee_status === "accepted" ? "Technician" : null)
+  const isAcceptedByCurrentUser = role === "employee" ? isAssignedToCurrentUser : Boolean(job.accepted_by && String(job.accepted_by) === currentUserId)
+  const acceptedByName = isAcceptedByCurrentUser ? (currentUser?.name || "You") : (job.accepted_by_name || job.assigned_employee_name || null)
 
   return (
     <Card className="rounded-2xl border border-border/70 bg-card/95 backdrop-blur-xs hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300 group overflow-hidden">
