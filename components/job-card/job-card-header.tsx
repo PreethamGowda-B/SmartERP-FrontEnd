@@ -16,6 +16,7 @@ interface JobCardHeaderProps {
   priority: string
   startDate?: string
   assignedCrew?: { id: string; name: string; avatar?: string }[]
+  role?: "owner" | "employee"
   isCustomerJob?: boolean
   source?: string
   onEdit?: () => void
