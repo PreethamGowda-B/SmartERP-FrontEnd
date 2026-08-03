@@ -59,7 +59,7 @@ function CallbackContent() {
                     const adminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE
                     if (adminRoute) router.push(`/${adminRoute}/dashboard`)
                     else router.push("/not-found")
-                } else if (user.role === "owner" || user.role === "admin") {
+                } else if (user.role === "owner") {
                     router.push("/owner")
                 } else if (user.role === "hr") {
                     router.push("/hr")
@@ -102,7 +102,7 @@ function CallbackContent() {
                 } else {
                     router.push("/superadmin")
                 }
-            } else if (user.role === "owner" || user.role === "admin") {
+            } else if (user.role === "owner") {
                 router.push("/owner")
             } else if (user.role === "hr") {
                 router.push("/hr")

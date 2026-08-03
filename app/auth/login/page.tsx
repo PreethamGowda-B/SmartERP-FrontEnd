@@ -15,7 +15,7 @@ export default function LoginPage() {
       const adminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE
       if (user.role === "super_admin") {
         router.push(adminRoute ? `/${adminRoute}` : "/superadmin")
-      } else if (user.role === "owner" || user.role === "admin") {
+      } else if (user.role === "owner") {
         router.push("/owner")
       } else if (user.role === "hr") {
         router.push("/hr")
