@@ -59,8 +59,16 @@ export function ExecutiveJobCard({
       String(job.accepted_by) === currentUserId ||
       (Array.isArray(job.assignedEmployees) && job.assignedEmployees.some((e: any) => String(typeof e === "object" ? e.id : e) === currentUserId)))
 
-  const isAcceptedByCurrentUser = role === "employee" ? isAssignedToCurrentUser : Boolean(job.accepted_by && String(job.accepted_by) === currentUserId)
-  const acceptedByName = isAcceptedByCurrentUser ? (currentUser?.name || "You") : (job.accepted_by_name || job.assigned_employee_name || null)
+  const empStatus = String(job.employee_status || "").toLowerCase()
+  const isAcceptedStatus =
+    empStatus === "accepted" ||
+    Boolean(job.accepted_at) ||
+    (Boolean(job.accepted_by) && String(job.accepted_by) === currentUserId && empStatus !== "pending" && empStatus !== "assigned")
+
+  const isAcceptedByCurrentUser = isAssignedToCurrentUser && isAcceptedStatus
+  const acceptedByName = isAcceptedByCurrentUser
+    ? (currentUser?.name || "You")
+    : (isAcceptedStatus ? (job.accepted_by_name || job.assigned_employee_name || "Technician") : null)
 
   return (
     <Card className="rounded-2xl border border-border/70 bg-card/95 backdrop-blur-xs hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300 group overflow-hidden">
