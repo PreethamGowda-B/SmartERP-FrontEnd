@@ -87,9 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
             }
           } else if (isMounted && refreshRes.status === 401) {
-            logger.warn("[v0] Token refresh 401 — clearing session")
-            signOut()
-            setUser(null)
+            logger.warn("[v0] Token refresh 401 — keeping cached user session in UI")
+            // Keep cached user state active so user stays logged in across tab switches
           }
         } catch (fetchErr: any) {
           logger.warn("[v0] Token refresh network error — keeping cached user session:", fetchErr)

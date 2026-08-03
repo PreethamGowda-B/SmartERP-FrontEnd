@@ -110,7 +110,7 @@ export function clearTokens(isAdmin?: boolean) {
 
 /**
  * SINGLE SOURCE OF TRUTH FOR AUTH TOKEN
- * Requirement 1.1: Read from sessionStorage or localStorage fallback
+ * Prioritize localStorage to ensure 100% cross-tab token synchronization.
  */
 export function getAuthToken() {
   if (typeof window === "undefined") return null
@@ -118,20 +118,20 @@ export function getAuthToken() {
   const { at } = getStorageKeys()
   const altAt = at === ADMIN_AT ? USER_AT : ADMIN_AT
   
-  // 1. Check sessionStorage
-  const fromSession = sessionStorage.getItem(at) || 
-                      sessionStorage.getItem(altAt) || 
-                      sessionStorage.getItem("accessToken") || 
-                      sessionStorage.getItem(USER_AT) || 
-                      sessionStorage.getItem(ADMIN_AT)
-  if (fromSession) return fromSession
-  
-  // 2. Fallback to localStorage (persistent login)
-  return localStorage.getItem(at) || 
-         localStorage.getItem(altAt) || 
-         localStorage.getItem("accessToken") || 
-         localStorage.getItem(USER_AT) || 
-         localStorage.getItem(ADMIN_AT)
+  // 1. Check localStorage first (shared across all browser tabs)
+  const fromLocal = localStorage.getItem(at) || 
+                    localStorage.getItem(altAt) || 
+                    localStorage.getItem("accessToken") || 
+                    localStorage.getItem(USER_AT) || 
+                    localStorage.getItem(ADMIN_AT)
+  if (fromLocal) return fromLocal
+
+  // 2. Fallback to sessionStorage
+  return sessionStorage.getItem(at) || 
+         sessionStorage.getItem(altAt) || 
+         sessionStorage.getItem("accessToken") || 
+         sessionStorage.getItem(USER_AT) || 
+         sessionStorage.getItem(ADMIN_AT)
 }
 
 export function getAccessToken() {
@@ -143,22 +143,33 @@ export function getRefreshToken(): string | null {
     const { rt } = getStorageKeys()
     const altRt = rt === ADMIN_RT ? USER_RT : ADMIN_RT
     
-    // 1. Check sessionStorage
-    const fromSession = sessionStorage.getItem(rt) || 
-                        sessionStorage.getItem(altRt) || 
-                        sessionStorage.getItem("refreshToken") || 
-                        sessionStorage.getItem(USER_RT) || 
-                        sessionStorage.getItem(ADMIN_RT)
-    if (fromSession) return fromSession
-    
-    // 2. Fallback to localStorage (persistent login)
-    return localStorage.getItem(rt) || 
-           localStorage.getItem(altRt) || 
-           localStorage.getItem("refreshToken") || 
-           localStorage.getItem(USER_RT) || 
-           localStorage.getItem(ADMIN_RT)
+    // 1. Check localStorage first (shared across all browser tabs)
+    const fromLocal = localStorage.getItem(rt) || 
+                      localStorage.getItem(altRt) || 
+                      localStorage.getItem("refreshToken") || 
+                      localStorage.getItem(USER_RT) || 
+                      localStorage.getItem(ADMIN_RT)
+    if (fromLocal) return fromLocal
+
+    // 2. Fallback to sessionStorage
+    return sessionStorage.getItem(rt) || 
+           sessionStorage.getItem(altRt) || 
+           sessionStorage.getItem("refreshToken") || 
+           sessionStorage.getItem(USER_RT) || 
+           sessionStorage.getItem(ADMIN_RT)
   }
   return null
+}
+
+// Sync sessionStorage whenever localStorage tokens change across tabs
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key === USER_AT || e.key === USER_RT || e.key === "accessToken" || e.key === "refreshToken") {
+      if (e.newValue) {
+        try { sessionStorage.setItem(e.key, e.newValue) } catch {}
+      }
+    }
+  })
 }
 
 // Helper to sync with Android bridge
@@ -171,16 +182,23 @@ function syncWithAndroid(token: string, refreshToken?: string | null) {
 // Helper to handle unified logout across Web and Android
 function handleLogout() {
   if (typeof window !== "undefined") {
-    logger.warn("[v0] Session expired or invalid — logging out")
-    clearTokens() // Clears all token storage
-    localStorage.removeItem("smarterp_user")
-    localStorage.removeItem("smarterp_admin_user")
-    sessionStorage.removeItem("smarterp_mock_users")
+    // Only perform hard redirect to landing page if the user has explicitly logged out
+    // or if user session data is completely missing.
+    const cachedUser = localStorage.getItem("smarterp_user") || localStorage.getItem("smarterp_admin_user")
+    if (!cachedUser) {
+      logger.warn("[v0] Session expired or invalid — logging out")
+      clearTokens() // Clears all token storage
+      localStorage.removeItem("smarterp_user")
+      localStorage.removeItem("smarterp_admin_user")
+      sessionStorage.removeItem("smarterp_mock_users")
 
-    if ((window as any).Android?.logout) {
-      (window as any).Android.logout()
+      if ((window as any).Android?.logout) {
+        (window as any).Android.logout()
+      } else {
+        window.location.href = "/"
+      }
     } else {
-      window.location.href = "/"
+      logger.warn("[v0] Background refresh 401 — keeping cached user session in UI")
     }
   }
 }
