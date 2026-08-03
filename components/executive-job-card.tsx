@@ -8,6 +8,8 @@ import { JobCardFinancials } from "@/components/job-card/job-card-financials"
 import { JobCardActionToolbar } from "@/components/job-card/job-card-action-toolbar"
 import { JobCardDrawer } from "@/components/job-card/job-card-drawer"
 import { JobActionsModal } from "@/components/job-actions-modal"
+import { OwnerEmergencyOverrideModal } from "@/components/owner-emergency-override-modal"
+import { apiClient } from "@/lib/apiClient"
 
 export interface ExecutiveJobCardProps {
   job: any
@@ -30,6 +32,17 @@ export function ExecutiveJobCard({
 }: ExecutiveJobCardProps) {
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
   const [isActionsOpen, setIsActionsOpen] = React.useState(false)
+  const [isOverrideOpen, setIsOverrideOpen] = React.useState(false)
+  const [currentUser, setCurrentUser] = React.useState<any>(null)
+
+  React.useEffect(() => {
+    try {
+      const u = apiClient.getUser()
+      setCurrentUser(u)
+    } catch (e) {
+      // Session fallback
+    }
+  }, [])
 
   // Map crew members safely
   const crew = Array.isArray(job.assigned_crew)
@@ -37,6 +50,14 @@ export function ExecutiveJobCard({
     : Array.isArray(job.assignedEmployees)
     ? job.assignedEmployees.map((e: any) => (typeof e === "object" ? e : { id: e, name: "Crew" }))
     : []
+
+  const currentUserId = currentUser?.id || currentUser?.userId
+  const isAcceptedByCurrentUser =
+    Boolean(currentUserId) &&
+    ((job.accepted_by && String(job.accepted_by) === String(currentUserId)) ||
+      (job.assigned_to && String(job.assigned_to) === String(currentUserId) && job.employee_status === "accepted"))
+
+  const acceptedByName = job.accepted_by_name || job.assigned_employee_name || (job.employee_status === "accepted" ? "Technician" : null)
 
   return (
     <Card className="rounded-2xl border border-border/70 bg-card/95 backdrop-blur-xs hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300 group overflow-hidden">
@@ -66,7 +87,11 @@ export function ExecutiveJobCard({
           actualHours={job.spent_hours || 0}
           stage={job.stage}
           role={role}
+          isAcceptedByCurrentUser={isAcceptedByCurrentUser}
+          acceptedByName={acceptedByName}
+          acceptedAt={job.accepted_at}
           onActionComplete={onActionComplete}
+          onEmergencyOverride={() => setIsOverrideOpen(true)}
         />
 
         {/* 3. Financial Breakdown Block */}
@@ -81,11 +106,13 @@ export function ExecutiveJobCard({
           <JobCardActionToolbar
             job={job}
             role={role}
+            isAcceptedByCurrentUser={isAcceptedByCurrentUser}
             onView={onView}
             onEdit={onEdit}
             onDelete={onDelete}
             onActionComplete={onActionComplete}
             onOpenJobActions={() => setIsActionsOpen(true)}
+            onEmergencyOverride={() => setIsOverrideOpen(true)}
           />
         )}
 
@@ -97,12 +124,21 @@ export function ExecutiveJobCard({
         />
       </CardContent>
 
-      {/* 6. Mounted Job Actions Modal for Employee / Field Requests */}
+      {/* 6. Mounted Job Actions Modal for Accepted Technician */}
       <JobActionsModal
         jobId={job.id}
         jobTitle={job.title || "Job Action Request"}
         isOpen={isActionsOpen}
         onClose={() => setIsActionsOpen(false)}
+        onActionComplete={onActionComplete}
+      />
+
+      {/* 7. Mounted Emergency Override Modal for Owner Supervisory Intervention */}
+      <OwnerEmergencyOverrideModal
+        jobId={job.id}
+        jobTitle={job.title || "Job Override"}
+        isOpen={isOverrideOpen}
+        onClose={() => setIsOverrideOpen(false)}
         onActionComplete={onActionComplete}
       />
     </Card>
