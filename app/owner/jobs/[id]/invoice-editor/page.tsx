@@ -16,7 +16,8 @@ import {
   Building, 
   Clock, 
   AlertCircle,
-  Loader2
+  Loader2,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,90 @@ interface LineItem {
   quantity: number;
   unit_price: number;
   total_amount: number;
+}
+
+function InvoiceEditorSkeleton() {
+  return (
+    <div className="p-6 max-w-6xl mx-auto space-y-6 animate-pulse">
+      {/* Header Bar Skeleton */}
+      <div className="flex items-center justify-between border-b pb-4">
+        <div className="flex items-center space-x-3">
+          <div className="h-9 w-28 bg-slate-200 rounded-md" />
+          <div className="space-y-2">
+            <div className="h-6 w-48 bg-slate-200 rounded-md" />
+            <div className="h-4 w-72 bg-slate-100 rounded-md" />
+          </div>
+        </div>
+        <div className="flex items-center space-x-3">
+          <div className="h-6 w-24 bg-emerald-100 rounded-full" />
+          <div className="h-10 w-48 bg-indigo-200 rounded-md" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left 2 Cols Skeleton */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader className="pb-3 border-b">
+              <div className="h-5 w-40 bg-slate-200 rounded-md" />
+            </CardHeader>
+            <CardContent className="p-4 grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="h-3 w-20 bg-slate-100 rounded" />
+                <div className="h-5 w-36 bg-slate-200 rounded" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-20 bg-slate-100 rounded" />
+                <div className="h-5 w-40 bg-slate-200 rounded" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-20 bg-slate-100 rounded" />
+                <div className="h-5 w-48 bg-slate-200 rounded" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-20 bg-slate-100 rounded" />
+                <div className="h-5 w-32 bg-slate-200 rounded" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
+              <div className="space-y-1">
+                <div className="h-5 w-36 bg-slate-200 rounded-md" />
+                <div className="h-3 w-48 bg-slate-100 rounded" />
+              </div>
+              <div className="h-8 w-28 bg-slate-100 rounded-md" />
+            </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-3 items-center border-b pb-3">
+                  <div className="h-9 w-28 bg-slate-100 rounded" />
+                  <div className="h-9 flex-1 bg-slate-100 rounded" />
+                  <div className="h-9 w-20 bg-slate-100 rounded" />
+                  <div className="h-9 w-24 bg-slate-100 rounded" />
+                  <div className="h-9 w-24 bg-slate-200 rounded" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Col Calculation Summary Skeleton */}
+        <div>
+          <Card className="border-indigo-100 bg-indigo-50/20 p-4 space-y-4">
+            <div className="h-6 w-52 bg-indigo-200 rounded" />
+            <div className="space-y-2 border-t pt-3">
+              <div className="h-4 w-full bg-slate-200 rounded" />
+              <div className="h-4 w-full bg-slate-100 rounded" />
+              <div className="h-4 w-full bg-slate-100 rounded" />
+            </div>
+            <div className="h-10 w-full bg-indigo-300 rounded mt-4" />
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function DedicatedInvoiceEditorPage() {
@@ -161,13 +246,18 @@ export default function DedicatedInvoiceEditorPage() {
     setLineItems(updated);
   };
 
+  // Manual Invoice Adjustment State (Owner Permission)
+  const [isManualAdjustment, setIsManualAdjustment] = useState<boolean>(false);
+  const [manualGrandTotal, setManualGrandTotal] = useState<string>('');
+  const [adjustmentReason, setAdjustmentReason] = useState<string>('');
+
   // Computations
   const computedLabourCost = parseFloat((labourHours * labourRate).toFixed(2));
   const computedMaterialsCost = lineItems
     .filter((i) => i.item_type === 'material')
     .reduce((sum, i) => sum + (i.total_amount || 0), 0);
 
-  const subtotal = Math.max(
+  const calculatedSubtotal = Math.max(
     0,
     parseFloat(
       (
@@ -180,8 +270,24 @@ export default function DedicatedInvoiceEditorPage() {
     )
   );
 
-  const totalTax = parseFloat(((subtotal * gstRate) / 100).toFixed(2));
-  const grandTotal = parseFloat((subtotal + totalTax).toFixed(2));
+  const calculatedTax = parseFloat(((calculatedSubtotal * gstRate) / 100).toFixed(2));
+  const calculatedGrandTotal = parseFloat((calculatedSubtotal + calculatedTax).toFixed(2));
+
+  // Live Recalculations for Manual Adjustment
+  const parsedManualTotal = isManualAdjustment && manualGrandTotal !== '' ? parseFloat(manualGrandTotal) : null;
+  const isAdjusted = isManualAdjustment && parsedManualTotal !== null && !isNaN(parsedManualTotal) && parsedManualTotal >= 0;
+
+  const effectiveGrandTotal = isAdjusted ? parsedManualTotal : calculatedGrandTotal;
+  const effectiveSubtotal = isAdjusted
+    ? parseFloat((effectiveGrandTotal / (1 + gstRate / 100)).toFixed(2))
+    : calculatedSubtotal;
+  const effectiveTotalTax = isAdjusted
+    ? parseFloat((effectiveGrandTotal - effectiveSubtotal).toFixed(2))
+    : calculatedTax;
+  const effectiveCgst = isInterState ? 0 : parseFloat((effectiveTotalTax / 2).toFixed(2));
+  const effectiveSgst = isInterState ? 0 : parseFloat((effectiveTotalTax / 2).toFixed(2));
+  const effectiveIgst = isInterState ? effectiveTotalTax : 0;
+  const adjustmentDifference = isAdjusted ? parseFloat((effectiveGrandTotal - calculatedGrandTotal).toFixed(2)) : 0;
 
   const handleFinalizeInvoice = async () => {
     try {
@@ -202,6 +308,12 @@ export default function DedicatedInvoiceEditorPage() {
         customer_notes: customerNotes,
         internal_notes: internalNotes,
         lineItems,
+        // Manual adjustment payload
+        is_manual_adjustment: isAdjusted,
+        manual_grand_total: effectiveGrandTotal,
+        original_grand_total: calculatedGrandTotal,
+        adjustment_difference: adjustmentDifference,
+        adjustment_reason: adjustmentReason || 'Owner Manual Pricing Adjustment',
       };
 
       const res = await apiClient<{ success: boolean; invoice?: any; reason?: string; error?: string; edited_count?: number }>('/api/invoices/finalize', {
@@ -238,12 +350,7 @@ export default function DedicatedInvoiceEditorPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-        <span className="ml-3 text-slate-600 font-medium">Loading Job Invoice Editor...</span>
-      </div>
-    );
+    return <InvoiceEditorSkeleton />;
   }
 
   return (
@@ -472,8 +579,8 @@ export default function DedicatedInvoiceEditorPage() {
             </CardHeader>
             <CardContent className="p-4 space-y-4 text-sm">
               <div className="flex justify-between text-slate-600">
-                <span>Subtotal (Line Items + Charges):</span>
-                <span className="font-medium text-slate-900">₹{subtotal.toLocaleString('en-IN')}</span>
+                <span>Taxable Subtotal:</span>
+                <span className="font-medium text-slate-900">₹{effectiveSubtotal.toLocaleString('en-IN')}</span>
               </div>
 
               {/* GST Config */}
@@ -496,30 +603,101 @@ export default function DedicatedInvoiceEditorPage() {
                 {isInterState ? (
                   <div className="flex justify-between text-xs text-slate-600">
                     <span>IGST ({gstRate}%):</span>
-                    <span className="font-medium text-slate-900">₹{totalTax.toLocaleString('en-IN')}</span>
+                    <span className="font-medium text-slate-900">₹{effectiveIgst.toLocaleString('en-IN')}</span>
                   </div>
                 ) : (
                   <>
                     <div className="flex justify-between text-xs text-slate-600">
                       <span>CGST ({(gstRate / 2)}%):</span>
-                      <span className="font-medium text-slate-900">₹{(totalTax / 2).toLocaleString('en-IN')}</span>
+                      <span className="font-medium text-slate-900">₹{effectiveCgst.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="flex justify-between text-xs text-slate-600">
                       <span>SGST ({(gstRate / 2)}%):</span>
-                      <span className="font-medium text-slate-900">₹{(totalTax / 2).toLocaleString('en-IN')}</span>
+                      <span className="font-medium text-slate-900">₹{effectiveSgst.toLocaleString('en-IN')}</span>
                     </div>
                   </>
                 )}
 
                 <div className="flex justify-between text-xs font-semibold text-slate-700 pt-1">
                   <span>Total Tax:</span>
-                  <span>₹{totalTax.toLocaleString('en-IN')}</span>
+                  <span>₹{effectiveTotalTax.toLocaleString('en-IN')}</span>
                 </div>
               </div>
 
-              <div className="border-t border-slate-300 pt-3 flex justify-between items-baseline">
-                <span className="font-bold text-base text-slate-900">Total Payable:</span>
-                <span className="font-extrabold text-2xl text-indigo-600">₹{grandTotal.toLocaleString('en-IN')}</span>
+              {/* Manual Adjustment Section */}
+              <div className="border-t pt-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /> Manual Invoice Adjustment
+                    </Label>
+                    <p className="text-[10px] text-slate-500">Override total for negotiated, fixed quote, or goodwill discount</p>
+                  </div>
+                  <Switch checked={isManualAdjustment} onCheckedChange={setIsManualAdjustment} />
+                </div>
+
+                {isManualAdjustment && (
+                  <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-lg space-y-3 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-amber-900">Calculated Original Total:</span>
+                      <span className="font-mono text-slate-600 line-through font-bold">₹{calculatedGrandTotal.toLocaleString('en-IN')}</span>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs font-semibold text-slate-800">Final Adjusted Total (₹)</Label>
+                      <Input
+                        type="number"
+                        placeholder={`Calculated: ${calculatedGrandTotal}`}
+                        value={manualGrandTotal}
+                        onChange={(e) => setManualGrandTotal(e.target.value)}
+                        className="h-9 mt-1 text-amber-900 font-extrabold text-base bg-white border-amber-300"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs font-semibold text-slate-800">Adjustment Reason (Audit Required)</Label>
+                      <Input
+                        placeholder="e.g. Customer Loyalty Discount, Fixed Quote"
+                        value={adjustmentReason}
+                        onChange={(e) => setAdjustmentReason(e.target.value)}
+                        className="h-8 mt-1 text-xs bg-white border-amber-300"
+                      />
+                    </div>
+
+                    {isAdjusted && (
+                      <div className="p-2.5 bg-white rounded border border-amber-200 space-y-1 font-mono text-[11px]">
+                        <div className="flex justify-between text-slate-700">
+                          <span>Price Variance:</span>
+                          <span className={adjustmentDifference <= 0 ? "text-emerald-700 font-bold" : "text-amber-700 font-bold"}>
+                            {adjustmentDifference > 0 ? `+₹${adjustmentDifference}` : `-₹${Math.abs(adjustmentDifference)}`}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-slate-500">
+                          <span>Recalculated Subtotal:</span>
+                          <span>₹{effectiveSubtotal.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-500">
+                          <span>Recalculated Tax:</span>
+                          <span>₹{effectiveTotalTax.toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-slate-300 pt-3 flex flex-col gap-1">
+                <div className="flex justify-between items-baseline">
+                  <span className="font-bold text-base text-slate-900 flex items-center gap-1.5">
+                    Total Payable:
+                    {isAdjusted && (
+                      <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[10px] px-2 py-0.5 font-bold">
+                        ⚡ Manually Adjusted
+                      </Badge>
+                    )}
+                  </span>
+                  <span className="font-extrabold text-2xl text-indigo-600">₹{effectiveGrandTotal.toLocaleString('en-IN')}</span>
+                </div>
               </div>
             </CardContent>
             <CardFooter className="bg-indigo-50/50 border-t p-4 flex flex-col gap-2">
