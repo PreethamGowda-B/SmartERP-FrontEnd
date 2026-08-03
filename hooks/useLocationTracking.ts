@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useCallback } from "react"
-import { apiClient } from "@/lib/apiClient"
+import { apiClient, getAccessToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 
 const SEND_INTERVAL_MS = 12_000   // send every 12 seconds
