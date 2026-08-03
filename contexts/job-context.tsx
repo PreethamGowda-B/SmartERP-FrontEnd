@@ -84,6 +84,29 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
                 ? [String(topAssigned)]
                 : []
 
+            // Build a normalised nested `invoice` object from the flat SQL join columns
+            // so JobCardFinancials always receives the LATEST invoice total.
+            // The API returns: invoice_id, invoice_number, invoice_status,
+            //                  invoice_total_amount, invoice_viewed_at, invoice_downloaded_at
+            const flatInvoiceId = s.invoice_id ?? s.invoiceId ?? null
+            const flatInvoiceTotal = s.invoice_total_amount ?? s.invoiceTotal ?? null
+            const nestedInvoice = s.invoice && typeof s.invoice === "object" ? s.invoice : null
+
+            const invoice = flatInvoiceId
+              ? {
+                  id: String(flatInvoiceId),
+                  invoice_number: s.invoice_number ?? nestedInvoice?.invoice_number ?? "",
+                  version_number: s.invoice_version_number ?? s.version_number ?? nestedInvoice?.version_number ?? 1,
+                  edited_count: s.invoice_edited_count ?? s.edited_count ?? nestedInvoice?.edited_count ?? 0,
+                  total_amount: flatInvoiceTotal != null
+                    ? Number(flatInvoiceTotal)
+                    : Number(nestedInvoice?.total_amount ?? 0),
+                  status: s.invoice_status ?? nestedInvoice?.status ?? "issued",
+                  viewed_at: s.invoice_viewed_at ?? nestedInvoice?.viewed_at ?? null,
+                  downloaded_at: s.invoice_downloaded_at ?? nestedInvoice?.downloaded_at ?? null,
+                }
+              : (nestedInvoice ?? null)
+
             return {
               // prefer server-provided fields but ensure id and assignedEmployees exist
               id: s.id?.toString?.() ?? String(s._db_row?.id ?? s.id ?? ""),
@@ -92,6 +115,9 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
               assignedEmployees,
               // keep any other server-provided fields
               ...s,
+              // OVERRIDE: always use the freshly-built invoice object so the card
+              // shows the correct latest total amount, not stale localStorage data.
+              invoice,
             }
           })
 
