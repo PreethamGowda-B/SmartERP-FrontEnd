@@ -142,15 +142,15 @@ export function LoginForm() {
       if (mode === "login") {
         const user: any = await signIn(email, password)
         if (user) {
-          if (user.accessToken) localStorage.setItem("accessToken", user.accessToken)
-          if (user.refreshToken) localStorage.setItem("refreshToken", user.refreshToken)
+          const isSuperAdmin = user.role === "super_admin"
+          const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
+          localStorage.setItem(userKey, JSON.stringify(user))
 
-          // âœ… Sync tokens with Android native bridge if available
-          if (typeof window !== "undefined" && (window as any).Android?.saveToken) {
+          // Sync tokens with Android native bridge if available
+          if (typeof window !== "undefined" && (window as any).Android?.saveToken && user.accessToken) {
             (window as any).Android.saveToken(user.accessToken, user.refreshToken || null)
           }
 
-          localStorage.setItem("user", JSON.stringify(user))
           setUser(user)
           if (user.role === "owner") {
             router.push("/owner")

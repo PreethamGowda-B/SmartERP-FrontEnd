@@ -41,7 +41,7 @@ export function useLocationTracking({ onPermissionChange }: UseLocationTrackingO
     const isDisabledByTier = useRef<boolean>(false)
 
     const sendLocation = useCallback(async (lat: number, lng: number) => {
-        if (isDisabledByTier.current) return
+        if (isDisabledByTier.current || !getAccessToken()) return
 
         try {
             await apiClient("/api/location/update", {

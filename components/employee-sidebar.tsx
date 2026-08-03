@@ -46,9 +46,9 @@ const empNavHrefs = navigation.map((n) => n.href)
 export function EmployeeSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [features, setFeatures] = useState<Record<string, boolean>>({
-    payroll: false,
-    messages: false,
-    location_tracking: false
+    payroll: true,
+    messages: true,
+    location_tracking: true
   })
   const pathname = usePathname()
   const { user, signOut } = useAuth()
@@ -59,20 +59,6 @@ export function EmployeeSidebar() {
     await signOut()
     window.location.href = "/"
   }
-
-  useEffect(() => {
-    async function fetchPlan() {
-      try {
-        const res = await apiClient("/api/subscription/status")
-        if (res && res.plan && res.plan.features) {
-          setFeatures(res.plan.features)
-        }
-      } catch (err) {
-        logger.error("Employee sidebar failed to fetch plan status:", err)
-      }
-    }
-    fetchPlan()
-  }, [])
 
   return (
     <>

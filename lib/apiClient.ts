@@ -53,14 +53,7 @@ function getStorageKeys() {
                       pathname.includes('[adminRoute]') ||
                       hostname.startsWith('superadmin.')
   
-  // Also check if we have an active admin session in localStorage
-  const adminUser = localStorage.getItem("smarterp_admin_user")
-  
-  // Contextual priority: 
-  // 1. If we are on an admin SPECIFIC path, definitely use admin keys.
-  // 2. If we are on a generic path but ONLY have an admin user, use admin keys.
-  // 3. Otherwise, use user keys.
-  if (isAdminPath || (adminUser && !localStorage.getItem("smarterp_user"))) {
+  if (isAdminPath) {
     return { at: ADMIN_AT, rt: ADMIN_RT }
   }
   

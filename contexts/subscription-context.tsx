@@ -98,6 +98,25 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       return
     }
 
+    // Employees do not manage subscriptions — give them active features by default
+    if (user.role === 'employee') {
+      setPlan({
+        id: 3,
+        name: 'Employee Standard',
+        is_trial: false,
+        days_remaining: 36500,
+        employee_limit: null,
+        max_inventory_items: null,
+        features: {
+          payroll: true, messages: true, ai_assistant: true,
+          basic_reports: true, export_reports: true, advanced_reports: true,
+          inventory_images: true, priority_support: true, location_tracking: true
+        }
+      })
+      setLoading(false)
+      return
+    }
+
     try {
       if (!getAccessToken()) {
         setLoading(false)
@@ -125,18 +144,24 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       fetchSubscriptionStatus()
     }
 
+    const handleFocus = () => {
+      if (user?.role === 'owner' && getAccessToken()) {
+        fetchSubscriptionStatus()
+      }
+    }
+
     if (typeof window !== "undefined") {
       window.addEventListener("subscription-activated", handleActivation)
-      window.addEventListener("focus", fetchSubscriptionStatus)
+      window.addEventListener("focus", handleFocus)
     }
 
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("subscription-activated", handleActivation)
-        window.removeEventListener("focus", fetchSubscriptionStatus)
+        window.removeEventListener("focus", handleFocus)
       }
     }
-  }, [fetchSubscriptionStatus])
+  }, [fetchSubscriptionStatus, user?.role])
 
   const isPro = plan.id >= 3 || plan.name?.toLowerCase().includes("pro")
   const isBasic = plan.id === 2 || plan.name?.toLowerCase().includes("basic")
