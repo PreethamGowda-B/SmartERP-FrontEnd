@@ -37,7 +37,25 @@ export default function SettingsPage() {
 
   // ── Company ───────────────────────────────────────────────────────────────
   const [company, setCompany] = useState({
-    name: "", address: "", phone: "", contact_email: "", company_id: "",
+    name: "",
+    legal_name: "",
+    address: "",
+    phone: "",
+    contact_email: "",
+    website: "",
+    company_id: "",
+    gstin: "",
+    pan: "",
+    cin: "",
+    logo_url: "",
+    bank_name: "",
+    account_number: "",
+    ifsc_code: "",
+    upi_id: "",
+    authorized_signatory_name: "",
+    stamp_url: "",
+    terms_and_conditions: "",
+    default_notes: "",
   })
   const [bizSettings, setBizSettings] = useState({
     autoApproval: false, overtimeAlerts: true, budgetAlerts: true,
@@ -87,10 +105,24 @@ export default function SettingsPage() {
         const cid = c.company_id || ""
         setCompany({
           name: c.name || "",
+          legal_name: c.legal_name || c.name || "",
           address: c.address || "",
           phone: c.phone || "",
           contact_email: c.contact_email || "",
+          website: c.website || "",
           company_id: cid,
+          gstin: c.gstin || "",
+          pan: c.pan || "",
+          cin: c.cin || "",
+          logo_url: c.logo_url || "",
+          bank_name: c.bank_name || "",
+          account_number: c.account_number || "",
+          ifsc_code: c.ifsc_code || "",
+          upi_id: c.upi_id || "",
+          authorized_signatory_name: c.authorized_signatory_name || "",
+          stamp_url: c.stamp_url || "",
+          terms_and_conditions: c.terms_and_conditions || "",
+          default_notes: c.default_notes || "",
         })
         // Persist for future loads
         if (cid) localStorage.setItem("company_code", cid)
@@ -229,23 +261,85 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Company Name</Label>
+                <Label>Company Trade / Display Name</Label>
                 <Input value={company.name} onChange={(e) => setCompany((p) => ({ ...p, name: e.target.value }))} placeholder="Your Company Name" />
               </div>
               <div className="space-y-2">
-                <Label>Address</Label>
-                <Textarea value={company.address} onChange={(e) => setCompany((p) => ({ ...p, address: e.target.value }))} placeholder="123 Main St, City, Country" />
+                <Label>Legal Business Name (For Invoices)</Label>
+                <Input value={company.legal_name} onChange={(e) => setCompany((p) => ({ ...p, legal_name: e.target.value }))} placeholder="e.g. Acme Innovations Pvt Ltd" />
               </div>
               <div className="space-y-2">
-                <Label>Phone</Label>
-                <Input value={company.phone} onChange={(e) => setCompany((p) => ({ ...p, phone: e.target.value }))} placeholder="+91 99999 99999" />
+                <Label>Company Logo Image URL</Label>
+                <Input value={company.logo_url} onChange={(e) => setCompany((p) => ({ ...p, logo_url: e.target.value }))} placeholder="https://example.com/logo.png" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>GSTIN Number</Label>
+                  <Input value={company.gstin} onChange={(e) => setCompany((p) => ({ ...p, gstin: e.target.value }))} placeholder="27AAAAA0000A1Z5" className="font-mono uppercase" />
+                </div>
+                <div className="space-y-2">
+                  <Label>PAN Number</Label>
+                  <Input value={company.pan} onChange={(e) => setCompany((p) => ({ ...p, pan: e.target.value }))} placeholder="AAAAA0000A" className="font-mono uppercase" />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>Contact Email</Label>
-                <Input type="email" value={company.contact_email} onChange={(e) => setCompany((p) => ({ ...p, contact_email: e.target.value }))} placeholder="info@company.com" />
+                <Label>Business Address</Label>
+                <Textarea value={company.address} onChange={(e) => setCompany((p) => ({ ...p, address: e.target.value }))} placeholder="123 Main St, City, State, Country, Pincode" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Phone</Label>
+                  <Input value={company.phone} onChange={(e) => setCompany((p) => ({ ...p, phone: e.target.value }))} placeholder="+91 99999 99999" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Contact Email</Label>
+                  <Input type="email" value={company.contact_email} onChange={(e) => setCompany((p) => ({ ...p, contact_email: e.target.value }))} placeholder="info@company.com" />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>Company ID</Label>
+                <Label>Website</Label>
+                <Input value={company.website} onChange={(e) => setCompany((p) => ({ ...p, website: e.target.value }))} placeholder="https://www.company.com" />
+              </div>
+              <Separator />
+              <div className="space-y-2 font-bold text-sm text-foreground">Bank & UPI Payment Details (For Invoice Printing)</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Bank Name</Label>
+                  <Input value={company.bank_name} onChange={(e) => setCompany((p) => ({ ...p, bank_name: e.target.value }))} placeholder="HDFC Bank / ICICI Bank" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Account Number</Label>
+                  <Input value={company.account_number} onChange={(e) => setCompany((p) => ({ ...p, account_number: e.target.value }))} placeholder="50100012345678" className="font-mono" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>IFSC Code</Label>
+                  <Input value={company.ifsc_code} onChange={(e) => setCompany((p) => ({ ...p, ifsc_code: e.target.value }))} placeholder="HDFC0001234" className="font-mono uppercase" />
+                </div>
+                <div className="space-y-2">
+                  <Label>UPI ID (Generates Dynamic QR Code)</Label>
+                  <Input value={company.upi_id} onChange={(e) => setCompany((p) => ({ ...p, upi_id: e.target.value }))} placeholder="company@upi" className="font-mono" />
+                </div>
+              </div>
+              <Separator />
+              <div className="space-y-2 font-bold text-sm text-foreground">Signatory & Legal Terms</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Authorized Signatory Name</Label>
+                  <Input value={company.authorized_signatory_name} onChange={(e) => setCompany((p) => ({ ...p, authorized_signatory_name: e.target.value }))} placeholder="Managing Director / Owner" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Digital Stamp / Signature Image URL</Label>
+                  <Input value={company.stamp_url} onChange={(e) => setCompany((p) => ({ ...p, stamp_url: e.target.value }))} placeholder="https://example.com/stamp.png" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Default Invoice Terms & Conditions</Label>
+                <Textarea value={company.terms_and_conditions} onChange={(e) => setCompany((p) => ({ ...p, terms_and_conditions: e.target.value }))} placeholder="1. Payment due within 15 days..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Company ID (Permanent Code)</Label>
                 <div className="flex gap-2">
                   <Input
                     value={company.company_id}
@@ -264,7 +358,7 @@ export default function SettingsPage() {
                 </p>
               </div>
               <Button onClick={handleUpdateCompany} disabled={savingCompany}>
-                {savingCompany ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : "Update Company Info"}
+                {savingCompany ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : "Save Company & Invoice Settings"}
               </Button>
 
             </CardContent>

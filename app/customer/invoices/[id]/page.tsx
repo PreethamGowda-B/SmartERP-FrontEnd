@@ -33,6 +33,7 @@ export default function CustomerInvoiceDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [invoice, setInvoice] = useState<any>(null);
+  const [company, setCompany] = useState<any>(null);
   const [lineItems, setLineItems] = useState<any[]>([]);
 
   // Dispute modal state
@@ -50,9 +51,10 @@ export default function CustomerInvoiceDetailPage() {
   const fetchInvoiceDetails = async () => {
     try {
       setLoading(true);
-      const res = await apiClient<{ success: boolean; invoice: any; lineItems: any[] }>(`/api/invoices/${invoiceId}`);
+      const res = await apiClient<{ success: boolean; invoice: any; company?: any; lineItems: any[] }>(`/api/invoices/${invoiceId}`);
       if (res && res.success) {
         setInvoice(res.invoice);
+        setCompany(res.company || null);
         setLineItems(res.lineItems || []);
 
         // Log View Activity Tracking Beacon
@@ -206,7 +208,10 @@ export default function CustomerInvoiceDetailPage() {
                 {invoice.invoice_number} (v{invoice.version_number || 1}.0)
               </Badge>
               <h1 className="text-2xl font-bold text-slate-900 mt-2">{invoice.job_title || 'Completed Service Job'}</h1>
-              <p className="text-xs text-slate-500 mt-1">SmartERP Enterprise Portal</p>
+              <div className="text-xs text-slate-600 mt-1 font-semibold flex items-center gap-2">
+                {company?.name || 'Business Enterprise'}
+                {company?.gstin && <span className="font-mono text-slate-500">| GSTIN: {company.gstin}</span>}
+              </div>
             </div>
             <div className="text-right">
               <Badge className={`text-xs px-3 py-1 ${invoice.status === 'paid' ? 'bg-emerald-600' : invoice.status === 'disputed' ? 'bg-amber-600' : 'bg-indigo-600'}`}>

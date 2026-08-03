@@ -1,11 +1,10 @@
-"use client"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Printer, Download, Receipt, Sparkles, Loader2 } from "lucide-react"
+import { apiClient } from "@/lib/apiClient"
 
 interface GSTInvoiceModalProps {
   isOpen: boolean
@@ -15,6 +14,7 @@ interface GSTInvoiceModalProps {
 
 export function GSTInvoiceModal({ isOpen, onClose, customerName = "Acme Construction Corp" }: GSTInvoiceModalProps) {
   const [loading, setLoading] = useState(false)
+  const [company, setCompany] = useState<any>(null)
   const [invoiceData, setInvoiceData] = useState<any>({
     invoiceNumber: `GST-INV-${Math.floor(100000 + Math.random() * 900000)}`,
     date: new Date().toISOString().split("T")[0],
@@ -32,9 +32,19 @@ export function GSTInvoiceModal({ isOpen, onClose, customerName = "Acme Construc
     grandTotal: 82600,
   })
 
+  useEffect(() => {
+    if (isOpen) {
+      apiClient("/api/settings/company-info")
+        .then((c) => setCompany(c))
+        .catch(() => {})
+    }
+  }, [isOpen])
+
   const handlePrint = () => {
     window.print()
   }
+
+  const companyName = company?.legal_name || company?.name || "Business Enterprise"
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -61,9 +71,16 @@ export function GSTInvoiceModal({ isOpen, onClose, customerName = "Acme Construc
           {/* Header Info */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-muted/40 rounded-xl border">
             <div>
-              <p className="font-extrabold text-foreground text-sm">SmartERP Solutions</p>
-              <p className="text-muted-foreground">GSTIN: 27AABCS1429B1Z2</p>
-              <p className="text-muted-foreground">State Code: 27 (Maharashtra)</p>
+              {company?.logo_url && (
+                <img src={company.logo_url} alt={companyName} className="h-8 max-w-[160px] object-contain mb-1.5" />
+              )}
+              <p className="font-extrabold text-foreground text-sm">{companyName}</p>
+              {company?.gstin ? (
+                <p className="text-muted-foreground font-mono">GSTIN: {company.gstin}</p>
+              ) : (
+                <p className="text-muted-foreground">Registered Business</p>
+              )}
+              {company?.address && <p className="text-muted-foreground leading-tight mt-0.5">{company.address}</p>}
             </div>
             <div className="text-right">
               <p className="font-bold text-foreground">Invoice #: {invoiceData.invoiceNumber}</p>
