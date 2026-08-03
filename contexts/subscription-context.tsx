@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react"
-import { apiClient } from "@/lib/apiClient"
+import { apiClient, getAccessToken } from "@/lib/apiClient"
 import { useAuth } from "./auth-context"
 
 export interface PlanFeatures {
@@ -99,7 +99,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
 
     try {
-      if (!apiClient.getToken()) {
+      if (!getAccessToken()) {
         setLoading(false)
         return
       }
