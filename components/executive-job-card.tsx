@@ -9,7 +9,7 @@ import { JobCardActionToolbar } from "@/components/job-card/job-card-action-tool
 import { JobCardDrawer } from "@/components/job-card/job-card-drawer"
 import { JobActionsModal } from "@/components/job-actions-modal"
 import { OwnerEmergencyOverrideModal } from "@/components/owner-emergency-override-modal"
-import { apiClient } from "@/lib/apiClient"
+import { getCurrentUser } from "@/lib/auth"
 
 export interface ExecutiveJobCardProps {
   job: any
@@ -37,7 +37,7 @@ export function ExecutiveJobCard({
 
   React.useEffect(() => {
     try {
-      const u = apiClient.getUser()
+      const u = getCurrentUser()
       setCurrentUser(u)
     } catch (e) {
       // Session fallback
