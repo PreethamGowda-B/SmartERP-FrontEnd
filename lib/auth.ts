@@ -99,11 +99,16 @@ export const signIn = async (email: string, password: string): Promise<User | nu
       setTokens(data.accessToken, data.refreshToken, isSuperAdmin)
     }
 
-    // ✅ Store user profile (name, email, role) for UI rendering only
+    // ✅ Store user profile with tokens for redundant auth fallback
     const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
-    localStorage.setItem(userKey, JSON.stringify(userDetails))
+    const userObj = {
+      ...userDetails,
+      ...(data.accessToken && { accessToken: data.accessToken }),
+      ...(data.refreshToken && { refreshToken: data.refreshToken }),
+    }
+    localStorage.setItem(userKey, JSON.stringify(userObj))
 
-    return userDetails
+    return userObj
   } catch (error) {
     if (error instanceof Error) {
       logger.error("[v0] Authentication failed:", error.message)

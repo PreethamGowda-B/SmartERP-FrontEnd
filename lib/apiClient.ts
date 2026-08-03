@@ -112,7 +112,7 @@ export function clearTokens(isAdmin?: boolean) {
  * SINGLE SOURCE OF TRUTH FOR AUTH TOKEN
  * Prioritize localStorage to ensure 100% cross-tab token synchronization.
  */
-export function getAuthToken() {
+export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null
   
   const { at } = getStorageKeys()
@@ -127,11 +127,23 @@ export function getAuthToken() {
   if (fromLocal) return fromLocal
 
   // 2. Fallback to sessionStorage
-  return sessionStorage.getItem(at) || 
-         sessionStorage.getItem(altAt) || 
-         sessionStorage.getItem("accessToken") || 
-         sessionStorage.getItem(USER_AT) || 
-         sessionStorage.getItem(ADMIN_AT)
+  const fromSession = sessionStorage.getItem(at) || 
+                      sessionStorage.getItem(altAt) || 
+                      sessionStorage.getItem("accessToken") || 
+                      sessionStorage.getItem(USER_AT) || 
+                      sessionStorage.getItem(ADMIN_AT)
+  if (fromSession) return fromSession
+
+  // 3. Fallback: Parse user profile from localStorage
+  try {
+    const userStr = localStorage.getItem("smarterp_user") || localStorage.getItem("smarterp_admin_user")
+    if (userStr) {
+      const u = JSON.parse(userStr)
+      if (u?.accessToken) return u.accessToken
+    }
+  } catch (_) {}
+
+  return null
 }
 
 export function getAccessToken() {
@@ -152,11 +164,21 @@ export function getRefreshToken(): string | null {
     if (fromLocal) return fromLocal
 
     // 2. Fallback to sessionStorage
-    return sessionStorage.getItem(rt) || 
-           sessionStorage.getItem(altRt) || 
-           sessionStorage.getItem("refreshToken") || 
-           sessionStorage.getItem(USER_RT) || 
-           sessionStorage.getItem(ADMIN_RT)
+    const fromSession = sessionStorage.getItem(rt) || 
+                        sessionStorage.getItem(altRt) || 
+                        sessionStorage.getItem("refreshToken") || 
+                        sessionStorage.getItem(USER_RT) || 
+                        sessionStorage.getItem(ADMIN_RT)
+    if (fromSession) return fromSession
+
+    // 3. Fallback: Parse user profile from localStorage
+    try {
+      const userStr = localStorage.getItem("smarterp_user") || localStorage.getItem("smarterp_admin_user")
+      if (userStr) {
+        const u = JSON.parse(userStr)
+        if (u?.refreshToken) return u.refreshToken
+      }
+    } catch (_) {}
   }
   return null
 }
@@ -206,7 +228,7 @@ function handleLogout() {
 // ── Session Refresh Queue Mutex ──────────────────────────────────────────────
 // Prevents concurrent 401s from each spawning a refresh, which causes
 // replay-protection to terminate the session. Instead, all parallel requests
-// subscribe to a single in-flight refresh and retry when it resolves.
+// queue up and await a SINGLE refresh call.
 let refreshPromise: Promise<any> | null = null
 let refreshSubscribers: Array<(token: string | null) => void> = []
 
@@ -228,8 +250,29 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
     ...(options.headers as Record<string, string>),
   }
 
-  // Attach access token if available
-  const currentToken = getAuthToken()
+  // Attach access token if available, or auto-refresh if missing
+  let currentToken = getAuthToken()
+  if (!currentToken && !path.includes('/auth/')) {
+    const storedRt = getRefreshToken()
+    if (storedRt) {
+      try {
+        const autoRefRes = await fetch(`${baseUrl}/api/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: storedRt }),
+          credentials: "include"
+        })
+        if (autoRefRes.ok) {
+          const refData = await autoRefRes.json()
+          if (refData?.accessToken) {
+            setTokens(refData.accessToken, refData.refreshToken || storedRt)
+            currentToken = refData.accessToken
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
   if (currentToken) {
     headers["Authorization"] = `Bearer ${currentToken}`
   } else {
