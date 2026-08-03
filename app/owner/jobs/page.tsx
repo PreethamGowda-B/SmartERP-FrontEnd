@@ -137,26 +137,32 @@ function OwnerJobsPageContent() {
   const checkIsCustomerJob = (j: any) => Boolean(j?.is_customer_job || j?.source === "customer" || j?.source === "customer_portal" || j?.created_by_role === "customer" || j?.customer_id)
 
   // Filter jobs by search, filters, and active tab
-  const filteredJobs = jobs.filter((job) => {
-    const isCust = checkIsCustomerJob(job)
-    const isCompleted = job.status?.toLowerCase() === "completed"
+  const filteredJobs = jobs
+    .filter((job) => {
+      const isCust = checkIsCustomerJob(job)
+      const isCompleted = job.status?.toLowerCase() === "completed"
 
-    if (activeTab === "customer" && !isCust) return false
-    if (activeTab === "completed" && !isCompleted) return false
-    if (activeTab === "archived" && job.status?.toLowerCase() !== "cancelled") return false
+      if (activeTab === "customer" && !isCust) return false
+      if (activeTab === "completed" && !isCompleted) return false
+      if (activeTab === "archived" && job.status?.toLowerCase() !== "cancelled") return false
 
-    const matchesSearch =
-      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (job as any).client?.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesSearch =
+        job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (job as any).client?.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesStatus = statusFilter === "all" || job.status?.toLowerCase() === statusFilter.toLowerCase()
-    const matchesEmployeeStatus =
-      employeeStatusFilter === "all" ||
-      job.employee_status?.toLowerCase() === employeeStatusFilter.toLowerCase()
+      const matchesStatus = statusFilter === "all" || job.status?.toLowerCase() === statusFilter.toLowerCase()
+      const matchesEmployeeStatus =
+        employeeStatusFilter === "all" ||
+        job.employee_status?.toLowerCase() === employeeStatusFilter.toLowerCase()
 
-    return matchesSearch && matchesStatus && matchesEmployeeStatus
-  })
+      return matchesSearch && matchesStatus && matchesEmployeeStatus
+    })
+    .sort((a, b) => {
+      const timeA = new Date(a.created_at || (a as any).startDate || (a as any).created_date || 0).getTime()
+      const timeB = new Date(b.created_at || (b as any).startDate || (b as any).created_date || 0).getTime()
+      return timeB - timeA
+    })
 
   const acceptedJobs = jobs.filter((j) => j.employee_status?.toLowerCase() === "accepted").length
   const pendingJobs = jobs.filter((j) => j.employee_status?.toLowerCase() === "pending" || !j.employee_status).length

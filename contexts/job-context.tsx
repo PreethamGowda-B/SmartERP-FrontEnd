@@ -95,6 +95,13 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
             }
           })
 
+          // Sort normalized jobs strictly created_at DESC (newest / latest created jobs first)
+          normalized.sort((a: any, b: any) => {
+            const timeA = new Date(a.created_at || a.startDate || a.created_date || 0).getTime()
+            const timeB = new Date(b.created_at || b.startDate || b.created_date || 0).getTime()
+            return timeB - timeA
+          })
+
           // Update only when the server data differs to avoid stomping local changes
           try {
             const current = JSON.stringify(jobs)
