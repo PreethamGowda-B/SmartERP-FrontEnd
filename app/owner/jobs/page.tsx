@@ -134,12 +134,14 @@ function OwnerJobsPageContent() {
     }
   }
 
+  const checkIsCustomerJob = (j: any) => Boolean(j?.is_customer_job || j?.source === "customer" || j?.source === "customer_portal" || j?.created_by_role === "customer" || j?.customer_id)
+
   // Filter jobs by search, filters, and active tab
   const filteredJobs = jobs.filter((job) => {
-    const isCustomerJob = (job as any).source === "customer"
+    const isCust = checkIsCustomerJob(job)
     const isCompleted = job.status?.toLowerCase() === "completed"
 
-    if (activeTab === "customer" && !isCustomerJob) return false
+    if (activeTab === "customer" && !isCust) return false
     if (activeTab === "completed" && !isCompleted) return false
     if (activeTab === "archived" && job.status?.toLowerCase() !== "cancelled") return false
 
@@ -160,7 +162,7 @@ function OwnerJobsPageContent() {
   const pendingJobs = jobs.filter((j) => j.employee_status?.toLowerCase() === "pending" || !j.employee_status).length
   const completedJobs = jobs.filter((j) => j.status?.toLowerCase() === "completed").length
   const declinedJobs = jobs.filter((j) => j.employee_status?.toLowerCase() === "declined").length
-  const customerJobsCount = jobs.filter((j) => (j as any).source === "customer").length
+  const customerJobsCount = jobs.filter(checkIsCustomerJob).length
 
   return (
     <OwnerLayout>

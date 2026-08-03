@@ -16,7 +16,8 @@ interface JobCardHeaderProps {
   priority: string
   startDate?: string
   assignedCrew?: { id: string; name: string; avatar?: string }[]
-  role?: "owner" | "employee"
+  isCustomerJob?: boolean
+  source?: string
   onEdit?: () => void
   onDelete?: () => void
   onView?: () => void
@@ -32,10 +33,13 @@ export function JobCardHeader({
   startDate,
   assignedCrew = [],
   role = "owner",
+  isCustomerJob = false,
+  source,
   onEdit,
   onDelete,
   onView,
 }: JobCardHeaderProps) {
+  const isCust = isCustomerJob || source === "customer" || source === "customer_portal"
   const getStatusBadge = (st: string) => {
     const s = (st || "open").toLowerCase()
     switch (s) {
@@ -87,6 +91,17 @@ export function JobCardHeader({
           <Badge variant="outline" className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 ${getPriorityBadge(priority)}`}>
             {priority}
           </Badge>
+          {isCust ? (
+            <Badge className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-950 dark:text-sky-300 dark:border-sky-800 flex items-center gap-1 shadow-xs">
+              <User className="h-3 w-3" />
+              Customer Request
+            </Badge>
+          ) : (
+            <Badge className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 flex items-center gap-1">
+              <Building2 className="h-3 w-3" />
+              Internal Job
+            </Badge>
+          )}
         </div>
 
         <div className="flex items-center gap-1">

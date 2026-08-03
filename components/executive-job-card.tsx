@@ -73,6 +73,8 @@ export function ExecutiveJobCard({
           startDate={job.startDate || job.created_at}
           assignedCrew={crew}
           role={role}
+          isCustomerJob={Boolean(job.is_customer_job || job.source === 'customer' || job.source === 'customer_portal' || job.created_by_role === 'customer' || job.customer_id)}
+          source={job.source}
           onView={() => onView?.(job)}
           onEdit={() => onEdit?.(job)}
           onDelete={() => onDelete?.(job)}
