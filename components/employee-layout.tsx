@@ -27,11 +27,14 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   useLocationTracking({})
   // ───────────────────────────────────────────────────────────────────────────
 
+  // ── Enterprise RBAC: only employee and manager roles may access Employee Portal ──
+  const EMPLOYEE_ROLES = ["employee", "manager"]
+
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && (!user || !EMPLOYEE_ROLES.includes(user.role))) {
       router.push("/")
     }
-  }, [user?.id, isLoading, router])
+  }, [user?.id, user?.role, isLoading, router])
 
   if (isLoading) {
     return (
@@ -43,7 +46,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     )
   }
 
-  if (!user) {
+  if (!user || !EMPLOYEE_ROLES.includes(user.role)) {
     return null
   }
 

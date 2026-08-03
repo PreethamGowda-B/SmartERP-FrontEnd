@@ -12,9 +12,16 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !isLoading) {
-      if (user.role === "owner") router.push("/owner")
-      else if (user.role === "hr") router.push("/hr")
-      else if (user.role === "employee") router.push("/employee")
+      const adminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE
+      if (user.role === "super_admin") {
+        router.push(adminRoute ? `/${adminRoute}` : "/superadmin")
+      } else if (user.role === "owner" || user.role === "admin") {
+        router.push("/owner")
+      } else if (user.role === "hr") {
+        router.push("/hr")
+      } else if (user.role === "employee") {
+        router.push("/employee")
+      }
     }
   }, [user?.id, user?.role, isLoading, router])
 

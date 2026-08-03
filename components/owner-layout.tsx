@@ -23,11 +23,14 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
   const router = useRouter()
 
 
+  // ── Enterprise RBAC: only owner, admin, and super_admin may access Owner Portal ──
+  const OWNER_ROLES = ["owner", "admin", "super_admin"]
+
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && (!user || !OWNER_ROLES.includes(user.role))) {
       router.push("/")
     }
-  }, [user?.id, isLoading, router])
+  }, [user?.id, user?.role, isLoading, router])
 
   if (isLoading) {
     return (
@@ -39,7 +42,7 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
     )
   }
 
-  if (!user) {
+  if (!user || !OWNER_ROLES.includes(user.role)) {
     return null
   }
 
