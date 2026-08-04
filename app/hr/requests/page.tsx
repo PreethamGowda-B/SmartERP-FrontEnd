@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { apiClient } from "@/lib/apiClient"
-import { Inbox, CheckCircle2, XCircle, Clock, Check, X, Search } from "lucide-react"
+import { Inbox, CheckCircle2, XCircle, Clock, Check, X, Search, Loader2 } from "lucide-react"
 
 export default function HRRequestsPage() {
   const { toast } = useToast()
