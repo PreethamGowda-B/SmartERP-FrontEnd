@@ -28,10 +28,12 @@ import {
 import { LockedFeatureScreen } from "@/components/locked-feature-screen"
 import { useSubscription } from "@/contexts/subscription-context"
 
+import { apiClient } from "@/lib/apiClient"
+
 export default function PayrollPreRunValidationPage() {
   const { isPro } = useSubscription()
   const { toast } = useToast()
-  const [selectedMonth, setSelectedMonth] = useState<number>(7)
+  const [selectedMonth, setSelectedMonth] = useState<number>(8)
   const [selectedYear, setSelectedYear] = useState<number>(2026)
   const [run, setRun] = useState<PayrollValidationRun | null>(null)
   const [flags, setFlags] = useState<PayrollValidationFlag[]>([])
@@ -48,14 +50,29 @@ export default function PayrollPreRunValidationPage() {
   const handleRunValidation = async () => {
     try {
       setLoading(true)
-      // Sample mock proposed payroll records for 7-point audit demonstration
-      const sampleProposed = [
-        { userId: "11111111-1111-1111-1111-111111111111", employeeName: "Rajesh Kumar", baseSalary: 45000, bonus: 15000, deduction: 2000 },
-        { userId: "22222222-2222-2222-2222-222222222222", employeeName: "Priya Sharma", baseSalary: 60000, bonus: 0, deduction: 2500 },
-        { userId: "33333333-3333-3333-3333-333333333333", employeeName: "Vikram Singh (Former)", baseSalary: 30000, bonus: 0, deduction: 0 },
-      ]
+      // Fetch real company payroll records for the selected month/year
+      let realProposed: any[] = []
+      try {
+        const payrollRes = await apiClient("/api/payroll")
+        if (Array.isArray(payrollRes)) {
+          const currentRecords = payrollRes.filter(
+            (p: any) => Number(p.payroll_month) === selectedMonth && Number(p.payroll_year) === selectedYear
+          )
+          realProposed = currentRecords.map((r: any) => ({
+            userId: r.employee_id || r.id,
+            employeeName: r.employee_name || r.employee_email,
+            employeeEmail: r.employee_email,
+            baseSalary: Number(r.base_salary || 0),
+            bonus: Number(r.extra_amount || 0) + Number(r.salary_increment || 0),
+            deduction: Number(r.deduction || 0),
+            netPay: Number(r.total_salary || 0),
+          }))
+        }
+      } catch (err) {
+        // Fallback to automatic DB extraction in backend
+      }
 
-      const valData = await payrollValidationApi.validatePreRun(selectedMonth, selectedYear, sampleProposed)
+      const valData = await payrollValidationApi.validatePreRun(selectedMonth, selectedYear, realProposed)
       if (valData.success && valData.validation) {
         fetchRunDetails(valData.validation.runId)
       }
