@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
 import { useNotifications } from "@/contexts/notification-context"
+import { useClockInGatekeeper } from "@/contexts/clock-in-gatekeeper-context"
 import { toast } from "sonner"
 
 interface JobActionsModalProps {
@@ -95,6 +96,7 @@ const ACTION_MODULES: { category: ActionCategory; title: string; icon: any; colo
 
 export function JobActionsModal({ jobId, jobTitle, isOpen, onClose, onActionComplete }: JobActionsModalProps) {
   const { registerMessagingHandler, unregisterMessagingHandler } = useNotifications()
+  const { withClockInCheck } = useClockInGatekeeper()
 
   const [activeTab, setActiveTab] = useState<"actions" | "my_requests">("actions")
   const [selectedOption, setSelectedOption] = useState<ActionOption | null>(null)
@@ -156,7 +158,7 @@ export function JobActionsModal({ jobId, jobTitle, isOpen, onClose, onActionComp
     })
   }
 
-  const handleSubmitAction = async () => {
+  const doSubmitAction = async () => {
     if (!selectedOption) return
     setSubmitting(true)
 
@@ -213,6 +215,10 @@ export function JobActionsModal({ jobId, jobTitle, isOpen, onClose, onActionComp
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleSubmitAction = async () => {
+    withClockInCheck(() => doSubmitAction())
   }
 
   const getStatusBadge = (st: string) => {

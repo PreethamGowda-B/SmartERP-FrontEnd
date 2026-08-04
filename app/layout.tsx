@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { SubscriptionProvider } from "@/contexts/subscription-context"
 import { LimitProvider } from "@/contexts/limit-context"
 import { JobProvider } from "@/contexts/job-context"
+import { ClockInGatekeeperProvider } from "@/contexts/clock-in-gatekeeper-context"
 import { NotificationProvider } from "@/contexts/notification-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
@@ -148,9 +149,11 @@ export default function RootLayout({
                     <NotificationProvider>
                       <CommandRegistryProvider>
                         <JobProvider>
-                          <ErrorBoundary>
-                            {children}
-                          </ErrorBoundary>
+                          <ClockInGatekeeperProvider>
+                            <ErrorBoundary>
+                              {children}
+                            </ErrorBoundary>
+                          </ClockInGatekeeperProvider>
                         </JobProvider>
                         <Toaster richColors closeButton position="top-right" />
                         <LockedFeaturePrompt />

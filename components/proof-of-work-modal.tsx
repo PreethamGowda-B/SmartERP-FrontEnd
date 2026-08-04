@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { apiClient } from "@/lib/apiClient"
+import { useClockInGatekeeper } from "@/contexts/clock-in-gatekeeper-context"
 import { Camera, MapPin, CheckCircle2, Loader2, UploadCloud, Signature } from "lucide-react"
 import { CustomerSignaturePad } from "@/components/customer-signature-pad"
 
@@ -22,6 +23,7 @@ interface ProofOfWorkModalProps {
 
 export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfWorkModalProps) {
   const { toast } = useToast()
+  const { withClockInCheck } = useClockInGatekeeper()
   const [photoUrl, setPhotoUrl] = useState("")
   const [notes, setNotes] = useState("")
   const [stage, setStage] = useState("in_progress")
@@ -100,7 +102,7 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
     )
   }
 
-  const handleSubmit = async () => {
+  const doSubmit = async () => {
     if (!photoUrl && !notes) {
       toast({ title: "Missing details", description: "Please take/upload a photo or enter site notes.", variant: "destructive" })
       return
@@ -147,6 +149,10 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleSubmit = async () => {
+    withClockInCheck(() => doSubmit())
   }
 
   return (

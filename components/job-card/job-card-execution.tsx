@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Clock, CheckCircle2, AlertCircle, ShieldAlert, Lock, UserCheck, Loader2 } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
 import { toast } from "sonner"
+import { useClockInGatekeeper } from "@/contexts/clock-in-gatekeeper-context"
 
 interface JobCardExecutionProps {
   jobId: string
@@ -37,6 +38,7 @@ export function JobCardExecution({
   onActionComplete,
   onEmergencyOverride,
 }: JobCardExecutionProps) {
+  const { withClockInCheck } = useClockInGatekeeper()
   const [currentProgress, setCurrentProgress] = React.useState(Math.min(100, Math.max(0, progress)))
   const [isUpdating, setIsUpdating] = React.useState(false)
   const [isAccepting, setIsAccepting] = React.useState(false)
@@ -56,7 +58,7 @@ export function JobCardExecution({
       ? 1
       : 0
 
-  const handleSaveProgress = async () => {
+  const doSaveProgress = async () => {
     setIsUpdating(true)
     try {
       await apiClient(`/api/jobs/${jobId}/progress`, {
@@ -72,7 +74,15 @@ export function JobCardExecution({
     }
   }
 
-  const handleAcceptJob = async () => {
+  const handleSaveProgress = async () => {
+    if (role === "employee") {
+      withClockInCheck(() => doSaveProgress())
+    } else {
+      doSaveProgress()
+    }
+  }
+
+  const doAcceptJob = async () => {
     setIsAccepting(true)
     try {
       await apiClient(`/api/jobs/${jobId}/accept`, { method: "POST" })
@@ -85,7 +95,15 @@ export function JobCardExecution({
     }
   }
 
-  const handleDeclineJob = async () => {
+  const handleAcceptJob = async () => {
+    if (role === "employee") {
+      withClockInCheck(() => doAcceptJob())
+    } else {
+      doAcceptJob()
+    }
+  }
+
+  const doDeclineJob = async () => {
     setIsDeclining(true)
     try {
       await apiClient(`/api/jobs/${jobId}/decline`, { method: "POST" })
@@ -95,6 +113,14 @@ export function JobCardExecution({
       toast.error(err?.message || "Failed to decline job")
     } finally {
       setIsDeclining(false)
+    }
+  }
+
+  const handleDeclineJob = async () => {
+    if (role === "employee") {
+      withClockInCheck(() => doDeclineJob())
+    } else {
+      doDeclineJob()
     }
   }
 
