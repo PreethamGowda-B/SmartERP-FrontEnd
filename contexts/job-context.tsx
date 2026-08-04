@@ -4,7 +4,7 @@ import type React from "react"
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react"
 import { type Job } from "@/lib/data"
 import { useAuth } from "@/contexts/auth-context"
-import { apiClient } from "@/lib/apiClient"
+import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { useNotifications } from "@/contexts/notification-context"
 import { logger } from "@/lib/logger"
 
@@ -57,7 +57,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     let intervalId: ReturnType<typeof setInterval> | null = null
 
     async function loadJobs() {
-      if (!user) return
+      if (!user || !getAuthToken()) return
       try {
         logger.log("[v0] Fetching jobs from backend...")
 
@@ -298,7 +298,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
   }, [jobs])
 
   const refreshJobs = useCallback(async () => {
-    if (!user) return
+    if (!user || !getAuthToken()) return
     try {
       logger.log("[v0] Manually refreshing jobs...")
       const serverJobs = await apiClient("/api/jobs", { method: "GET" })
@@ -325,8 +325,10 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
         if (user.role) localStorage.setItem("smarterp-jobs-role", user.role)
       }
-    } catch (err) {
-      logger.error("[v0] Failed to refresh jobs:", err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err)))
+    } catch (err: any) {
+      if (err?.status !== 401 && err?.message !== "Authentication required") {
+        logger.error("[v0] Failed to refresh jobs:", err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err)))
+      }
     }
   }, [user?.id, user?.role])
 

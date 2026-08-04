@@ -56,14 +56,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Fetch notifications from backend
   const fetchNotifications = useCallback(async () => {
+    if (!user || !getAuthToken()) return
     try {
       const data = await apiClient("/api/notifications")
       setNotifications(data || [])
       logger.log(`✅ Fetched ${data?.length || 0} notifications`)
-    } catch (error) {
-      logger.error("❌ Error fetching notifications:", error)
+    } catch (error: any) {
+      if (error?.status !== 401 && error?.message !== "Authentication required") {
+        logger.error("❌ Error fetching notifications:", error)
+      }
     }
-  }, [])
+  }, [user])
 
   // Initialize FCM and request permission
   const setupFCM = useCallback(async () => {
