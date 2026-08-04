@@ -39,8 +39,9 @@ export function JobCardFinancials({ invoice, budget = 0, role = "owner" }: JobCa
   const editedCount = invoice.edited_count || 0
   const handleInvoiceClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (role === "owner" && invoice?.id) {
-      window.location.href = `/owner/jobs/${invoice.id}/invoice-editor`
+    const targetJobId = (invoice as any)?.job_id || (invoice as any)?.jobId || invoice?.id
+    if (role === "owner" && targetJobId) {
+      window.location.href = `/owner/jobs/${targetJobId}/invoice-editor`
     }
   }
 
