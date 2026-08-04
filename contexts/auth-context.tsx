@@ -26,13 +26,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const currentUser = getCurrentUser()
         
-        // 1. Immediately update user state from cache to allow instant UI rendering
+        // 1. Immediately update user state & stop loading from cache for instant UI rendering
         if (currentUser && isMounted) {
           setUser(currentUser)
+          setIsLoading(false)
         }
         
-        // 2. If there is NO cached user, we can stop loading immediately — no
-        //    network call needed, the user is definitively logged out.
+        // 2. If there is NO cached user, stop loading immediately
         if (!currentUser) {
           if (isMounted) setIsLoading(false)
           return

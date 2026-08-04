@@ -167,13 +167,19 @@ export default function EmployeeDocumentsPage() {
   }
 
   const getFullUrl = (path: string) => {
-    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+    if (!path) return ""
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+      return path
+    }
+    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in'
     return `${baseUrl.replace(/\/$/, '')}${path.startsWith('/') ? path : '/' + path}`
   }
 
   const isImage = (url: string) => {
-    const ext = url.split('.').pop()?.toLowerCase()
-    return ['jpg', 'jpeg', 'png'].includes(ext || '')
+    if (!url) return false
+    const cleanUrl = url.split('?')[0]
+    const ext = cleanUrl.split('.').pop()?.toLowerCase()
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext || '')
   }
 
   return (

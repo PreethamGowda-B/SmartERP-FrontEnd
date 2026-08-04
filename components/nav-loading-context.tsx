@@ -13,7 +13,7 @@ const NavLoadingContext = createContext<NavContext>({
   setLoadingId: () => {},
 })
 
-const MIN_DISPLAY_MS = 1000 // minimum overlay display when page loads quickly; you can increase to 2000
+const MIN_DISPLAY_MS = 0 // Instant tab switching — zero artificial delay
 
 export function NavLoadingProvider({ children }: { children: React.ReactNode }) {
   const [loadingId, setLoadingId] = useState<string | null>(null)
