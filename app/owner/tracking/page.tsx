@@ -9,6 +9,7 @@ import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { LockedFeatureScreen } from "@/components/locked-feature-screen"
 import { useSubscription } from "@/contexts/subscription-context"
+import "leaflet/dist/leaflet.css"
 
 // Leaflet CSS — loaded once at module level
 const LEAFLET_CSS_ID = "leaflet-css"
@@ -95,6 +96,10 @@ export default function EmployeeTrackingPage() {
 
             mapRef.current = map
             setMapReady(true)
+
+            setTimeout(() => {
+                map.invalidateSize()
+            }, 300)
         })
 
         const markers = markersRef.current
@@ -362,24 +367,28 @@ export default function EmployeeTrackingPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Map */}
-                    <Card className="flex-1 overflow-hidden relative">
-                        {/* Empty state overlay */}
+                    {/* Map Container */}
+                    <Card className="flex-1 overflow-hidden relative border border-border/60 shadow-sm">
+                        {/* Status notification banner when employees exist but haven't pushed GPS coordinates yet */}
                         {!loading && withLocation.length === 0 && (
-                            <div className="absolute inset-0 z-500 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-xl gap-3">
-                                <MapPin className="h-12 w-12 text-muted-foreground/30" />
-                                <p className="text-sm text-muted-foreground font-medium">No location data yet</p>
-                                <p className="text-xs text-muted-foreground/70 text-center max-w-xs">
-                                    Employees will appear here once they log in and allow location access.
-                                </p>
+                            <div className="absolute top-4 left-4 right-4 z-10 bg-background/95 backdrop-blur-md border border-border p-3.5 rounded-xl flex items-center gap-3 shadow-md transition-all">
+                                <div className="p-2.5 rounded-full bg-primary/10 text-primary shrink-0">
+                                    <MapPin className="h-5 w-5" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-semibold text-foreground">Waiting for live GPS coordinates</p>
+                                    <p className="text-[11px] text-muted-foreground truncate">
+                                        Employee is online. Pins will automatically appear live once location access is enabled on device.
+                                    </p>
+                                </div>
                             </div>
                         )}
 
                         {/* Leaflet map mount point */}
                         <div
                             ref={containerRef}
-                            className="w-full h-full rounded-xl"
-                            style={{ minHeight: 500, zIndex: 0 }}
+                            className="w-full h-full min-h-[500px] rounded-xl relative z-0"
+                            style={{ width: "100%", height: "100%", minHeight: 500 }}
                         />
                     </Card>
                 </div>

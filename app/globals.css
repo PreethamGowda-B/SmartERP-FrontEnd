@@ -445,3 +445,30 @@
   pointer-events: none;
   z-index: 9998;
 }
+
+/* Leaflet Map Styles */
+@import "leaflet/dist/leaflet.css";
+
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 500px !important;
+  border-radius: 0.75rem;
+  z-index: 1 !important;
+}
+
+.leaflet-pane {
+  z-index: 1 !important;
+}
+.leaflet-tile-pane {
+  z-index: 2 !important;
+}
+.leaflet-overlay-pane {
+  z-index: 3 !important;
+}
+.leaflet-marker-pane {
+  z-index: 4 !important;
+}
+.leaflet-popup-pane {
+  z-index: 5 !important;
+}
