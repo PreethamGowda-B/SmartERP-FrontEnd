@@ -23,22 +23,37 @@ import {
   Files,
   Briefcase,
   UserCheck,
+  UserPlus,
+  Calendar,
+  Award,
+  TrendingUp,
+  GraduationCap,
+  Laptop,
+  Inbox,
+  ShieldCheck,
+  HeartPulse
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { logger } from "@/lib/logger"
 
 const navigation = [
-  { name: "Dashboard", href: "/hr", icon: LayoutDashboard },
-  { name: "Tasks", href: "/hr/tasks", icon: Briefcase },
+  { name: "Operations Dashboard", href: "/hr", icon: LayoutDashboard },
+  { name: "Employee Directory", href: "/hr/employees", icon: Users },
+  { name: "Recruitment (ATS)", href: "/hr/recruitment", icon: UserPlus },
+  { name: "Attendance & GPS", href: "/hr/attendance", icon: Clock },
+  { name: "Shift & Roster", href: "/hr/roster", icon: Calendar },
+  { name: "Leave & Holidays", href: "/hr/leave", icon: ShieldCheck },
+  { name: "Payroll & Benefits", href: "/hr/payroll", icon: DollarSign },
+  { name: "Skills & Certifications", href: "/hr/skills", icon: Award },
+  { name: "Performance (PMS)", href: "/hr/performance", icon: TrendingUp },
+  { name: "Training & Safety", href: "/hr/training", icon: GraduationCap },
+  { name: "Asset Management", href: "/hr/assets", icon: Laptop },
+  { name: "Document Vault", href: "/hr/documents", icon: Files },
+  { name: "Request Inbox", href: "/hr/requests", icon: Inbox },
+  { name: "Exit Offboarding", href: "/hr/exit", icon: LogOut },
+  { name: "Announcements & Hub", href: "/hr/hr-hub", icon: Megaphone },
   { name: "Customer Jobs", href: "/hr/customer-jobs", icon: UserCheck },
-  { name: "Employees", href: "/hr/employees", icon: Users },
-  { name: "Attendance", href: "/hr/attendance", icon: Clock },
-  { name: "Documents", href: "/hr/documents", icon: Files },
-  { name: "Payroll", href: "/hr/payroll", icon: DollarSign },
-  { name: "HR Hub", href: "/hr/hr-hub", icon: Megaphone },
   { name: "Messages", href: "/hr/messages", icon: MessageSquare },
-  { name: "Notifications", href: "/hr/notifications", icon: Bell },
-  { name: "Contact Support", href: "/hr/support", icon: Headset },
 ]
 
 const hrNavHrefs = navigation.map((n) => n.href)

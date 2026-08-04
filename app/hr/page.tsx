@@ -5,6 +5,8 @@ import { HRLayout } from "@/components/hr-layout"
 import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { 
   Users, 
   Clock, 
@@ -12,94 +14,238 @@ import {
   CheckCircle2, 
   AlertCircle,
   TrendingUp,
-  UserPlus
+  UserPlus,
+  Inbox,
+  Laptop,
+  Award,
+  ArrowRight,
+  ShieldCheck,
+  Check,
+  X
 } from "lucide-react"
-import { motion } from "framer-motion"
-import { format } from "date-fns"
+import { useToast } from "@/hooks/use-toast"
 
 export default function HRDashboard() {
-  const [stats, setStats] = useState({
-    totalEmployees: 0,
+  const { toast } = useToast()
+  const [analytics, setAnalytics] = useState<any>({
+    totalHeadcount: 0,
     presentToday: 0,
-    pendingLeaves: 0,
-    topPerformers: 0
+    lateToday: 0,
+    pendingRequests: 0,
+    activeRecruitment: 0,
+    assignedAssets: 0
   })
-  const [activities, setActivities] = useState<any[]>([])
+  const [requests, setRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  function formatTimeAgo(dateStr?: string) {
-    if (!dateStr) return "—"
-    const date = new Date(dateStr)
-    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
-    if (seconds < 60) return "just now"
-    const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return `${minutes}m ago`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ago`
-    return date.toLocaleDateString()
+  const fetchHrData = async () => {
+    try {
+      setLoading(true)
+      const [analyticsRes, requestsRes] = await Promise.all([
+        apiClient("/api/hr/analytics").catch(() => ({ analytics: {} })),
+        apiClient("/api/hr/requests?status=pending").catch(() => ({ requests: [] }))
+      ])
+
+      if (analyticsRes?.analytics) setAnalytics(analyticsRes.analytics)
+      if (Array.isArray(requestsRes?.requests)) setRequests(requestsRes.requests)
+    } catch (error) {
+      logger.error("Failed to fetch HR dashboard data:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
-    async function fetchStats() {
-      try {
-        setLoading(true)
-        const [empRes, leaveRes, attendanceRes, activityRes] = await Promise.all([
-          apiClient("/api/employees").catch(() => []),
-          apiClient("/api/hr/leaves").catch(() => []),
-          apiClient("/api/attendance/overview").catch(() => null),
-          apiClient("/api/dashboard/owner/recent-activity").catch(() => [])
-        ])
-        
-        setStats({
-          totalEmployees: empRes?.length || 0,
-          presentToday: attendanceRes?.summary?.present ?? 0,
-          pendingLeaves: leaveRes?.filter((l: any) => l.status === 'pending').length || 0,
-          topPerformers: Math.max(1, Math.floor((empRes?.length || 0) * 0.4))
-        })
-        setActivities(Array.isArray(activityRes) ? activityRes : [])
-      } catch (error) {
-        logger.error("Failed to fetch HR dashboard stats:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchStats()
+    fetchHrData()
   }, [])
 
-  const cards = [
-    {
-      title: "Total Employees",
-      value: stats.totalEmployees,
-      description: "Active workforce",
-      icon: Users,
-      color: "text-blue-500",
-      bg: "bg-blue-500/10"
-    },
-    {
-      title: "Present Today",
-      value: stats.presentToday,
-      description: "Clocked in",
-      icon: CheckCircle2,
-      color: "text-green-500",
-      bg: "bg-green-500/10"
-    },
-    {
-      title: "Pending Leaves",
-      value: stats.pendingLeaves,
-      description: "Awaiting approval",
-      icon: Clock,
-      color: "text-orange-500",
-      bg: "bg-orange-500/10"
-    },
-    {
-      title: "Top Performers",
-      value: stats.topPerformers,
-      description: "90%+ performance",
-      icon: TrendingUp,
-      color: "text-purple-500",
-      bg: "bg-purple-500/10"
+  const handleReviewRequest = async (id: number, status: "approved" | "rejected") => {
+    try {
+      await apiClient(`/api/hr/requests/${id}/review`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, hr_comments: `Processed by HR Manager` })
+      })
+      toast({
+        title: `Request ${status.toUpperCase()}`,
+        description: `Employee request #${id} updated successfully.`
+      })
+      fetchHrData()
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Failed to process request", variant: "destructive" })
     }
-  ]
+  }
+
+  return (
+    <HRLayout>
+      <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto">
+        {/* Title Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-primary via-indigo-600 to-accent bg-clip-text text-transparent">
+              HR People Operations Console
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Master workforce administration, employee lifecycle, attendance, & ESS requests.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-3 text-xs font-bold rounded-xl"
+              onClick={() => window.location.href = "/hr/recruitment"}
+            >
+              <UserPlus className="h-4 w-4 mr-1.5" /> Add Candidate
+            </Button>
+            <Button
+              size="sm"
+              className="h-9 px-3 text-xs font-bold rounded-xl bg-primary text-primary-foreground"
+              onClick={() => window.location.href = "/hr/requests"}
+            >
+              <Inbox className="h-4 w-4 mr-1.5" /> Request Inbox ({analytics.pendingRequests})
+            </Button>
+          </div>
+        </div>
+
+        {/* 6 Key Analytics Stat Cards Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <Card className="premium-card border-blue-500/20 bg-blue-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <Users className="h-5 w-5 text-blue-600" />
+                <Badge variant="outline" className="bg-blue-100 text-blue-800 text-[10px]">Headcount</Badge>
+              </div>
+              <p className="text-2xl font-black mt-2 text-foreground">{analytics.totalHeadcount}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Active Employees</p>
+            </CardContent>
+          </Card>
+
+          <Card className="premium-card border-emerald-500/20 bg-emerald-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                <Badge variant="outline" className="bg-emerald-100 text-emerald-800 text-[10px]">Present</Badge>
+              </div>
+              <p className="text-2xl font-black mt-2 text-emerald-600">{analytics.presentToday}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Clocked in today</p>
+            </CardContent>
+          </Card>
+
+          <Card className="premium-card border-amber-500/20 bg-amber-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <Clock className="h-5 w-5 text-amber-600" />
+                <Badge variant="outline" className="bg-amber-100 text-amber-800 text-[10px]">Late</Badge>
+              </div>
+              <p className="text-2xl font-black mt-2 text-amber-600">{analytics.lateToday}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Late marks today</p>
+            </CardContent>
+          </Card>
+
+          <Card className="premium-card border-purple-500/20 bg-purple-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <Inbox className="h-5 w-5 text-purple-600" />
+                <Badge variant="outline" className="bg-purple-100 text-purple-800 text-[10px]">Pending</Badge>
+              </div>
+              <p className="text-2xl font-black mt-2 text-purple-600">{analytics.pendingRequests}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">ESS Requests</p>
+            </CardContent>
+          </Card>
+
+          <Card className="premium-card border-indigo-500/20 bg-indigo-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <UserPlus className="h-5 w-5 text-indigo-600" />
+                <Badge variant="outline" className="bg-indigo-100 text-indigo-800 text-[10px]">Recruitment</Badge>
+              </div>
+              <p className="text-2xl font-black mt-2 text-indigo-600">{analytics.activeRecruitment}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Active candidates</p>
+            </CardContent>
+          </Card>
+
+          <Card className="premium-card border-rose-500/20 bg-rose-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <Laptop className="h-5 w-5 text-rose-600" />
+                <Badge variant="outline" className="bg-rose-100 text-rose-800 text-[10px]">Assets</Badge>
+              </div>
+              <p className="text-2xl font-black mt-2 text-rose-600">{analytics.assignedAssets}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Assigned items</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Pending Requests Queue Section */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-extrabold tracking-tight">Pending Employee Requests Inbox</h2>
+              <p className="text-xs text-muted-foreground">Review leave applications, attendance corrections, & advance requests</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs font-bold text-primary"
+              onClick={() => window.location.href = "/hr/requests"}
+            >
+              View All Requests <ArrowRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </div>
+
+          {requests.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="text-center py-12 text-muted-foreground">
+                <CheckCircle2 className="h-10 w-10 mx-auto mb-2 opacity-30 text-emerald-600" />
+                <p className="text-sm font-bold text-foreground">No pending requests</p>
+                <p className="text-xs mt-0.5">All employee ESS applications have been processed cleanly.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {requests.slice(0, 4).map((req) => (
+                <Card key={req.id} className="premium-card border hover:border-primary/40 transition-all">
+                  <CardContent className="p-4 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-foreground">{req.employee_name}</span>
+                        <Badge variant="outline" className="text-[10px] font-extrabold uppercase bg-primary/10 text-primary border-primary/20">
+                          {req.request_type.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                        {typeof req.details === "object" ? JSON.stringify(req.details) : req.details}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-xl border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                        onClick={() => handleReviewRequest(req.id, "approved")}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 rounded-xl border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100"
+                        onClick={() => handleReviewRequest(req.id, "rejected")}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </HRLayout>
+  )
+}
 
   return (
     <HRLayout>
@@ -136,63 +282,4 @@ export default function HRDashboard() {
                     {card.description}
                   </p>
                 </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="border-none shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-xl">Quick Actions</CardTitle>
-              <CardDescription>Commonly used HR operations</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              <button className="flex flex-col items-center justify-center p-6 rounded-xl border border-dashed hover:border-primary hover:bg-primary/5 transition-all gap-3 group">
-                <div className="p-3 bg-primary/10 rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <UserPlus className="h-6 w-6" />
-                </div>
-                <span className="font-medium text-sm">Add Employee</span>
-              </button>
-              <button className="flex flex-col items-center justify-center p-6 rounded-xl border border-dashed hover:border-primary hover:bg-primary/5 transition-all gap-3 group">
-                <div className="p-3 bg-primary/10 rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <Calendar className="h-6 w-6" />
-                </div>
-                <span className="font-medium text-sm">Review Leaves</span>
-              </button>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-xl">Recent Activity</CardTitle>
-              <CardDescription>Latest events in the organization</CardDescription>
-            </CardHeader>
-            <CardContent>
-               <div className="space-y-4">
-                 {loading ? (
-                   [1, 2, 3].map(i => <div key={i} className="h-12 bg-muted animate-pulse rounded-lg" />)
-                 ) : activities.length === 0 ? (
-                   <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
-                 ) : (
-                   activities.slice(0, 5).map((act: any) => (
-                     <div key={act.id} className="flex items-start gap-3 pb-4 border-b last:border-0 border-border/50">
-                       <div className="p-2 bg-muted rounded-full mt-1">
-                         <AlertCircle className="h-3 w-3" />
-                       </div>
-                       <div className="flex-1 min-w-0">
-                         <p className="text-sm font-medium truncate">{act.title || act.message}</p>
-                         {act.title && act.message && <p className="text-xs text-muted-foreground truncate">{act.message}</p>}
-                         <p className="text-[10px] text-muted-foreground mt-0.5">{formatTimeAgo(act.created_at)}</p>
-                       </div>
-                     </div>
-                   ))
-                 )}
-               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </HRLayout>
-  )
 }
