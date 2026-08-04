@@ -27,9 +27,13 @@ export function HRLayout({ children }: HRLayoutProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div style={{ width: 160, height: 100 }} className="flex items-center justify-center bg-white rounded-lg shadow-md">
-          <DotsLoader />
+      <div className="min-h-screen bg-background">
+        <HRSidebar />
+        <div className="lg:pl-64 flex flex-col min-h-screen">
+          <main className="flex-1 p-8 space-y-6">
+            <div className="h-8 w-48 bg-muted/80 animate-pulse rounded-lg" />
+            <div className="h-64 w-full bg-muted/40 animate-pulse rounded-xl" />
+          </main>
         </div>
       </div>
     )

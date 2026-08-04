@@ -28,7 +28,7 @@ export function useAuthGuard() {
 export default function withAuth(Component: any) {
   return function Wrapped(props: any) {
     const { user, loading } = useAuthGuard();
-    if (loading) return <div className="w-full h-48"><DotsLoader /></div>;
+    if (loading) return <div className="w-full h-48 bg-muted/40 animate-pulse rounded-xl" />;
     return <Component {...props} user={user} />;
   };
 }
