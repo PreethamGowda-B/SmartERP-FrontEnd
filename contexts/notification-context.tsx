@@ -7,14 +7,17 @@ import { useRouter } from "next/navigation"
 import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 
+import { LiveNotificationToastContainer, LiveToastItem } from "@/components/live-notification-toast"
+import { playEnterpriseChime } from "@/lib/sound-chime"
+
 export interface Notification {
   id: string
-  type: "job" | "material_request" | "payroll" | "message" | "chat_message"
+  type: "job" | "material_request" | "payroll" | "message" | "chat_message" | string
   title: string
   message: string
   created_at: string
   read: boolean
-  priority: "low" | "medium" | "high"
+  priority: "low" | "medium" | "high" | "urgent" | string
   data?: any // Additional data for the notification
 }
 
@@ -29,22 +32,40 @@ interface NotificationContextType {
   getUnreadCount: () => number
   refreshNotifications: () => Promise<void>
   isConnected: boolean
+  isMuted: boolean
+  toggleMute: () => void
   registerMessagingHandler: (handler: MessagingSSEHandler) => void
   unregisterMessagingHandler: () => void
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
-// BACKEND_URL removed as apiClient handles it
-
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [liveToasts, setLiveToasts] = useState<LiveToastItem[]>([])
+  const [isMuted, setIsMuted] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("smarterp_sound_muted") === "true"
+    }
+    return false
+  })
+
   const { user, isLoading } = useAuth()
   const router = useRouter()
   const [sseConnection, setSSEConnection] = useState<EventSource | null>(null)
   const [reconnectTrigger, setReconnectTrigger] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const messagingHandlerRef = useRef<MessagingSSEHandler | null>(null)
+
+  const toggleMute = useCallback(() => {
+    setIsMuted((prev) => {
+      const next = !prev
+      if (typeof window !== "undefined") {
+        localStorage.setItem("smarterp_sound_muted", String(next))
+      }
+      return next
+    })
+  }, [])
 
   const registerMessagingHandler = useCallback((handler: MessagingSSEHandler) => {
     messagingHandlerRef.current = handler
@@ -54,15 +75,26 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     messagingHandlerRef.current = null
   }, [])
 
+  const handleDismissLiveToast = useCallback((id: string) => {
+    setLiveToasts((prev) => prev.filter((t) => t.id !== id))
+  }, [])
+
   // Fetch notifications from backend
   const fetchNotifications = useCallback(async () => {
     if (!user || !getAuthToken()) return
     try {
       const data = await apiClient("/api/notifications")
-      setNotifications(data || [])
-      logger.log(`✅ Fetched ${data?.length || 0} notifications`)
+      const parsed = Array.isArray(data) ? data.map((n: any) => {
+        let parsedData = n.data
+        if (typeof parsedData === "string") {
+          try { parsedData = JSON.parse(parsedData) } catch {}
+        }
+        return { ...n, data: parsedData }
+      }) : []
+      setNotifications(parsed)
+      logger.log(`✅ Fetched ${parsed.length} notifications`)
     } catch (error: any) {
-      const isAuthErr = error?.status === 401 || error?.status === '401' || error?.message === "Authentication required" || JSON.stringify(error || {}).includes('401')
+      const isAuthErr = error?.status === 401 || error?.status === '401' || error?.message === "Authentication required"
       if (!isAuthErr) {
         logger.error("❌ Error fetching notifications:", error)
       }
@@ -90,7 +122,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         // Handle foreground messages
         onMessage(messaging, (payload) => {
           logger.log("🔔 FCM Foreground message received:", payload);
-          // REQUIREMENT: Work when app is OPEN. Show system notification in mobile bar.
           if (payload.notification) {
             new Notification(payload.notification.title || "New Notification", {
               body: payload.notification.body,
@@ -108,7 +139,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         if (currentToken) {
           logger.log("✅ FCM Token generated:", currentToken);
-          // Send token to the new multi-device endpoint
           await apiClient("/api/notifications/devices", {
             method: "POST",
             body: JSON.stringify({
@@ -116,8 +146,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               deviceType: 'web'
             }),
           });
-        } else {
-          logger.log("⚠️ No registration token available. Request permission to generate one.");
         }
       }
     } catch (error) {
@@ -127,7 +155,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Establish SSE connection for real-time notifications
   useEffect(() => {
-    // Wait for auth to finish (proactive token refresh) before making API calls
     if (isLoading) return
 
     if (!user) {
@@ -139,9 +166,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
 
     fetchNotifications()
-    setupFCM() // Request FCM permission
+    setupFCM()
 
-    // SSE requires token as query param since EventSource doesn't support custom headers
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
     const token = getAuthToken()
     const sseUrl = token
@@ -162,48 +188,43 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         if (data.type === "connected") {
           logger.log("✅ SSE connected:", data.message)
-        } else if (data.type === "new_message" || data.type === "status_change") {
-          // Forward messaging events to MessagingContext handler
-          if (messagingHandlerRef.current) {
-            messagingHandlerRef.current({ type: data.type, data: data.data })
-          }
-        } else if (data.type === "typing_indicator" || data.type === "receipt_update") {
-          // Forward Phase 2 messaging events
+        } else if (data.type === "new_message" || data.type === "status_change" || data.type === "typing_indicator" || data.type === "receipt_update") {
           if (messagingHandlerRef.current) {
             messagingHandlerRef.current({ type: data.type, data: data.data })
           }
         } else if (data.type === "notification") {
-          const notification = data.data
+          let notification = data.data
+          if (notification && typeof notification.data === "string") {
+            try { notification.data = JSON.parse(notification.data) } catch {}
+          }
           logger.log("🔔 New notification received:", notification)
 
+          // 1. Update Notification Center state
           setNotifications((prev) => [notification, ...prev])
 
-          // 1. Play notification sound
-          const audio = new Audio("/notification.mp3")
-          audio.play().catch((e) => logger.log("🔇 Audio play blocked by browser", e))
+          // 2. Add Live Slide-In Toast Popup
+          setLiveToasts((prev) => [
+            {
+              id: String(notification.id || Date.now()),
+              title: notification.title || "Notification",
+              message: notification.message || "",
+              type: notification.type || "system",
+              created_at: notification.created_at || new Date().toISOString(),
+              data: notification.data || {},
+              read: false,
+            },
+            ...prev.slice(0, 5), // Keep max 5
+          ])
 
-          // 2. Show toast notification
-          const isChatMessage = notification.type === "chat_message"
+          // 3. Play Crisp Web Audio Chime Sound (if not muted)
+          if (!isMuted) {
+            playEnterpriseChime()
+          }
+
+          // 4. Toast Fallback
           toast(notification.title, {
             description: notification.message,
-            duration: isChatMessage ? 8000 : 5000,
-            action: {
-              label: "View",
-              onClick: () => {
-                // Determine redirect path based on notification type/data
-                let redirectPath = "/notifications"
-                if (user.role === "owner") {
-                  if (notification.type === "job") redirectPath = "/owner/jobs"
-                  else if (notification.type === "material_request") redirectPath = "/owner/materials"
-                } else {
-                  if (notification.type === "job") redirectPath = "/employee/jobs"
-                  else if (notification.type === "chat_message") redirectPath = "/employee/jobs"
-                  else if (notification.type === "message") redirectPath = "/employee/messages"
-                }
-                router.push(redirectPath)
-                markAsRead(notification.id)
-              },
-            },
+            duration: 6000,
           })
         }
       } catch (error) {
@@ -215,7 +236,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setIsConnected(false)
       eventSource.close()
       
-      // Auto-reconnect after 3 seconds with fresh token
       if (user) {
         setTimeout(() => {
           setReconnectTrigger(prev => prev + 1)
@@ -225,7 +245,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     setSSEConnection(eventSource)
 
-    // FIX 5: NOTIFICATION SYNC (Fallback polling every 60s)
     const pollInterval = setInterval(() => {
       if (user) fetchNotifications()
     }, 60000)
@@ -236,10 +255,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setIsConnected(false)
       logger.log("📡 SSE connection closed")
     }
-  }, [user?.id, isLoading, fetchNotifications, router, reconnectTrigger])
+  }, [user?.id, isLoading, fetchNotifications, setupFCM, reconnectTrigger, isMuted])
 
   const addNotification = (notificationData: Omit<Notification, "id" | "created_at" | "read">) => {
-    // This is for local notifications only (not used in production)
     const newNotification: Notification = {
       ...notificationData,
       id: Date.now().toString(),
@@ -291,11 +309,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         getUnreadCount,
         refreshNotifications: fetchNotifications,
         isConnected,
+        isMuted,
+        toggleMute,
         registerMessagingHandler,
         unregisterMessagingHandler,
       }}
     >
       {children}
+      <LiveNotificationToastContainer
+        toasts={liveToasts}
+        onDismiss={handleDismissLiveToast}
+        onMarkRead={markAsRead}
+        isMuted={isMuted}
+        onToggleMute={toggleMute}
+      />
     </NotificationContext.Provider>
   )
 }
