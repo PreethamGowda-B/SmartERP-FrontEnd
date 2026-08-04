@@ -17,6 +17,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonList } from "@/components/ui/skeleton-card"
 import { ExecutiveJobCard } from "@/components/executive-job-card"
 
+import { ProofOfWorkModal } from "@/components/proof-of-work-modal"
+
 function formatLastUpdated(date: Date | null) {
   if (!date) return "Never"
   return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
@@ -32,6 +34,19 @@ export default function EmployeeJobsPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
   const isRefreshingRef = useRef(false)
+
+  // Proof of work modal state
+  const [proofJobId, setProofJobId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const handleOpenProof = (e: any) => {
+      if (e.detail?.jobId) {
+        setProofJobId(String(e.detail.jobId))
+      }
+    }
+    window.addEventListener("openProofOfWorkModal", handleOpenProof)
+    return () => window.removeEventListener("openProofOfWorkModal", handleOpenProof)
+  }, [])
 
   // 1. Deduplicate allJobs by job.id
   const rawScoped = currentUser?.role === "employee"
@@ -222,6 +237,15 @@ export default function EmployeeJobsPage() {
           </div>
         )}
       </div>
+
+      {proofJobId && (
+        <ProofOfWorkModal
+          jobId={proofJobId}
+          isOpen={Boolean(proofJobId)}
+          onClose={() => setProofJobId(null)}
+          onSuccess={handleRefresh}
+        />
+      )}
     </EmployeeLayout>
   )
 }

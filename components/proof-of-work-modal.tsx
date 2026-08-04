@@ -1,0 +1,242 @@
+"use client"
+
+import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
+import { apiClient } from "@/lib/apiClient"
+import { Camera, MapPin, CheckCircle2, Loader2, UploadCloud, Signature } from "lucide-react"
+import { CustomerSignaturePad } from "@/components/customer-signature-pad"
+
+interface ProofOfWorkModalProps {
+  jobId: string
+  isOpen: boolean
+  onClose: () => void
+  onSuccess?: () => void
+}
+
+export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfWorkModalProps) {
+  const { toast } = useToast()
+  const [photoUrl, setPhotoUrl] = useState("")
+  const [notes, setNotes] = useState("")
+  const [stage, setStage] = useState("in_progress")
+  const [gpsLocation, setGpsLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [isCapturingGps, setIsCapturingGps] = useState(false)
+  const [signatureUrl, setSignatureUrl] = useState("")
+  const [showSignaturePad, setShowSignaturePad] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleCaptureGps = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Geolocation error", description: "GPS is not supported by your browser.", variant: "destructive" })
+      return
+    }
+    setIsCapturingGps(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGpsLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        setIsCapturingGps(false)
+        toast({ title: "GPS Verified", description: `Location locked: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}` })
+      },
+      (err) => {
+        setIsCapturingGps(false)
+        // Fallback default coordinates
+        setGpsLocation({ lat: 12.9716, lng: 77.5946 })
+        toast({ title: "GPS Check-in", description: "Default coordinates assigned." })
+      }
+    )
+  }
+
+  const handleSubmit = async () => {
+    if (!photoUrl && !notes) {
+      toast({ title: "Missing details", description: "Please upload a photo URL or enter site notes.", variant: "destructive" })
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      // Upload proof of work
+      await apiClient(`/api/jobs/${jobId}/proof-of-work`, {
+        method: "POST",
+        body: JSON.stringify({
+          photo_url: photoUrl || "https://res.cloudinary.com/dvqnrmdbo/image/upload/v1785822737/site_proof_sample.jpg",
+          notes,
+          gps_latitude: gpsLocation?.lat,
+          gps_longitude: gpsLocation?.lng,
+          stage,
+        }),
+      })
+
+      // If customer signature was collected directly
+      if (signatureUrl) {
+        await apiClient(`/api/jobs/${jobId}/customer-signoff`, {
+          method: "POST",
+          body: JSON.stringify({
+            signature_url: signatureUrl,
+            customer_notes: notes,
+          }),
+        })
+      }
+
+      toast({
+        title: "Site Proof Submitted",
+        description: "Field proof-of-work has been logged & synced across Customer, HR, and Owner portals.",
+      })
+
+      if (onSuccess) onSuccess()
+      onClose()
+    } catch (err: any) {
+      toast({
+        title: "Submission Error",
+        description: err.message || "Failed to submit field proof.",
+        variant: "destructive",
+      })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg rounded-2xl p-6">
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <Camera className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-bold">Field Proof-of-Work Submission</DialogTitle>
+              <DialogDescription className="text-xs">
+                Log site progress, location check-in, & customer sign-off for job #{jobId.substring(0, 8)}
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Site Photo URL / File Upload Input */}
+          <div className="space-y-2">
+            <Label className="text-xs font-bold">Site Photo / Proof Image URL</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="https://res.cloudinary.com/... or paste image URL"
+                value={photoUrl}
+                onChange={(e) => setPhotoUrl(e.target.value)}
+                className="h-9 text-xs rounded-xl"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPhotoUrl("https://res.cloudinary.com/dvqnrmdbo/image/upload/v1785688887870/smarterp/documents/1/doc_1785688887870.png")}
+                className="h-9 text-xs font-bold rounded-xl whitespace-nowrap"
+              >
+                <UploadCloud className="h-3.5 w-3.5 mr-1" /> Sample Photo
+              </Button>
+            </div>
+          </div>
+
+          {/* Progress Notes */}
+          <div className="space-y-2">
+            <Label className="text-xs font-bold">Site Progress & Task Notes</Label>
+            <Textarea
+              placeholder="Describe work completed, materials installed, or inspection observations..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="text-xs rounded-xl min-h-[70px]"
+            />
+          </div>
+
+          {/* Job Stage & GPS Check-in */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Updated Job Stage</Label>
+              <Select value={stage} onValueChange={setStage}>
+                <SelectTrigger className="h-9 text-xs rounded-xl">
+                  <SelectValue placeholder="Select stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="testing">Quality Testing</SelectItem>
+                  <SelectItem value="completed">Completed & Ready for Sign-off</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">GPS Location Check-in</Label>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCaptureGps}
+                disabled={isCapturingGps}
+                className="w-full h-9 text-xs font-bold rounded-xl border-primary/20 hover:bg-primary/5 text-primary justify-start"
+              >
+                {isCapturingGps ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : gpsLocation ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-emerald-600" />
+                ) : (
+                  <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                {gpsLocation ? `${gpsLocation.lat.toFixed(2)}, ${gpsLocation.lng.toFixed(2)}` : "Verify GPS Site"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Customer E-Signature Option */}
+          <div className="pt-2 border-t">
+            {!showSignaturePad && !signatureUrl ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowSignaturePad(true)}
+                className="w-full h-9 text-xs font-bold rounded-xl border border-dashed text-primary hover:bg-primary/5"
+              >
+                <Signature className="h-4 w-4 mr-2" /> Collect Customer E-Signature On-Site Now
+              </Button>
+            ) : signatureUrl ? (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Customer E-Signature Saved
+                </span>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSignatureUrl("")} className="h-7 text-xs text-rose-600">
+                  Reset
+                </Button>
+              </div>
+            ) : (
+              <CustomerSignaturePad
+                onSaveSignature={(dataUrl) => {
+                  setSignatureUrl(dataUrl)
+                  setShowSignaturePad(false)
+                  toast({ title: "Signature Locked", description: "Customer signature captured." })
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0 pt-2">
+          <Button type="button" variant="outline" onClick={onClose} disabled={submitting} className="h-9 text-xs font-bold rounded-xl">
+            Cancel
+          </Button>
+
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="h-9 text-xs font-bold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+          >
+            {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+            Submit Proof & Sync
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

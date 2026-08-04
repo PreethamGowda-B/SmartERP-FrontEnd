@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Button } from "@/components/ui/button"
-import { Eye, FileText, Zap, Edit, Trash2, CheckCircle2, UserCheck, ShieldAlert } from "lucide-react"
+import { Eye, FileText, Zap, Edit, Trash2, CheckCircle2, UserCheck, ShieldAlert, Camera } from "lucide-react"
 
 interface JobCardActionToolbarProps {
   job: any
@@ -132,6 +132,22 @@ export function JobCardActionToolbar({
       {/* ── ROLE: EMPLOYEE FIELD WORKSPACE ACTIONS (ONLY ACCEPTED TECHNICIAN) ── */}
       {role === "employee" && (
         <>
+          {status !== "completed" && status !== "cancelled" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs border-emerald-300 text-emerald-800 bg-emerald-50/80 hover:bg-emerald-100 font-bold dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 active:scale-95 transition-transform rounded-xl shadow-xs"
+              onClick={(e) => {
+                e.stopPropagation()
+                const evt = new CustomEvent("openProofOfWorkModal", { detail: { jobId: job.id } })
+                window.dispatchEvent(evt)
+              }}
+            >
+              <Camera className="h-3.5 w-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
+              Submit Site Proof & Sign-Off
+            </Button>
+          )}
+
           {isAcceptedByCurrentUser && status !== "completed" && status !== "cancelled" && (
             <Button
               variant="outline"
