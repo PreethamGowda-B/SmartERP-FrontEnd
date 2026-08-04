@@ -26,20 +26,25 @@ export default function HRRequestsPage() {
     }
   }
 
+  const [processingId, setProcessingId] = useState<number | null>(null)
+
   useEffect(() => {
     fetchRequests()
   }, [])
 
   const handleReview = async (id: number, status: "approved" | "rejected") => {
     try {
+      setProcessingId(id)
       await apiClient(`/api/hr/requests/${id}/review`, {
         method: "PATCH",
         body: JSON.stringify({ status, hr_comments: `Reviewed & updated by HR` })
       })
-      toast({ title: `Request ${status.toUpperCase()}`, description: `Employee request updated successfully.` })
+      toast({ title: "✅ Application Updated", description: `Request #${id} marked as ${status} successfully.` })
       fetchRequests()
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Failed to update request", variant: "destructive" })
+      toast({ title: "❌ Review Failed", description: err.message || "Failed to update request", variant: "destructive" })
+    } finally {
+      setProcessingId(null)
     }
   }
 
@@ -101,18 +106,22 @@ export default function HRRequestsPage() {
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={processingId === r.id}
                               className="h-7 text-xs font-bold rounded-lg border-emerald-300 text-emerald-700 bg-emerald-50"
                               onClick={() => handleReview(r.id, "approved")}
                             >
-                              Approve
+                              {processingId === r.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                              {processingId === r.id ? "Approving..." : "Approve"}
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={processingId === r.id}
                               className="h-7 text-xs font-bold rounded-lg border-rose-300 text-rose-700 bg-rose-50"
                               onClick={() => handleReview(r.id, "rejected")}
                             >
-                              Reject
+                              {processingId === r.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                              {processingId === r.id ? "Rejecting..." : "Reject"}
                             </Button>
                           </div>
                         )}

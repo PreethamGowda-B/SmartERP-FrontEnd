@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -284,7 +284,7 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
             className="h-9 text-xs font-bold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
           >
             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-            Submit Proof & Sync
+            {submitting ? "Submitting Proof..." : "Submit Proof & Sync"}
           </Button>
         </DialogFooter>
       </DialogContent>
