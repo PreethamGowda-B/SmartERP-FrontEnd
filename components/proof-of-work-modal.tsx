@@ -33,18 +33,46 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const compressImage = (dataUrl: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        let width = img.width
+        let height = img.height
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width)
+          width = maxWidth
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        const ctx = canvas.getContext("2d")
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height)
+          const compressed = canvas.toDataURL("image/jpeg", quality)
+          resolve(compressed)
+        } else {
+          resolve(dataUrl)
+        }
+      }
+      img.onerror = () => resolve(dataUrl)
+      img.src = dataUrl
+    })
+  }
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0]
-      if (selectedFile.size > 12 * 1024 * 1024) {
-        toast({ title: "File too large", description: "Image size must be under 12MB.", variant: "destructive" })
-        return
-      }
       const reader = new FileReader()
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         if (event.target?.result) {
-          setPhotoUrl(event.target.result as string)
-          toast({ title: "Photo captured", description: "Site photo loaded successfully." })
+          const rawData = event.target.result as string
+          const compressed = await compressImage(rawData, 1200, 0.7)
+          setPhotoUrl(compressed)
+          toast({ title: "Photo attached", description: "Site progress photo compressed & ready." })
         }
       }
       reader.readAsDataURL(selectedFile)
