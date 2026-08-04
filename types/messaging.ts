@@ -25,6 +25,8 @@ export interface MessageAttachment {
   file_name: string
   file_type: string    // MIME type
   file_size: number    // bytes
+  media_url?: string
+  media_type?: string
 }
 
 // Message — a single chat message

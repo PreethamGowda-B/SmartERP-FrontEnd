@@ -100,11 +100,16 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
       const data = await response.json()
 
       const isImage = file.type.startsWith("image/")
+      const url = data.url || data.media_url || data.file_url || ""
+      const type = isImage ? "image" : "document"
+
       setPendingAttachment({
-        media_url: data.url || data.media_url,
-        media_type: isImage ? "image" : "document",
+        file_url: url,
+        file_type: file.type || type,
         file_name: file.name,
         file_size: file.size,
+        media_url: url,
+        media_type: type,
       })
     } catch (err: any) {
       toast.error(err.message || "Failed to upload attachment")
@@ -134,12 +139,15 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
 
       if (!response.ok) throw new Error("Voice note upload failed")
       const data = await response.json()
+      const url = data.url || data.media_url || data.file_url || ""
       
       const attachment: MessageAttachment = {
-        media_url: data.url || data.media_url,
-        media_type: "audio",
+        file_url: url,
+        file_type: "audio/webm",
         file_name: `Voice Note (${durationSeconds}s)`,
         file_size: blob.size,
+        media_url: url,
+        media_type: "audio",
       }
       await onSend("🎤 Voice Note", attachment)
     } catch (err: any) {
@@ -156,9 +164,9 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
       {pendingAttachment && (
         <div className="flex items-center justify-between p-3 border-b bg-muted/30">
           <div className="flex items-center gap-2 min-w-0">
-            {pendingAttachment.media_type === "image" ? (
+            {(pendingAttachment.media_type === "image" || pendingAttachment.file_type?.startsWith("image")) ? (
               <img
-                src={pendingAttachment.media_url}
+                src={pendingAttachment.media_url || pendingAttachment.file_url}
                 alt="Attachment preview"
                 className="h-8 w-8 rounded object-cover shrink-0"
               />
