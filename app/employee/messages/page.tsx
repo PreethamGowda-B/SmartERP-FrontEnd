@@ -120,6 +120,8 @@ function JobMessagesTab() {
     if (sseRef.current) { sseRef.current.close(); sseRef.current = null }
     if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current)
     const token = getAuthToken()
+    if (!token) return
+
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
     const url = `${BACKEND_URL}/api/customer/jobs/${jobId}/events${token ? `?token=${token}` : ""}`
     const source = new EventSource(url, { withCredentials: true })
@@ -138,7 +140,7 @@ function JobMessagesTab() {
     }
     source.onerror = () => {
       source.close(); sseRef.current = null
-      reconnectTimeout.current = setTimeout(() => connectSSE(jobId), 3000)
+      // Do not infinitely reconnect if server drops or returns auth error
     }
   }, [])
 

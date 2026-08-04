@@ -108,9 +108,11 @@ export function useSSE({ jobId, onEvent, enabled = true }: UseSSEOptions): UseSS
       es.close();
       esRef.current = null;
 
-      const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30_000);
-      retryCountRef.current += 1;
-      reconnectTimeoutRef.current = setTimeout(connect, delay);
+      if (retryCountRef.current < 5) {
+        const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30_000);
+        retryCountRef.current += 1;
+        reconnectTimeoutRef.current = setTimeout(connect, delay);
+      }
     };
   }, [jobId, enabled, isNewEvent]);
 

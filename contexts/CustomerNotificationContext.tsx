@@ -37,8 +37,10 @@ export function CustomerNotificationProvider({ children }: { children: React.Rea
       const res = await customerApi.get<{ success: boolean; data: Notification[] }>("/api/customer/notifications")
       const data = res.data?.data ?? (res.data as any)
       setNotifications(Array.isArray(data) ? data : [])
-    } catch (error) {
-      logger.error("Error fetching customer notifications:", error)
+    } catch (error: any) {
+      if (error?.response?.status !== 401 && error?.code !== "ERR_NETWORK") {
+        logger.error("Error fetching customer notifications:", error?.message || error)
+      }
     }
   }, [])
 
