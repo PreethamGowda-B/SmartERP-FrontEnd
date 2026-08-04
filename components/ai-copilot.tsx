@@ -120,9 +120,9 @@ function AICopilotInner({ user, pathname, className }: { user: any; pathname: st
     return "Executive Dashboard"
   }
 
-  const handleSend = (textToSend?: string) => {
+  const handleSend = async (textToSend?: string) => {
     const query = textToSend || input
-    if (!query.trim()) return
+    if (!query.trim() || isTyping) return
 
     const userMsg: ChatMessage = {
       id: String(Date.now()),
@@ -135,25 +135,23 @@ function AICopilotInner({ user, pathname, className }: { user: any; pathname: st
     if (!textToSend) setInput("")
     setIsTyping(true)
 
-    setTimeout(() => {
-      let replyText = "Here is the insight based on your current organization data:"
-      const q = query.toLowerCase()
+    try {
+      const historyPayload = messages.slice(-6).map((m) => ({
+        sender: m.sender,
+        content: m.text,
+      }))
 
-      if (q.includes("inventory") || q.includes("stock")) {
-        replyText =
-          "Inventory Analysis: 3 items are currently below minimum safety stock levels (Raw Steel, Concrete Mix). Recommendation: Trigger a new supplier purchase request."
-      } else if (q.includes("payroll") || q.includes("salary")) {
-        replyText =
-          "Payroll Summary: Net disbursement for this period totals ₹4,85,000 across 24 staff members. 0 pending approvals remaining."
-      } else if (q.includes("attendance") || q.includes("clock")) {
-        replyText =
-          "Attendance Stream: 94% on-time arrival rate today. 2 staff members logged late check-ins."
-      } else if (q.includes("employee") || q.includes("staff")) {
-        replyText =
-          "Employee Roster: Total active headcount is 28 members across Operations, Engineering, and Sales."
-      } else {
-        replyText = `SmartERP Copilot analyzed context for ${getContextLabel()}: All system metrics are functioning smoothly within standard parameters.`
-      }
+      const res = await apiClient("/api/ai/agent", {
+        method: "POST",
+        body: JSON.stringify({
+          message: query,
+          history: historyPayload,
+          currentPagePath: pathname,
+          currentPortal: user.role || "owner",
+        }),
+      })
+
+      const replyText = res.text || res.message || "SmartERP Intelligence processed your query."
 
       const copilotMsg: ChatMessage = {
         id: String(Date.now() + 1),
@@ -163,8 +161,20 @@ function AICopilotInner({ user, pathname, className }: { user: any; pathname: st
       }
 
       setMessages((prev) => [...prev, copilotMsg])
+    } catch (err: any) {
+      const errorText = err.message || "SmartERP Intelligence could not fetch live ERP data. Please check your network connection."
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: String(Date.now() + 1),
+          sender: "copilot",
+          text: `⚠️ ${errorText}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ])
+    } finally {
       setIsTyping(false)
-    }, 800)
+    }
   }
 
   return (

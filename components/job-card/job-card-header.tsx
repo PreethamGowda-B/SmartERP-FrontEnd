@@ -4,7 +4,7 @@ import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { MapPin, Calendar, User, MoreVertical, Building2, Clock } from "lucide-react"
+import { MapPin, Calendar, User, MoreVertical, Building2, Clock, Sparkles } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface JobCardHeaderProps {
@@ -18,6 +18,7 @@ interface JobCardHeaderProps {
   assignedCrew?: { id: string; name: string; avatar?: string }[]
   role?: "owner" | "employee"
   isCustomerJob?: boolean
+  isAiCreated?: boolean
   source?: string
   onEdit?: () => void
   onDelete?: () => void
@@ -35,12 +36,14 @@ export function JobCardHeader({
   assignedCrew = [],
   role = "owner",
   isCustomerJob = false,
+  isAiCreated = false,
   source,
   onEdit,
   onDelete,
   onView,
 }: JobCardHeaderProps) {
   const isCust = isCustomerJob || source === "customer" || source === "customer_portal"
+  const isAi = isAiCreated || source === "ai_copilot" || source === "SmartERP Intelligence"
   const getStatusBadge = (st: string) => {
     const s = (st || "open").toLowerCase()
     switch (s) {
@@ -92,6 +95,12 @@ export function JobCardHeader({
           <Badge variant="outline" className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 ${getPriorityBadge(priority)}`}>
             {priority}
           </Badge>
+          {isAi && (
+            <Badge className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800 flex items-center gap-1 shadow-xs">
+              <Sparkles className="h-3 w-3 text-indigo-500" />
+              ✨ AI Created
+            </Badge>
+          )}
           {isCust ? (
             <Badge className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-950 dark:text-sky-300 dark:border-sky-800 flex items-center gap-1 shadow-xs">
               <User className="h-3 w-3" />

@@ -85,6 +85,7 @@ export function ExecutiveJobCard({
           assignedCrew={crew}
           role={role}
           isCustomerJob={Boolean(job.is_customer_job || job.source === 'customer' || job.source === 'customer_portal' || job.created_by_role === 'customer' || job.customer_id)}
+          isAiCreated={Boolean(job.is_ai_created || job.source === 'ai_copilot' || job.created_by === 'AI Copilot')}
           source={job.source}
           onView={() => onView?.(job)}
           onEdit={() => onEdit?.(job)}
