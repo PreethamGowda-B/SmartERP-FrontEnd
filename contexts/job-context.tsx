@@ -326,7 +326,8 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         if (user.role) localStorage.setItem("smarterp-jobs-role", user.role)
       }
     } catch (err: any) {
-      if (err?.status !== 401 && err?.message !== "Authentication required") {
+      const isAuthErr = err?.status === 401 || err?.status === '401' || err?.message === "Authentication required" || JSON.stringify(err || {}).includes('401')
+      if (!isAuthErr) {
         logger.error("[v0] Failed to refresh jobs:", err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err)))
       }
     }

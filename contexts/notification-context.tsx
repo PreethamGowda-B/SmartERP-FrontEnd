@@ -62,7 +62,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setNotifications(data || [])
       logger.log(`✅ Fetched ${data?.length || 0} notifications`)
     } catch (error: any) {
-      if (error?.status !== 401 && error?.message !== "Authentication required") {
+      const isAuthErr = error?.status === 401 || error?.status === '401' || error?.message === "Authentication required" || JSON.stringify(error || {}).includes('401')
+      if (!isAuthErr) {
         logger.error("❌ Error fetching notifications:", error)
       }
     }
