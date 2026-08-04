@@ -55,18 +55,46 @@ export interface ExportOptions {
 // ── Company Branding Helper ──────────────────────────────────────────────────
 
 export function getCompanyBranding(providedName?: string): { name: string; logo_url?: string } {
-  if (providedName && providedName.trim() && !providedName.includes("Prozync Innovations") && !providedName.includes("SmartERP")) {
-    return { name: providedName }
+  const isGeneric = (str?: string) => {
+    if (!str || !str.trim()) return true
+    const s = str.trim().toLowerCase()
+    return s === "business enterprise" || s === "enterprise" || s === "prozync innovations" || s === "smarterp" || s === "company report"
+  }
+
+  // 1. If providedName is explicitly given and not a generic string
+  if (providedName && !isGeneric(providedName)) {
+    return { name: providedName.trim() }
   }
 
   if (typeof window !== "undefined") {
     try {
-      const stored = localStorage.getItem("company_info") || localStorage.getItem("smarterp-company-profile")
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        const name = parsed.legal_name || parsed.name
-        if (name && name.trim() && !name.includes("Prozync Innovations") && !name.includes("SmartERP")) {
-          return { name, logo_url: parsed.logo_url }
+      const keys = [
+        "company_info",
+        "smarterp-company-profile",
+        "smarterp_company_settings",
+        "company_name",
+        "smarterp_user",
+        "smarterp_admin_user",
+        "smarterp_user_company"
+      ]
+
+      for (const key of keys) {
+        const raw = localStorage.getItem(key)
+        if (!raw) continue
+
+        let name = ""
+        let logo_url = ""
+
+        if (raw.startsWith("{")) {
+          const parsed = JSON.parse(raw)
+          name = parsed.legal_name || parsed.company_name || parsed.companyName || parsed.name || parsed.company?.name || ""
+          logo_url = parsed.logo_url || ""
+        } else {
+          name = raw
+        }
+
+        if (name && !isGeneric(name)) {
+          return { name: name.trim(), logo_url }
         }
       }
     } catch {
@@ -74,7 +102,7 @@ export function getCompanyBranding(providedName?: string): { name: string; logo_
     }
   }
 
-  return { name: providedName || "Business Enterprise" }
+  return { name: (providedName && !isGeneric(providedName) ? providedName.trim() : "") || "OFFICIAL COMPANY REPORT" }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

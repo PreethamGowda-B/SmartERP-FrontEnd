@@ -29,6 +29,19 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
   useEffect(() => {
     if (!isLoading && (!user || !OWNER_ROLES.includes(user.role))) {
       router.push("/")
+    } else if (user && OWNER_ROLES.includes(user.role) && typeof window !== "undefined") {
+      const stored = localStorage.getItem("company_info") || localStorage.getItem("company_name")
+      if (!stored) {
+        import("@/lib/apiClient").then(({ apiClient }) => {
+          apiClient("/api/settings/company").then((c) => {
+            if (c && (c.name || c.legal_name)) {
+              localStorage.setItem("company_info", JSON.stringify(c))
+              localStorage.setItem("smarterp-company-profile", JSON.stringify(c))
+              localStorage.setItem("company_name", c.legal_name || c.name)
+            }
+          }).catch(() => {})
+        })
+      }
     }
   }, [user?.id, user?.role, isLoading, router])
 

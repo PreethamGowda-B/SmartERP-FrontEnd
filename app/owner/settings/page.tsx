@@ -103,6 +103,12 @@ export default function SettingsPage() {
 
       if (c) {
         const cid = c.company_id || ""
+        const companyName = c.legal_name || c.name || ""
+        if (companyName) {
+          localStorage.setItem("company_info", JSON.stringify(c))
+          localStorage.setItem("smarterp-company-profile", JSON.stringify(c))
+          localStorage.setItem("company_name", companyName)
+        }
         setCompany({
           name: c.name || "",
           legal_name: c.legal_name || c.name || "",
