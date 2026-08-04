@@ -15,8 +15,9 @@ export const AntigravityBackground: React.FC = () => {
 
         let width: number, height: number
         let particles: Particle[] = []
-        // Increased particle count for ultra-premium feel
-        const particleCount = 100
+        let animationFrameId: number
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+        const particleCount = isMobile ? 25 : 80
 
         class Particle {
             x: number = 0
@@ -36,47 +37,44 @@ export const AntigravityBackground: React.FC = () => {
             init() {
                 this.x = Math.random() * width
                 this.y = Math.random() * height
-                // Bubble-like varying sizes for depth
                 this.size = Math.random() * 2.5 + 0.5
-                this.vx = (Math.random() - 0.5) * 0.4
-                this.vy = (Math.random() - 0.5) * 0.4
-                this.density = (Math.random() * 30) + 1
+                this.vx = (Math.random() - 0.5) * 0.3
+                this.vy = (Math.random() - 0.5) * 0.3
+                this.density = (Math.random() * 20) + 1
                 this.opacity = Math.random() * 0.4 + 0.1
                 this.pulse = Math.random() * 0.005 + 0.002
 
-                // Varied theme colors
                 const colors = ['#6366f1', '#818cf8', '#4f46e5', '#f59e0b']
                 this.color = colors[Math.floor(Math.random() * colors.length)]
             }
 
             update() {
-                // Autonomous floating
                 this.x += this.vx
                 this.y += this.vy
 
-                // Mouse interaction physics (Sophisticated Repulsion)
-                const dx = mouseRef.current.x - this.x
-                const dy = mouseRef.current.y - this.y
-                const distance = Math.sqrt(dx * dx + dy * dy)
-                const maxDistance = 180
+                // Mouse interaction physics (desktop only to save mobile main thread)
+                if (!isMobile) {
+                    const dx = mouseRef.current.x - this.x
+                    const dy = mouseRef.current.y - this.y
+                    const distance = Math.sqrt(dx * dx + dy * dy)
+                    const maxDistance = 150
 
-                if (distance < maxDistance) {
-                    const forceDirectionX = dx / distance
-                    const forceDirectionY = dy / distance
-                    const force = (maxDistance - distance) / maxDistance
-                    const movement = force * this.density * 0.5
+                    if (distance < maxDistance) {
+                        const forceDirectionX = dx / distance
+                        const forceDirectionY = dy / distance
+                        const force = (maxDistance - distance) / maxDistance
+                        const movement = force * this.density * 0.4
 
-                    this.x -= forceDirectionX * movement
-                    this.y -= forceDirectionY * movement
+                        this.x -= forceDirectionX * movement
+                        this.y -= forceDirectionY * movement
+                    }
                 }
 
-                // Smooth wrap-around
                 if (this.x < 0) this.x = width
                 if (this.x > width) this.x = 0
                 if (this.y < 0) this.y = height
                 if (this.y > height) this.y = 0
 
-                // Subtle breathing effect
                 this.opacity += this.pulse
                 if (this.opacity > 0.6 || this.opacity < 0.1) this.pulse *= -1
             }
@@ -89,11 +87,13 @@ export const AntigravityBackground: React.FC = () => {
                 ctx.globalAlpha = this.opacity
                 ctx.fill()
 
-                // Add minor glow back to premium bubbles
-                ctx.shadowBlur = 4
-                ctx.shadowColor = this.color
-                ctx.globalAlpha = 1
-                ctx.shadowBlur = 0
+                // Skip expensive canvas shadowBlur on mobile devices
+                if (!isMobile) {
+                    ctx.shadowBlur = 3
+                    ctx.shadowColor = this.color
+                    ctx.globalAlpha = 1
+                    ctx.shadowBlur = 0
+                }
             }
         }
 
@@ -115,20 +115,22 @@ export const AntigravityBackground: React.FC = () => {
         const animate = () => {
             ctx.clearRect(0, 0, width, height)
 
-            // Draw cinematic network connections (faint)
-            for (let i = 0; i < particles.length; i++) {
-                for (let j = i + 1; j < particles.length; j++) {
-                    const dx = particles[i].x - particles[j].x
-                    const dy = particles[i].y - particles[j].y
-                    const distance = Math.sqrt(dx * dx + dy * dy)
+            // Draw network connections only on desktop to save mobile GPU/CPU
+            if (!isMobile) {
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x
+                        const dy = particles[i].y - particles[j].y
+                        const distance = Math.sqrt(dx * dx + dy * dy)
 
-                    if (distance < 130) {
-                        ctx.beginPath()
-                        ctx.strokeStyle = `rgba(99, 102, 241, ${0.1 * (1 - distance / 130)})`
-                        ctx.lineWidth = 0.5
-                        ctx.moveTo(particles[i].x, particles[i].y)
-                        ctx.lineTo(particles[j].x, particles[j].y)
-                        ctx.stroke()
+                        if (distance < 120) {
+                            ctx.beginPath()
+                            ctx.strokeStyle = `rgba(99, 102, 241, ${0.08 * (1 - distance / 120)})`
+                            ctx.lineWidth = 0.5
+                            ctx.moveTo(particles[i].x, particles[i].y)
+                            ctx.lineTo(particles[j].x, particles[j].y)
+                            ctx.stroke()
+                        }
                     }
                 }
             }
@@ -138,32 +140,27 @@ export const AntigravityBackground: React.FC = () => {
                 p.draw()
             })
 
-            requestAnimationFrame(animate)
+            animationFrameId = requestAnimationFrame(animate)
         }
 
         const handleMouseMove = (e: MouseEvent) => {
+            if (isMobile) return
             mouseRef.current.x = e.clientX
             mouseRef.current.y = e.clientY
         }
 
-        const handleTouchMove = (e: TouchEvent) => {
-            if (e.touches.length > 0) {
-                mouseRef.current.x = e.touches[0].clientX
-                mouseRef.current.y = e.touches[0].clientY
-            }
-        }
-
         window.addEventListener('resize', resize)
-        window.addEventListener('mousemove', handleMouseMove)
-        window.addEventListener('touchmove', handleTouchMove)
+        if (!isMobile) {
+            window.addEventListener('mousemove', handleMouseMove)
+        }
 
         resize()
         animate()
 
         return () => {
+            cancelAnimationFrame(animationFrameId)
             window.removeEventListener('resize', resize)
             window.removeEventListener('mousemove', handleMouseMove)
-            window.removeEventListener('touchmove', handleTouchMove)
         }
     }, [])
 
@@ -171,16 +168,16 @@ export const AntigravityBackground: React.FC = () => {
         <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-background">
             <canvas
                 ref={canvasRef}
-                className="absolute inset-0 w-full h-full opacity-60"
+                className="absolute inset-0 w-full h-full opacity-50"
             />
 
-            {/* Aurora Layers: These create the ₹1L+ depth feel */}
-            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 dark:bg-primary/20 rounded-full blur-[140px] animate-aurora dark:mix-blend-screen" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-accent/10 dark:bg-accent/20 rounded-full blur-[160px] animate-aurora dark:mix-blend-screen" style={{ animationDelay: '-10s' }} />
-            <div className="absolute top-[30%] left-[20%] w-[30%] h-[30%] bg-secondary/10 dark:bg-secondary/20 rounded-full blur-[120px] animate-aurora dark:mix-blend-screen" style={{ animationDelay: '-5s' }} />
+            {/* Aurora Layers: Lightweight on mobile, full depth on desktop */}
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 dark:bg-primary/15 rounded-full blur-[60px] md:blur-[140px] animate-aurora" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-accent/10 dark:bg-accent/15 rounded-full blur-[70px] md:blur-[160px] animate-aurora" style={{ animationDelay: '-10s' }} />
+            <div className="hidden md:block absolute top-[30%] left-[20%] w-[30%] h-[30%] bg-secondary/10 dark:bg-secondary/20 rounded-full blur-[120px] animate-aurora" style={{ animationDelay: '-5s' }} />
 
-            {/* Subtle Grid Texture for that professional SaaS look */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+            {/* Grid Texture */}
+            <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
                 style={{
                     backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
                     backgroundSize: '100px 100px'
@@ -188,4 +185,5 @@ export const AntigravityBackground: React.FC = () => {
             />
         </div>
     )
+
 }

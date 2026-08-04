@@ -50,11 +50,11 @@ export function LandingPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCounters((prev) => ({
-        users: prev.users < 5000 ? prev.users + 100 : 5000,
-        jobs: prev.jobs < 50000 ? prev.jobs + 1000 : 50000,
-        teams: prev.teams < 1200 ? prev.teams + 25 : 1200,
+        users: prev.users < 5000 ? prev.users + 200 : 5000,
+        jobs: prev.jobs < 50000 ? prev.jobs + 2000 : 50000,
+        teams: prev.teams < 1200 ? prev.teams + 50 : 1200,
       }))
-    }, 50)
+    }, 200)
     return () => clearInterval(interval)
   }, [])
 

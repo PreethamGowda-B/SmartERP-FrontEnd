@@ -152,12 +152,12 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    if (!isLoading) {
+    if (!isLoading && user) {
       if (!hasSyncedRef.current) {
         loadJobs()
         hasSyncedRef.current = true
       }
-      // Poll every 30 seconds — 1500ms was hammering the backend with ~40 calls/min
+      // Poll every 30 seconds for authenticated user
       intervalId = setInterval(loadJobs, 30000)
     }
 
@@ -165,7 +165,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       mounted = false
       if (intervalId) clearInterval(intervalId)
     }
-  }, [user?.id, user?.role, isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role, isLoading])
 
   const { addNotification } = useNotifications()
 

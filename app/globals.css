@@ -431,20 +431,13 @@
 /* --- Entrance Reveal --- */
 .entrance-content {
   opacity: 0;
-  transform: scale(0.98) translateY(20px);
-  /* NOTE: pointer-events intentionally NOT set here.
-   * The flagship-loader (z-index: 9999) covers the page visually during intro.
-   * In light theme the loader background is white-on-white, so users see a
-   * loaded page and click immediately — pointer-events: none was silently
-   * swallowing every click for ~2.7s. The loader z-index handles blocking. */
-  transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.5s ease;
-  filter: blur(10px);
+  transform: scale(0.99) translateY(10px);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease;
 }
 
 .entrance-content.visible {
   opacity: 1;
   transform: scale(1) translateY(0);
-  filter: blur(0px);
 }
 
 /* Cinematic Grain */
@@ -455,6 +448,26 @@
   opacity: 0.04;
   pointer-events: none;
   z-index: 9998;
+}
+
+@media (max-width: 768px) {
+  .cinema-grain {
+    display: none !important;
+  }
+}
+
+/* Enterprise Mobile Touch & Table Responsiveness Utilities */
+@media (max-width: 640px) {
+  .responsive-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .mobile-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100vw;
+  }
 }
 
 /* Leaflet Map Styles */

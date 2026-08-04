@@ -155,13 +155,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Establish SSE connection for real-time notifications
   useEffect(() => {
-    if (isLoading) return
-
-    if (!user) {
+    const token = getAuthToken()
+    if (!user || !token) {
       if (sseConnection) {
         sseConnection.close()
         setSSEConnection(null)
       }
+      setIsConnected(false)
       return
     }
 
@@ -169,10 +169,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setupFCM()
 
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
-    const token = getAuthToken()
-    const sseUrl = token
-      ? `${BACKEND_URL}/api/notifications/sse?token=${encodeURIComponent(token)}`
-      : `${BACKEND_URL}/api/notifications/sse`
+    const sseUrl = `${BACKEND_URL}/api/notifications/sse?token=${encodeURIComponent(token)}`
     const eventSource = new EventSource(sseUrl, {
       withCredentials: true,
     })
