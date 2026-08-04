@@ -36,11 +36,15 @@ export interface Message {
   sender_id: string
   sender_name: string
   content: string
-  message_type: 'text' | 'image' | 'document'
+  message_type: 'text' | 'image' | 'document' | 'audio' | 'erp_card'
   created_at: string // ISO UTC
   is_mine: boolean
   receipt?: 'sent' | 'delivered' | 'read'   // only on own messages
-  attachment?: MessageAttachment              // Phase 2
+  attachment?: MessageAttachment
+  // ERP Card fields
+  erp_record_type?: 'job' | 'invoice' | 'leave' | 'payslip' | 'asset' | string
+  erp_record_id?: string
+  duration?: number  // voice note seconds
 }
 
 // MessagingState — the state shape for MessagingContext
@@ -82,9 +86,11 @@ export interface NewMessageEvent {
   sender_id: string
   sender_name: string
   content: string
-  message_type: 'text' | 'image' | 'document'
+  message_type: 'text' | 'image' | 'document' | 'audio' | 'erp_card'
   created_at: string
   attachment?: MessageAttachment
+  erp_record_type?: string
+  erp_record_id?: string
 }
 
 export interface StatusChangeEvent {

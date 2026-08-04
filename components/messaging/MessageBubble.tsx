@@ -1,8 +1,9 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { Check, CheckCheck } from "lucide-react"
+import { Check, CheckCheck, Play } from "lucide-react"
 import { AttachmentPreview } from "./AttachmentPreview"
+import { ErpChatCard } from "@/components/erp-chat-card"
 import type { Message } from "@/types/messaging"
 
 interface MessageBubbleProps {
@@ -24,11 +25,9 @@ function formatRelativeTime(iso: string): string {
 
 function ReceiptIcon({ status }: { status: Message["receipt"] }) {
   if (!status || status === "sent") {
-    // Single gray tick
     return <Check className="h-3 w-3 text-primary-foreground/50" aria-label="Sent" />
   }
   if (status === "delivered") {
-    // Double gray tick
     return <CheckCheck className="h-3 w-3 text-primary-foreground/50" aria-label="Delivered" />
   }
   // read — double blue tick
@@ -37,7 +36,62 @@ function ReceiptIcon({ status }: { status: Message["receipt"] }) {
 
 export function MessageBubble({ message, isOwn }: MessageBubbleProps) {
   const isTemp = String(message.id).startsWith("temp_")
+  const isErpCard = message.message_type === "erp_card"
+  const isAudio = message.message_type === "audio" || message.attachment?.media_type === "audio"
+  const isImage = message.message_type === "image" || message.attachment?.file_type?.startsWith("image/")
   const hasTextContent = message.content && message.content.trim().length > 0
+
+  // ERP Card — rendered outside the bubble, full-width-ish
+  if (isErpCard) {
+    return (
+      <div className={cn("flex w-full mb-1", isOwn ? "justify-end" : "justify-start")}>
+        <div className={cn("max-w-[85%] flex flex-col", isOwn ? "items-end" : "items-start", isTemp && "opacity-60")}>
+          {!isOwn && (
+            <span className="text-xs font-semibold text-muted-foreground mb-0.5 px-1">
+              {message.sender_name}
+            </span>
+          )}
+          <ErpChatCard
+            recordType={message.erp_record_type}
+            recordId={message.erp_record_id}
+            content={message.content}
+          />
+          {!isTemp && (
+            <div className={cn("flex items-center gap-1 mt-0.5 px-1", isOwn ? "flex-row-reverse" : "flex-row")}>
+              <span className="text-[10px] text-muted-foreground">{formatRelativeTime(message.created_at)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Voice Note — inline audio player
+  if (isAudio) {
+    const audioSrc = message.attachment?.media_url || message.attachment?.file_url || ""
+    return (
+      <div className={cn("flex w-full mb-1", isOwn ? "justify-end" : "justify-start")}>
+        <div className={cn("max-w-[70%] flex flex-col", isOwn ? "items-end" : "items-start", isTemp && "opacity-60")}>
+          {!isOwn && (
+            <span className="text-xs font-semibold text-muted-foreground mb-0.5 px-1">{message.sender_name}</span>
+          )}
+          <div className={cn(
+            "px-3 py-2 rounded-2xl flex items-center gap-2",
+            isOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm"
+          )}>
+            <Play className="h-4 w-4 shrink-0" />
+            <audio src={audioSrc} controls className="h-8 max-w-[160px]" style={{ accentColor: isOwn ? "white" : undefined }} />
+          </div>
+          {!isTemp && (
+            <div className={cn("flex items-center gap-1 mt-0.5 px-1", isOwn ? "flex-row-reverse" : "flex-row")}>
+              <span className="text-[10px] text-muted-foreground">{formatRelativeTime(message.created_at)}</span>
+              {isOwn && <ReceiptIcon status={message.receipt} />}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={cn("flex w-full mb-1", isOwn ? "justify-end" : "justify-start")}>
@@ -58,7 +112,7 @@ export function MessageBubble({ message, isOwn }: MessageBubbleProps) {
               : "bg-muted rounded-bl-sm",
             isTemp && "opacity-60",
             // Remove horizontal padding if only an image attachment and no text
-            !hasTextContent && message.attachment?.file_type.startsWith("image/") && "p-1"
+            !hasTextContent && isImage && "p-1"
           )}
         >
           {/* Attachment (rendered above text if both present) */}

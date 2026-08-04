@@ -79,11 +79,13 @@ function reducer(state: MessagingState, action: Action): MessagingState {
         messages: state.messages.filter(m => String(m.id) !== String(action.payload))
       }
     case 'RECEIVE_MESSAGE': {
-      const { conversation_id, message_id, sender_id, sender_name, content, message_type, created_at, attachment } = action.payload
+      const { conversation_id, message_id, sender_id, sender_name, content, message_type, created_at, attachment, erp_record_type, erp_record_id } = action.payload
       const newMsg: Message = {
         id: String(message_id), conversation_id, sender_id, sender_name,
         content, message_type, created_at, is_mine: false,
-        ...(attachment ? { attachment } : {})
+        ...(attachment ? { attachment } : {}),
+        ...(erp_record_type ? { erp_record_type } : {}),
+        ...(erp_record_id ? { erp_record_id } : {}),
       }
       const updatedConvs = state.conversations.map(c =>
         c.conversation_id === conversation_id
