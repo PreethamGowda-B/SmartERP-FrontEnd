@@ -276,11 +276,11 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
   if (currentToken) {
     headers["Authorization"] = `Bearer ${currentToken}`
   } else {
-    // REQUIREMENT 1.2: If no token, do not send request to protected endpoints
-    // (We allow public paths like auth/login)
-    if (!path.includes('/auth/') && !path.includes('/public/')) {
-       console.warn(`[apiClient] Blocking request to ${path} - no token available`)
-       // return Promise.reject({ status: 401, message: "Authentication required" })
+    // If no token, do not send unauthenticated request to protected endpoints
+    const isPublicPath = path.includes('/auth/') || path.includes('/public/') || path.includes('/customer/login') || path.includes('/health')
+    if (!isPublicPath) {
+      logger.warn(`[apiClient] Blocking request to ${path} - no auth token available`)
+      return Promise.reject({ status: 401, message: "Authentication required" })
     }
   }
 

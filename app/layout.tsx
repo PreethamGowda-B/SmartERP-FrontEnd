@@ -25,6 +25,7 @@ import { BackgroundSubscriptionPoller } from "@/components/background-subscripti
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal"
 import { OnboardingTourModal } from "@/components/onboarding-tour-modal"
 import { ServerPrewarmer } from "@/components/server-prewarmer"
+import { DomRangeErrorSuppressor } from "@/components/dom-range-error-suppressor"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import "./globals.css"
 
@@ -162,6 +163,7 @@ export default function RootLayout({
                         <ServerPrewarmer />
                         <KeyboardShortcutsModal />
                         <OnboardingTourModal />
+                        <DomRangeErrorSuppressor />
                       </CommandRegistryProvider>
                     </NotificationProvider>
                   </LimitProvider>

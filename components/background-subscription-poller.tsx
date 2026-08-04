@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { apiClient } from "@/lib/apiClient"
+import { apiClient, getAccessToken } from "@/lib/apiClient"
 import { useToast } from "@/hooks/use-toast"
 import { logger } from "@/lib/logger"
 
@@ -18,6 +18,8 @@ export function BackgroundSubscriptionPoller() {
     logger.log("[PAYMENT POLLER] Background activation poller active for pending transaction...")
 
     const checkActivation = async () => {
+      if (!getAccessToken()) return
+
       try {
         const res = await apiClient("/api/subscription/status")
         const isPaidPlan = res.plan && res.plan.id > 1 && !res.plan.is_trial

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Zap, Clock, ArrowRight, ShieldCheck, Users, Box, AlertCircle, Sparkles, AlertTriangle } from "lucide-react"
 import Link from "next/link"
-import { apiClient } from "@/lib/apiClient"
+import { apiClient, getAccessToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 
 type SubscriptionStatusData = {
@@ -31,6 +31,10 @@ export function SubscriptionStatus() {
 
   useEffect(() => {
     async function fetchStatus() {
+      if (!getAccessToken()) {
+        setLoading(false)
+        return
+      }
       try {
         const res = await apiClient("/api/subscription/status")
         setData(res)
