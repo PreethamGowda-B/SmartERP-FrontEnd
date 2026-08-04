@@ -31,6 +31,26 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
   const [showSignaturePad, setShowSignaturePad] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0]
+      if (selectedFile.size > 12 * 1024 * 1024) {
+        toast({ title: "File too large", description: "Image size must be under 12MB.", variant: "destructive" })
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setPhotoUrl(event.target.result as string)
+          toast({ title: "Photo captured", description: "Site photo loaded successfully." })
+        }
+      }
+      reader.readAsDataURL(selectedFile)
+    }
+  }
+
   const handleCaptureGps = () => {
     if (!navigator.geolocation) {
       toast({ title: "Geolocation error", description: "GPS is not supported by your browser.", variant: "destructive" })
@@ -54,7 +74,7 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
 
   const handleSubmit = async () => {
     if (!photoUrl && !notes) {
-      toast({ title: "Missing details", description: "Please upload a photo URL or enter site notes.", variant: "destructive" })
+      toast({ title: "Missing details", description: "Please take/upload a photo or enter site notes.", variant: "destructive" })
       return
     }
 
@@ -64,7 +84,7 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
       await apiClient(`/api/jobs/${jobId}/proof-of-work`, {
         method: "POST",
         body: JSON.stringify({
-          photo_url: photoUrl || "https://res.cloudinary.com/dvqnrmdbo/image/upload/v1785822737/site_proof_sample.jpg",
+          photo_url: photoUrl,
           notes,
           gps_latitude: gpsLocation?.lat,
           gps_longitude: gpsLocation?.lng,
@@ -119,26 +139,57 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Site Photo URL / File Upload Input */}
+          {/* Site Photo Capture / File Selection */}
           <div className="space-y-2">
-            <Label className="text-xs font-bold">Site Photo / Proof Image URL</Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="https://res.cloudinary.com/... or paste image URL"
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                className="h-9 text-xs rounded-xl"
-              />
-              <Button
+            <Label className="text-xs font-bold">Site Progress Photo</Label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleImageSelect}
+            />
+
+            {photoUrl ? (
+              <div className="relative rounded-xl overflow-hidden border border-border/60 bg-muted/30 p-2">
+                <img
+                  src={photoUrl}
+                  alt="Site proof preview"
+                  className="w-full h-44 object-cover rounded-lg shadow-sm"
+                />
+                <div className="mt-2 flex items-center justify-between px-1">
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Photo Attached
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-7 text-xs rounded-lg"
+                  >
+                    Retake / Change Photo
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setPhotoUrl("https://res.cloudinary.com/dvqnrmdbo/image/upload/v1785688887870/smarterp/documents/1/doc_1785688887870.png")}
-                className="h-9 text-xs font-bold rounded-xl whitespace-nowrap"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full border-2 border-dashed border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10 transition-all rounded-xl p-6 flex flex-col items-center justify-center gap-2 text-center group cursor-pointer"
               >
-                <UploadCloud className="h-3.5 w-3.5 mr-1" /> Sample Photo
-              </Button>
-            </div>
+                <div className="p-3 rounded-full bg-primary/10 group-hover:scale-110 transition-transform">
+                  <Camera className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-foreground">Take Photo / Upload Image</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Click to open mobile camera or select image file from your device
+                  </p>
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Progress Notes */}

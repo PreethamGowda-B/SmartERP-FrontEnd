@@ -177,10 +177,22 @@ export default function EmployeeDocumentsPage() {
 
   const isImage = (url: string) => {
     if (!url) return false
+    if (url.startsWith('data:image/')) return true
+    if (url.toLowerCase().includes('cloudinary') || url.toLowerCase().includes('/upload/')) return true
     const cleanUrl = url.split('?')[0]
     const ext = cleanUrl.split('.').pop()?.toLowerCase()
-    return ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext || '')
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'bmp'].includes(ext || '')
   }
+
+  const handleOpenDocument = (url: string) => {
+    const fullUrl = getFullUrl(url)
+    if (!fullUrl) {
+      toast.error("Document URL unavailable")
+      return
+    }
+    window.open(fullUrl, '_blank', 'noopener,noreferrer')
+  }
+
 
   return (
     <OwnerLayout>
@@ -259,11 +271,14 @@ export default function EmployeeDocumentsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 pt-0 flex items-center justify-between border-t border-border/50 gap-2">
-                    <a href={getFullUrl(doc.file_url)} download target="_blank" className="flex-1">
-                      <Button variant="ghost" size="sm" className="w-full justify-start text-xs h-8">
-                        <Download className="h-3 w-3 mr-2" /> Download
-                      </Button>
-                    </a>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex-1 justify-start text-xs h-8"
+                      onClick={() => handleOpenDocument(doc.file_url)}
+                    >
+                      <Download className="h-3 w-3 mr-2" /> Open / Download
+                    </Button>
                     <Button 
                       variant="ghost" 
                       size="icon" 
@@ -364,28 +379,45 @@ export default function EmployeeDocumentsPage() {
                 <p className="text-xs text-white/60">Uploaded on {previewDoc && new Date(previewDoc.created_at).toLocaleDateString()}</p>
               </div>
               <div className="flex items-center gap-2">
-                <a href={previewDoc ? getFullUrl(previewDoc.file_url) : "#"} target="_blank" rel="noopener noreferrer">
-                  <Button size="icon" variant="ghost" className="text-white hover:bg-white/10">
-                    <ExternalLink className="h-5 w-5" />
+                {previewDoc && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleOpenDocument(previewDoc.file_url)}
+                    className="text-xs gap-1 bg-white/10 text-white border-white/20 hover:bg-white/20"
+                  >
+                    <ExternalLink className="h-4 w-4" /> Open Full Document
                   </Button>
-                </a>
+                )}
                 <Button size="icon" variant="ghost" onClick={() => setPreviewDoc(null)} className="text-white hover:bg-white/10">
                   <CheckCircle2 className="h-5 w-5 rotate-45" />
                 </Button>
               </div>
             </div>
-            <div className="flex-1 overflow-auto flex items-center justify-center p-4">
+            <div className="flex-1 overflow-auto flex items-center justify-center p-6">
               {previewDoc && (
                 isImage(previewDoc.file_url) ? (
                   <div className="relative w-full h-full min-h-[400px]">
-                    <Image src={getFullUrl(previewDoc.file_url)} fill unoptimized className="object-contain shadow-2xl" alt="Preview" />
+                    <img
+                      src={getFullUrl(previewDoc.file_url)}
+                      alt="Document Preview"
+                      className="w-full h-full object-contain rounded-lg shadow-2xl"
+                    />
                   </div>
                 ) : (
-                  <iframe 
-                    src={getFullUrl(previewDoc.file_url)} 
-                    className="w-full h-full rounded-lg bg-white" 
-                    title="PDF Preview"
-                  />
+                  <div className="flex flex-col items-center justify-center text-center p-8 bg-white/5 rounded-2xl border border-white/10 max-w-md space-y-4">
+                    <FileText className="h-16 w-16 text-primary animate-pulse" />
+                    <div>
+                      <h4 className="text-white font-bold text-base">{previewDoc.document_type}</h4>
+                      <p className="text-white/60 text-xs mt-1">PDF / External Document Record</p>
+                    </div>
+                    <Button
+                      onClick={() => handleOpenDocument(previewDoc.file_url)}
+                      className="bg-primary hover:bg-primary/90 text-white font-bold text-xs gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" /> View / Download Document
+                    </Button>
+                  </div>
                 )
               )}
             </div>
