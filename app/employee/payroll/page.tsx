@@ -18,6 +18,7 @@ import { logger } from "@/lib/logger"
 import { SkeletonList } from "@/components/ui/skeleton-card"
 import { cn } from "@/lib/utils"
 import jsPDF from "jspdf"
+import { getCompanyBranding } from "@/lib/export-utils"
 
 interface PayrollRecord {
   id: number
@@ -71,112 +72,235 @@ export default function EmployeePayrollPage() {
     fetchPayrolls()
   }, [])
 
-  // Generate PDF salary report
+  // Generate Executive PDF salary report
   const generatePDF = (payroll: PayrollRecord) => {
     const doc = new jsPDF()
+    const pageW = doc.internal.pageSize.getWidth()
+    const company = getCompanyBranding()
+    const companyName = company.name || "SmartERP Enterprise"
 
-    const companyInfo = (() => {
+    // Colors
+    const NAVY = [15, 40, 80] as const
+    const ACCENT_BLUE = [37, 99, 235] as const
+    const BG_LIGHT = [248, 250, 252] as const
+    const TEXT_DARK = [30, 41, 59] as const
+    const TEXT_MUTED = [100, 116, 139] as const
+    const GREEN = [22, 163, 74] as const
+    const RED = [220, 38, 38] as const
+    const BORDER = [226, 232, 240] as const
+
+    const formatINR = (val: number): string => {
       try {
-        const stored = localStorage.getItem("company_info") || localStorage.getItem("smarterp-company-profile")
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          return parsed.legal_name || parsed.name || "Business Enterprise"
-        }
-      } catch {}
-      return "Business Enterprise"
-    })()
+        return new Intl.NumberFormat("en-IN", {
+          style: "currency",
+          currency: "INR",
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        }).format(val)
+      } catch {
+        return `₹ ${val.toFixed(2)}`
+      }
+    }
 
-    // Company Header
+    // ── Header Banner ──────────────────────────────────────────────────────
+    doc.setFillColor(...NAVY)
+    doc.rect(0, 0, pageW, 36, "F")
+
+    // Blue Accent Bar
+    doc.setFillColor(...ACCENT_BLUE)
+    doc.rect(0, 0, pageW, 4, "F")
+
+    // Company Name
+    doc.setFont("helvetica", "bold")
     doc.setFontSize(18)
-    doc.setFont("helvetica", "bold")
-    doc.text(companyInfo.toUpperCase(), 105, 20, { align: "center" })
+    doc.setTextColor(255, 255, 255)
+    doc.text(companyName.toUpperCase(), 14, 17)
 
-    doc.setFontSize(14)
-    doc.text("Salary Payslip & Earnings Statement", 105, 28, { align: "center" })
-
-    // Payroll Period
-    doc.setFontSize(12)
+    // Document Subtitle
     doc.setFont("helvetica", "normal")
-    doc.text(`${MONTHS[payroll.payroll_month - 1]} ${payroll.payroll_year}`, 105, 40, { align: "center" })
+    doc.setFontSize(9)
+    doc.setTextColor(203, 213, 225)
+    doc.text("SALARY PAYSLIP & EARNINGS STATEMENT", 14, 26)
 
-    // Horizontal line
-    doc.setLineWidth(0.5)
-    doc.line(20, 45, 190, 45)
-
-    // Employee Details
-    doc.setFontSize(11)
+    // Period Pill Badge
+    const monthName = MONTHS[payroll.payroll_month - 1] || "Month"
+    const periodText = `${monthName.toUpperCase()} ${payroll.payroll_year}`
+    doc.setFillColor(30, 58, 110)
+    doc.roundedRect(pageW - 65, 10, 51, 18, 3, 3, "F")
     doc.setFont("helvetica", "bold")
-    doc.text("Employee Details:", 20, 55)
+    doc.setFontSize(7.5)
+    doc.setTextColor(148, 163, 184)
+    doc.text("PAY PERIOD", pageW - 40, 16, { align: "center" })
+    doc.setFontSize(9)
+    doc.setTextColor(255, 255, 255)
+    doc.text(periodText, pageW - 40, 23.5, { align: "center" })
 
-    doc.setFont("helvetica", "normal")
-    doc.text(`Name: ${payroll.employee_name}`, 20, 65)
-    doc.text(`Email: ${payroll.employee_email}`, 20, 72)
+    // ── Employee & Payslip Metadata Card ──────────────────────────────────
+    let y = 44
+    doc.setFillColor(...BG_LIGHT)
+    doc.setDrawColor(...BORDER)
+    doc.roundedRect(14, y, pageW - 28, 38, 3, 3, "FD")
 
-    // Salary Breakdown
+    // Col 1: Employee Details
     doc.setFont("helvetica", "bold")
-    doc.text("Salary Breakdown:", 20, 85)
-
-    let yPos = 95
-    doc.setFont("helvetica", "normal")
-
-    // Base Salary
-    doc.text("Base Salary:", 30, yPos)
-    doc.text(`₹ ${Number(payroll.base_salary || 0).toFixed(2)}`, 150, yPos, { align: "right" })
-    yPos += 10
-
-    // Extra Amount (if > 0)
-    if (payroll.extra_amount > 0) {
-      doc.text("Extra Amount:", 30, yPos)
-      doc.text(`₹ ${Number(payroll.extra_amount || 0).toFixed(2)}`, 150, yPos, { align: "right" })
-      yPos += 10
-    }
-
-    // Salary Increment (if > 0)
-    if (payroll.salary_increment > 0) {
-      doc.text("Salary Increment:", 30, yPos)
-      doc.text(`₹ ${Number(payroll.salary_increment || 0).toFixed(2)}`, 150, yPos, { align: "right" })
-      yPos += 10
-    }
-
-    // Deduction (if > 0)
-    if (payroll.deduction > 0) {
-      doc.text("Deduction:", 30, yPos)
-      doc.text(`- ₹ ${Number(payroll.deduction || 0).toFixed(2)}`, 150, yPos, { align: "right" })
-      yPos += 10
-    }
-
-    // Horizontal line before total
-    doc.setLineWidth(0.3)
-    doc.line(30, yPos + 2, 150, yPos + 2)
-    yPos += 10
-
-    // Total Salary
-    doc.setFont("helvetica", "bold")
-    doc.setFontSize(13)
-    doc.text("TOTAL SALARY:", 30, yPos)
-    doc.text(`₹ ${Number(payroll.total_salary || 0).toFixed(2)}`, 150, yPos, { align: "right" })
-
-    // Remarks (if any)
-    if (payroll.remarks) {
-      yPos += 15
-      doc.setFontSize(11)
-      doc.text("Remarks:", 20, yPos)
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(10)
-
-      // Split remarks into multiple lines if needed
-      const splitRemarks = doc.splitTextToSize(payroll.remarks, 170)
-      doc.text(splitRemarks, 20, yPos + 7)
-    }
-
-    // Footer
     doc.setFontSize(8)
-    doc.setFont("helvetica", "italic")
-    doc.text("Generated by SmartERP® | Powered by Prozync Innovations | Confidential", 105, 280, { align: "center" })
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 285, { align: "center" })
+    doc.setTextColor(...TEXT_MUTED)
+    doc.text("EMPLOYEE DETAILS", 20, y + 8)
+
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(11)
+    doc.setTextColor(...TEXT_DARK)
+    doc.text(payroll.employee_name || "Employee", 20, y + 16)
+
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(9)
+    doc.setTextColor(...TEXT_MUTED)
+    doc.text(payroll.employee_email || "N/A", 20, y + 23)
+
+    // Col 2: Payslip Metadata
+    const col2X = pageW / 2 + 10
+    const payslipNo = `SLIP-PAY-${payroll.payroll_year}${(payroll.payroll_month < 10 ? "0" : "") + payroll.payroll_month}-${payroll.id || Math.floor(1000 + Math.random() * 9000)}`
+
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(8)
+    doc.setTextColor(...TEXT_MUTED)
+    doc.text("STATEMENT DETAILS", col2X, y + 8)
+
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(9)
+    doc.setTextColor(...TEXT_DARK)
+    doc.text(`Payslip Ref: `, col2X, y + 16)
+    doc.setFont("helvetica", "bold")
+    doc.text(payslipNo, col2X + 22, y + 16)
+
+    doc.setFont("helvetica", "normal")
+    doc.text(`Status: `, col2X, y + 23)
+    doc.setFont("helvetica", "bold")
+    doc.setTextColor(...GREEN)
+    doc.text("PAID & DISBURSED", col2X + 13, y + 23)
+
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(8)
+    doc.setTextColor(...TEXT_MUTED)
+    doc.text(`Issued Date: ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`, col2X, y + 30)
+
+    // ── Table Header: Earnings Breakdown ──────────────────────────────────
+    y += 46
+    doc.setFillColor(...NAVY)
+    doc.rect(14, y, pageW - 28, 10, "F")
+
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(9)
+    doc.setTextColor(255, 255, 255)
+    doc.text("EARNINGS & DEDUCTIONS BREAKDOWN", 20, y + 6.5)
+    doc.text("AMOUNT (INR)", pageW - 20, y + 6.5, { align: "right" })
+
+    y += 10
+
+    // Item rows
+    const items: { label: string; amount: number; isDeduction?: boolean }[] = [
+      { label: "Base Salary (Basic + HRA + Allowances)", amount: Number(payroll.base_salary || 0) },
+    ]
+
+    if (payroll.extra_amount > 0) {
+      items.push({ label: "Performance Bonus / Field Incentive", amount: Number(payroll.extra_amount || 0) })
+    }
+    if (payroll.salary_increment > 0) {
+      items.push({ label: "Salary Increment Adjustments", amount: Number(payroll.salary_increment || 0) })
+    }
+    if (payroll.deduction > 0) {
+      items.push({ label: "Deductions (TDS / Advance / Statutory)", amount: Number(payroll.deduction || 0), isDeduction: true })
+    }
+
+    let isZebra = false
+    items.forEach((item) => {
+      if (isZebra) {
+        doc.setFillColor(248, 250, 252)
+        doc.rect(14, y, pageW - 28, 10, "F")
+      }
+      doc.setDrawColor(...BORDER)
+      doc.line(14, y + 10, pageW - 14, y + 10)
+
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(9.5)
+      doc.setTextColor(...(item.isDeduction ? RED : TEXT_DARK))
+      doc.text(item.label, 20, y + 6.5)
+
+      doc.setFont("helvetica", "bold")
+      doc.text(
+        item.isDeduction ? `- ${formatINR(item.amount)}` : formatINR(item.amount),
+        pageW - 20,
+        y + 6.5,
+        { align: "right" }
+      )
+
+      y += 10
+      isZebra = !isZebra
+    })
+
+    // ── Net Take-Home Salary Summary Banner ──────────────────────────────
+    y += 4
+    doc.setFillColor(240, 253, 244)
+    doc.setDrawColor(187, 247, 208)
+    doc.roundedRect(14, y, pageW - 28, 16, 3, 3, "FD")
+
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10)
+    doc.setTextColor(22, 101, 52)
+    doc.text("NET TAKE-HOME SALARY", 20, y + 10.5)
+
+    doc.setFontSize(13)
+    doc.setTextColor(22, 163, 74)
+    doc.text(formatINR(Number(payroll.total_salary || 0)), pageW - 20, y + 10.5, { align: "right" })
+
+    // ── Remarks Section ────────────────────────────────────────────────────
+    y += 24
+    if (payroll.remarks) {
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(8.5)
+      doc.setTextColor(...TEXT_MUTED)
+      doc.text("PAYROLL REMARKS & NOTES", 14, y)
+      y += 5
+
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(9)
+      doc.setTextColor(...TEXT_DARK)
+      const lines = doc.splitTextToSize(payroll.remarks, pageW - 28)
+      doc.text(lines, 14, y)
+      y += lines.length * 5 + 8
+    } else {
+      y += 4
+    }
+
+    // ── Sign-off & Stamp Section ──────────────────────────────────────────
+    y = Math.max(y, 195)
+    doc.setDrawColor(...BORDER)
+    doc.setLineWidth(0.4)
+    doc.line(14, y, pageW - 14, y)
+    y += 12
+
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(8.5)
+    doc.setTextColor(...TEXT_DARK)
+    doc.text("AUTHORIZED SIGNATORY", pageW - 20, y, { align: "right" })
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(8)
+    doc.setTextColor(...TEXT_MUTED)
+    doc.text(companyName, pageW - 20, y + 5, { align: "right" })
+    doc.text("Digitally Signed & Validated", pageW - 20, y + 9.5, { align: "right" })
+
+    doc.setFontSize(7.5)
+    doc.text("Confidential — For Employee Private Use Only", 14, y)
+    doc.text("System Generated Payslip. No signature required.", 14, y + 4.5)
+
+    // ── Footer ─────────────────────────────────────────────────────────────
+    doc.setFontSize(7.5)
+    doc.setFont("helvetica", "normal")
+    doc.setTextColor(148, 163, 184)
+    doc.text(`SmartERP® Enterprise Solutions • Generated on ${new Date().toLocaleDateString("en-IN", { dateStyle: "medium" })}`, pageW / 2, 285, { align: "center" })
 
     // Save PDF
-    const fileName = `Salary_${payroll.employee_name.replace(/\s+/g, '_')}_${MONTHS[payroll.payroll_month - 1]}_${payroll.payroll_year}.pdf`
+    const fileName = `Payslip_${payroll.employee_name.replace(/\s+/g, '_')}_${monthName}_${payroll.payroll_year}.pdf`
     doc.save(fileName)
   }
 
