@@ -275,13 +275,6 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
 
   if (currentToken) {
     headers["Authorization"] = `Bearer ${currentToken}`
-  } else {
-    // If no token, do not send unauthenticated request to protected endpoints
-    const isPublicPath = path.includes('/auth/') || path.includes('/public/') || path.includes('/customer/login') || path.includes('/health')
-    if (!isPublicPath) {
-      logger.warn(`[apiClient] Blocking request to ${path} - no auth token available`)
-      return Promise.reject({ status: 401, message: "Authentication required" })
-    }
   }
 
   const requestId = Math.random().toString(36).substring(7)
