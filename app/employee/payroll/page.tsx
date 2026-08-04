@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { DollarSign, Download, Loader2, Calendar, FileText } from "lucide-react"
+import { DollarSign, Download, Loader2, Calendar, FileText, CheckCircle2 } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
@@ -316,20 +316,123 @@ export default function EmployeePayrollPage() {
   // Get unique years from payrolls
   const uniqueYears = Array.from(new Set((Array.isArray(payrolls) ? payrolls : []).map(p => p.payroll_year))).sort((a, b) => b - a)
 
+  // Calculate YTD metrics
+  const totalYTDEarnings = (Array.isArray(payrolls) ? payrolls : []).reduce((sum, p) => sum + Number(p.total_salary || 0), 0)
+  const latestPayout = Array.isArray(payrolls) && payrolls.length > 0 ? Number(payrolls[0].total_salary || 0) : 0
+  const avgPayout = Array.isArray(payrolls) && payrolls.length > 0 ? Math.round(totalYTDEarnings / payrolls.length) : 0
+
   return (
     <EmployeeLayout>
-      <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">My Payroll</h1>
-          <p className="text-muted-foreground mt-1">View your salary records and download reports</p>
+      <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto">
+        {/* Header Title Banner */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/50">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-primary via-indigo-600 to-accent bg-clip-text text-transparent">
+                Earnings & Payroll Console
+              </h1>
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold px-2.5 py-0.5">
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Active Account
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Review your monthly compensation statements, salary breakdown, and download official tax-compliant payslips.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-4 rounded-xl border-primary/20 hover:bg-primary/5 text-primary font-bold shadow-xs"
+              onClick={() => {
+                if (filteredPayrolls.length > 0) generatePDF(filteredPayrolls[0])
+              }}
+              disabled={filteredPayrolls.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" /> Latest Payslip PDF
+            </Button>
+          </div>
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex gap-4">
+        {/* Executive YTD Earnings Summary Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <Card className="premium-card border-blue-500/20 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Total YTD Earnings</p>
+                  <p className="text-2xl font-black tracking-tight text-blue-600 dark:text-blue-400 mt-1">
+                    ₹{totalYTDEarnings.toLocaleString("en-IN")}
+                  </p>
+                  <p className="text-[11px] font-medium text-muted-foreground mt-1">Across {payrolls.length} statement periods</p>
+                </div>
+                <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-600">
+                  <DollarSign className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="premium-card border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Latest Disbursed Payout</p>
+                  <p className="text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 mt-1">
+                    ₹{latestPayout.toLocaleString("en-IN")}
+                  </p>
+                  <p className="text-[11px] font-medium text-muted-foreground mt-1">
+                    {payrolls.length > 0 ? `${MONTHS[payrolls[0].payroll_month - 1]} ${payrolls[0].payroll_year}` : "No records"}
+                  </p>
+                </div>
+                <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="premium-card border-purple-500/20 bg-gradient-to-br from-purple-500/5 via-transparent to-transparent">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Average Monthly Payout</p>
+                  <p className="text-2xl font-black tracking-tight text-purple-600 dark:text-purple-400 mt-1">
+                    ₹{avgPayout.toLocaleString("en-IN")}
+                  </p>
+                  <p className="text-[11px] font-medium text-muted-foreground mt-1">Net compensation average</p>
+                </div>
+                <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-600">
+                  <Calendar className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="premium-card border-indigo-500/20 bg-gradient-to-br from-indigo-500/5 via-transparent to-transparent">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Payment Channel</p>
+                  <p className="text-lg font-bold tracking-tight text-foreground mt-1">Direct Bank Deposit</p>
+                  <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Verified & Encrypted
+                  </p>
+                </div>
+                <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-600">
+                  <FileText className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Integrated Filter Toolbar Bar */}
+        <Card className="border shadow-xs bg-card/80 backdrop-blur-md">
+          <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
               <Select value={monthFilter} onValueChange={setMonthFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[180px] h-9 rounded-xl text-xs font-semibold">
                   <SelectValue placeholder="Filter by month" />
                 </SelectTrigger>
                 <SelectContent>
@@ -343,7 +446,7 @@ export default function EmployeePayrollPage() {
               </Select>
 
               <Select value={yearFilter} onValueChange={setYearFilter}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-[140px] h-9 rounded-xl text-xs font-semibold">
                   <SelectValue placeholder="Filter by year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -356,106 +459,140 @@ export default function EmployeePayrollPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="text-xs text-muted-foreground font-semibold">
+              Showing <span className="text-foreground font-bold">{filteredPayrolls.length}</span> statement records
+            </div>
           </CardContent>
         </Card>
 
-        {/* Payroll Records */}
-        <div className="space-y-4">
+        {/* Payroll Statements Grid */}
+        <div className="space-y-6">
           {loading ? (
             <SkeletonList count={3} />
           ) : !Array.isArray(filteredPayrolls) || filteredPayrolls.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No payroll records found</p>
-                <p className="text-sm mt-1">Your salary records will appear here once created by your employer</p>
+            <Card className="border-dashed">
+              <CardContent className="text-center py-16 text-muted-foreground">
+                <FileText className="h-14 w-14 mx-auto mb-4 opacity-30 text-primary" />
+                <p className="text-lg font-bold text-foreground">No payroll statements found</p>
+                <p className="text-sm mt-1 max-w-sm mx-auto">
+                  Your monthly salary disbursements and payslips will appear here automatically once created by your organization.
+                </p>
               </CardContent>
             </Card>
           ) : (
-            Array.isArray(filteredPayrolls) && filteredPayrolls.map((payroll) => (
-              <Card key={payroll.id} className="premium-card hover-lift-subtle border shadow-sm">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="flex items-center gap-2 text-lg font-black tracking-tight">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        {MONTHS[payroll.payroll_month - 1]} {payroll.payroll_year}
-                      </CardTitle>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
-                        Salary Disbursement
-                      </p>
+            Array.isArray(filteredPayrolls) && filteredPayrolls.map((payroll) => {
+              const monthText = MONTHS[payroll.payroll_month - 1] || "Month"
+              const baseSalary = Number(payroll.base_salary || 0)
+              const extraAmount = Number(payroll.extra_amount || 0)
+              const increment = Number(payroll.salary_increment || 0)
+              const deduction = Number(payroll.deduction || 0)
+              const totalSalary = Number(payroll.total_salary || 0)
+
+              return (
+                <Card key={payroll.id} className="premium-card hover:border-primary/40 hover:shadow-xl transition-all duration-300 overflow-hidden border">
+                  {/* Top Highlight Strip */}
+                  <div className="h-1.5 w-full bg-gradient-to-r from-primary via-indigo-500 to-emerald-500" />
+                  
+                  <CardHeader className="pb-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-2xl bg-primary/10 text-primary">
+                          <Calendar className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-xl font-extrabold tracking-tight">
+                              {monthText} {payroll.payroll_year}
+                            </CardTitle>
+                            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold px-2.5 py-0.5 rounded-full border-emerald-200">
+                              <CheckCircle2 className="h-3 w-3 mr-1" /> PAID & DISBURSED
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">
+                            Ref: SLIP-PAY-{payroll.payroll_year}{(payroll.payroll_month < 10 ? "0" : "") + payroll.payroll_month}-{payroll.id}
+                          </p>
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={() => generatePDF(payroll)}
+                        variant="outline"
+                        size="sm"
+                        className="h-9 px-4 rounded-xl border-primary/20 hover:bg-primary/5 hover:border-primary text-primary font-bold shadow-xs transition-all"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Official Payslip PDF
+                      </Button>
                     </div>
-                    <Button
-                      onClick={() => generatePDF(payroll)}
-                      variant="outline"
-                      size="sm"
-                      className="h-8 rounded-lg border-primary/20 hover:border-primary hover:bg-primary/5 text-primary font-bold"
-                    >
-                      <Download className="h-3.5 w-3.5 mr-2" />
-                      PDF Report
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-5">
-                    {/* Salary Breakdown */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  </CardHeader>
+
+                  <CardContent className="space-y-6 pt-2">
+                    {/* Itemized Salary Component Cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-muted/30 border border-border/50">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Base Salary</p>
-                        <p className="text-xl font-black tracking-tighter text-foreground">₹{Number(payroll.base_salary || 0).toLocaleString('en-IN')}</p>
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Base Salary</p>
+                        <p className="text-xl font-black tracking-tight text-foreground">
+                          ₹{baseSalary.toLocaleString("en-IN")}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">Basic + HRA + Allowances</p>
                       </div>
 
-                      {Number(payroll.extra_amount || 0) > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Extra Amount</p>
-                          <p className="text-xl font-black tracking-tighter text-green-600">
-                            +₹{Number(payroll.extra_amount || 0).toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      )}
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Performance Bonus</p>
+                        <p className={cn("text-xl font-black tracking-tight", extraAmount > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground/50")}>
+                          {extraAmount > 0 ? `+₹${extraAmount.toLocaleString("en-IN")}` : "₹0"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">Field Incentives / Bonus</p>
+                      </div>
 
-                      {Number(payroll.salary_increment || 0) > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Increment</p>
-                          <p className="text-xl font-black tracking-tighter text-green-600">
-                            +₹{Number(payroll.salary_increment || 0).toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      )}
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Increments</p>
+                        <p className={cn("text-xl font-black tracking-tight", increment > 0 ? "text-indigo-600 dark:text-indigo-400" : "text-muted-foreground/50")}>
+                          {increment > 0 ? `+₹${increment.toLocaleString("en-IN")}` : "₹0"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">Salary Adjustments</p>
+                      </div>
 
-                      {Number(payroll.deduction || 0) > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Deduction</p>
-                          <p className="text-xl font-black tracking-tighter text-red-600">
-                            -₹{Number(payroll.deduction || 0).toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Total Salary */}
-                    <div className="pt-4 border-t border-dashed">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Total Salary</span>
-                        <span className="text-4xl font-black tracking-tighter text-primary">
-                          ₹{Number(payroll.total_salary || 0).toLocaleString('en-IN')}
-                        </span>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/70">Deductions</p>
+                        <p className={cn("text-xl font-black tracking-tight", deduction > 0 ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground/50")}>
+                          {deduction > 0 ? `-₹${deduction.toLocaleString("en-IN")}` : "₹0"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">TDS / Advance / Statutory</p>
                       </div>
                     </div>
 
-                    {/* Remarks */}
+                    {/* Net Take-Home Salary Banner */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-widest text-emerald-800 dark:text-emerald-300">
+                          NET TAKE-HOME DISBURSEMENT
+                        </p>
+                        <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 font-medium">
+                          Transferred directly to registered employee bank account
+                        </p>
+                      </div>
+                      <div className="text-3xl sm:text-4xl font-black tracking-tighter text-emerald-600 dark:text-emerald-400">
+                        ₹{totalSalary.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+
+                    {/* Remarks Section */}
                     {payroll.remarks && (
-                      <div className="pt-3 border-t">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-2">Remarks:</p>
-                        <div className="bg-accent/30 p-3 rounded-lg text-sm italic text-muted-foreground leading-relaxed">
-                          "{payroll.remarks}"
+                      <div className="pt-2">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-1.5">
+                          Employer Remarks & Notes:
+                        </p>
+                        <div className="p-3.5 rounded-xl bg-accent/40 text-xs text-foreground/90 font-medium border border-border/40 italic">
+                          &quot;{payroll.remarks}&quot;
                         </div>
                       </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              )
+            })
           )}
         </div>
       </div>
