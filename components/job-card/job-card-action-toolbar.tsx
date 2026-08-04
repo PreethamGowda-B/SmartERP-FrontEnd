@@ -71,11 +71,15 @@ export function JobCardActionToolbar({
           {status === "completed" && (
             <Button
               size="sm"
-              className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 shadow-xs active:scale-95 transition-transform rounded-xl"
+              className={`h-8 text-xs text-white font-bold px-3 shadow-xs active:scale-95 transition-transform rounded-xl ${
+                Boolean(job.invoice || job.invoice_id || job.invoiceId)
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+              }`}
               onClick={handleOpenInvoiceEditor}
             >
               <FileText className="h-3.5 w-3.5 mr-1" />
-              Generate Invoice
+              {Boolean(job.invoice || job.invoice_id || job.invoiceId) ? "Edit / View Invoice" : "Generate Invoice"}
             </Button>
           )}
 

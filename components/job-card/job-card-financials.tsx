@@ -37,9 +37,19 @@ export function JobCardFinancials({ invoice, budget = 0, role = "owner" }: JobCa
   const isViewed = !!invoice.viewed_at
   const isDownloaded = !!invoice.downloaded_at
   const editedCount = invoice.edited_count || 0
+  const handleInvoiceClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (role === "owner" && invoice?.id) {
+      window.location.href = `/owner/jobs/${invoice.id}/invoice-editor`
+    }
+  }
 
   return (
-    <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 space-y-2 text-xs">
+    <div 
+      className="p-3 rounded-xl bg-primary/5 border border-primary/15 space-y-2 text-xs cursor-pointer hover:border-primary/40 hover:bg-primary/10 transition-all"
+      onClick={handleInvoiceClick}
+      title="Click to view/edit invoice"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-primary shrink-0" />
