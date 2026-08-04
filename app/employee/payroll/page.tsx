@@ -221,9 +221,11 @@ export default function EmployeePayrollPage() {
       doc.setDrawColor(...BORDER)
       doc.line(14, y + 10, pageW - 14, y + 10)
 
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(9.5)
-      doc.setTextColor(...(item.isDeduction ? RED : TEXT_DARK))
+      if (item.isDeduction) {
+        doc.setTextColor(RED[0], RED[1], RED[2])
+      } else {
+        doc.setTextColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2])
+      }
       doc.text(item.label, 20, y + 6.5)
 
       doc.setFont("helvetica", "bold")
