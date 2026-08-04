@@ -1,4 +1,4 @@
-"use client"
+ï»¿"use client"
 
 import { useState, useEffect, useCallback } from "react"
 import { HRLayout } from "@/components/hr-layout"
@@ -150,7 +150,7 @@ export default function ShiftRosterPage() {
     const lastDay = new Date(today.setDate(today.getDate() - today.getDay() + 7 + currentWeekOffset * 7))
 
     const formatOpts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }
-    return `${firstDay.toLocaleDateString("en-US", formatOpts)} – ${lastDay.toLocaleDateString("en-US", formatOpts)}, ${firstDay.getFullYear()}`
+    return `${firstDay.toLocaleDateString("en-US", formatOpts)} â€“ ${lastDay.toLocaleDateString("en-US", formatOpts)}, ${firstDay.getFullYear()}`
   }
 
   // Handle Shift Update
@@ -266,7 +266,7 @@ export default function ShiftRosterPage() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Morning Shift</p>
                 <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{morningShifts}</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5">07:00 AM – 03:30 PM</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">07:00 AM â€“ 03:30 PM</p>
               </div>
               <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 <Sun className="h-5 w-5" />
@@ -279,7 +279,7 @@ export default function ShiftRosterPage() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Night Shift</p>
                 <h3 className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">{nightShifts}</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5">11:00 PM – 07:30 AM</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">11:00 PM â€“ 07:30 AM</p>
               </div>
               <div className="p-3 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
                 <Moon className="h-5 w-5" />
@@ -412,7 +412,7 @@ export default function ShiftRosterPage() {
                               <p className="font-semibold text-foreground truncate">{emp.name}</p>
                               <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                                 <span>{emp.department}</span>
-                                <span>•</span>
+                                <span>â€¢</span>
                                 <span className="truncate">{emp.role}</span>
                               </div>
                             </div>
@@ -491,10 +491,10 @@ export default function ShiftRosterPage() {
                     <SelectValue placeholder="Select shift" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="General">General Shift (09:00 AM – 06:00 PM)</SelectItem>
-                    <SelectItem value="Morning">Morning Shift (07:00 AM – 03:30 PM)</SelectItem>
-                    <SelectItem value="Evening">Evening Shift (03:00 PM – 11:30 PM)</SelectItem>
-                    <SelectItem value="Night">Night Shift (11:00 PM – 07:30 AM)</SelectItem>
+                    <SelectItem value="General">General Shift (09:00 AM â€“ 06:00 PM)</SelectItem>
+                    <SelectItem value="Morning">Morning Shift (07:00 AM â€“ 03:30 PM)</SelectItem>
+                    <SelectItem value="Evening">Evening Shift (03:00 PM â€“ 11:30 PM)</SelectItem>
+                    <SelectItem value="Night">Night Shift (11:00 PM â€“ 07:30 AM)</SelectItem>
                     <SelectItem value="Weekly Off">Weekly Off (Off Duty)</SelectItem>
                     <SelectItem value="Leave">On Leave</SelectItem>
                   </SelectContent>
