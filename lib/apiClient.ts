@@ -204,23 +204,16 @@ function syncWithAndroid(token: string, refreshToken?: string | null) {
 // Helper to handle unified logout across Web and Android
 function handleLogout() {
   if (typeof window !== "undefined") {
-    // Only perform hard redirect to landing page if the user has explicitly logged out
-    // or if user session data is completely missing.
-    const cachedUser = localStorage.getItem("smarterp_user") || localStorage.getItem("smarterp_admin_user")
-    if (!cachedUser) {
-      logger.warn("[v0] Session expired or invalid — logging out")
-      clearTokens() // Clears all token storage
-      localStorage.removeItem("smarterp_user")
-      localStorage.removeItem("smarterp_admin_user")
-      sessionStorage.removeItem("smarterp_mock_users")
+    logger.warn("[v0] Session expired or invalid token refresh — clearing tokens and redirecting to login")
+    clearTokens() // Clears _at, _rt, accessToken, refreshToken from storage
+    localStorage.removeItem("smarterp_user")
+    localStorage.removeItem("smarterp_admin_user")
+    sessionStorage.removeItem("smarterp_mock_users")
 
-      if ((window as any).Android?.logout) {
-        (window as any).Android.logout()
-      } else {
-        window.location.href = "/"
-      }
-    } else {
-      logger.warn("[v0] Background refresh 401 — keeping cached user session in UI")
+    if ((window as any).Android?.logout) {
+      (window as any).Android.logout()
+    } else if (window.location.pathname !== "/" && window.location.pathname !== "/auth/login") {
+      window.location.href = "/auth/login"
     }
   }
 }
