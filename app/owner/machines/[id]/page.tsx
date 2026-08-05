@@ -110,15 +110,21 @@ export default function MachineDashboardPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="timeline" className="w-full">
-        <TabsList className="grid grid-cols-3 md:w-auto bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
+        <TabsList className="grid grid-cols-5 md:w-auto bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
           <TabsTrigger value="timeline" className="rounded-xl font-bold text-xs">
-            📜 17-Step Lifecycle Timeline
+            📜 Lifecycle Timeline
+          </TabsTrigger>
+          <TabsTrigger value="alarms" className="rounded-xl font-bold text-xs">
+            🚨 Alarm History ({machineData.alarm_history?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="subcomponents" className="rounded-xl font-bold text-xs">
             🧩 Sub-Components ({machineData.subcomponents?.length || 0})
           </TabsTrigger>
+          <TabsTrigger value="remote" className="rounded-xl font-bold text-xs">
+            💻 Remote Support ({machineData.remote_sessions?.length || 0})
+          </TabsTrigger>
           <TabsTrigger value="documents" className="rounded-xl font-bold text-xs">
-            📁 Machine Documents ({machineData.documents?.length || 0})
+            📁 Documents ({machineData.documents?.length || 0})
           </TabsTrigger>
         </TabsList>
 
@@ -181,6 +187,69 @@ export default function MachineDashboardPage() {
                       <Badge variant="outline">{sub.make_model || "Generic"}</Badge>
                     </div>
                   </Card>
+                ))
+              )}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* Alarm History Tab */}
+        <TabsContent value="alarms" className="mt-6 space-y-4">
+          <Card className="p-6">
+            <CardHeader className="px-0 pt-0">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-rose-500" /> Historical Alarm Frequency
+              </CardTitle>
+              <CardDescription>Frequency breakdown of alarm codes triggered on this machine</CardDescription>
+            </CardHeader>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              {machineData.alarm_history?.length === 0 ? (
+                <p className="text-xs text-slate-400">No alarm code history recorded for this machine.</p>
+              ) : (
+                machineData.alarm_history?.map((alm: any, i: number) => (
+                  <Card key={i} className="p-4 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div>
+                      <Badge className="bg-rose-500 text-white font-mono font-bold">{alm.alarm_code}</Badge>
+                      <p className="text-xs text-slate-500 mt-1">Controller: {alm.controller_type}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-rose-600 dark:text-rose-400">{alm.frequency} Occurrences</p>
+                      <p className="text-[10px] text-slate-400">Last: {new Date(alm.last_occurred).toLocaleDateString()}</p>
+                    </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* Remote Support Tab */}
+        <TabsContent value="remote" className="mt-6 space-y-4">
+          <Card className="p-6">
+            <CardHeader className="px-0 pt-0">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-indigo-500" /> Remote Support Sessions
+              </CardTitle>
+              <CardDescription>Phone, WhatsApp, AnyDesk & FOCAS remote troubleshooting log</CardDescription>
+            </CardHeader>
+
+            <div className="space-y-3 pt-2">
+              {machineData.remote_sessions?.length === 0 ? (
+                <p className="text-xs text-slate-400">No remote support sessions logged for this machine.</p>
+              ) : (
+                machineData.remote_sessions?.map((sess: any) => (
+                  <div key={sess.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border flex items-center justify-between">
+                    <div>
+                      <Badge variant="outline" className="uppercase text-[10px] font-mono text-indigo-600">
+                        {sess.support_channel}
+                      </Badge>
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white mt-1">{sess.resolution_summary}</p>
+                    </div>
+                    <Badge className={sess.status === "resolved" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}>
+                      {sess.status === "resolved" ? "Resolved" : "Dispatched"}
+                    </Badge>
+                  </div>
                 ))
               )}
             </div>
