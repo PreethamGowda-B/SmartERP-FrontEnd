@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiClient } from "@/lib/apiClient"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { CustomerNavbar } from "@/components/customer/layout/CustomerNavbar"
 import { Cpu, CheckCircle2, ArrowRight } from "lucide-react"
 
 export default function CustomerOnboardingWizardPage() {
@@ -40,7 +41,9 @@ export default function CustomerOnboardingWizardPage() {
   }
 
   return (
-    <div className="container max-w-3xl mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-gray-50">
+      <CustomerNavbar />
+      <div className="container max-w-3xl mx-auto p-6 space-y-6">
       <div className="border-b pb-5">
         <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
           <Cpu className="h-8 w-8 text-emerald-500" /> Customer CNC Fleet Self-Service Onboarding
@@ -96,6 +99,7 @@ export default function CustomerOnboardingWizardPage() {
           </Button>
         </form>
       </Card>
+    </div>
     </div>
   )
 }

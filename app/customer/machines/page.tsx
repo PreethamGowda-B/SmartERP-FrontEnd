@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import {
   Cpu, Wrench, ShieldCheck, Activity, Calendar, Clock, Plus, Search, CheckCircle2, AlertTriangle, Layers, FileText
 } from "lucide-react"
+import { CustomerNavbar } from "@/components/customer/layout/CustomerNavbar"
 
 export default function CustomerMachinesPage() {
   const [machines, setMachines] = useState<any[]>([])
@@ -81,7 +82,9 @@ export default function CustomerMachinesPage() {
   )
 
   return (
-    <div className="container max-w-7xl mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-gray-50">
+      <CustomerNavbar />
+      <div className="container max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
         <div>
@@ -316,6 +319,7 @@ export default function CustomerMachinesPage() {
           </form>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   )
 }

@@ -24,6 +24,8 @@ export default function CreateJobPage() {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<JobPriority>('medium');
   const [scheduledAt, setScheduledAt] = useState('');
+  const [selectedMachineId, setSelectedMachineId] = useState('');
+  const [machines, setMachines] = useState<any[]>([]);
   const [titleError, setTitleError] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +34,16 @@ export default function CreateJobPage() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.push('/customer/login');
   }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    async function loadMachines() {
+      try {
+        const res = await customerApi.get<{ success: boolean; machines: any[] }>('/api/machines');
+        if (res?.data?.machines) setMachines(res.data.machines);
+      } catch (_) {}
+    }
+    if (isAuthenticated) loadMachines();
+  }, [isAuthenticated]);
 
   if (authLoading) {
     return (
@@ -60,6 +72,7 @@ export default function CreateJobPage() {
         description: description.trim() || undefined,
         priority,
         scheduled_at: scheduledAt || undefined,
+        machine_id: selectedMachineId || undefined,
       });
       setSuccess(true);
       setTimeout(() => router.push('/customer/dashboard'), 2000);
@@ -135,13 +148,32 @@ export default function CreateJobPage() {
                 <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select Machine Unit <span className="text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <select
+                      value={selectedMachineId}
+                      onChange={(e) => setSelectedMachineId(e.target.value)}
+                      disabled={isLoading}
+                      className="w-full px-4 py-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                    >
+                      <option value="">General Service (No Machine Linked)</option>
+                      {machines.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.machine_name} ({m.make} {m.model} - S/N: {m.serial_number})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Request title <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={title}
                       onChange={e => { setTitle(e.target.value); setTitleError(''); }}
-                      placeholder="e.g. Fix leaking pipe in bathroom"
+                      placeholder="e.g. Spindle Alarm #414 Servo Error on VMC 850"
                       disabled={isLoading}
                       className={`w-full px-4 py-2.5 text-sm text-gray-900 bg-white border rounded-lg outline-none transition-all
                         focus:ring-2 focus:border-transparent disabled:opacity-50

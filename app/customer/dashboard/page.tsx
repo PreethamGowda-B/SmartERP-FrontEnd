@@ -6,7 +6,7 @@ import { motion, type Variants } from 'framer-motion';
 import {
   PlusCircle, Briefcase, CheckCircle, Clock, TrendingUp, ArrowRight,
   AlertCircle, Bell, History, Repeat, List, Activity, User, MapPin,
-  Zap, Eye,
+  Zap, Eye, Cpu, FileText, Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
@@ -161,6 +161,30 @@ export default function CustomerDashboardPage() {
       icon: List,
       iconBg: 'bg-blue-50',
       iconColor: 'text-blue-600',
+    },
+    {
+      href: '/customer/machines',
+      label: 'My CNC Machinery',
+      description: 'CNC Machine registry, health & digital twin timeline',
+      icon: Cpu,
+      iconBg: 'bg-amber-50',
+      iconColor: 'text-amber-600',
+    },
+    {
+      href: '/customer/documents',
+      label: 'Customer Documents',
+      description: 'Self-service machine manuals, reports & invoices',
+      icon: FileText,
+      iconBg: 'bg-emerald-50',
+      iconColor: 'text-emerald-600',
+    },
+    {
+      href: '/customer/onboarding-wizard',
+      label: 'Fleet Setup Wizard',
+      description: 'Self-service CNC machinery fleet registration',
+      icon: Sparkles,
+      iconBg: 'bg-indigo-50',
+      iconColor: 'text-indigo-600',
     },
     {
       href: '/customer/notifications',

@@ -31,6 +31,13 @@ import {
   UserCheck,
   Flame,
   ShieldCheck,
+  Radio,
+  Award,
+  ShoppingBag,
+  Navigation,
+  Zap,
+  Bot,
+  Cpu,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationCenterDrawer } from "@/components/notification-center-drawer"
@@ -46,6 +53,19 @@ const navCategories = [
       { name: "Customer Jobs", href: "/owner/customer-jobs", icon: UserCheck },
       { name: "Sales Pipeline", href: "/owner/crm/pipeline", icon: Flame },
       { name: "Tracking", href: "/owner/tracking", icon: MapPin },
+    ],
+  },
+  {
+    title: "CNC Service Edition",
+    items: [
+      { name: "Command Center", href: "/owner/cnc/command-center", icon: Radio },
+      { name: "SLA Management", href: "/owner/cnc/sla", icon: Clock },
+      { name: "Supplier Warranty", href: "/owner/cnc/warranty", icon: Award },
+      { name: "Vendors & POs", href: "/owner/cnc/vendors", icon: ShoppingBag },
+      { name: "Dispatch Routes", href: "/owner/cnc/route-optimization", icon: Navigation },
+      { name: "Executive BI", href: "/owner/cnc/bi", icon: BarChart3 },
+      { name: "Automations", href: "/owner/cnc/automations", icon: Zap },
+      { name: "AI Audit Trail", href: "/owner/cnc/ai-activity", icon: Bot },
     ],
   },
   {

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { apiClient } from "@/lib/apiClient"
 import { toast } from "sonner"
+import { CustomerNavbar } from "@/components/customer/layout/CustomerNavbar"
 import { FileText, Download, Search, ShieldCheck, FileCheck } from "lucide-react"
 
 export default function CustomerDocumentCenterPage() {
@@ -32,7 +33,9 @@ export default function CustomerDocumentCenterPage() {
   }, [fetchDocs])
 
   return (
-    <div className="container max-w-7xl mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-gray-50">
+      <CustomerNavbar />
+      <div className="container max-w-7xl mx-auto p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
@@ -77,6 +80,7 @@ export default function CustomerDocumentCenterPage() {
           ))
         )}
       </div>
+    </div>
     </div>
   )
 }

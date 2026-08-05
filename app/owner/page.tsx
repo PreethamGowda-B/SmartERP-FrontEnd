@@ -11,7 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   Building2, Users, Clock, DollarSign, TrendingUp,
   AlertTriangle, CheckCircle, Calendar, Loader2, Briefcase,
-  RefreshCw, Zap, ArrowRight, FileText, Package, UserCheck
+  RefreshCw, Zap, ArrowRight, FileText, Package, UserCheck,
+  Radio, ShoppingBag, Navigation
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DateTimeWeather } from "@/components/date-time-weather"
@@ -116,6 +117,10 @@ export default function OwnerDashboard() {
 
   const quickActions = [
     { label: "Create Job", icon: Briefcase, href: "/owner/jobs" },
+    { label: "CNC Command Center", icon: Radio, href: "/owner/cnc/command-center" },
+    { label: "SLA Engine", icon: Clock, href: "/owner/cnc/sla" },
+    { label: "Spare Part POs", icon: ShoppingBag, href: "/owner/cnc/vendors" },
+    { label: "Dispatch Routes", icon: Navigation, href: "/owner/cnc/route-optimization" },
     { label: "Add Employee", icon: Users, href: "/owner/employees" },
     { label: "Process Payroll", icon: DollarSign, href: "/owner/payroll" },
     { label: "View Reports", icon: Calendar, href: "/owner/reports" },

@@ -4,24 +4,27 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, PlusCircle, User, LogOut, Menu, X, Bell, List, History, Repeat } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, User, LogOut, Menu, X, Bell, List, History, Repeat, Cpu, FileText, Sparkles } from 'lucide-react';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { useCustomerNotifications } from '@/contexts/CustomerNotificationContext';
 import { NotificationCenterDrawer } from '@/components/notification-center-drawer';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 const MAIN_NAV_ITEMS = [
-  { href: '/customer/dashboard',  label: 'Dashboard',   icon: LayoutDashboard },
-  { href: '/customer/jobs',       label: 'Requests',    icon: List },
-  { href: '/customer/create-job', label: 'New Request', icon: PlusCircle },
-  { href: '/customer/history',    label: 'History',     icon: History },
-  { href: '/customer/recurring',  label: 'Recurring',   icon: Repeat },
+  { href: '/customer/dashboard',         label: 'Dashboard',   icon: LayoutDashboard },
+  { href: '/customer/machines',          label: 'My Machines', icon: Cpu },
+  { href: '/customer/jobs',              label: 'Requests',    icon: List },
+  { href: '/customer/create-job',        label: 'New Request', icon: PlusCircle },
+  { href: '/customer/documents',         label: 'Documents',   icon: FileText },
+  { href: '/customer/onboarding-wizard', label: 'Fleet Setup', icon: Sparkles },
+  { href: '/customer/history',           label: 'History',     icon: History },
+  { href: '/customer/recurring',         label: 'Recurring',   icon: Repeat },
 ];
 
 const MOBILE_NAV_ITEMS = [
   ...MAIN_NAV_ITEMS,
-  { href: '/customer/notifications', label: 'Notifications', icon: Bell },
-  { href: '/customer/profile',       label: 'Profile',       icon: User },
+  { href: '/customer/notifications',     label: 'Notifications', icon: Bell },
+  { href: '/customer/profile',           label: 'Profile',       icon: User },
 ];
 
 export function CustomerNavbar() {
