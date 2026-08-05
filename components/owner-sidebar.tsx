@@ -56,6 +56,19 @@ const navCategories = [
     ],
   },
   {
+    title: "CNC Service Edition",
+    items: [
+      { name: "Command Center", href: "/owner/cnc/command-center", icon: Radio },
+      { name: "SLA Management", href: "/owner/cnc/sla", icon: Clock },
+      { name: "Supplier Warranty", href: "/owner/cnc/warranty", icon: Award },
+      { name: "Vendors & POs", href: "/owner/cnc/vendors", icon: ShoppingBag },
+      { name: "Dispatch Routes", href: "/owner/cnc/route-optimization", icon: Navigation },
+      { name: "Executive BI", href: "/owner/cnc/bi", icon: BarChart3 },
+      { name: "Automations", href: "/owner/cnc/automations", icon: Zap },
+      { name: "AI Audit Trail", href: "/owner/cnc/ai-activity", icon: Bot },
+    ],
+  },
+  {
     title: "People & HR",
     items: [
       { name: "Employees", href: "/owner/employees", icon: Users },
