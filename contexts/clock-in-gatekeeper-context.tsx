@@ -27,6 +27,12 @@ export function ClockInGatekeeperProvider({ children }: { children: React.ReactN
 
   const refreshAttendance = useCallback(async () => {
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("_at") || localStorage.getItem("accessToken") : null
+      if (!token) {
+        setIsClockedIn(false)
+        setLoading(false)
+        return
+      }
       const res = await apiClient<{ success?: boolean; attendance?: any; clock_in?: string; clock_out?: string }>("/api/attendance/today")
       const att = res?.attendance || res
       const hasClockIn = Boolean(att?.clock_in || att?.clockIn)

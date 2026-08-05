@@ -38,27 +38,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        // 3. There IS a cached user — perform token refresh to validate it.
-        //    Keep isLoading=true until we know the session is still valid.
-        //    This prevents the landing page from seeing a stale user and
-        //    redirecting to /owner before the refresh confirms or denies it.
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+        // 3. There IS a cached user — perform token refresh with strict 3500ms timeout
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
         const rt = getRefreshToken()
         
         if (!rt) {
-          // No refresh token — cached user is stale, clear it
           signOut()
           if (isMounted) { setUser(null); setIsLoading(false) }
           return
         }
 
         try {
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 3500)
+
           const refreshRes = await fetch(`${apiUrl}/api/auth/refresh`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
             body: JSON.stringify({ refreshToken: rt }),
+            signal: controller.signal,
           })
+          clearTimeout(timeoutId)
 
           if (refreshRes.ok && isMounted) {
             const data = await refreshRes.json()
@@ -66,11 +67,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               const isAdmin = currentUser?.role === 'super_admin'
               setTokens(data.accessToken, data.refreshToken || rt || "", isAdmin)
               
-              // Fetch fresh profile to sync company code
+              // Fetch fresh profile with 3000ms timeout
               try {
+                const meController = new AbortController()
+                const meTimeoutId = setTimeout(() => meController.abort(), 3000)
+
                 const meRes = await fetch(`${apiUrl}/api/auth/me`, {
-                  headers: { "Authorization": `Bearer ${data.accessToken}` }
+                  headers: { "Authorization": `Bearer ${data.accessToken}` },
+                  signal: meController.signal,
                 })
+                clearTimeout(meTimeoutId)
+
                 if (meRes.ok && isMounted) {
                   const freshUser = await meRes.json()
                   setUser(freshUser)
@@ -79,26 +86,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem("company_code", freshUser.company_code)
                   }
                   logger.log("[v0] ✅ Profile synced with latest DB state")
-                } else {
-                  logger.warn("[v0] Profile sync returned non-ok — keeping cached session")
                 }
               } catch {
-                // /me failed — keep the cached user, not a hard failure
+                // Profile fetch timeout/failure — keep cached user session
               }
             }
-          } else if (isMounted && refreshRes.status === 401) {
-            logger.warn("[v0] Token refresh 401 — keeping cached user session in UI")
-            // Keep cached user state active so user stays logged in across tab switches
           }
         } catch (fetchErr: any) {
-          logger.warn("[v0] Token refresh network error — keeping cached user session:", fetchErr)
+          logger.warn("[v0] Token refresh timeout or network error — keeping cached user session:", fetchErr)
         }
-
-        // 4. Auth check done — allow the rest of the app to render
-        if (isMounted) setIsLoading(false)
-
       } catch (err) {
-        logger.error("[v0] Auth initialization error:", { error: err })
+        logger.error("[v0] Auth initialization error:", err)
+      } finally {
         if (isMounted) setIsLoading(false)
       }
     }

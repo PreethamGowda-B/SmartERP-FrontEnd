@@ -33,7 +33,7 @@ export interface AuthState {
 }
 
 export const signUp = async (userData: SignUpData): Promise<User | null> => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
   logger.log("[v0] Attempting signup with backend:", apiUrl)
 
   const response = await fetch(`${apiUrl}/api/auth/signup`, {
@@ -63,7 +63,7 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
 
 export const signIn = async (email: string, password: string): Promise<User | null> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
     logger.log("[v0] Attempting login with backend:", apiUrl)
 
     const response = await fetch(`${apiUrl}/api/auth/login`, {
@@ -120,7 +120,7 @@ export const signIn = async (email: string, password: string): Promise<User | nu
 
 export const signOut = async (): Promise<void> => {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
     await fetch(`${apiUrl}/api/auth/logout`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

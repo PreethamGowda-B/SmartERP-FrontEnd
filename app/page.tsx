@@ -16,25 +16,30 @@ export default function HomePage() {
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    // Animate progress bar from 0 → 100 over ~1.8s
+    // Skip intro loader if already seen in current session
+    if (typeof window !== "undefined" && sessionStorage.getItem("smarterp_intro_seen")) {
+      setShutterOpen(true)
+      setLoaderDone(true)
+      setContentVisible(true)
+      return
+    }
+
+    // Fast 300ms progress animation for smooth first impression without hanging
     let current = 0
     progressRef.current = setInterval(() => {
-      current += Math.random() * 18 + 8
+      current += 34
       if (current >= 100) {
         current = 100
-        clearInterval(progressRef.current!)
-        // Trigger cinematic shutter open
+        if (progressRef.current) clearInterval(progressRef.current)
+        setShutterOpen(true)
+        if (typeof window !== "undefined") sessionStorage.setItem("smarterp_intro_seen", "true")
         setTimeout(() => {
-          setShutterOpen(true)
-          // Show content underneath
-          setTimeout(() => {
-            setLoaderDone(true)
-            setTimeout(() => setContentVisible(true), 100)
-          }, 800)
-        }, 300)
+          setLoaderDone(true)
+          setContentVisible(true)
+        }, 150)
       }
       setProgress(Math.min(current, 100))
-    }, 90)
+    }, 60)
 
     return () => {
       if (progressRef.current) clearInterval(progressRef.current)
