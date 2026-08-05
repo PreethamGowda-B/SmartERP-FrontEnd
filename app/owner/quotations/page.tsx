@@ -12,11 +12,16 @@ import { apiClient } from "@/lib/apiClient"
 import { toast } from "sonner"
 import { FileText, Plus, CheckCircle2, ArrowRight, DollarSign, Calculator, Cpu } from "lucide-react"
 
+import { QuotationCompareModal } from "@/components/quotation-compare-modal"
+
 export default function ServiceQuotationsPage() {
   const [quotations, setQuotations] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
   const [machines, setMachines] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Compare modal state
+  const [selectedForCompare, setSelectedForCompare] = useState<any>(null)
 
   // Create Quotation Modal state
   const [isAddOpen, setIsAddOpen] = useState(false)
@@ -149,20 +154,38 @@ export default function ServiceQuotationsPage() {
                     </p>
                   </div>
 
-                  {q.status !== "converted_to_job" && (
+                  <div className="flex items-center gap-2">
                     <Button
-                      onClick={() => handleApproveAndConvert(q.id)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedForCompare(q)}
+                      className="text-xs font-semibold gap-1 text-slate-700 dark:text-slate-300"
                     >
-                      <CheckCircle2 className="h-4 w-4" /> Approve & Convert to Job
+                      <Calculator className="h-3.5 w-3.5 text-amber-500" /> Compare V1 vs V2
                     </Button>
-                  )}
+
+                    {q.status !== "converted_to_job" && (
+                      <Button
+                        onClick={() => handleApproveAndConvert(q.id)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5"
+                      >
+                        <CheckCircle2 className="h-4 w-4" /> Approve & Convert to Job
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Quotation Compare Modal */}
+      <QuotationCompareModal
+        isOpen={Boolean(selectedForCompare)}
+        onClose={() => setSelectedForCompare(null)}
+        quotation={selectedForCompare}
+      />
 
       {/* Create Quotation Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
