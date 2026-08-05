@@ -12,6 +12,9 @@ import {
   Cpu, Wrench, ShieldCheck, Activity, Calendar, Clock, FileText, CheckCircle2, AlertTriangle, ArrowLeft, Plus, Download, HardDrive
 } from "lucide-react"
 
+import { MachineActionPanel } from "@/components/machine-action-panel"
+import { AiActionableRecommendations } from "@/components/ai-actionable-recommendations"
+
 export default function MachineDashboardPage() {
   const params = useParams()
   const router = useRouter()
@@ -109,6 +112,12 @@ export default function MachineDashboardPage() {
           </div>
         </div>
       </Card>
+
+      {/* Quick Operational Action Command Panel */}
+      <MachineActionPanel machine={machineData} />
+
+      {/* Actionable AI Prescriptive Recommendations */}
+      <AiActionableRecommendations machine={machineData} />
 
       {/* AI Machine Timeline Summary Box */}
       <Card className="p-5 bg-gradient-to-r from-amber-500/10 via-amber-600/5 to-indigo-500/10 border border-amber-500/30 rounded-3xl">
