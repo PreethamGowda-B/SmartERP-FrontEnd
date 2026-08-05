@@ -162,6 +162,7 @@ const VisibilitySwitch = memo(function VisibilitySwitch({
 // ─── Main Optimized JobForm Component ─────────────────────────────────────────
 
 export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
+  const [jobType, setJobType] = useState<"general" | "machine">((job as any)?.machine_id ? "machine" : "general")
   const [formData, setFormData] = useState({
     title: job?.title || "",
     client: job?.client || "",
@@ -175,10 +176,16 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
     assignedEmployees: job?.assignedEmployees || [],
     visible_to_all: (job as any)?.visible_to_all ?? true,
     is_billable: (job as any)?.is_billable ?? Boolean(job?.client),
+    // CNC fields
+    machine_id: (job as any)?.machine_id || "",
+    controller_type: (job as any)?.controller_type || "Fanuc 0i-MF",
+    alarm_code: (job as any)?.alarm_code || "",
+    service_type: (job as any)?.service_type || "breakdown",
   })
 
   const [employees, setEmployees] = useState<any[]>([])
   const [isEmployeesLoading, setIsEmployeesLoading] = useState(false)
+  const [machines, setMachines] = useState<any[]>([])
 
   useEffect(() => {
     async function fetchEmployees() {
@@ -194,7 +201,18 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
         setIsEmployeesLoading(false)
       }
     }
+    async function fetchMachines() {
+      try {
+        const res = await apiClient<{ success: boolean; machines: any[] }>("/api/machines")
+        if (res?.machines) {
+          setMachines(res.machines)
+        }
+      } catch (error) {
+        console.warn("Failed to fetch machines:", error)
+      }
+    }
     fetchEmployees()
+    fetchMachines()
   }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -238,6 +256,126 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* View Switcher: General Job vs Machine-Based Job */}
+          <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setJobType("general")}
+              className={cn(
+                "flex-1 py-2 px-3 text-xs font-semibold rounded-lg transition-all",
+                jobType === "general"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              )}
+            >
+              General Job (Default)
+            </button>
+            <button
+              type="button"
+              onClick={() => setJobType("machine")}
+              className={cn(
+                "flex-1 py-2 px-3 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5",
+                jobType === "machine"
+                  ? "bg-amber-600 text-white shadow-sm font-bold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              )}
+            >
+              ⚙️ Machine-Based Job (CNC)
+            </button>
+          </div>
+
+          {/* CNC-Specific Extension Fields */}
+          {jobType === "machine" && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-4">
+              <div className="font-semibold text-xs text-amber-700 dark:text-amber-300 uppercase tracking-wider flex items-center gap-2">
+                ⚙️ CNC Machinery Parameters
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Select Registered Machine</Label>
+                  <Select
+                    value={formData.machine_id}
+                    onValueChange={(val) => {
+                      const selectedM = machines.find((m) => String(m.id) === val)
+                      setFormData((prev) => ({
+                        ...prev,
+                        machine_id: val,
+                        client: selectedM?.customer_name || prev.client,
+                        location: selectedM?.plant_name || selectedM?.area_location || prev.location,
+                        controller_type: selectedM?.controller_type || prev.controller_type,
+                      }))
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose Machine..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {machines.length === 0 ? (
+                        <SelectItem value="none" disabled>No machines registered yet</SelectItem>
+                      ) : (
+                        machines.map((m) => (
+                          <SelectItem key={m.id} value={String(m.id)}>
+                            {m.machine_name} ({m.make} {m.model} - S/N: {m.serial_number})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Service Type</Label>
+                  <Select
+                    value={formData.service_type}
+                    onValueChange={(val) => setFormData((prev) => ({ ...prev, service_type: val }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Service Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="breakdown">🔴 Breakdown Repair</SelectItem>
+                      <SelectItem value="preventive">🟡 Preventive Maintenance (PM)</SelectItem>
+                      <SelectItem value="installation">🟢 Installation & Commissioning</SelectItem>
+                      <SelectItem value="calibration">🔵 Calibration & Laser Alignment</SelectItem>
+                      <SelectItem value="inspection">🟣 Inspection & Audit</SelectItem>
+                      <SelectItem value="amc_visit">⭐ AMC Scheduled Visit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Controller Type</Label>
+                  <Select
+                    value={formData.controller_type}
+                    onValueChange={(val) => setFormData((prev) => ({ ...prev, controller_type: val }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Controller" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Fanuc 0i-MF">Fanuc 0i-MF / 0i-TF</SelectItem>
+                      <SelectItem value="Siemens 828D">Siemens 828D / 840D</SelectItem>
+                      <SelectItem value="Mitsubishi M80">Mitsubishi M80 / M800</SelectItem>
+                      <SelectItem value="Heidenhain TNC 640">Heidenhain TNC 640</SelectItem>
+                      <SelectItem value="Haas NextGen">Haas NextGen Control</SelectItem>
+                      <SelectItem value="Other">Other / Custom Controller</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="alarm_code">Alarm Code (Optional)</Label>
+                  <Input
+                    id="alarm_code"
+                    value={formData.alarm_code}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, alarm_code: e.target.value }))}
+                    placeholder="e.g. SV0401, 2001 Spindle Overload"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Job Title</Label>
