@@ -6,7 +6,7 @@ import { motion, type Variants } from 'framer-motion';
 import {
   PlusCircle, Briefcase, CheckCircle, Clock, TrendingUp, ArrowRight,
   AlertCircle, Bell, History, Repeat, List, Activity, User, MapPin,
-  Zap, Eye, Cpu, FileText, Sparkles,
+  Zap, Eye, Cpu, FileText, Sparkles, Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
@@ -112,44 +112,44 @@ export default function CustomerDashboardPage() {
 
   const STATS = [
     {
-      label: 'Pending Approval',
-      value: counts.pending_approval,
-      icon: AlertCircle,
+      label: 'My CNC Fleet',
+      value: (counts as any).machines || 0,
+      icon: Cpu,
       color: 'text-amber-600',
       bg: 'bg-amber-50',
       border: 'border-amber-200',
     },
     {
-      label: 'Active Jobs',
-      value: counts.active,
+      label: 'Active Requests',
+      value: (counts as any).active || 0,
       icon: Clock,
       color: 'text-blue-600',
       bg: 'bg-blue-50',
       border: 'border-blue-200',
     },
     {
-      label: 'In Progress',
-      value: counts.in_progress,
-      icon: TrendingUp,
-      color: 'text-orange-600',
-      bg: 'bg-orange-50',
-      border: 'border-orange-200',
+      label: 'Upcoming PM',
+      value: (counts as any).pm_due || 0,
+      icon: Calendar,
+      color: 'text-purple-600',
+      bg: 'bg-purple-50',
+      border: 'border-purple-200',
     },
     {
-      label: 'Completed',
-      value: counts.completed,
-      icon: CheckCircle,
-      color: 'text-green-600',
-      bg: 'bg-green-50',
-      border: 'border-green-200',
+      label: 'Warranty Active',
+      value: (counts as any).warranty || 0,
+      icon: Activity,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+      border: 'border-emerald-200',
     },
     {
       label: 'SLA Breaches',
-      value: counts.sla_breaches,
+      value: (counts as any).sla_breaches || 0,
       icon: Zap,
       color: 'text-red-600',
       bg: 'bg-red-50',
-      border: counts.sla_breaches > 0 ? 'border-red-300' : 'border-red-100',
+      border: ((counts as any).sla_breaches || 0) > 0 ? 'border-red-300' : 'border-red-100',
     },
   ];
 

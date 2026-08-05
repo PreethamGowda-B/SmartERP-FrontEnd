@@ -11,14 +11,11 @@ import { NotificationCenterDrawer } from '@/components/notification-center-drawe
 import { ThemeToggle } from '@/components/theme-toggle';
 
 const MAIN_NAV_ITEMS = [
-  { href: '/customer/dashboard',         label: 'Dashboard',   icon: LayoutDashboard },
-  { href: '/customer/machines',          label: 'My Machines', icon: Cpu },
-  { href: '/customer/jobs',              label: 'Requests',    icon: List },
-  { href: '/customer/create-job',        label: 'New Request', icon: PlusCircle },
-  { href: '/customer/documents',         label: 'Documents',   icon: FileText },
-  { href: '/customer/onboarding-wizard', label: 'Fleet Setup', icon: Sparkles },
-  { href: '/customer/history',           label: 'History',     icon: History },
-  { href: '/customer/recurring',         label: 'Recurring',   icon: Repeat },
+  { href: '/customer/dashboard',  label: 'Dashboard',   icon: LayoutDashboard },
+  { href: '/customer/jobs',       label: 'Requests',    icon: List },
+  { href: '/customer/create-job', label: 'New Request', icon: PlusCircle },
+  { href: '/customer/history',    label: 'History',     icon: History },
+  { href: '/customer/recurring',  label: 'Recurring',   icon: Repeat },
 ];
 
 const MOBILE_NAV_ITEMS = [

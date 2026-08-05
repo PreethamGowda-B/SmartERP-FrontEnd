@@ -198,3 +198,14 @@ export interface CompanyValidationResult {
   valid: boolean;
   companyName?: string;
 }
+
+export interface StatusCounts {
+  pending_approval: number;
+  active: number;
+  in_progress: number;
+  completed: number;
+  sla_breaches: number;
+  machines?: number;
+  pm_due?: number;
+  warranty?: number;
+}

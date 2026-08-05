@@ -20,6 +20,9 @@ export default function CreateJobPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useCustomerAuth();
 
+  const [requestTab, setRequestTab] = useState<'general' | 'machine'>('general');
+  const [alarmCode, setAlarmCode] = useState('');
+  const [serviceType, setServiceType] = useState('breakdown');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<JobPriority>('medium');
@@ -130,6 +133,32 @@ export default function CreateJobPage() {
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            {/* General vs Machine-Based Request Tabs */}
+            <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-xl mb-6 border border-gray-200">
+              <button
+                type="button"
+                onClick={() => setRequestTab('general')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                  requestTab === 'general'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                🛠️ General Request
+              </button>
+              <button
+                type="button"
+                onClick={() => setRequestTab('machine')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                  requestTab === 'machine'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                ⚙️ Machine-Based Request
+              </button>
+            </div>
+
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
@@ -146,24 +175,41 @@ export default function CreateJobPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {/* Left: Title + Description */}
                 <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Select Machine Unit <span className="text-gray-400 font-normal">(optional)</span>
-                    </label>
-                    <select
-                      value={selectedMachineId}
-                      onChange={(e) => setSelectedMachineId(e.target.value)}
-                      disabled={isLoading}
-                      className="w-full px-4 py-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                    >
-                      <option value="">General Service (No Machine Linked)</option>
-                      {machines.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.machine_name} ({m.make} {m.model} - S/N: {m.serial_number})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {requestTab === 'machine' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Select Machine Unit <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={selectedMachineId}
+                          onChange={(e) => setSelectedMachineId(e.target.value)}
+                          disabled={isLoading}
+                          className="w-full px-4 py-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                        >
+                          <option value="">-- Select CNC Machine --</option>
+                          {machines.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.machine_name} ({m.make} {m.model} - S/N: {m.serial_number})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          CNC Alarm Code <span className="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={alarmCode}
+                          onChange={(e) => setAlarmCode(e.target.value)}
+                          placeholder="e.g. Alarm #414 Servo Overheat"
+                          className="w-full px-4 py-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
