@@ -51,8 +51,12 @@ export default function EmployeeJobsPage() {
   // 1. Deduplicate allJobs by job.id
   const rawScoped = currentUser?.role === "employee"
     ? allJobs.filter((job: any) => {
-        const userId = String(currentUser.id || "")
-        const assignedTo = job.assigned_to ? String(job.assigned_to) : null
+        const userId = String(currentUser.id || currentUser.userId || "")
+        const assignedTo = job.assigned_employee_id
+          ? String(job.assigned_employee_id)
+          : job.assigned_to
+            ? String(job.assigned_to)
+            : null
         const assignedEmployees = Array.isArray(job.assignedEmployees)
           ? job.assignedEmployees.map(String)
           : []

@@ -57,7 +57,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     let intervalId: ReturnType<typeof setInterval> | null = null
 
     async function loadJobs() {
-      if (!user || !getAuthToken()) return
+      if (!user) return
       try {
         logger.log("[v0] Fetching jobs from backend...")
 
@@ -76,8 +76,8 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
           const normalized = serverJobs.map((s: any) => {
             // prefer an explicit assignedEmployees array if present
             const assignedArr = Array.isArray(s.assignedEmployees) ? s.assignedEmployees : null
-            // fallback to top-level assigned_to or assignedTo (unknown shapes from server)
-            const topAssigned = (s as any).assigned_to ?? (s as any).assignedTo ?? null
+            // fallback to top-level assigned_employee_id, assigned_to, or assignedTo
+            const topAssigned = (s as any).assigned_employee_id ?? (s as any).assigned_to ?? (s as any).assignedTo ?? null
             const assignedEmployees = Array.isArray(assignedArr)
               ? assignedArr.map((a: any) => String(a))
               : topAssigned != null
