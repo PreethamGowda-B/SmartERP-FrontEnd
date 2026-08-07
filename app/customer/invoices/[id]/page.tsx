@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { apiClient } from '@/lib/apiClient';
+import customerApi from '@/lib/customerApi';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CustomerInvoiceDetailPage() {
@@ -51,27 +51,25 @@ export default function CustomerInvoiceDetailPage() {
   const fetchInvoiceDetails = async () => {
     try {
       setLoading(true);
-      const res = await apiClient<{ success: boolean; invoice: any; company?: any; lineItems: any[] }>(`/api/invoices/${invoiceId}`);
-      if (res && res.success) {
-        setInvoice(res.invoice);
-        setCompany(res.company || null);
-        setLineItems(res.lineItems || []);
+      const res = await customerApi.get<{ success: boolean; invoice: any; company?: any; lineItems: any[] }>(`/api/customer/jobs/${invoiceId}/invoice`);
+      const data = res.data;
+      if (data && data.success) {
+        setInvoice(data.invoice);
+        setCompany(data.company || null);
+        setLineItems(data.lineItems || []);
 
         // Log View Activity Tracking Beacon
-        apiClient(`/api/invoices/${invoiceId}/track`, {
-          method: 'POST',
-          body: JSON.stringify({
-            companyId: res.invoice.company_id,
-            actionType: 'viewed',
-            performedByType: 'customer',
-            performedByName: res.invoice.customer_name || 'Customer',
-          }),
+        customerApi.post(`/api/invoices/${invoiceId}/track`, {
+          companyId: data.invoice.company_id,
+          actionType: 'viewed',
+          performedByType: 'customer',
+          performedByName: data.invoice.customer_name || 'Customer',
         }).catch(() => {});
       }
     } catch (err: any) {
       toast({
         title: 'Error loading invoice',
-        description: err.message || 'Could not fetch invoice details',
+        description: err.response?.data?.error || err.message || 'Could not fetch invoice details',
         variant: 'destructive',
       });
     } finally {
@@ -82,14 +80,11 @@ export default function CustomerInvoiceDetailPage() {
   const handleDownloadPDF = async () => {
     try {
       // Log Download Activity Tracking Beacon
-      apiClient(`/api/invoices/${invoiceId}/track`, {
-        method: 'POST',
-        body: JSON.stringify({
-          companyId: invoice.company_id,
-          actionType: 'downloaded',
-          performedByType: 'customer',
-          performedByName: invoice.customer_name || 'Customer',
-        }),
+      customerApi.post(`/api/invoices/${invoiceId}/track`, {
+        companyId: invoice.company_id,
+        actionType: 'downloaded',
+        performedByType: 'customer',
+        performedByName: invoice.customer_name || 'Customer',
       }).catch(() => {});
 
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
@@ -112,32 +107,26 @@ export default function CustomerInvoiceDetailPage() {
     try {
       setSubmittingDispute(true);
       // 1. Post to Canonical Approval Engine (/api/work-requests)
-      await apiClient('/api/work-requests', {
-        method: 'POST',
-        body: JSON.stringify({
-          request_type: 'invoice_discount',
-          category: 'finance',
-          urgency: 'high',
-          invoice_id: invoiceId,
-          job_id: invoice?.job_id,
-          title: `Customer Discount Request: ${invoice?.invoice_number || invoiceId}`,
-          reason: `${issueCategory}: ${issueDescription}`,
-          payload: { category: issueCategory, invoice_number: invoice?.invoice_number }
-        }),
+      await customerApi.post('/api/work-requests', {
+        request_type: 'invoice_discount',
+        category: 'finance',
+        urgency: 'high',
+        invoice_id: invoiceId,
+        job_id: invoice?.job_id,
+        title: `Customer Discount Request: ${invoice?.invoice_number || invoiceId}`,
+        reason: `${issueCategory}: ${issueDescription}`,
+        payload: { category: issueCategory, invoice_number: invoice?.invoice_number }
       }).catch(() => {});
 
-      // 2. Log to legacy dispute endpoint for backward compatibility
-      const res = await apiClient<{ success: boolean }>(`/api/invoices/${invoiceId}/dispute`, {
-        method: 'POST',
-        body: JSON.stringify({
-          companyId: invoice.company_id,
-          customerId: invoice.customer_id,
-          issueCategory,
-          description: issueDescription,
-        }),
+      // 2. Log to dispute endpoint
+      const res = await customerApi.post<{ success: boolean }>(`/api/invoices/${invoiceId}/dispute`, {
+        companyId: invoice.company_id,
+        customerId: invoice.customer_id,
+        issueCategory,
+        description: issueDescription,
       });
 
-      if (res && res.success) {
+      if (res.data && res.data.success) {
         toast({
           title: 'Invoice Issue Submitted',
           description: 'The business owner has been notified and will review your request.',

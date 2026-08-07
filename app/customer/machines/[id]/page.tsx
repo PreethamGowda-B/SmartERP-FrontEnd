@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { apiClient } from "@/lib/apiClient"
+import customerApi from "@/lib/customerApi"
 import { toast } from "sonner"
 import { Cpu, Clock, ArrowLeft, ShieldCheck, CheckCircle2, AlertTriangle } from "lucide-react"
 
@@ -21,12 +21,12 @@ export default function CustomerMachineDetailPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await apiClient<{ success: boolean; machine: any }>(`/api/machines/${machineId}`)
-      if (res?.machine) setMachine(res.machine)
-      const tRes = await apiClient<{ success: boolean; timeline: any[] }>(`/api/machines/${machineId}/timeline`)
-      if (tRes?.timeline) setTimeline(tRes.timeline)
+      const res = await customerApi.get<{ success: boolean; machine: any }>(`/api/customer/machines/${machineId}`)
+      if (res.data?.machine) setMachine(res.data.machine)
+      const tRes = await customerApi.get<{ success: boolean; timeline: any[] }>(`/api/customer/machines/${machineId}/timeline`)
+      if (tRes.data?.timeline) setTimeline(tRes.data.timeline)
     } catch (err: any) {
-      toast.error(err.message || "Failed to load machine timeline")
+      toast.error(err.response?.data?.error || err.message || "Failed to load machine timeline")
     } finally {
       setLoading(false)
     }

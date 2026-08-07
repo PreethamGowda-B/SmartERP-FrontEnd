@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { apiClient } from "@/lib/apiClient"
+import customerApi from "@/lib/customerApi"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { CustomerNavbar } from "@/components/customer/layout/CustomerNavbar"
@@ -27,14 +27,11 @@ export default function CustomerOnboardingWizardPage() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      await apiClient("/api/machines", {
-        method: "POST",
-        body: JSON.stringify(formData),
-      })
+      await customerApi.post("/api/customer/machines", formData)
       toast.success("CNC Fleet Machine registered successfully!")
       router.push("/customer/machines")
     } catch (err: any) {
-      toast.error(err.message || "Failed to register machine")
+      toast.error(err.response?.data?.error || err.message || "Failed to register machine")
     } finally {
       setSubmitting(false)
     }

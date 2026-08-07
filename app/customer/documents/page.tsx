@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { apiClient } from "@/lib/apiClient"
+import customerApi from "@/lib/customerApi"
 import { toast } from "sonner"
 import { CustomerNavbar } from "@/components/customer/layout/CustomerNavbar"
 import { FileText, Download, Search, ShieldCheck, FileCheck } from "lucide-react"
@@ -18,11 +18,11 @@ export default function CustomerDocumentCenterPage() {
   const fetchDocs = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await apiClient<{ success?: boolean; documents?: any[] }>("/api/documents")
-      const docs = Array.isArray(res) ? res : res?.documents || []
+      const res = await customerApi.get<{ success?: boolean; documents?: any[] }>("/api/customer/documents")
+      const docs = res.data?.documents || (res.data as any)?.data?.documents || []
       setDocuments(docs)
     } catch (err: any) {
-      toast.error(err.message || "Failed to load documents")
+      toast.error(err.response?.data?.error || err.message || "Failed to load documents")
     } finally {
       setLoading(false)
     }

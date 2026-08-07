@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { apiClient } from "@/lib/apiClient"
+import customerApi from "@/lib/customerApi"
 import { toast } from "sonner"
 import {
   Cpu, Wrench, ShieldCheck, Activity, Calendar, Clock, Plus, Search, CheckCircle2, AlertTriangle, Layers, FileText
@@ -35,12 +35,11 @@ export default function CustomerMachinesPage() {
   const fetchMachines = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await apiClient<{ success: boolean; machines: any[] }>("/api/machines")
-      if (res?.machines) {
-        setMachines(res.machines)
-      }
+      const res = await customerApi.get<{ success: boolean; machines: any[] }>("/api/customer/machines")
+      const machinesList = res.data?.machines || (res.data as any)?.data?.machines || []
+      setMachines(machinesList)
     } catch (err: any) {
-      toast.error(err.message || "Failed to load registered machines")
+      toast.error(err.response?.data?.error || err.message || "Failed to load registered machines")
     } finally {
       setLoading(false)
     }
@@ -54,20 +53,15 @@ export default function CustomerMachinesPage() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      // For customer self-registration, user id is customer_id
-      const res = await apiClient<{ success: boolean; machine: any }>("/api/machines", {
-        method: "POST",
-        body: JSON.stringify({
-          ...formData,
-          customer_id: "self",
-          spindle_hours: parseInt(formData.spindle_hours) || 0,
-        }),
+      await customerApi.post("/api/customer/machines", {
+        ...formData,
+        spindle_hours: parseInt(formData.spindle_hours) || 0,
       })
       toast.success("CNC Machine registered successfully!")
       setIsAddOpen(false)
       fetchMachines()
     } catch (err: any) {
-      toast.error(err.message || "Failed to register machine")
+      toast.error(err.response?.data?.error || err.message || "Failed to register machine")
     } finally {
       setSubmitting(false)
     }
