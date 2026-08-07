@@ -41,9 +41,12 @@ export default function CreateJobPage() {
   useEffect(() => {
     async function loadMachines() {
       try {
-        const res = await customerApi.get<{ success: boolean; machines: any[] }>('/api/machines');
-        if (res?.data?.machines) setMachines(res.data.machines);
-      } catch (_) {}
+        const res = await customerApi.get<{ success: boolean; machines: any[] }>('/api/customer/machines');
+        const list = res.data?.machines || (res.data as any)?.data?.machines || [];
+        setMachines(list);
+      } catch (err) {
+        console.error('Failed to load customer machines:', err);
+      }
     }
     if (isAuthenticated) loadMachines();
   }, [isAuthenticated]);
