@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, PlusCircle, User, LogOut, Menu, X, Bell, List, History, Repeat, Cpu, FileText, Sparkles } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, User, LogOut, Menu, X, Bell, List, History, Repeat, Cpu, FileText, Sparkles, ChevronDown } from 'lucide-react';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { useCustomerNotifications } from '@/contexts/CustomerNotificationContext';
 import { NotificationCenterDrawer } from '@/components/notification-center-drawer';
@@ -21,6 +21,9 @@ const MAIN_NAV_ITEMS = [
   { href: '/customer/recurring',         label: 'Recurring',   icon: Repeat },
 ];
 
+const PRIMARY_NAV_ITEMS = MAIN_NAV_ITEMS.slice(0, 5);
+const SECONDARY_NAV_ITEMS = MAIN_NAV_ITEMS.slice(5);
+
 const MOBILE_NAV_ITEMS = [
   ...MAIN_NAV_ITEMS,
   { href: '/customer/notifications',     label: 'Notifications', icon: Bell },
@@ -32,6 +35,7 @@ export function CustomerNavbar() {
   const { customer, logout } = useCustomerAuth();
   const { getUnreadCount } = useCustomerNotifications();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const unreadCount = getUnreadCount();
 
@@ -58,14 +62,14 @@ export function CustomerNavbar() {
           </Link>
 
           {/* Desktop Navigation Tabs */}
-          <div className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 min-w-0">
-            {MAIN_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          <div className="hidden lg:flex items-center gap-1 xl:gap-1.5 shrink-0">
+            {PRIMARY_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = pathname === href || (href !== '/customer/dashboard' && pathname.startsWith(href));
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-1 lg:gap-1.5 px-2 xl:px-3 py-1.5 rounded-xl text-[11px] xl:text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
                     active
                       ? 'bg-primary/15 text-primary font-bold shadow-2xs border border-primary/20'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
@@ -76,6 +80,68 @@ export function CustomerNavbar() {
                 </Link>
               );
             })}
+
+            {/* Extra tabs visible directly on xl screens (1280px+) */}
+            <div className="hidden xl:flex items-center gap-1.5 shrink-0">
+              {SECONDARY_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href || pathname.startsWith(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
+                      active
+                        ? 'bg-primary/15 text-primary font-bold shadow-2xs border border-primary/20'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span>{label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* "More" dropdown for lg screens (1024px - 1279px) */}
+            <div className="relative xl:hidden shrink-0">
+              <button
+                onClick={() => setMoreOpen(!moreOpen)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
+                  SECONDARY_NAV_ITEMS.some((i) => pathname === i.href || pathname.startsWith(i.href))
+                    ? 'bg-primary/15 text-primary font-bold border border-primary/20'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                }`}
+              >
+                <span>More</span>
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {moreOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-48 rounded-xl bg-card border border-border/80 shadow-lg p-1.5 z-50 flex flex-col gap-1">
+                    {SECONDARY_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+                      const active = pathname === href || pathname.startsWith(href);
+                      return (
+                        <Link
+                          key={href}
+                          href={href}
+                          onClick={() => setMoreOpen(false)}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                            active
+                              ? 'bg-primary/15 text-primary font-bold'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                          }`}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span>{label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Right Utilities (Notifications Bell, Theme, Profile Pill, Sign Out) */}
