@@ -58,14 +58,14 @@ export function CustomerNavbar() {
           </Link>
 
           {/* Desktop Navigation Tabs */}
-          <div className="hidden lg:flex items-center gap-1 xl:gap-1.5 shrink-0">
+          <div className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 min-w-0">
             {MAIN_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
               const active = pathname === href || (href !== '/customer/dashboard' && pathname.startsWith(href));
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`flex items-center gap-1 lg:gap-1.5 px-2 xl:px-3 py-1.5 rounded-xl text-[11px] xl:text-xs font-semibold whitespace-nowrap transition-all ${
                     active
                       ? 'bg-primary/15 text-primary font-bold shadow-2xs border border-primary/20'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'

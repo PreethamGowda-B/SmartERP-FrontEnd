@@ -232,7 +232,7 @@ export default function CustomerDashboardPage() {
         {/* ── Top bar ─────────────────────────────────────────────────────── */}
         <motion.div
           variants={fadeUp} initial="hidden" animate="visible" custom={0}
-          className="flex items-center justify-between mb-8"
+          className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 mb-8"
         >
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Good day, {firstName} 👋</h1>

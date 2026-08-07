@@ -62,7 +62,7 @@ export default function CustomerDocumentCenterPage() {
           <Card className="p-12 text-center text-slate-400">No customer documents available.</Card>
         ) : (
           documents.map((d) => (
-            <Card key={d.id} className="p-4 flex items-center justify-between border">
+            <Card key={d.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0 border">
               <div className="flex items-center gap-3">
                 <FileCheck className="h-6 w-6 text-emerald-500" />
                 <div>

@@ -65,7 +65,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   if (isLoading || !user || user.role !== 'super_admin') {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 text-slate-900">
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 text-slate-900">
         <ShieldCheck className="h-12 w-12 text-slate-900 animate-pulse mb-4" />
         <p className="text-slate-600 font-semibold tracking-tight">Verifying Platform Security...</p>
       </div>
