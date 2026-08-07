@@ -8,7 +8,7 @@ import { apiClient } from "@/lib/apiClient"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import {
-  Activity, Cpu, Wrench, ShieldAlert, Monitor, Clock, Users, DollarSign, AlertTriangle, ArrowUpRight, Radio
+  Activity, Cpu, Wrench, ShieldAlert, Monitor, Clock, Users, DollarSign, AlertTriangle, ArrowUpRight, Radio, RefreshCw, PackageCheck, History
 } from "lucide-react"
 
 export default function CommandCenterPage() {
@@ -30,9 +30,11 @@ export default function CommandCenterPage() {
 
   useEffect(() => {
     fetchCommandCenter()
+    const interval = setInterval(fetchCommandCenter, 30000) // 30s auto-refresh
+    return () => clearInterval(interval)
   }, [fetchCommandCenter])
 
-  if (loading) return <div className="p-12 text-center text-slate-500">Connecting to Executive Command Center...</div>
+  if (loading && !data) return <div className="p-12 text-center text-slate-500">Connecting to Executive Command Center...</div>
 
   return (
     <div className="container max-w-7xl mx-auto p-6 space-y-6">
@@ -43,11 +45,11 @@ export default function CommandCenterPage() {
             <Radio className="h-8 w-8 text-rose-500 animate-pulse" /> Executive CNC Operations Command Center
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Real-time operations ticker, engineer radar, SLA compliance warnings, and machine breakdown dispatches
+            Live operations telemetry, technician radar, SLA warnings, active dispatches, and inventory movements
           </p>
         </div>
         <Button onClick={() => fetchCommandCenter()} variant="outline" className="font-bold text-xs gap-1.5">
-          🔄 Refresh Operations Telemetry
+          <RefreshCw className="h-4 w-4" /> Refresh Telemetry
         </Button>
       </div>
 
@@ -59,7 +61,7 @@ export default function CommandCenterPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">Active Jobs</p>
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">Active Field Jobs</p>
               <h2 className="text-3xl font-black text-slate-900 dark:text-white mt-1">{data?.active_jobs_total || 0}</h2>
             </div>
             <Wrench className="h-8 w-8 text-amber-500" />
@@ -93,40 +95,128 @@ export default function CommandCenterPage() {
         </Card>
 
         <Card
-          onClick={() => router.push("/owner/remote-support")}
-          className="p-5 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 border-indigo-300 dark:border-indigo-900 cursor-pointer hover:shadow-lg transition-all"
+          onClick={() => router.push("/owner/attendance")}
+          className="p-5 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-300 dark:border-emerald-900 cursor-pointer hover:shadow-lg transition-all"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-indigo-800 dark:text-indigo-400">Active Remote Sessions</p>
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white mt-1">{data?.remote_sessions_active || 0}</h2>
+              <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">Technicians Online</p>
+              <h2 className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{data?.technicians_online || 0}</h2>
             </div>
-            <Monitor className="h-8 w-8 text-indigo-500" />
+            <Users className="h-8 w-8 text-emerald-500" />
           </div>
         </Card>
       </div>
 
-      {/* Top Alarm Codes Feed */}
-      <Card className="p-6">
-        <CardHeader className="px-0 pt-0">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <Cpu className="h-5 w-5 text-amber-500" /> Top Active Machine Alarm Codes
-          </CardTitle>
-          <CardDescription>Frequency breakdown of alarm codes requiring technical dispatch</CardDescription>
-        </CardHeader>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          {data?.top_alarm_codes?.length === 0 ? (
-            <p className="text-xs text-slate-400">No active breakdown alarms reported.</p>
-          ) : (
-            data?.top_alarm_codes?.map((alm: any, idx: number) => (
-              <Card key={idx} className="p-4 bg-slate-50 dark:bg-slate-900 border flex items-center justify-between">
-                <div>
-                  <Badge className="bg-rose-600 text-white font-mono font-bold">{alm.alarm_code}</Badge>
-                  <p className="text-xs text-slate-500 mt-1">High Priority Diagnostic</p>
+      {/* Top Alarm Codes & Live Dispatches */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="p-6">
+          <CardHeader className="px-0 pt-0">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <Cpu className="h-5 w-5 text-amber-500" /> Breakdown Alarm Diagnostics
+            </CardTitle>
+            <CardDescription>Frequency breakdown of active CNC alarm codes</CardDescription>
+          </CardHeader>
+          <div className="space-y-3 pt-2">
+            {!data?.top_alarm_codes || data.top_alarm_codes.length === 0 ? (
+              <p className="text-xs text-slate-400">No active breakdown alarms reported.</p>
+            ) : (
+              data.top_alarm_codes.map((alm: any, idx: number) => (
+                <div key={idx} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border flex items-center justify-between">
+                  <div>
+                    <Badge className="bg-rose-600 text-white font-mono font-bold">{alm.alarm_code}</Badge>
+                    <p className="text-xs text-slate-500 mt-1">High Priority Diagnostic Code</p>
+                  </div>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{alm.frequency} Jobs</span>
                 </div>
-                <span className="text-lg font-black text-slate-900 dark:text-white">{alm.frequency} Jobs</span>
-              </Card>
+              ))
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <CardHeader className="px-0 pt-0">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <PackageCheck className="h-5 w-5 text-indigo-500" /> Recent Inventory Movements
+            </CardTitle>
+            <CardDescription>Material requests and spare part allocations</CardDescription>
+          </CardHeader>
+          <div className="space-y-3 pt-2">
+            {!data?.recent_inventory_movements || data.recent_inventory_movements.length === 0 ? (
+              <p className="text-xs text-slate-400">No recent inventory movements logged.</p>
+            ) : (
+              data.recent_inventory_movements.map((inv: any) => (
+                <div key={inv.id} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-white">{inv.item_name}</h4>
+                    <p className="text-[11px] text-slate-500">Qty: {inv.quantity} • Req by: {inv.requested_by || 'Technician'}</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] uppercase">{inv.status}</Badge>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+      </div>
+
+      {/* Live Recent Service Tickets */}
+      <Card className="p-6">
+        <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-lg font-bold">Recent Service Requests & Dispatches</CardTitle>
+            <CardDescription>Live job status pipeline from customer creation to technician signoff</CardDescription>
+          </div>
+          <Button onClick={() => router.push("/owner/jobs")} variant="ghost" size="sm" className="text-xs font-bold text-amber-600">
+            View All Jobs →
+          </Button>
+        </CardHeader>
+        <div className="space-y-3 pt-2">
+          {!data?.recent_jobs || data.recent_jobs.length === 0 ? (
+            <p className="text-xs text-slate-400 text-center py-6">No recent service requests created.</p>
+          ) : (
+            data.recent_jobs.map((job: any) => (
+              <div key={job.id} onClick={() => router.push(`/owner/jobs`)} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border flex items-center justify-between hover:bg-slate-100 cursor-pointer transition-all">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-slate-900 dark:text-white">{job.title}</span>
+                    <Badge variant="outline" className="text-[10px] capitalize">{job.service_type || 'service'}</Badge>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">Customer: {job.customer_name || 'Customer'}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge className={job.priority === 'urgent' ? 'bg-rose-500 text-white' : 'bg-blue-500 text-white'}>
+                    {job.priority}
+                  </Badge>
+                  <Badge variant="secondary" className="capitalize">{job.status}</Badge>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+
+      {/* Live System Audit Trail */}
+      <Card className="p-6">
+        <CardHeader className="px-0 pt-0 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <History className="h-5 w-5 text-rose-500" /> Live System Audit Trail
+            </CardTitle>
+            <CardDescription>Immutable record of cross-module system actions and approvals</CardDescription>
+          </div>
+          <Button onClick={() => router.push("/owner/cnc/ai-activity")} variant="ghost" size="sm" className="text-xs font-bold text-amber-600">
+            Audit Center →
+          </Button>
+        </CardHeader>
+        <div className="space-y-2 pt-2">
+          {!data?.recent_activities || data.recent_activities.length === 0 ? (
+            <p className="text-xs text-slate-400 text-center py-6">No system audit activities recorded yet.</p>
+          ) : (
+            data.recent_activities.map((act: any) => (
+              <div key={act.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-900 dark:text-white">{act.action}</span>
+                <span className="text-slate-400 font-mono">{new Date(act.created_at || act.timestamp).toLocaleTimeString()}</span>
+              </div>
             ))
           )}
         </div>
