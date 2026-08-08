@@ -558,6 +558,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={() => {
+                clearTokens()
                 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
                 window.location.href = `${apiUrl}/api/auth/google?role=${activeTab}`
               }}

@@ -94,21 +94,17 @@ function CallbackContent() {
 
             setUser(user)
 
-            // Redirect based on role — admin route comes from env, never hardcoded
+            // Redirect based on role — use window.location.href so fresh token context loads across all components & SSE connections
+            let target = "/owner"
             if (isSuperAdmin) {
                 const adminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE
-                if (adminRoute) {
-                    router.push(`/${adminRoute}/dashboard`)
-                } else {
-                    router.push("/superadmin")
-                }
-            } else if (user.role === "owner") {
-                router.push("/owner")
+                target = adminRoute ? `/${adminRoute}/dashboard` : "/superadmin"
             } else if (user.role === "hr") {
-                router.push("/hr")
-            } else {
-                router.push("/employee")
+                target = "/hr"
+            } else if (user.role === "employee") {
+                target = "/employee"
             }
+            window.location.href = target
         })
     }, [router, searchParams, setUser])
 
