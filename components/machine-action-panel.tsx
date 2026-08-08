@@ -63,7 +63,10 @@ export function MachineActionPanel({ machine, onOpenQuotationModal, onOpenRemote
         </Button>
 
         <Button
-          onClick={() => toast.success(`Exported complete Service Report PDF for ${machine.machine_name}`)}
+          onClick={() => {
+            toast.info(`Generating machine audit report for ${machine.machine_name}...`)
+            router.push(`/owner/reports?machine_id=${machine.id}`)
+          }}
           variant="outline"
           className="bg-slate-800 hover:bg-slate-700 text-white border-slate-700 text-xs font-bold gap-1.5 h-10 rounded-xl"
         >

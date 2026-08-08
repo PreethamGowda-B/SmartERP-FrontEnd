@@ -79,6 +79,8 @@ export default function CreateJobPage() {
         priority,
         scheduled_at: scheduledAt || undefined,
         machine_id: selectedMachineId || undefined,
+        alarm_code: alarmCode ? alarmCode.trim() : undefined,
+        service_type: requestTab === 'machine' ? (serviceType || 'breakdown') : 'general',
       });
       setSuccess(true);
       setTimeout(() => router.push('/customer/dashboard'), 2000);

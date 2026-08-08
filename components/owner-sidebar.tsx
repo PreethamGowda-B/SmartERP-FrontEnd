@@ -59,6 +59,7 @@ const navCategories = [
     title: "CNC Service Edition",
     items: [
       { name: "Command Center", href: "/owner/cnc/command-center", icon: Radio },
+      { name: "Machine Registry", href: "/owner/machines", icon: Cpu },
       { name: "SLA Management", href: "/owner/cnc/sla", icon: Clock },
       { name: "Supplier Warranty", href: "/owner/cnc/warranty", icon: Award },
       { name: "Vendors & POs", href: "/owner/cnc/vendors", icon: ShoppingBag },

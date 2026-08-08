@@ -16,7 +16,7 @@ export function ClockInRequiredModal({ isOpen, onClose }: ClockInRequiredModalPr
 
   const handleGoToClockIn = () => {
     onClose()
-    router.push("/employee/time")
+    router.push("/employee/time-tracking")
   }
 
   return (

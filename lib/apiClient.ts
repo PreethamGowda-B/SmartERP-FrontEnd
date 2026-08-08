@@ -425,3 +425,19 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
     markRequestEnd(requestId)
   }
 }
+
+apiClient.get = <T = any>(path: string, options: RequestInit = {}) => apiClient<T>(path, { ...options, method: "GET" })
+apiClient.post = <T = any>(path: string, body?: any, options: RequestInit = {}) =>
+  apiClient<T>(path, {
+    ...options,
+    method: "POST",
+    ...(body !== undefined && { body: body instanceof FormData ? body : JSON.stringify(body) }),
+  })
+apiClient.put = <T = any>(path: string, body?: any, options: RequestInit = {}) =>
+  apiClient<T>(path, {
+    ...options,
+    method: "PUT",
+    ...(body !== undefined && { body: body instanceof FormData ? body : JSON.stringify(body) }),
+  })
+apiClient.delete = <T = any>(path: string, options: RequestInit = {}) => apiClient<T>(path, { ...options, method: "DELETE" })
+
