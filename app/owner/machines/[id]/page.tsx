@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { OwnerLayout } from "@/components/owner-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -24,44 +25,48 @@ export default function MachineDashboardPage() {
   const [timeline, setTimeline] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchMachineProfile = useCallback(async () => {
+  const fetchMachineDetails = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await apiClient<{ success: boolean; machine: any }>(`/api/machines/${machineId}`)
-      if (res?.machine) {
-        setMachineData(res.machine)
-      }
-      const tRes = await apiClient<{ success: boolean; timeline: any[] }>(`/api/machines/${machineId}/timeline`)
-      if (tRes?.timeline) {
-        setTimeline(tRes.timeline)
+      const res = await apiClient<{ success: boolean; machine: any; timeline: any[] }>(`/api/machines/${machineId}`)
+      if (res) {
+        setMachineData(res.machine || null)
+        setTimeline(res.timeline || [])
       }
     } catch (err: any) {
-      toast.error(err.message || "Failed to load machine profile")
+      toast.error(err.message || "Failed to fetch CNC machine detail telemetry")
     } finally {
       setLoading(false)
     }
   }, [machineId])
 
   useEffect(() => {
-    if (machineId) fetchMachineProfile()
-  }, [machineId, fetchMachineProfile])
+    if (machineId) fetchMachineDetails()
+  }, [machineId, fetchMachineDetails])
 
   if (loading) {
-    return <div className="p-12 text-center text-slate-500">Loading CNC Machine Profile...</div>
+    return (
+      <OwnerLayout>
+        <div className="p-12 text-center text-slate-500">Loading CNC Machine Profile...</div>
+      </OwnerLayout>
+    )
   }
 
   if (!machineData) {
     return (
-      <div className="p-12 text-center space-y-4">
-        <AlertTriangle className="h-12 w-12 text-rose-500 mx-auto" />
-        <h2 className="text-xl font-bold">Machine Not Found</h2>
-        <Button onClick={() => router.back()}>← Back to Machine Registry</Button>
-      </div>
+      <OwnerLayout>
+        <div className="p-12 text-center space-y-4">
+          <AlertTriangle className="h-12 w-12 text-rose-500 mx-auto" />
+          <h2 className="text-xl font-bold">Machine Not Found</h2>
+          <Button onClick={() => router.back()}>← Back to Machine Registry</Button>
+        </div>
+      </OwnerLayout>
     )
   }
 
   return (
-    <div className="container max-w-7xl mx-auto p-6 space-y-6">
+    <OwnerLayout>
+      <div className="space-y-6">
       {/* Navigation Back */}
       <Button variant="ghost" onClick={() => router.back()} className="gap-2 text-slate-600 dark:text-slate-400">
         <ArrowLeft className="h-4 w-4" /> Back to Machines
@@ -324,5 +329,6 @@ export default function MachineDashboardPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </OwnerLayout>
   )
 }

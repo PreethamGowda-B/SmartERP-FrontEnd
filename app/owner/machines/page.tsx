@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
+import { OwnerLayout } from "@/components/owner-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -85,7 +86,8 @@ export default function OwnerMachineRegistryPage() {
   })
 
   return (
-    <div className="container max-w-7xl mx-auto p-6 space-y-6">
+    <OwnerLayout>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
         <div>
@@ -358,5 +360,6 @@ export default function OwnerMachineRegistryPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </OwnerLayout>
   )
 }
