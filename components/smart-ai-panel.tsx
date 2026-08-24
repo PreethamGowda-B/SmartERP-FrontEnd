@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAuth } from "@/contexts/auth-context"
 import { useSubscription } from "@/contexts/subscription-context"
-import { getAuthToken } from "@/lib/apiClient"
+import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -542,18 +542,10 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
 
       if (scopesToSend.length > 0) body.modelScopes = scopesToSend
 
-      const res = await fetch(`${API_URL}/api/ai/agent`, {
+      const data = await apiClient("/api/ai/agent", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
         body: JSON.stringify(body),
       })
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || err.message || "AI request failed")
-      }
-
-      const data = await res.json()
 
       // Update auto-badge if AI auto-selected a model
       if (data.autoSelectedModel) {
