@@ -9,7 +9,7 @@ import {
   MessageSquarePlus, Bug, AlertTriangle, Lock, Zap,
   History, Plus, Trash2, Edit3, Search, Check, Brain, TrendingUp, Package,
   CalendarCheck, CreditCard, Users, FileSpreadsheet, Globe, BarChart3,
-  ShieldCheck, Clock
+  ShieldCheck, Clock, Mic
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,6 +21,7 @@ import { useSubscription } from "@/contexts/subscription-context"
 import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { VoiceInputModal } from "@/components/voice-input-modal"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -297,6 +298,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   // ── Input state
   const [input, setInput] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(false)
+  const [showVoiceModal, setShowVoiceModal] = React.useState(false)
 
   // ── Feedback state
   const [feedbackDetected, setFeedbackDetected] = React.useState<FeedbackDetection | null>(null)
@@ -1033,6 +1035,16 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                         />
                       </div>
                       <Button
+                        type="button"
+                        onClick={() => setShowVoiceModal(true)}
+                        size="icon"
+                        variant="outline"
+                        title="Voice-to-Command / Shop Floor Mic"
+                        className="h-11 w-11 rounded-xl border-border/60 bg-muted/40 hover:bg-muted/80 text-violet-600 dark:text-violet-400 shrink-0"
+                      >
+                        <Mic className="h-4 w-4" />
+                      </Button>
+                      <Button
                         onClick={() => sendMessage()}
                         disabled={!input.trim() || isLoading}
                         size="icon"
@@ -1054,6 +1066,19 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Shop Floor Voice AI Modal */}
+      <VoiceInputModal
+        isOpen={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+        portal={currentPortal}
+        onSuccess={(res) => {
+          if (res?.text) {
+            toast.success("Voice command executed successfully!")
+            setShowVoiceModal(false)
+          }
+        }}
+      />
     </>
   )
 }

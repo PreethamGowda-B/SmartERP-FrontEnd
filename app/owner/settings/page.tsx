@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/contexts/auth-context"
-import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader2, Eye, EyeOff, Sparkles } from "lucide-react"
+import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader2, Eye, EyeOff, Sparkles, Download, Database } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import Link from "next/link"
 
@@ -85,6 +85,32 @@ export default function SettingsPage() {
   // ── Invite / Company ID ───────────────────────────────────────────────────
   const [inviteLink, setInviteLink] = useState("")
   const [loadingInvite, setLoadingInvite] = useState(false)
+  const [exportingBackup, setExportingBackup] = useState(false)
+
+  const handleDownloadBackup = async () => {
+    setExportingBackup(true)
+    try {
+      const token = getAuthToken()
+      const res = await fetch(`${API}/api/export/company-backup`, {
+        headers: { Authorization: token ? `Bearer ${token}` : "" }
+      })
+      if (!res.ok) throw new Error("Failed to generate backup archive.")
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `SmartERP_Full_Backup_${company.company_id || 'COMPANY'}_${new Date().toISOString().split('T')[0]}.zip`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast({ title: "Backup Complete 🎉", description: "All company tables, CSVs, and metadata downloaded successfully." })
+    } catch (err: any) {
+      toast({ title: "Export Error", description: err.message || "Failed to download backup.", variant: "destructive" })
+    } finally {
+      setExportingBackup(false)
+    }
+  }
 
   // ── Load profile + company on mount ──────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -625,6 +651,40 @@ export default function SettingsPage() {
                     <SelectItem value="yyyy-mm-dd">YYYY-MM-DD</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Enterprise Data Backup & Portability ── */}
+          <Card className="border-indigo-200 dark:border-indigo-900 bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/30 dark:from-indigo-950/20 dark:to-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200">
+                <Database className="h-5 w-5 text-indigo-600" />
+                Data Portability & Full Backup
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Download a complete, encrypted archive of all your business data (Jobs, Inventory Catalog, Machine Registry, Payroll, Attendance, and Invoices) packaged as organized CSV spreadsheets and JSON metadata.
+              </p>
+              <div className="pt-2">
+                <Button
+                  onClick={handleDownloadBackup}
+                  disabled={exportingBackup}
+                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-10 px-5 rounded-xl shadow-sm gap-2"
+                >
+                  {exportingBackup ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Compressing & Archiving Data...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      Download Full Company Backup (.ZIP)
+                    </>
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
