@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
 import { User, Bell, Shield, Loader2, Eye, EyeOff, Building2, Copy, CheckCheck } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
+import { DangerZoneAccountDeletion } from "@/components/danger-zone-account-deletion"
 
 import { getAuthToken, apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
@@ -343,6 +344,13 @@ export default function EmployeeSettingsPage() {
               </p>
             </CardContent>
           </Card>
+
+          {/* ── Danger Zone: Personal Account Deletion ── */}
+          <DangerZoneAccountDeletion
+            portalType="staff"
+            userRole={user?.role || "employee"}
+            userEmail={user?.email}
+          />
 
         </div>
       </div>

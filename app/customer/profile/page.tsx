@@ -7,6 +7,7 @@ import { User, Mail, Phone, Calendar, Loader2, CheckCircle, AlertCircle, ArrowLe
 import { format } from 'date-fns';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
+import { DangerZoneAccountDeletion } from '@/components/danger-zone-account-deletion';
 import customerApi from '@/lib/customerApi';
 import type { CustomerProfile } from '@/lib/customerTypes';
 
@@ -227,6 +228,15 @@ export default function CustomerProfilePage() {
                 )}
               </button>
             </form>
+          </div>
+
+          {/* ── Danger Zone: Customer Portal Account Deletion ── */}
+          <div className="mt-6">
+            <DangerZoneAccountDeletion
+              portalType="customer"
+              userRole="customer"
+              userEmail={profile?.email}
+            />
           </div>
         </motion.div>
       </main>

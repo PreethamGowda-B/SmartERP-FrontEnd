@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/contexts/auth-context"
 import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader2, Eye, EyeOff, Sparkles, Download, Database } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
+import { DangerZoneAccountDeletion } from "@/components/danger-zone-account-deletion"
 import Link from "next/link"
 
 import { getAuthToken, apiClient } from "@/lib/apiClient"
@@ -688,6 +689,13 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* ── Danger Zone: Permanent Account Deletion ── */}
+          <DangerZoneAccountDeletion
+            portalType="staff"
+            userRole={user?.role || "owner"}
+            userEmail={user?.email}
+          />
 
         </div>
       </div>
