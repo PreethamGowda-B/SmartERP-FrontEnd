@@ -61,9 +61,9 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       try {
         logger.log("[v0] Fetching jobs from backend...")
 
-        // Clear cached jobs if the role has changed (e.g. owner cache seen by employee)
+        // Clear cached jobs only if the role has genuinely changed between users
         const cachedRole = localStorage.getItem("smarterp-jobs-role")
-        if (cachedRole && cachedRole !== user.role) {
+        if (cachedRole && user?.role && cachedRole.toLowerCase() !== user.role.toLowerCase()) {
           localStorage.removeItem("smarterp-jobs")
           localStorage.removeItem("smarterp-jobs-role")
           setJobs([])
@@ -135,7 +135,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
             if (current !== incoming) {
               setJobs(normalized)
               localStorage.setItem("smarterp-jobs", incoming)
-              localStorage.setItem("smarterp-jobs-role", user.role)
+              if (user.role) localStorage.setItem("smarterp-jobs-role", user.role.toLowerCase())
             }
           } catch (err) {
             // fallback: set jobs if serialization fails
@@ -323,7 +323,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
         setJobs(normalized)
         localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
-        if (user.role) localStorage.setItem("smarterp-jobs-role", user.role)
+        if (user.role) localStorage.setItem("smarterp-jobs-role", user.role.toLowerCase())
       }
     } catch (err: any) {
       const isAuthErr = err?.status === 401 || err?.status === '401' || err?.message === "Authentication required" || JSON.stringify(err || {}).includes('401')
