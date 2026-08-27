@@ -4,13 +4,14 @@ import React from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useLoading } from '@/contexts/loading-context'
 
-export function NavLink({ href, children, id, className }: { href: string; children: React.ReactNode; id?: string; className?: string }) {
+export function NavLink({ href, children, id, className, onClick }: { href: string; children: React.ReactNode; id?: string; className?: string; onClick?: (e?: React.MouseEvent) => void }) {
   const router = useRouter()
   const pathname = usePathname()
   const { showLoading } = useLoading()
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
+    if (onClick) onClick(e)
     // Already on this route — do nothing
     if (pathname === href) return
     
