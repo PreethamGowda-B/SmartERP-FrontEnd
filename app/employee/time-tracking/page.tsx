@@ -293,9 +293,15 @@ export default function TimeTrackingPage() {
                 )}
 
                 {error && (
-                    <Card className="border-destructive">
-                        <CardContent className="pt-6">
-                            <p className="text-destructive">{error}</p>
+                    <Card className="border-red-200 dark:border-red-900/50 bg-red-50/80 dark:bg-red-950/40 shadow-sm">
+                        <CardContent className="pt-5 pb-5">
+                            <div className="flex items-start gap-3">
+                                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+                                <div>
+                                    <h4 className="font-semibold text-sm text-red-900 dark:text-red-200">Attendance Restriction Notice</h4>
+                                    <p className="text-sm text-red-800 dark:text-red-300 mt-0.5 leading-relaxed">{error}</p>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 )}
