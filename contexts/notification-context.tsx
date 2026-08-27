@@ -6,8 +6,6 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
-
-import { LiveNotificationToastContainer, LiveToastItem } from "@/components/live-notification-toast"
 import { playEnterpriseChime } from "@/lib/sound-chime"
 
 export interface Notification {
@@ -42,7 +40,6 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [liveToasts, setLiveToasts] = useState<LiveToastItem[]>([])
   const [isMuted, setIsMuted] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("smarterp_sound_muted") === "true"
@@ -73,10 +70,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const unregisterMessagingHandler = useCallback(() => {
     messagingHandlerRef.current = null
-  }, [])
-
-  const handleDismissLiveToast = useCallback((id: string) => {
-    setLiveToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
   // Fetch notifications from backend
@@ -199,29 +192,25 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           // 1. Update Notification Center state
           setNotifications((prev) => [notification, ...prev])
 
-          // 2. Add Live Slide-In Toast Popup
-          setLiveToasts((prev) => [
-            {
-              id: String(notification.id || Date.now()),
-              title: notification.title || "Notification",
-              message: notification.message || "",
-              type: notification.type || "system",
-              created_at: notification.created_at || new Date().toISOString(),
-              data: notification.data || {},
-              read: false,
-            },
-            ...prev.slice(0, 5), // Keep max 5
-          ])
-
-          // 3. Play Crisp Web Audio Chime Sound (if not muted)
+          // 2. Play Crisp Web Audio Chime Sound (if not muted)
           if (!isMuted) {
             playEnterpriseChime()
           }
 
-          // 4. Toast Fallback
-          toast(notification.title, {
-            description: notification.message,
+          // 3. Clean White Sonner Toast with Direct Action Link
+          const actionData = notification.data || {}
+          const jobId = actionData.job_id || (notification.type === "job" ? notification.id : null)
+          toast(notification.title || "New Notification", {
+            description: notification.message || "",
             duration: 6000,
+            action: jobId
+              ? {
+                  label: "View",
+                  onClick: () => {
+                    router.push(`/owner/jobs/${jobId}`)
+                  },
+                }
+              : undefined,
           })
         }
       } catch (error) {
@@ -313,13 +302,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }}
     >
       {children}
-      <LiveNotificationToastContainer
-        toasts={liveToasts}
-        onDismiss={handleDismissLiveToast}
-        onMarkRead={markAsRead}
-        isMuted={isMuted}
-        onToggleMute={toggleMute}
-      />
     </NotificationContext.Provider>
   )
 }
