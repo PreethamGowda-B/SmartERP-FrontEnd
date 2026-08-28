@@ -165,17 +165,17 @@ export default function OwnerDashboard() {
     <OwnerLayout>
       <div className="space-y-8 animate-in fade-in duration-1000">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Dashboard Overview
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               Welcome back! Here&apos;s what&apos;s happening with your business today.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="icon" onClick={fetchDashboardData} title="Refresh">
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <Button variant="outline" size="icon" onClick={fetchDashboardData} title="Refresh" className="shrink-0">
               <RefreshCw className="h-4 w-4" />
             </Button>
             <DateTimeWeather />

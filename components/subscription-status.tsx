@@ -191,13 +191,14 @@ export function SubscriptionStatus() {
                 
                 {!isFree && data.subscription_expires_at && (
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2.5">
-                    <p className="text-xs text-muted-foreground flex items-center bg-zinc-100 dark:bg-zinc-900/80 px-2.5 py-1.5 rounded-md shadow-inner border border-zinc-200 dark:border-zinc-800">
-                      <Clock className="w-3.5 h-3.5 mr-1.5 text-zinc-400 shrink-0" />
-                      Your plan expires on: <strong className="ml-1.5 text-zinc-700 dark:text-zinc-300">
+                    <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-1 bg-zinc-100 dark:bg-zinc-900/80 px-2.5 py-1.5 rounded-md shadow-inner border border-zinc-200 dark:border-zinc-800">
+                      <Clock className="w-3.5 h-3.5 mr-1 text-zinc-400 shrink-0" />
+                      <span>Your plan expires on:</span>
+                      <strong className="text-zinc-700 dark:text-zinc-300">
                         {new Date(data.subscription_expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </strong>
                     </p>
-                    <p className={`text-xs font-bold px-2 py-1 rounded-md ${daysRemaining <= 7 ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'}`}>
+                    <p className={`text-xs font-bold px-2.5 py-1.5 rounded-md w-fit whitespace-nowrap ${daysRemaining <= 7 ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'}`}>
                       {daysRemaining} day{daysRemaining !== 1 && 's'} remaining
                     </p>
                   </div>

@@ -384,7 +384,7 @@ export function LoginForm() {
                 {mode === "login" ? "Welcome back" : "Create an account"}
               </h1>
               <p className="text-[0.875rem] text-slate-500 font-medium">
-                {mode === "login" ? "Sign in to your workspace" : "Sign up and get 30â€‘day free trial"}
+                {mode === "login" ? "Sign in to your workspace" : "Sign up and get 30-day free trial"}
               </p>
             </div>
 
@@ -454,7 +454,7 @@ export function LoginForm() {
                     <Button type="submit" disabled={isLoading}
                       className="lp-btn-primary w-full h-10 rounded-xl bg-primary hover:bg-primary text-white font-semibold text-sm shadow-[0_4px_14px_oklch(0.45_0.15_240/0.30)]">
                       {isLoading
-                        ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{mode === "login" ? "Signing inâ€¦" : "Sending OTPâ€¦"}</>
+                        ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{mode === "login" ? "Signing in..." : "Sending OTP..."}</>
                         : mode === "login" ? "Sign In as Owner" : "Create Owner Account"
                       }
                     </Button>
@@ -467,7 +467,7 @@ export function LoginForm() {
                   </form>
                 </TabsContent>
 
-                {/* â”€â”€ EMPLOYEE TAB â”€â”€ */}
+                {/* ──── EMPLOYEE TAB ──── */}
                 <TabsContent value="employee">
                   <form onSubmit={handleSubmit} className="space-y-3">
                     {mode === "signup" && (

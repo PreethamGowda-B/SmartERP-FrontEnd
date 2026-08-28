@@ -205,7 +205,7 @@ export default function OwnerCustomerJobsPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <Card className="border-amber-200 bg-amber-50/50">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
@@ -292,14 +292,14 @@ export default function OwnerCustomerJobsPage() {
                 <div
                   key={job.id}
                   className={cn(
-                    "bg-card border rounded-xl p-5 hover:shadow-sm transition-all cursor-pointer",
+                    "bg-card border rounded-xl p-4 sm:p-5 hover:shadow-sm transition-all cursor-pointer",
                     isPending && "border-amber-200 bg-amber-50/20",
                     job.approval_status === "approved" && "border-green-100",
                     job.approval_status === "rejected" && "border-red-100 opacity-80",
                   )}
                   onClick={() => { setSelectedJob(job); setActionError("") }}
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <h3 className="font-semibold text-sm truncate">{job.title}</h3>
@@ -310,7 +310,7 @@ export default function OwnerCustomerJobsPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                      <div className="flex items-center gap-3 sm:gap-4 text-xs text-muted-foreground flex-wrap">
                         {job.customer_name && (
                           <span className="flex items-center gap-1"><User className="h-3 w-3" />{job.customer_name}</span>
                         )}
@@ -321,16 +321,16 @@ export default function OwnerCustomerJobsPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 flex-wrap sm:shrink-0 mt-1 sm:mt-0 justify-between sm:justify-end">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${approval.className}`}>
                         <ApprovalIcon className="h-3 w-3" />
                         {approval.label}
                       </span>
                       {isPending && (
-                        <>
+                        <div className="flex items-center gap-1.5">
                           <Button
                             size="sm"
-                            className="h-8 bg-green-600 hover:bg-green-700 text-white gap-1"
+                            className="h-8 bg-green-600 hover:bg-green-700 text-white gap-1 text-xs"
                             onClick={e => { e.stopPropagation(); handleApprove(job.id) }}
                             disabled={actionLoading === job.id + "_approve"}
                           >
@@ -340,16 +340,16 @@ export default function OwnerCustomerJobsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-8 border-red-200 text-red-600 hover:bg-red-50 gap-1"
+                            className="h-8 border-red-200 text-red-600 hover:bg-red-50 gap-1 text-xs"
                             onClick={e => { e.stopPropagation(); handleReject(job.id) }}
                             disabled={actionLoading === job.id + "_reject"}
                           >
                             {actionLoading === job.id + "_reject" ? <RefreshCw className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
                             Reject
                           </Button>
-                        </>
+                        </div>
                       )}
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground hidden sm:block" />
                     </div>
                   </div>
                 </div>

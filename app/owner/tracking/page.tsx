@@ -267,7 +267,7 @@ export default function EmployeeTrackingPage() {
                 </div>
 
                 {/* ── Stats ──────────────────────────────────────────────────────── */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     {[
                         { label: "Total Employees", value: employees.length, icon: Users, color: "text-primary" },
                         { label: "Sharing Location", value: withLocation.length, icon: MapPin, color: "text-blue-500" },
@@ -286,10 +286,10 @@ export default function EmployeeTrackingPage() {
                 </div>
 
                 {/* ── Main content: employee list + map ──────────────────────────── */}
-                <div className="flex gap-4 h-[600px]">
+                <div className="flex flex-col lg:flex-row gap-4 h-auto lg:h-[600px]">
 
                     {/* Employee list */}
-                    <Card className="w-72 shrink-0 flex flex-col overflow-hidden">
+                    <Card className="w-full lg:w-72 shrink-0 max-h-[260px] lg:max-h-none flex flex-col overflow-hidden">
                         <CardHeader className="pb-2 shrink-0">
                             <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                                 Employees
