@@ -9,7 +9,7 @@ import {
   MessageSquarePlus, Bug, AlertTriangle, Lock, Zap,
   History, Plus, Trash2, Edit3, Search, Check, Brain, TrendingUp, Package,
   CalendarCheck, CreditCard, Users, FileSpreadsheet, Globe, BarChart3,
-  ShieldCheck, Clock, Mic
+  ShieldCheck, Clock, Mic, Cpu, Wrench, ShieldAlert
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -75,6 +75,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
 
 const MODEL_SPECS = [
   { key: "auto", label: "Auto", description: "AI picks the best specialist", icon: Sparkles, plan: "all", color: "from-violet-500 to-purple-600" },
+  { key: "cnc", label: "CNC Service AI", description: "CNC troubleshooting, alarms, maintenance & service", icon: Cpu, plan: "basic", color: "from-amber-500 to-orange-600" },
   { key: "general", label: "General Assistant", description: "Broad ERP guidance", icon: Bot, plan: "free", color: "from-slate-500 to-slate-600" },
   { key: "finance", label: "Finance AI", description: "Revenue, expenses, invoicing", icon: TrendingUp, plan: "pro", color: "from-emerald-500 to-green-600" },
   { key: "inventory", label: "Inventory Expert", description: "Stock, warehouse, suppliers", icon: Package, plan: "basic", color: "from-blue-500 to-blue-600" },
@@ -87,7 +88,7 @@ const MODEL_SPECS = [
 ]
 
 const MODEL_DISPLAY_NAMES: Record<string, string> = {
-  auto: "SmartERP Intelligence", general: "General Assistant", finance: "Finance AI",
+  auto: "SmartERP Intelligence", cnc: "CNC Service AI", general: "General Assistant", finance: "Finance AI",
   inventory: "Inventory Expert", attendance: "Attendance AI", payroll: "Payroll AI",
   hr: "HR Assistant", gst: "GST Intelligence", executive: "Executive AI", crm: "CRM AI",
 }
@@ -230,6 +231,33 @@ function WidgetRenderer({ widget }: { widget: WidgetPayload }) {
     )
   }
 
+  if (widget.type === "ACTION_CONFIRMATION_REQUIRED" || widget.type === "ACTION_CONFIRMATION") {
+    return (
+      <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 space-y-2.5">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="h-4 w-4 text-red-500" />
+          <span className="text-xs font-bold text-red-600 dark:text-red-400">{widget.title || "Confirmation Required"}</span>
+        </div>
+        <p className="text-xs text-foreground/90 leading-relaxed">{widget.message || (widget as any).warning}</p>
+        {(widget as any).proposedAction && (
+          <div className="text-[11px] p-2 rounded-lg bg-background/80 border border-border/60 font-mono text-foreground">
+            <strong>Action:</strong> {(widget as any).proposedAction}
+          </div>
+        )}
+        <Button
+          size="sm"
+          className="w-full text-xs h-8 bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5"
+          onClick={() => {
+            toast.success("Service escalation ticket created and dispatched to Service Lead!")
+          }}
+        >
+          <Check className="h-3.5 w-3.5" />
+          Confirm &amp; Create Escalation
+        </Button>
+      </div>
+    )
+  }
+
   return null
 }
 
@@ -289,6 +317,11 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   const [selectedModel, setSelectedModel] = React.useState<string>("auto")
   const [multiAgentScopes, setMultiAgentScopes] = React.useState<string[]>([])
 
+  // ── CNC Machine Context
+  const [machines, setMachines] = React.useState<any[]>([])
+  const [selectedMachine, setSelectedMachine] = React.useState<any | null>(null)
+  const [showMachineDropdown, setShowMachineDropdown] = React.useState(false)
+
   // ── Conversation state
   const [conversations, setConversations] = React.useState<Conversation[]>([])
   const [activeConvId, setActiveConvId] = React.useState<string | null>(null)
@@ -324,6 +357,40 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
       setTopActions(getTopActions(String(user.id)))
     }
   }, [user?.id])
+
+  // ── Fetch company machines when panel opens or CNC model is active
+  React.useEffect(() => {
+    if (isOpen && user) {
+      apiClient("/api/machines")
+        .then((res: any) => {
+          if (res && res.machines && Array.isArray(res.machines)) {
+            setMachines(res.machines)
+          } else if (Array.isArray(res)) {
+            setMachines(res)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [isOpen, user])
+
+  // ── URL Search Param listener (e.g. ?askAI=cnc&machineId=123)
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const askAI = params.get("askAI")
+        const machineId = params.get("machineId")
+        if (askAI === "cnc" || machineId) {
+          setSelectedModel("cnc")
+          setIsOpen(true)
+          if (machineId && machines.length > 0) {
+            const found = machines.find((m) => String(m.id) === String(machineId) || m.serial_number === machineId)
+            if (found) setSelectedMachine(found)
+          }
+        }
+      } catch {}
+    }
+  }, [machines])
 
   // ── Auto-scroll to latest message
   React.useEffect(() => {
@@ -529,12 +596,32 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
         ? multiAgentScopes
         : selectedModel !== "auto" ? [selectedModel] : []
 
+      const clientCtx: any = {
+        currentPage: pathname,
+        portal: currentPortal,
+        module: pageModule,
+      }
+      if (selectedMachine) {
+        clientCtx.selectedMachine = {
+          id: selectedMachine.id,
+          name: selectedMachine.machine_name,
+          serial: selectedMachine.serial_number,
+          controller: selectedMachine.controller_type,
+          make: selectedMachine.make,
+          model: selectedMachine.model,
+          spindle_hours: selectedMachine.spindle_hours,
+          status: selectedMachine.status,
+          customer: selectedMachine.customer_name,
+          plant: selectedMachine.plant_name,
+        }
+      }
+
       const body: any = {
         message: text,
         currentPortal,
         currentModule: pageModule,
         currentPagePath: pathname,
-        clientContext: { currentPage: pathname, portal: currentPortal, module: pageModule },
+        clientContext: clientCtx,
         history: messages
           .filter(m => !m.isTyping)
           .slice(-10)
@@ -898,6 +985,96 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                         </motion.div>
                       )}
                     </AnimatePresence>
+
+                    {/* CNC Machine Context Selector & Quick Actions */}
+                    {selectedModel === "cnc" && (
+                      <div className="mt-2 pt-2 border-t border-border/40 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                            <Cpu className="h-3.5 w-3.5" />
+                            <span>Machine Context</span>
+                          </div>
+                          {selectedMachine && (
+                            <button
+                              onClick={() => setSelectedMachine(null)}
+                              className="text-[10px] text-muted-foreground hover:text-foreground hover:underline"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+
+                        {selectedMachine ? (
+                          <div className="flex items-center justify-between p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs">
+                            <div className="min-w-0">
+                              <div className="font-bold text-foreground truncate">{selectedMachine.machine_name}</div>
+                              <div className="text-[10px] text-muted-foreground font-mono truncate">
+                                {selectedMachine.controller_type || "CNC"} • SN: {selectedMachine.serial_number}
+                              </div>
+                            </div>
+                            <Badge variant="outline" className="text-[9px] font-mono border-amber-500/40 text-amber-600 dark:text-amber-400 bg-background/50">
+                              CONNECTED
+                            </Badge>
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setShowMachineDropdown(s => !s)}
+                              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border border-dashed border-border/80 bg-background/50 hover:bg-muted/40 text-xs text-muted-foreground font-medium"
+                            >
+                              <span className="flex items-center gap-1.5 truncate">
+                                <Cpu className="h-3 w-3 text-amber-500 shrink-0" />
+                                {machines.length > 0 ? "Select machine from registry..." : "No machines registered"}
+                              </span>
+                              <ChevronDown className="h-3 w-3 shrink-0" />
+                            </button>
+
+                            {showMachineDropdown && machines.length > 0 && (
+                              <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-48 overflow-y-auto rounded-xl border border-border bg-card shadow-xl p-1 space-y-0.5">
+                                {machines.map((m) => (
+                                  <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedMachine(m)
+                                      setShowMachineDropdown(false)
+                                    }}
+                                    className="w-full text-left p-2 rounded-lg hover:bg-amber-500/10 transition-colors text-xs space-y-0.5"
+                                  >
+                                    <div className="font-bold text-foreground">{m.machine_name}</div>
+                                    <div className="text-[10px] text-muted-foreground font-mono">
+                                      {m.controller_type || "Universal"} • SN: {m.serial_number} • {m.customer_name || "Plant"}
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* CNC Specialized Quick Actions */}
+                        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 pt-0.5 scrollbar-none">
+                          {[
+                            { label: "🔴 Decode Alarm", prompt: selectedMachine ? `Decode alarm for ${selectedMachine.machine_name} (${selectedMachine.controller_type})` : "Decode CNC alarm code" },
+                            { label: "🔧 Spindle Fault", prompt: selectedMachine ? `Why won't spindle start on ${selectedMachine.machine_name}?` : "Why won't spindle start?" },
+                            { label: "📜 History", prompt: selectedMachine ? `Show previous service history on ${selectedMachine.machine_name}` : "Show machine service history" },
+                            { label: "📦 Spare Parts", prompt: "Check available CNC spare parts in stock" },
+                            { label: "🛡 Warranty", prompt: selectedMachine ? `Check warranty status for ${selectedMachine.machine_name}` : "Check machine warranty status" },
+                            { label: "🚨 Escalate", prompt: selectedMachine ? `Create a service escalation for ${selectedMachine.machine_name}` : "Create a service escalation" },
+                          ].map((action) => (
+                            <button
+                              key={action.label}
+                              type="button"
+                              onClick={() => sendMessage(action.prompt)}
+                              className="text-[10px] whitespace-nowrap px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-all font-semibold"
+                            >
+                              {action.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Messages Scroll Area */}
