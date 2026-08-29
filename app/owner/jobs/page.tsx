@@ -24,6 +24,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { SkeletonList } from "@/components/ui/skeleton-card"
 import { ExecutiveJobCard } from "@/components/executive-job-card"
 import { ApprovalCenterView } from "@/components/approval-center-view"
+import { JobDetailsModal } from "@/components/job-details-modal"
 
 const AUTO_REFRESH_MS = 30_000
 
@@ -45,6 +46,7 @@ function OwnerJobsPageContent() {
   const [employeeStatusFilter, setEmployeeStatusFilter] = useState("all")
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingJob, setEditingJob] = useState<Job | null>(null)
+  const [viewingJob, setViewingJob] = useState<Job | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
@@ -361,7 +363,7 @@ function OwnerJobsPageContent() {
                     role="owner"
                     onEdit={handleEditJob}
                     onDelete={handleDeleteJob}
-                    onView={(j) => handleEditJob(j)}
+                    onView={(j) => setViewingJob(j)}
                     onActionComplete={handleRefresh}
                   />
                 ))}
@@ -369,6 +371,14 @@ function OwnerJobsPageContent() {
             )}
           </>
         )}
+
+        {/* Job Details & Proof-of-Work Modal */}
+        <JobDetailsModal
+          job={viewingJob}
+          isOpen={Boolean(viewingJob)}
+          onClose={() => setViewingJob(null)}
+          onEdit={handleEditJob}
+        />
 
         {/* Job Form Dialog */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
