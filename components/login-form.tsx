@@ -554,13 +554,14 @@ export function LoginForm() {
               </div>
             </div>
 
-            {/* Google OAuth â€” ORIGINAL LOGIC */}
+            {/* Google OAuth */}
             <button
               type="button"
               onClick={() => {
                 clearTokens()
                 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
-                window.location.href = `${apiUrl}/api/auth/google?role=${activeTab}`
+                const codeParam = companyCode ? `&company_code=${encodeURIComponent(companyCode.trim())}` : ""
+                window.location.href = `${apiUrl}/api/auth/google?role=${activeTab}${codeParam}`
               }}
               className="lp-btn-google w-full h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center gap-2.5 text-[0.875rem] font-semibold text-slate-700 lp-enter lp-enter-d5"
             >
