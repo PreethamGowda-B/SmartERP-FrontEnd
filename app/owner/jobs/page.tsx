@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { OwnerLayout } from "@/components/owner-layout"
 import { JobForm } from "@/components/job-form"
 import { Button } from "@/components/ui/button"
@@ -34,6 +34,7 @@ function formatLastUpdated(date: Date | null) {
 }
 
 function OwnerJobsPageContent() {
+  const router = useRouter()
   const { jobs, addJob, updateJob, deleteJob, refreshJobs } = useJobs()
   const searchParams = useSearchParams()
 
@@ -363,7 +364,7 @@ function OwnerJobsPageContent() {
                     role="owner"
                     onEdit={handleEditJob}
                     onDelete={handleDeleteJob}
-                    onView={(j) => setViewingJob(j)}
+                    onView={(j) => router.push(`/owner/jobs/${j.id}`)}
                     onActionComplete={handleRefresh}
                   />
                 ))}

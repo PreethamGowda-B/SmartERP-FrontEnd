@@ -49,84 +49,23 @@ export function JobCardActionToolbar({
   }
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-border/40" onClick={(e) => e.stopPropagation()}>
-      {onView && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 text-xs font-semibold px-2.5 active:scale-95 transition-transform rounded-xl"
-          onClick={(e) => {
-            e.stopPropagation()
-            React.startTransition(() => onView(job))
-          }}
-        >
-          <Eye className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-          View Details
-        </Button>
-      )}
-
       {/* ── ROLE: OWNER MANAGEMENT CONSOLE ACTIONS ── */}
       {role === "owner" && (
-        <>
-          {status === "completed" && (
-            <Button
-              size="sm"
-              className={`h-8 text-xs text-white font-bold px-3 shadow-xs active:scale-95 transition-transform rounded-xl ${
-                Boolean(job.invoice || job.invoice_id || job.invoiceId)
-                  ? "bg-emerald-600 hover:bg-emerald-700"
-                  : "bg-indigo-600 hover:bg-indigo-700"
-              }`}
-              onClick={handleOpenInvoiceEditor}
-            >
-              <FileText className="h-3.5 w-3.5 mr-1" />
-              {Boolean(job.invoice || job.invoice_id || job.invoiceId) ? "Edit / View Invoice" : "Generate Invoice"}
-            </Button>
-          )}
-
-          {onEdit && status !== "completed" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs px-2.5 active:scale-95 transition-transform rounded-xl"
-              onClick={(e) => {
-                e.stopPropagation()
-                React.startTransition(() => onEdit(job))
-              }}
-            >
-              <Edit className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              Edit Job
-            </Button>
-          )}
-
-          {onEmergencyOverride && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs font-bold border-amber-300 text-amber-800 bg-amber-50/50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 rounded-xl"
-              onClick={(e) => {
-                e.stopPropagation()
-                onEmergencyOverride()
-              }}
-            >
-              <ShieldAlert className="h-3.5 w-3.5 mr-1 text-amber-600" />
-              Emergency Override
-            </Button>
-          )}
-
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs text-destructive hover:bg-destructive/10 px-2.5 active:scale-95 transition-transform rounded-xl"
-              onClick={(e) => {
-                e.stopPropagation()
-                React.startTransition(() => onDelete(job))
-              }}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          )}
-        </>
+        <div className="w-full flex items-center justify-between gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full h-8 text-xs font-bold px-3 active:scale-95 transition-transform rounded-xl hover:bg-primary hover:text-primary-foreground border-border/80 shadow-xs flex items-center justify-center gap-1.5"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (onView) onView(job)
+              else window.location.href = `/owner/jobs/${job.id}`
+            }}
+          >
+            <Eye className="h-3.5 w-3.5" />
+            View Details &amp; Operations
+          </Button>
+        </div>
       )}
 
       {/* ── ROLE: EMPLOYEE FIELD WORKSPACE ACTIONS (ONLY ACCEPTED TECHNICIAN) ── */}

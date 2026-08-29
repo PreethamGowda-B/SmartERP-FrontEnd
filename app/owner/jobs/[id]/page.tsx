@@ -25,12 +25,17 @@ import {
   RefreshCw,
   Maximize2,
   ShieldCheck,
+  ShieldAlert,
   Package,
+  Trash2,
 } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { SkeletonList } from "@/components/ui/skeleton-card"
 import { ErrorView } from "@/components/ui/error-view"
+import { JobForm } from "@/components/job-form"
+import { OwnerEmergencyOverrideModal } from "@/components/owner-emergency-override-modal"
+import { toast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 
 export default function OwnerJobDetailPage() {
@@ -44,6 +49,11 @@ export default function OwnerJobDetailPage() {
   const [error, setError] = React.useState<string | null>(null)
   const [selectedPhoto, setSelectedPhoto] = React.useState<string | null>(null)
 
+  // Modal states
+  const [isEditOpen, setIsEditOpen] = React.useState(false)
+  const [isOverrideOpen, setIsOverrideOpen] = React.useState(false)
+  const [isSubmittingEdit, setIsSubmittingEdit] = React.useState(false)
+
   const fetchJobData = React.useCallback(async () => {
     if (!jobId) return
     setLoading(true)
@@ -51,7 +61,6 @@ export default function OwnerJobDetailPage() {
     try {
       // Fetch job details
       const jobRes = await apiClient<any>(`/api/jobs/${jobId}`).catch(async () => {
-        // Fallback: search in all jobs
         const allJobs = await apiClient<any>("/api/jobs")
         const list = Array.isArray(allJobs) ? allJobs : allJobs?.jobs || []
         const found = list.find((j: any) => String(j.id) === String(jobId))
@@ -73,6 +82,34 @@ export default function OwnerJobDetailPage() {
   React.useEffect(() => {
     fetchJobData()
   }, [fetchJobData])
+
+  const handleUpdateJob = async (formData: any) => {
+    try {
+      setIsSubmittingEdit(true)
+      await apiClient(`/api/jobs/${jobId}`, {
+        method: "PUT",
+        body: JSON.stringify(formData),
+      })
+      toast({ title: "Job Updated", description: "Job specifications updated successfully." })
+      setIsEditOpen(false)
+      fetchJobData()
+    } catch (err: any) {
+      toast({ title: "Update Failed", description: err.message || "Failed to update job.", variant: "destructive" })
+    } finally {
+      setIsSubmittingEdit(false)
+    }
+  }
+
+  const handleDeleteJob = async () => {
+    if (!window.confirm("Are you sure you want to delete or archive this job?")) return
+    try {
+      await apiClient(`/api/jobs/${jobId}`, { method: "DELETE" })
+      toast({ title: "Job Deleted", description: "Job has been removed." })
+      router.push("/owner/jobs")
+    } catch (err: any) {
+      toast({ title: "Delete Failed", description: err.message || "Failed to delete job.", variant: "destructive" })
+    }
+  }
 
   if (loading && !job) {
     return (
@@ -130,12 +167,22 @@ export default function OwnerJobDetailPage() {
                 >
                   {status.toUpperCase().replace("_", " ")}
                 </Badge>
+                {priority === "urgent" || priority === "high" ? (
+                  <Badge variant="destructive" className="uppercase text-[10px]">
+                    {priority}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="uppercase text-[10px]">
+                    {priority}
+                  </Badge>
+                )}
               </div>
               <h1 className="text-2xl font-black tracking-tight text-foreground mt-0.5">{job?.title || "Untitled Job"}</h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-center">
+          {/* Action Operations */}
+          <div className="flex items-center gap-2 flex-wrap self-start sm:self-center">
             <Button
               variant="outline"
               size="sm"
@@ -144,12 +191,41 @@ export default function OwnerJobDetailPage() {
             >
               <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} /> Refresh
             </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditOpen(true)}
+              className="h-9 px-3 text-xs font-bold rounded-xl gap-1.5"
+            >
+              <Edit className="h-3.5 w-3.5" /> Edit Job
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsOverrideOpen(true)}
+              className="h-9 px-3 text-xs font-bold rounded-xl border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 gap-1.5"
+            >
+              <ShieldAlert className="h-3.5 w-3.5 text-amber-600" /> Emergency Override
+            </Button>
+
             <Button
               size="sm"
               onClick={() => router.push(`/owner/jobs/${jobId}/invoice-editor`)}
               className="h-9 px-3 text-xs font-bold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5"
             >
               <FileText className="h-3.5 w-3.5" /> Invoice Editor
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDeleteJob}
+              className="h-9 px-2 text-xs text-destructive hover:bg-destructive/10 rounded-xl"
+              title="Delete Job"
+            >
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -233,7 +309,7 @@ export default function OwnerJobDetailPage() {
                     <Camera className="h-10 w-10 mx-auto text-muted-foreground/40" />
                     <h4 className="text-xs font-bold text-foreground">No Field Proofs Submitted Yet</h4>
                     <p className="text-[11px] text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                      When the technician captures progress photos, site notes, GPS check-ins, or collects the customer's signature on-site, they will appear here in real-time.
+                      When the technician captures progress photos, site notes, GPS check-ins, or collects the customer&apos;s signature on-site, they will appear here in real-time.
                     </p>
                   </div>
                 ) : (
@@ -358,6 +434,31 @@ export default function OwnerJobDetailPage() {
             </Card>
           </div>
         </div>
+
+        {/* Edit Job Modal */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="font-extrabold text-xl">Edit Job Specifications</DialogTitle>
+              <DialogDescription className="text-xs">Update job title, client, budget, SLA priority, or crew assignment.</DialogDescription>
+            </DialogHeader>
+            <JobForm
+              job={job || undefined}
+              onSubmit={handleUpdateJob}
+              onCancel={() => setIsEditOpen(false)}
+              isLoading={isSubmittingEdit}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Emergency Override Modal */}
+        <OwnerEmergencyOverrideModal
+          jobId={jobId}
+          jobTitle={job?.title || "Job Override"}
+          isOpen={isOverrideOpen}
+          onClose={() => setIsOverrideOpen(false)}
+          onActionComplete={fetchJobData}
+        />
 
         {/* Full Image Lightbox */}
         <Dialog open={Boolean(selectedPhoto)} onOpenChange={() => setSelectedPhoto(null)}>

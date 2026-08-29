@@ -70,8 +70,10 @@ export function ExecutiveJobCard({
     ? (currentUser?.name || "You")
     : (isAcceptedStatus ? (job.accepted_by_name || job.assigned_employee_name || "Technician") : null)
 
-  return (
-    <Card className="rounded-2xl border border-border/70 bg-card/95 backdrop-blur-xs hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300 group overflow-hidden">
+    <Card
+      className="rounded-2xl border border-border/70 bg-card/95 backdrop-blur-xs hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300 group overflow-hidden cursor-pointer"
+      onClick={() => onView?.(job)}
+    >
       <CardContent className="p-4 sm:p-5 space-y-3.5">
         {/* 1. Header Block */}
         <JobCardHeader
@@ -130,12 +132,14 @@ export function ExecutiveJobCard({
           />
         )}
 
-        {/* 5. Collapsible Breakdown Drawer */}
-        <JobCardDrawer
-          job={job}
-          isOpen={isDrawerOpen}
-          onToggle={() => setIsDrawerOpen(!isDrawerOpen)}
-        />
+        {/* 5. Collapsible Breakdown Drawer (Only on Employee portal) */}
+        {role === "employee" && (
+          <JobCardDrawer
+            job={job}
+            isOpen={isDrawerOpen}
+            onToggle={() => setIsDrawerOpen(!isDrawerOpen)}
+          />
+        )}
       </CardContent>
 
       {/* 6. Mounted Job Actions Modal for Accepted Technician */}
