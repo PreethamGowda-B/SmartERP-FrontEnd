@@ -61,6 +61,7 @@ const MONTHS = [
 ]
 
 export default function OwnerPayrollPage() {
+  const [mounted, setMounted] = useState(false)
   const { isFree } = useSubscription()
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -89,6 +90,10 @@ export default function OwnerPayrollPage() {
     deduction: "",
     remarks: ""
   })
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Calculate total salary
   const calculateTotal = () => {
@@ -126,20 +131,32 @@ export default function OwnerPayrollPage() {
       })) : []
       setPayrolls(parsedData)
     } catch (err: any) {
-      setError({
-        title: "Could not load payrolls",
-        message: err.message || "Failed to fetch payroll records from server."
-      })
       logger.error("Error fetching payrolls:", err)
+      setError({
+        title: "Failed to Load Payroll Data",
+        message: err.message || "An unexpected error occurred while fetching payroll records. Please check your connection and try again.",
+      })
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchPayrolls()
-    fetchEmployees()
-  }, [])
+    if (mounted) {
+      fetchPayrolls()
+      fetchEmployees()
+    }
+  }, [mounted])
+
+  if (!mounted) {
+    return (
+      <OwnerLayout>
+        <div className="space-y-6 p-6">
+          <SkeletonList count={3} />
+        </div>
+      </OwnerLayout>
+    )
+  }
 
   // Submit new payroll
   const handleSubmit = async (e: React.FormEvent) => {

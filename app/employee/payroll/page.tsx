@@ -41,10 +41,15 @@ const MONTHS = [
 ]
 
 export default function EmployeePayrollPage() {
+  const [mounted, setMounted] = useState(false)
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [monthFilter, setMonthFilter] = useState("all")
   const [yearFilter, setYearFilter] = useState("all")
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Fetch employee's payroll records
   const fetchPayrolls = async () => {
@@ -69,8 +74,20 @@ export default function EmployeePayrollPage() {
   }
 
   useEffect(() => {
-    fetchPayrolls()
-  }, [])
+    if (mounted) {
+      fetchPayrolls()
+    }
+  }, [mounted])
+
+  if (!mounted) {
+    return (
+      <EmployeeLayout>
+        <div className="space-y-6 p-6">
+          <SkeletonList count={3} />
+        </div>
+      </EmployeeLayout>
+    )
+  }
 
   // Generate Executive PDF salary report
   const generatePDF = (payroll: PayrollRecord) => {
