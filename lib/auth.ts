@@ -12,7 +12,9 @@ export interface User {
   accessToken?: string
   refreshToken?: string
   company_id?: string | number
+  companyId?: string | number
   company_code?: string
+  company_name?: string
 }
 
 
