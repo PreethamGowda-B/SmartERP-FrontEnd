@@ -260,7 +260,9 @@ export default function OwnerJobDetailPage() {
             <span className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
               <User className="h-3.5 w-3.5 text-purple-500" /> Assigned Technician
             </span>
-            <p className="text-sm font-extrabold text-foreground truncate">{job?.accepted_by_name || job?.assigned_employee_name || "Unassigned"}</p>
+            <p className="text-sm font-extrabold text-foreground truncate">
+              {job?.accepted_by_name || job?.employee_name || job?.assigned_employee_name || (proofs?.[0]?.uploaded_by_name) || (job?.accepted_at ? "Field Technician" : "Unassigned")}
+            </p>
             <p className="text-[11px] text-muted-foreground capitalize">Status: {job?.employee_status || "Pending"}</p>
           </Card>
         </div>
