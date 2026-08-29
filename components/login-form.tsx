@@ -531,7 +531,7 @@ export function LoginForm() {
                     <Button type="submit" disabled={isLoading}
                       className="lp-btn-accent w-full h-10 rounded-xl bg-accent hover:bg-accent text-white font-semibold text-sm shadow-[0_4px_14px_oklch(0.65_0.18_45/0.30)]">
                       {isLoading
-                        ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{mode === "login" ? "Signing inâ€¦" : "Sending OTPâ€¦"}</>
+                        ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{mode === "login" ? "Signing in..." : "Sending OTP..."}</>
                         : mode === "login" ? "Sign In as Employee" : "Create Employee Account"
                       }
                     </Button>
@@ -585,9 +585,9 @@ export function LoginForm() {
             </div>
           </div>
 
-          {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-              RIGHT PANEL â€” HERO
-          â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+          {/* ═══════════════════════════════════════════════════════════
+              RIGHT PANEL — HERO
+          ═══════════════════════════════════════════════════════════ */}
           <div className="lp-hero-panel hidden lg:flex lg:w-[54%] relative overflow-hidden">
             {/* Hero photo */}
             <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/login-hero.jpg')" }} />
@@ -618,7 +618,7 @@ export function LoginForm() {
                   Manage your entire<br />business from one place
                 </h2>
                 <p className="text-white/70 text-[0.82rem] font-medium max-w-[260px]">
-                  Jobs, payroll, attendance, HR, and AI-powered insights â€” all in SmartERP.
+                  Jobs, payroll, attendance, HR, and AI-powered insights - all in SmartERP.
                 </p>
               </div>
 
@@ -634,7 +634,7 @@ export function LoginForm() {
                       <span className="text-[0.7rem] font-bold text-slate-600 uppercase tracking-wide">Active Job</span>
                     </div>
                     <p className="text-[0.82rem] font-extrabold text-slate-900 leading-tight">Site Inspection</p>
-                    <p className="text-[0.7rem] text-slate-500 mt-0.5">09:30 â€“ 12:00pm</p>
+                    <p className="text-[0.7rem] text-slate-500 mt-0.5">09:30 - 12:00pm</p>
                     <div className="flex items-center gap-1 mt-2">
                       <div className="h-1 flex-1 rounded-full bg-slate-100 overflow-hidden">
                         <div className="h-1 w-[68%] rounded-full bg-amber-400" />
@@ -649,9 +649,9 @@ export function LoginForm() {
                       <span className="text-[0.7rem] font-bold text-slate-600 uppercase tracking-wide">Revenue</span>
                       <TrendingUp className="h-3 w-3 text-emerald-500" aria-hidden />
                     </div>
-                    <p className="text-[1.1rem] font-black text-slate-900">â‚¹2.4L</p>
+                    <p className="text-[1.1rem] font-black text-slate-900">₹2.4L</p>
                     <p className="text-[0.7rem] text-emerald-600 font-semibold mt-0.5 flex items-center gap-0.5">
-                      â†‘ 18% this month
+                      ↑ 18% this month
                     </p>
                   </div>
                 </div>
@@ -682,7 +682,7 @@ export function LoginForm() {
                     </div>
                     <div className="flex items-center gap-1 mb-1">
                       <Calendar className="h-3 w-3 text-slate-400" aria-hidden />
-                      <p className="text-[0.7rem] text-slate-500">12:00 â€“ 01:00pm</p>
+                      <p className="text-[0.7rem] text-slate-500">12:00 - 01:00pm</p>
                     </div>
                     <div className="flex -space-x-1">
                       {["#3b82f6","#10b981","#f59e0b"].map((color, i) => (
@@ -699,7 +699,7 @@ export function LoginForm() {
                   {[
                     { label: "24 Jobs", color: "bg-primary/10 text-primary border-primary/20" },
                     { label: "98% On-Time", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-                    { label: "â‚¹2.4L Rev", color: "bg-amber-50 text-amber-700 border-amber-200" },
+                    { label: "₹2.4L Rev", color: "bg-amber-50 text-amber-700 border-amber-200" },
                   ].map(({ label, color }) => (
                     <div key={label} className={`flex-1 text-center rounded-full border px-2 py-1 text-[0.7rem] font-bold backdrop-blur-sm ${color} bg-opacity-90`}>
                       {label}
@@ -714,7 +714,7 @@ export function LoginForm() {
 
         {/* Footer credits */}
         <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[0.7rem] text-slate-400/60 whitespace-nowrap select-none">
-          Â© {new Date().getFullYear()} SmartERP Â· Enterprise Workforce Management
+          © {new Date().getFullYear()} SmartERP · Enterprise Workforce Management
         </p>
       </div>
     </>

@@ -96,12 +96,19 @@
 
 /* ── Input premium focus ─────────────────────────── */
 .lp-input {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.lp-input::placeholder {
+  color: #94a3b8 !important;
 }
 .lp-input:focus {
   border-color: oklch(0.45 0.15 240) !important;
-  box-shadow: 0 0 0 3px oklch(0.45 0.15 240 / 0.12), 0 1px 4px 0 oklch(0 0 0 / 0.06) !important;
-  background-color: #fff !important;
+  box-shadow: 0 0 0 3px oklch(0.45 0.15 240 / 0.15), 0 1px 4px 0 oklch(0 0 0 / 0.06) !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
   outline: none !important;
 }
 
