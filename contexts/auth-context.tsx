@@ -61,6 +61,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           })
           clearTimeout(timeoutId)
 
+          if (refreshRes.status === 401 || refreshRes.status === 403) {
+            logger.warn("[v0] Stored session is invalid or expired — clearing session and signing out")
+            await signOut()
+            if (isMounted) {
+              setUser(null)
+              setIsLoading(false)
+            }
+            return
+          }
+
           if (refreshRes.ok && isMounted) {
             const data = await refreshRes.json()
             if (data.accessToken) {

@@ -369,15 +369,11 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
 
           if (res.status === 401) {
             // Still 401 after a fresh access token — session is genuinely invalid
-            if (!getRefreshToken()) {
-              handleLogout()
-            }
+            handleLogout()
             throw new Error("Authentication required. Please log in again.")
           }
         } catch (refreshErr) {
-          if (!getRefreshToken()) {
-            handleLogout()
-          }
+          handleLogout()
           throw refreshErr
         }
       }
