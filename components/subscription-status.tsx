@@ -21,6 +21,7 @@ type SubscriptionStatusData = {
     employees: number
     inventory_items: number
   }
+  billing_cycle?: string
   subscription_expires_at: string | null
 }
 
@@ -80,7 +81,9 @@ export function SubscriptionStatus() {
   } else if (isTrial) {
     planMessage = `🚀 Pro Trial Active — You are currently using the PRO plan (Trial).`
   } else if (isPro) {
-    const billingCycle = (data as any).billing_cycle === 'yearly' ? 'Yearly' : 'Monthly'
+    const rawCycle = (data.billing_cycle || "").toLowerCase()
+    const isYearly = rawCycle === "yearly" || rawCycle === "annual" || daysRemaining > 45
+    const billingCycle = isYearly ? "Yearly" : "Monthly"
     planMessage = `You are currently on the PRO plan (${billingCycle}).`
   } else if (isBasic) {
     planMessage = `You are currently on the BASIC plan.`
