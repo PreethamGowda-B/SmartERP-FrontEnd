@@ -33,12 +33,17 @@ export default function EmployeeJobDetailPage() {
   const router = useRouter()
   const jobId = params?.id as string
 
+  const [mounted, setMounted] = React.useState(false)
   const [job, setJob] = React.useState<any | null>(null)
   const [proofs, setProofs] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [isProofModalOpen, setIsProofModalOpen] = React.useState(false)
   const [selectedPhoto, setSelectedPhoto] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const fetchJobData = React.useCallback(async () => {
     if (!jobId) return
@@ -66,10 +71,12 @@ export default function EmployeeJobDetailPage() {
   }, [jobId])
 
   React.useEffect(() => {
-    fetchJobData()
-  }, [fetchJobData])
+    if (mounted) {
+      fetchJobData()
+    }
+  }, [mounted, fetchJobData])
 
-  if (loading && !job) {
+  if (!mounted || (loading && !job)) {
     return (
       <EmployeeLayout>
         <div className="space-y-6 p-4">

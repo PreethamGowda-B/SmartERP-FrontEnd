@@ -43,6 +43,7 @@ export default function OwnerJobDetailPage() {
   const router = useRouter()
   const jobId = params?.id as string
 
+  const [mounted, setMounted] = React.useState(false)
   const [job, setJob] = React.useState<any | null>(null)
   const [proofs, setProofs] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -53,6 +54,10 @@ export default function OwnerJobDetailPage() {
   const [isEditOpen, setIsEditOpen] = React.useState(false)
   const [isOverrideOpen, setIsOverrideOpen] = React.useState(false)
   const [isSubmittingEdit, setIsSubmittingEdit] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const fetchJobData = React.useCallback(async () => {
     if (!jobId) return
@@ -80,8 +85,10 @@ export default function OwnerJobDetailPage() {
   }, [jobId])
 
   React.useEffect(() => {
-    fetchJobData()
-  }, [fetchJobData])
+    if (mounted) {
+      fetchJobData()
+    }
+  }, [mounted, fetchJobData])
 
   const handleUpdateJob = async (formData: any) => {
     try {
@@ -111,7 +118,7 @@ export default function OwnerJobDetailPage() {
     }
   }
 
-  if (loading && !job) {
+  if (!mounted || (loading && !job)) {
     return (
       <OwnerLayout>
         <div className="space-y-6 p-2 sm:p-6">
