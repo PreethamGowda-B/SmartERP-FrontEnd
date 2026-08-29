@@ -156,6 +156,9 @@ export default function TimeTrackingPage() {
             const data = await apiClient("/api/attendance/clock-in", { method: "POST" })
             setTodayAttendance(data)
             fetchHistory()
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("attendance-status-changed"))
+            }
         } catch (err: any) {
             setError(err.message || "Failed to clock in")
         } finally {
@@ -187,6 +190,9 @@ export default function TimeTrackingPage() {
             const data = await apiClient("/api/attendance/clock-out", { method: "POST" })
             setTodayAttendance(data)
             fetchHistory()
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("attendance-status-changed"))
+            }
         } catch (err: any) {
             setError(err.message || "Failed to clock out")
         } finally {

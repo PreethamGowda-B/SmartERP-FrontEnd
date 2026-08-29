@@ -111,6 +111,9 @@ export function ClockInOut({
         setStatus("clocked-out")
         setSuccessMsg("✅ Clocked out successfully. See you tomorrow!")
       }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("attendance-status-changed"))
+      }
       onClockChange?.()
     } catch (err: any) {
       // Use the backend message directly — it's already user-friendly

@@ -33,10 +33,22 @@ export function ClockInGatekeeperProvider({ children }: { children: React.ReactN
         setLoading(false)
         return
       }
-      const res = await apiClient<{ success?: boolean; attendance?: any; clock_in?: string; clock_out?: string }>("/api/attendance/today")
+      const res = await apiClient<any>("/api/attendance/today")
       const att = res?.attendance || res
-      const hasClockIn = Boolean(att?.clock_in || att?.clockIn)
-      const hasClockOut = Boolean(att?.clock_out || att?.clockOut)
+      const hasClockIn = Boolean(
+        att?.check_in_time ||
+        att?.checkInTime ||
+        att?.clock_in_time ||
+        att?.clock_in ||
+        att?.clockIn
+      )
+      const hasClockOut = Boolean(
+        att?.check_out_time ||
+        att?.checkOutTime ||
+        att?.clock_out_time ||
+        att?.clock_out ||
+        att?.clockOut
+      )
       setIsClockedIn(hasClockIn && !hasClockOut)
     } catch (err) {
       // Fail-safe: assume false if check fails so gatekeeper protects operational actions
