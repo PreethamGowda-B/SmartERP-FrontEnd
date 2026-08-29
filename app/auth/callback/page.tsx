@@ -102,7 +102,7 @@ function CallbackContent() {
             } else if (user.role === "hr") {
                 target = "/hr"
             } else if (user.role === "employee") {
-                target = "/employee"
+                target = (user.company_id || user.companyId) ? "/employee" : "/employee/onboarding"
             }
             window.location.href = target
         })

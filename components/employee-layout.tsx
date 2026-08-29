@@ -31,10 +31,16 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const EMPLOYEE_ROLES = ["employee", "manager"]
 
   useEffect(() => {
-    if (!isLoading && (!user || !EMPLOYEE_ROLES.includes(user.role))) {
-      router.push("/")
+    if (!isLoading) {
+      if (!user || !EMPLOYEE_ROLES.includes(user.role)) {
+        router.push("/")
+      } else if (user.role === "employee" && !user.company_id && !user.companyId) {
+        if (typeof window !== "undefined" && window.location.pathname !== "/employee/onboarding") {
+          router.push("/employee/onboarding")
+        }
+      }
     }
-  }, [user?.id, user?.role, isLoading, router])
+  }, [user?.id, user?.role, user?.company_id, isLoading, router])
 
   if (isLoading) {
     return (
