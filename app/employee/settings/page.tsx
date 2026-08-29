@@ -158,12 +158,11 @@ export default function EmployeeSettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Full Name</Label>
-                <Input value={profile.name} onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))} />
+                <Input value={profile.name} onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))} placeholder="Your name" />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input type="email" value={user?.email || ""} disabled className="opacity-60" />
-                <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+                <Input type="email" value={user?.email || ""} disabled className="bg-muted text-muted-foreground font-mono text-xs" />
               </div>
               <div className="space-y-2">
                 <Label>Phone Number</Label>
@@ -212,51 +211,134 @@ export default function EmployeeSettingsPage() {
             </CardContent>
           </Card>
 
-          {/* ── Security / Change Password ── */}
+          {/* ── Security & Password Management ── */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Security</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Security &amp; Password</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Current Password</Label>
-                <div className="relative">
-                  <Input
-                    type={showPw ? "text" : "password"}
-                    value={passwords.current}
-                    onChange={(e) => setPasswords((p) => ({ ...p, current: e.target.value }))}
-                    placeholder="Enter current password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+              <div className="flex rounded-lg bg-muted p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSecurityTab("current")}
+                  className={`flex-1 py-1.5 rounded-md font-semibold transition-all ${
+                    securityTab === "current"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Change Password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSecurityTab("otp")
+                    if (!resetOtpSent) handleSendResetOtp()
+                  }}
+                  className={`flex-1 py-1.5 rounded-md font-semibold transition-all ${
+                    securityTab === "otp"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Reset via Email OTP (Google Users)
+                </button>
+              </div>
+
+              {securityTab === "current" ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Current Password</Label>
+                    <div className="relative">
+                      <Input
+                        type={showPw ? "text" : "password"}
+                        value={passwords.current}
+                        onChange={(e) => setPasswords((p) => ({ ...p, current: e.target.value }))}
+                        placeholder="Enter current password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPw((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>New Password</Label>
+                    <Input
+                      type="password"
+                      value={passwords.newPw}
+                      onChange={(e) => setPasswords((p) => ({ ...p, newPw: e.target.value }))}
+                      placeholder="Min 6 characters"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Confirm New Password</Label>
+                    <Input
+                      type="password"
+                      value={passwords.confirm}
+                      onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
+                      placeholder="Repeat new password"
+                    />
+                  </div>
+                  <Button onClick={handleChangePassword} disabled={savingPw || !passwords.current || !passwords.newPw}>
+                    {savingPw ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Changing…</> : "Change Password"}
+                  </Button>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>New Password</Label>
-                <Input
-                  type="password"
-                  value={passwords.newPw}
-                  onChange={(e) => setPasswords((p) => ({ ...p, newPw: e.target.value }))}
-                  placeholder="Min 6 characters"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Confirm New Password</Label>
-                <Input
-                  type="password"
-                  value={passwords.confirm}
-                  onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
-                  placeholder="Repeat new password"
-                />
-              </div>
-              <Button onClick={handleChangePassword} disabled={savingPw || !passwords.current || !passwords.newPw}>
-                {savingPw ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Changing…</> : "Change Password"}
-              </Button>
+              ) : (
+                <div className="space-y-4 p-3.5 rounded-xl bg-muted/40 border border-border/60">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold">Email Verification Code</Label>
+                      <button
+                        type="button"
+                        onClick={handleSendResetOtp}
+                        disabled={sendingResetOtp}
+                        className="text-xs text-primary hover:underline font-semibold"
+                      >
+                        {sendingResetOtp ? "Sending code..." : resetOtpSent ? "Resend OTP Code" : "Send OTP Code"}
+                      </button>
+                    </div>
+                    <Input
+                      type="text"
+                      maxLength={6}
+                      placeholder="Enter 6-digit OTP code"
+                      value={resetOtp}
+                      onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, ""))}
+                      className="text-center font-mono font-bold tracking-widest text-base h-10"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Sent to <span className="font-mono font-medium">{user?.email}</span>
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold">New Password</Label>
+                    <Input
+                      type="password"
+                      placeholder="Min 6 characters"
+                      value={resetPw}
+                      onChange={(e) => setResetPw(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold">Confirm New Password</Label>
+                    <Input
+                      type="password"
+                      placeholder="Repeat new password"
+                      value={resetConfirm}
+                      onChange={(e) => setResetConfirm(e.target.value)}
+                    />
+                  </div>
+
+                  <Button onClick={handleResetPasswordWithOtp} disabled={resettingPw || !resetOtp.trim() || !resetPw.trim()}>
+                    {resettingPw ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Setting Password…</> : "Reset & Save Password"}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 

@@ -71,30 +71,105 @@ export function DangerZoneAccountDeletion({
     ? "/api/customer/profile/deletion/confirm"
     : "/api/account/deletion/confirm"
 
+  const [authMode, setAuthMode] = useState<"password" | "otp">("password")
+  const [otpCode, setOtpCode] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [isSendingOtp, setIsSendingOtp] = useState(false)
+  const [otpSent, setOtpSent] = useState(false)
+  const [otpError, setOtpError] = useState("")
+
+  const activeEmail = userEmail || auth?.user?.email || ""
+
   const handleOpenModal = () => {
     setStep("challenge")
+    setAuthMode("password")
     setPassword("")
+    setOtpCode("")
+    setNewPassword("")
     setReason("")
     setConfirmPhrase("")
     setChallengeToken("")
     setIsOwnerBlocked(false)
     setBlockMessage("")
+    setOtpSent(false)
+    setOtpError("")
     setIsOpen(true)
   }
 
-  // Step 1: Request Deletion Challenge
+  // Send OTP for Google / Passwordless users
+  const handleSendOtp = async () => {
+    if (!activeEmail) {
+      toast({
+        title: "Email Missing",
+        description: "Could not find your registered email address.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsSendingOtp(true)
+    setOtpError("")
+    try {
+      const res = await apiClient("/api/auth/send-otp", { 
+        method: "POST",
+        body: JSON.stringify({ email: activeEmail }) 
+      })
+      setOtpSent(true)
+      toast({
+        title: "Verification Code Sent",
+        description: `A 6-digit OTP code has been sent to ${activeEmail}.`
+      })
+    } catch (err: any) {
+      setOtpError(err?.message || "Failed to send verification code.")
+      toast({
+        title: "Failed to Send OTP",
+        description: err?.message || "Please check your network and try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSendingOtp(false)
+    }
+  }
+
+  // Step 1: Request Deletion Challenge (Password or OTP)
   const handleRequestChallenge = async (e: React.FormEvent) => {
     e.preventDefault()
     setRequesting(true)
     setIsOwnerBlocked(false)
+    setOtpError("")
 
     try {
+      // If user provided a new password along with OTP, first set their password
+      if (authMode === "otp" && otpCode.trim() && newPassword.trim()) {
+        const resetRes = await apiClient("/api/auth/reset-password", {
+          method: "POST",
+          body: JSON.stringify({
+            email: activeEmail,
+            otp: otpCode.trim(),
+            new_password: newPassword.trim()
+          })
+        })
+        if (resetRes.ok || resetRes.success) {
+          toast({
+            title: "Password Set Successfully",
+            description: "Your account password has been updated and verified."
+          })
+        }
+      }
+
+      const payload: any = {
+        reason: reason.trim() || undefined
+      }
+
+      if (authMode === "password") {
+        payload.password = password.trim() || undefined
+      } else {
+        payload.otp = otpCode.trim() || undefined
+      }
+
       const res = await apiClient(requestEndpoint, {
         method: "POST",
-        body: JSON.stringify({
-          password: password.trim() || undefined,
-          reason: reason.trim() || undefined
-        })
+        body: JSON.stringify(payload)
       })
 
       if (res.success && res.challengeToken) {
@@ -117,7 +192,7 @@ export function DangerZoneAccountDeletion({
       } else {
         toast({
           title: "Deletion Request Rejected",
-          description: err?.message || "Invalid password or authorization failure.",
+          description: err?.message || "Invalid credentials or authorization failure.",
           variant: "destructive"
         })
       }
@@ -199,28 +274,34 @@ export function DangerZoneAccountDeletion({
         <CardContent className="space-y-4">
           <div className="p-3.5 rounded-xl border border-red-200/80 dark:border-red-900/50 bg-white/70 dark:bg-black/30 text-xs space-y-2 text-slate-700 dark:text-slate-300">
             <div className="flex items-start gap-2">
-              <FileText className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
               <span>
-                <strong>Statutory Record Retention:</strong> Historical tax invoices, completed job records, GST filings, and attendance compliance logs are retained in company archives where required by law.
+                <strong>Irreversible Action:</strong> Account deletion will permanently purge your user profile, active sessions, and access permissions.
               </span>
             </div>
             <div className="flex items-start gap-2">
-              <UserX className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+              <FileText className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
               <span>
-                <strong>Personal Data Erasure:</strong> Your name, email, phone number, login credentials, push tokens, and private notifications will be permanently anonymized.
+                <strong>Statutory Record Retention:</strong> In compliance with Indian tax & labor laws, business invoices, tax filings, and attendance records already submitted to your company will remain archived for 8 years as required by law.
+              </span>
+            </div>
+            <div className="flex items-start gap-2">
+              <UserX className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+              <span>
+                <strong>Personal Data Erasure:</strong> Your contact number, hashed credentials, personal tokens, and session tokens will be permanently erased.
               </span>
             </div>
           </div>
 
-          <div className="pt-1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="text-xs text-muted-foreground">
-              Account: <span className="font-semibold text-foreground">{userEmail || "Your Account"}</span>
+          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-red-100 dark:border-red-950">
+            <div className="text-xs text-slate-500 font-mono">
+              Account: <span className="font-semibold text-slate-700 dark:text-slate-300">{activeEmail || "Current User"}</span>
             </div>
             <Button
               variant="destructive"
               size="sm"
               onClick={handleOpenModal}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs shadow-sm h-9 px-4 rounded-xl gap-1.5"
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs gap-1.5 shadow-sm"
             >
               <Trash2 className="h-4 w-4" />
               Delete My Account
@@ -262,20 +343,112 @@ export function DangerZoneAccountDeletion({
                   </Alert>
                 )}
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Account Password</Label>
-                  <div className="relative">
-                    <Input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your current password"
-                      required
-                      className="text-xs pr-9"
-                    />
-                    <Lock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  </div>
+                {/* Mode Selector Tabs */}
+                <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode("password")}
+                    className={`flex-1 py-1.5 rounded-md font-semibold transition-all ${
+                      authMode === "password"
+                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    Account Password
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode("otp")
+                      if (!otpSent) handleSendOtp()
+                    }}
+                    className={`flex-1 py-1.5 rounded-md font-semibold transition-all ${
+                      authMode === "otp"
+                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    Email OTP Verification (Google Users)
+                  </button>
                 </div>
+
+                {/* Password Mode */}
+                {authMode === "password" && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Account Password</Label>
+                    <div className="relative">
+                      <Input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter your current password"
+                        required
+                        className="text-xs pr-9"
+                      />
+                      <Lock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    </div>
+                    <div className="flex justify-between items-center text-[11px] text-muted-foreground pt-0.5">
+                      <span>Created account with Google or forgot password?</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMode("otp")
+                          if (!otpSent) handleSendOtp()
+                        }}
+                        className="text-primary hover:underline font-semibold"
+                      >
+                        Verify with Email OTP
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Email OTP Mode (For Google OAuth or Passwordless Accounts) */}
+                {authMode === "otp" && (
+                  <div className="space-y-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-bold">Email Verification Code</Label>
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          disabled={isSendingOtp}
+                          className="text-[11px] text-primary hover:underline font-semibold"
+                        >
+                          {isSendingOtp ? "Sending code..." : otpSent ? "Resend OTP Code" : "Send OTP Code"}
+                        </button>
+                      </div>
+                      <Input
+                        type="text"
+                        maxLength={6}
+                        placeholder="Enter 6-digit OTP code"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                        required
+                        className="text-center font-mono font-bold tracking-widest text-base h-10"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Sent to <span className="font-mono font-medium">{activeEmail}</span>
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1 border-t border-slate-200 dark:border-slate-800">
+                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Set / Reset Account Password <span className="text-slate-400 font-normal">(Optional)</span>
+                      </Label>
+                      <Input
+                        type="password"
+                        placeholder="New password (min 6 characters)"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="text-xs h-9"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Optional: Set a permanent password for your Google account to use for future logins.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Reason for Deletion (Optional)</Label>
@@ -304,7 +477,7 @@ export function DangerZoneAccountDeletion({
                   type="submit"
                   variant="destructive"
                   size="sm"
-                  disabled={requesting || !password.trim()}
+                  disabled={requesting || (authMode === "password" ? !password.trim() : !otpCode.trim())}
                   className="text-xs bg-red-600 hover:bg-red-700 gap-1.5"
                 >
                   {requesting ? (
