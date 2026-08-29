@@ -146,14 +146,22 @@ function SingleToast({
     // Direct navigation based on embedded url or fallback
     let targetUrl = toast.data?.url
     if (!targetUrl) {
-      if (toast.type?.includes("job")) targetUrl = "/employee/jobs"
-      else if (toast.type?.includes("leave") || toast.type?.includes("hr")) targetUrl = "/hr/requests"
-      else if (toast.type?.includes("invoice") || toast.type?.includes("payment")) targetUrl = "/owner/finance"
-      else if (toast.type?.includes("payroll")) targetUrl = "/employee/payroll"
-      else targetUrl = "/notifications"
+      if (toast.data?.job_id) {
+        targetUrl = `/owner/jobs/${toast.data.job_id}`
+      } else if (toast.type?.includes("proof") || toast.type?.includes("job")) {
+        targetUrl = "/owner/jobs"
+      } else if (toast.type?.includes("leave") || toast.type?.includes("hr")) {
+        targetUrl = "/hr/requests"
+      } else if (toast.type?.includes("invoice") || toast.type?.includes("payment")) {
+        targetUrl = "/owner/finance"
+      } else if (toast.type?.includes("payroll")) {
+        targetUrl = "/employee/payroll"
+      } else {
+        targetUrl = "/notifications"
+      }
     }
 
-    router.push(targetUrl)
+    if (targetUrl) router.push(targetUrl)
   }
 
   return (
