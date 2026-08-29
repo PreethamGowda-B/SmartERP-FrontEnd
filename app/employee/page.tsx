@@ -56,7 +56,7 @@ interface AttendanceRecord {
 export default function EmployeeDashboard() {
   const { user } = useAuth()
   const router = useRouter()
-  const { jobs, updateJobStatus } = useJobs()
+  const { jobs } = useJobs()
   const { notifications } = useNotifications()
 
   // Location Consent Banner state
