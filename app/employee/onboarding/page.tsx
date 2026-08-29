@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, type Variants } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient, setTokens } from "@/lib/apiClient"
 import {
@@ -31,13 +31,13 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 
 // Animation variants for smooth step transitions
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
   exit: { opacity: 0, y: -12, transition: { duration: 0.2, ease: "easeIn" } },
 }
 
-const itemFade = {
+const itemFade: Variants = {
   hidden: { opacity: 0, y: 8 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
 }
