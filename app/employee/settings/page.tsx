@@ -42,6 +42,15 @@ export default function EmployeeSettingsPage() {
   const [showPw, setShowPw] = useState(false)
   const [savingPw, setSavingPw] = useState(false)
 
+  // ── OTP Password Reset State ──────────────────────────────────────────────
+  const [securityTab, setSecurityTab] = useState<"current" | "otp">("current")
+  const [resetOtp, setResetOtp] = useState("")
+  const [resetPw, setResetPw] = useState("")
+  const [resetConfirm, setResetConfirm] = useState("")
+  const [sendingResetOtp, setSendingResetOtp] = useState(false)
+  const [resetOtpSent, setResetOtpSent] = useState(false)
+  const [resettingPw, setResettingPw] = useState(false)
+
   // ── Company info (read-only) ───────────────────────────────────────────────
   interface CompanyInfo {
     company_id: string
@@ -121,6 +130,61 @@ export default function EmployeeSettingsPage() {
     const updated = { ...notifPrefs, [key]: val }
     setNotifPrefs(updated)
     handleSaveNotifPrefs(updated)
+  }
+
+  const handleSendResetOtp = async () => {
+    if (!user?.email) {
+      return toast({ title: "Email not found", description: "Could not identify your registered email.", variant: "destructive" })
+    }
+    setSendingResetOtp(true)
+    try {
+      await apiClient("/api/auth/send-otp", {
+        method: "POST",
+        body: JSON.stringify({ email: user.email }),
+      })
+      setResetOtpSent(true)
+      toast({ title: "Verification Code Sent", description: `A 6-digit OTP code has been sent to ${user.email}.` })
+    } catch (err: any) {
+      toast({ title: "Failed to send OTP", description: err.message || "Please try again later.", variant: "destructive" })
+    } finally {
+      setSendingResetOtp(false)
+    }
+  }
+
+  const handleResetPasswordWithOtp = async () => {
+    if (!resetOtp.trim()) {
+      return toast({ title: "OTP Required", description: "Please enter the 6-digit OTP sent to your email.", variant: "destructive" })
+    }
+    if (resetPw.length < 6) {
+      return toast({ title: "Password too short", description: "At least 6 characters required", variant: "destructive" })
+    }
+    if (resetPw !== resetConfirm) {
+      return toast({ title: "Passwords don't match", variant: "destructive" })
+    }
+
+    setResettingPw(true)
+    try {
+      const res = await apiClient("/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({
+          email: user?.email,
+          otp: resetOtp.trim(),
+          new_password: resetPw.trim()
+        })
+      })
+
+      if (res.ok || res.success) {
+        toast({ title: "Password Updated", description: "Your account password has been updated and tracked successfully." })
+        setResetOtp("")
+        setResetPw("")
+        setResetConfirm("")
+        setSecurityTab("current")
+      }
+    } catch (err: any) {
+      toast({ title: "Password Reset Failed", description: err.message || "Invalid or expired OTP code.", variant: "destructive" })
+    } finally {
+      setResettingPw(false)
+    }
   }
 
   const handleChangePassword = async () => {
