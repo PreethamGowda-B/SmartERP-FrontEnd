@@ -140,7 +140,7 @@ export default function EmployeeSettingsPage() {
     try {
       await apiClient("/api/auth/send-otp", {
         method: "POST",
-        body: JSON.stringify({ email: user.email }),
+        body: JSON.stringify({ email: user.email, type: "password_reset" }),
       })
       setResetOtpSent(true)
       toast({ title: "Verification Code Sent", description: `A 6-digit OTP code has been sent to ${user.email}.` })

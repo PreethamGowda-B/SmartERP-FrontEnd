@@ -112,7 +112,7 @@ export function DangerZoneAccountDeletion({
     try {
       const res = await apiClient("/api/auth/send-otp", { 
         method: "POST",
-        body: JSON.stringify({ email: activeEmail }) 
+        body: JSON.stringify({ email: activeEmail, type: "account_deletion" }) 
       })
       setOtpSent(true)
       toast({
