@@ -1,370 +1,434 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import React, { useState, useEffect, useCallback } from "react"
 import { AdminLayout } from "@/components/admin-layout"
 import { motion, AnimatePresence } from "framer-motion"
-import { 
-  MessageSquare, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  CheckCircle2, 
-  Clock, 
-  Bug, 
-  Lightbulb, 
-  ExternalLink,
-  Reply,
+import {
+  MessageSquare,
+  Search,
+  Filter,
+  CheckCircle2,
+  Clock,
   Send,
-  Loader2,
-  Users
+  User,
+  Building,
+  RefreshCw,
+  Mail,
+  AlertCircle,
+  Tag,
+  ChevronRight,
+  X,
+  ExternalLink,
+  MessageCircle,
+  Laptop
 } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
-import { logger } from "@/lib/logger"
-import { formatDistanceToNow } from "date-fns"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { formatDistanceToNow } from "date-fns"
 
-interface FeedbackData {
+interface FeedbackItem {
   id: number
-  user_id: string
-  user_name: string | null
-  user_email: string | null
-  type: string
+  user_id?: string
+  user_name?: string
+  user_email?: string
+  company_id?: number
+  company_name?: string
+  type: string // bug, feature, general, support
   subject: string
   message: string
-  page_url: string
-  status: 'new' | 'replied'
-  admin_reply: string | null
-  replied_at: string | null
+  status: string // new, open, pending, replied, resolved, closed
+  admin_reply?: string
+  replied_at?: string
   created_at: string
+  page_url?: string
+  severity?: string
 }
 
-export default function AdminFeedbackPage() {
-  const params = useParams()
-  const router = useRouter()
-  const [feedback, setFeedback] = useState<FeedbackData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [filterType, setFilterType] = useState<string>("all")
-  const [filterStatus, setFilterStatus] = useState<string>("all")
+function safeDistance(dateStr: string): string {
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return "Recently"
+    return formatDistanceToNow(d, { addSuffix: true })
+  } catch {
+    return "Recently"
+  }
+}
 
-  // Reply Dialog State
-  const [replyDialogOpen, setReplyDialogOpen] = useState(false)
-  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackData | null>(null)
-  const [replyMessage, setReplyMessage] = useState("")
+export default function AdminFeedback() {
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [typeFilter, setTypeFilter] = useState("all")
+  
+  // Selected ticket drawer
+  const [selectedItem, setSelectedItem] = useState<FeedbackItem | null>(null)
+  const [replyText, setReplyText] = useState("")
   const [replying, setReplying] = useState(false)
+
+  const fetchFeedback = useCallback(async (showRefreshing = false) => {
+    if (showRefreshing) setIsRefreshing(true)
+    try {
+      const data = await apiClient<FeedbackItem[]>("/api/v1/feedback")
+      setFeedback(Array.isArray(data) ? data : [])
+    } catch {
+      toast.error("Failed to load user feedback & tickets")
+      setFeedback([])
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [])
 
   useEffect(() => {
     fetchFeedback()
-  }, [])
+  }, [fetchFeedback])
 
-  const fetchFeedback = async () => {
-    try {
-      const data = await apiClient("/api/v1/feedback")
-      setFeedback(data)
-    } catch (err: any) {
-      logger.error("Failed to fetch feedback", err)
-      toast.error("Failed to load feedback")
-    } finally {
-      setLoading(false)
+  const handleSendReply = async () => {
+    if (!selectedItem || !replyText.trim()) {
+      toast.error("Please enter a reply message")
+      return
     }
-  }
-
-  const handleReplySubmit = async () => {
-    if (!selectedFeedback || !replyMessage.trim()) return
 
     setReplying(true)
     try {
-      await apiClient(`/api/v1/feedback/${selectedFeedback.id}/reply`, {
-        method: 'PATCH',
-        body: JSON.stringify({ replyMessage })
+      await apiClient(`/api/v1/feedback/${selectedItem.id}/reply`, {
+        method: "PATCH",
+        body: JSON.stringify({ reply: replyText, status: "replied" })
+      }).catch(async () => {
+        // Fallback for general status update
+        await apiClient(`/api/v1/feedback/${selectedItem.id}/status`, {
+          method: "PATCH",
+          body: JSON.stringify({ status: "replied", admin_reply: replyText })
+        })
       })
-      
-      toast.success("Reply sent successfully! They will receive an email and notification.")
-      setReplyDialogOpen(false)
-      setReplyMessage("")
-      
-      // Update local state to reflect the reply
-      setFeedback(current => current.map(f => 
-        f.id === selectedFeedback.id 
-          ? { ...f, status: 'replied', admin_reply: replyMessage, replied_at: new Date().toISOString() } 
-          : f
+
+      setFeedback(prev => prev.map(item => 
+        item.id === selectedItem.id 
+          ? { ...item, status: "replied", admin_reply: replyText, replied_at: new Date().toISOString() } 
+          : item
       ))
+      if (selectedItem) {
+        setSelectedItem({
+          ...selectedItem,
+          status: "replied",
+          admin_reply: replyText,
+          replied_at: new Date().toISOString()
+        })
+      }
+      toast.success("Reply recorded and ticket marked replied")
+      setReplyText("")
     } catch (err: any) {
-      toast.error(err.message || "Failed to send reply")
+      toast.error(err?.message || "Failed to record reply")
     } finally {
       setReplying(false)
     }
   }
 
-  const openReplyDialog = (item: FeedbackData) => {
-    setSelectedFeedback(item)
-    setReplyMessage(item.admin_reply || "")
-    setReplyDialogOpen(true)
-  }
-
-  // Filtering
-  const filteredFeedback = feedback.filter(item => {
-    const matchesSearch = 
-      (item.subject?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (item.message?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (item.user_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (item.user_email?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-    
-    const matchesType = filterType === "all" || item.type === filterType
-    const matchesStatus = filterStatus === "all" || item.status === filterStatus
-
-    return matchesSearch && matchesType && matchesStatus
+  const filteredItems = feedback.filter(item => {
+    const matchesSearch =
+      (item.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       item.message?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       item.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       item.user_email?.toLowerCase().includes(searchQuery.toLowerCase()))
+    const matchesStatus = statusFilter === "all" || item.status === statusFilter
+    const matchesType = typeFilter === "all" || item.type === typeFilter
+    return matchesSearch && matchesStatus && matchesType
   })
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'bug': return <Bug className="h-4 w-4 text-red-500" />
-      case 'feature_request': return <Lightbulb className="h-4 w-4 text-amber-500" />
-      default: return <MessageSquare className="h-4 w-4 text-blue-500" />
-    }
-  }
-
-  const getTypeBadge = (type: string) => {
-    switch (type) {
-      case 'bug': return <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">Bug Report</Badge>
-      case 'feature_request': return <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">Feature Request</Badge>
-      default: return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">General</Badge>
-    }
-  }
 
   return (
     <AdminLayout>
-      <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="space-y-6 font-sans pb-12">
+        {/* ── Header ──────────────────────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">User Feedback</h1>
-            <p className="text-slate-500 mt-1 text-sm font-bold uppercase tracking-widest opacity-80">
-              Manage bug reports and feature requests
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+              Feedback & Support Hub
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+              User inquiries, bug submissions, feature suggestions, and administrative resolution
             </p>
           </div>
-          <div className="flex items-center gap-3 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-             <div className="flex items-center gap-2 px-3 py-1.5 border-r border-slate-100">
-                <Search className="h-4 w-4 text-slate-400" />
-                <Input 
-                  placeholder="Search feedback..." 
-                  className="h-8 border-0 shadow-none focus-visible:ring-0 px-0 min-w-[200px]"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-             </div>
-             <div className="flex items-center gap-2 px-2">
-                <Button 
-                  variant={filterStatus === 'new' ? 'secondary' : 'ghost'} 
-                  size="sm" 
-                  className="h-8 text-xs font-bold"
-                  onClick={() => setFilterStatus(filterStatus === 'new' ? 'all' : 'new')}
-                >
-                  <Clock className="h-3 w-3 mr-1" /> Unread
-                </Button>
-                <Button 
-                   variant={filterType === 'bug' ? 'secondary' : 'ghost'} 
-                   size="sm" 
-                   className="h-8 text-xs font-bold"
-                   onClick={() => setFilterType(filterType === 'bug' ? 'all' : 'bug')}
-                >
-                  <Bug className="h-3 w-3 mr-1" /> Bugs
-                </Button>
-             </div>
+
+          <div className="flex items-center gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchFeedback(true)}
+              disabled={isRefreshing}
+              className="h-9 px-3 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs gap-1.5 shadow-2xs"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 text-slate-500 ${isRefreshing ? "animate-spin text-indigo-600" : ""}`} />
+              <span>Refresh Inbox</span>
+            </Button>
           </div>
         </div>
 
-        {/* Feedback List */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
-          {loading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900" />
-            </div>
-          ) : filteredFeedback.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mb-4">
-                <MessageSquare className="h-8 w-8 text-slate-300" />
-              </div>
-              <h3 className="text-lg font-black text-slate-900">No Feedback Found</h3>
-              <p className="text-sm text-slate-500 mt-1 max-w-sm">
-                Try adjusting your search or filters to find what you&apos;re looking for.
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {filteredFeedback.map((item) => (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  key={item.id} 
-                  className={`p-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row gap-6 relative group ${item.status === 'new' ? 'bg-slate-50/50' : ''}`}
-                >
-                  {/* Status Indicator Bar */}
-                  {item.status === 'new' && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500" />
-                  )}
+        {/* ── Filter Toolbar ─────────────────────────────────────────────────── */}
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col md:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Search by subject, message content, or user email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-10 rounded-xl bg-slate-50/50 border-slate-200 text-xs font-medium focus:bg-white"
+            />
+          </div>
 
-                  {/* Icon & Type */}
-                  <div className="shrink-0 flex flex-col items-center sm:items-start gap-2">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm border ${
-                      item.type === 'bug' ? 'bg-red-50 border-red-100' : 
-                      item.type === 'feature_request' ? 'bg-amber-50 border-amber-100' : 
-                      'bg-blue-50 border-blue-100'
-                    }`}>
-                      {getTypeIcon(item.type)}
-                    </div>
-                  </div>
+          <div className="flex items-center gap-2.5">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Filter by Status"
+              className="h-10 px-3 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-semibold text-slate-700 focus:outline-none focus:bg-white cursor-pointer"
+            >
+              <option value="all">All Statuses</option>
+              <option value="open">Open</option>
+              <option value="replied">Replied</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          {getTypeBadge(item.type)}
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                            {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              aria-label="Filter by Category"
+              className="h-10 px-3 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-semibold text-slate-700 focus:outline-none focus:bg-white cursor-pointer"
+            >
+              <option value="all">All Categories</option>
+              <option value="bug">Bug Reports</option>
+              <option value="feature">Feature Requests</option>
+              <option value="support">Support Inquiries</option>
+              <option value="general">General Feedback</option>
+            </select>
+          </div>
+        </div>
+
+        {/* ── Ticket List Table ──────────────────────────────────────────────── */}
+        <div className="rounded-2xl bg-white border border-slate-200/90 shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                  <th className="py-3.5 pl-6">Subject & Message</th>
+                  <th className="py-3.5">Category</th>
+                  <th className="py-3.5">Submitter</th>
+                  <th className="py-3.5">Status</th>
+                  <th className="py-3.5">Submitted</th>
+                  <th className="py-3.5 text-right pr-6">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="py-4 pl-6"><div className="h-4 w-48 bg-slate-100 rounded" /></td>
+                      <td className="py-4"><div className="h-4 w-16 bg-slate-100 rounded" /></td>
+                      <td className="py-4"><div className="h-4 w-28 bg-slate-100 rounded" /></td>
+                      <td className="py-4"><div className="h-4 w-16 bg-slate-100 rounded" /></td>
+                      <td className="py-4"><div className="h-4 w-20 bg-slate-100 rounded" /></td>
+                      <td className="py-4 pr-6 text-right"><div className="h-4 w-14 bg-slate-100 rounded ml-auto" /></td>
+                    </tr>
+                  ))
+                ) : filteredItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                      <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                      No support tickets found matching your criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredItems.map((item) => (
+                    <tr
+                      key={item.id}
+                      onClick={() => setSelectedItem(item)}
+                      className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-3.5 pl-6 max-w-sm min-w-0">
+                        <span className="font-bold text-slate-900 block truncate group-hover:text-indigo-600 transition-colors">
+                          {item.subject || "No Subject"}
+                        </span>
+                        <span className="text-slate-500 line-clamp-1 text-[11px] mt-0.5">
+                          {item.message}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5">
+                        <Badge className="bg-slate-100 text-slate-700 border-slate-200 text-[10px] font-bold uppercase">
+                          {item.type || "general"}
+                        </Badge>
+                      </td>
+
+                      <td className="py-3.5">
+                        <div className="min-w-0">
+                          <span className="font-semibold text-slate-800 block truncate">
+                            {item.user_name || "User"}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-mono truncate block">
+                            {item.user_email || "Anonymous"}
                           </span>
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900 truncate">
-                          {item.subject || 'No Subject Provided'}
-                        </h3>
-                      </div>
-                      
-                      {/* Actions */}
-                      <div className="shrink-0 flex items-center gap-2">
-                         {item.status === 'replied' ? (
-                            <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                              <CheckCircle2 className="h-3 w-3 mr-1" /> Replied
-                            </Badge>
-                         ) : (
-                            <Button 
-                              size="sm" 
-                              onClick={() => openReplyDialog(item)}
-                              className="bg-slate-900 hover:bg-slate-800 text-white shadow-md focus:ring-2 focus:ring-slate-900/20"
-                            >
-                              <Reply className="h-4 w-4 mr-2" /> Reply
-                            </Button>
-                         )}
-                      </div>
-                    </div>
+                      </td>
 
-                    <p className="text-slate-600 text-sm whitespace-pre-wrap flex-1 mb-4 leading-relaxed">
-                      {item.message}
-                    </p>
+                      <td className="py-3.5">
+                        <Badge className={
+                          item.status === 'replied' || item.status === 'resolved'
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold"
+                            : "bg-amber-50 text-amber-700 border-amber-200 text-[10px] font-bold"
+                        }>
+                          {item.status === 'replied' ? "Replied" : item.status === 'resolved' ? "Resolved" : "Open"}
+                        </Badge>
+                      </td>
 
-                    {/* Footer Info */}
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-auto pt-4 border-t border-slate-100 text-xs text-slate-500">
-                      <div className="flex items-center gap-2 font-medium">
-                        <Users className="h-3.5 w-3.5 text-slate-400" />
-                        <span className="text-slate-900">{item.user_name || 'Unknown User'}</span>
-                        <span className="text-slate-400">({item.user_email || 'No email'})</span>
-                      </div>
-                      {item.page_url && (
-                        <a 
-                          href={item.page_url} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="flex items-center gap-1.5 hover:text-blue-600 transition-colors"
+                      <td className="py-3.5 text-slate-400 font-mono text-[11px]">
+                        {safeDistance(item.created_at)}
+                      </td>
+
+                      <td className="py-3.5 pr-6 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedItem(item)
+                          }}
+                          className="h-8 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
                         >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          Source Page
-                        </a>
-                      )}
+                          Details
+                          <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ── Slide-Over Ticket Drawer ────────────────────────────────────────── */}
+        <AnimatePresence>
+          {selectedItem && (
+            <div className="fixed inset-0 z-50 flex justify-end font-sans">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setSelectedItem(null)}
+                className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs"
+              />
+
+              <motion.div
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", stiffness: 350, damping: 35 }}
+                className="relative z-50 w-full max-w-lg h-full bg-white shadow-2xl flex flex-col border-l border-slate-200"
+              >
+                {/* Drawer Header */}
+                <div className="p-6 border-b border-slate-200 flex items-start justify-between bg-slate-50/50">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold shrink-0">
+                      <MessageSquare className="h-5 w-5" />
                     </div>
-                    
-                    {/* Admin Reply Preview */}
-                    {item.admin_reply && (
-                      <div className="mt-4 bg-emerald-50/50 rounded-xl p-4 border border-emerald-100">
-                         <div className="flex items-center justify-between mb-2">
-                           <span className="text-xs font-black text-emerald-700 uppercase tracking-widest">Your Reply</span>
-                           <span className="text-[10px] font-bold text-slate-400">
-                             {item.replied_at ? formatDistanceToNow(new Date(item.replied_at), { addSuffix: true }) : ''}
-                           </span>
-                         </div>
-                         <p className="text-sm text-slate-700 whitespace-pre-wrap">{item.admin_reply}</p>
+                    <div className="min-w-0">
+                      <h2 className="text-base font-bold text-slate-900 truncate">
+                        {selectedItem.subject || "Support Inquiry"}
+                      </h2>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className="bg-slate-100 text-slate-700 border-slate-200 text-[10px] font-bold uppercase">
+                          {selectedItem.type || "General"}
+                        </Badge>
+                        <span className="text-[11px] font-mono text-slate-400">
+                          {safeDistance(selectedItem.created_at)}
+                        </span>
                       </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedItem(null)}
+                    className="h-8 w-8 text-slate-400 hover:text-slate-700 rounded-lg shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Drawer Body */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-thin scrollbar-thumb-slate-200 text-xs">
+                  {/* Submitter Box */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                    <span className="text-slate-400 font-semibold uppercase text-[10px] block">Submitted By</span>
+                    <p className="text-sm font-bold text-slate-900">{selectedItem.user_name || "User"}</p>
+                    <p className="text-slate-500 font-mono">{selectedItem.user_email || "No email provided"}</p>
+                    {selectedItem.page_url && (
+                      <p className="text-slate-400 font-mono text-[11px] pt-1 truncate">
+                        URL: {selectedItem.page_url}
+                      </p>
                     )}
                   </div>
-                </motion.div>
-              ))}
+
+                  {/* Message Box */}
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-slate-700 uppercase text-[10px]">User Inquiry / Feedback</span>
+                    <div className="p-4 rounded-xl bg-white border border-slate-200 text-slate-800 whitespace-pre-wrap leading-relaxed shadow-2xs">
+                      {selectedItem.message}
+                    </div>
+                  </div>
+
+                  {/* Existing Reply if any */}
+                  {selectedItem.admin_reply && (
+                    <div className="space-y-1.5">
+                      <span className="font-bold text-emerald-700 uppercase text-[10px] flex items-center gap-1">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Previous Admin Reply
+                      </span>
+                      <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200 text-emerald-950 whitespace-pre-wrap">
+                        {selectedItem.admin_reply}
+                        {selectedItem.replied_at && (
+                          <span className="block text-[10px] text-emerald-600 font-mono mt-2">
+                            Replied {safeDistance(selectedItem.replied_at)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Compose Reply Form */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <span className="font-bold text-slate-800">Send Administrative Resolution / Reply</span>
+                    <textarea
+                      rows={4}
+                      placeholder="Write your official response to this user..."
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none text-xs transition-colors"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        disabled={replying || !replyText.trim()}
+                        onClick={handleSendReply}
+                        className="h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-1.5"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        {replying ? "Recording..." : "Record & Send Reply"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
-
-      {/* Reply Dialog */}
-      <Dialog open={replyDialogOpen} onOpenChange={setReplyDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden">
-          <div className="p-6 bg-slate-50 border-b border-slate-200">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-xl font-black">
-                <Reply className="h-5 w-5 text-indigo-600" />
-                Reply to Feedback
-              </DialogTitle>
-              <DialogDescription className="mt-2 text-sm text-slate-600">
-                This will send an email and an in-app notification directly to <strong className="text-slate-900">{selectedFeedback?.user_name}</strong>.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <div className="p-6 space-y-4">
-             {/* Original Message Preview */}
-             <div className="bg-white border text-sm border-slate-200 rounded-xl p-4 shadow-sm relative overflow-visible">
-                <div className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Original Message</div>
-                <p className="text-slate-700 font-medium mb-1">{selectedFeedback?.subject}</p>
-                <p className="text-slate-500 italic line-clamp-3">"{selectedFeedback?.message}"</p>
-             </div>
-
-             <div className="space-y-3">
-                <label className="text-xs font-black uppercase tracking-widest text-slate-900 ml-1">Your Response</label>
-                <Textarea
-                  placeholder="Type your reply here. Thank them for the feedback, or provide an update on the bug fix..."
-                  className="min-h-[150px] resize-none focus-visible:ring-indigo-500"
-                  value={replyMessage}
-                  onChange={(e) => setReplyMessage(e.target.value)}
-                  disabled={selectedFeedback?.status === 'replied'}
-                />
-             </div>
-          </div>
-
-          <DialogFooter className="p-6 bg-slate-50 border-t border-slate-200 sm:justify-between items-center">
-            <Button variant="ghost" onClick={() => setReplyDialogOpen(false)} className="text-slate-500">
-              Cancel
-            </Button>
-            {selectedFeedback?.status !== 'replied' ? (
-              <Button onClick={handleReplySubmit} disabled={replying || !replyMessage.trim()} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 transition-all min-w-[120px]">
-                {replying ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
-                ) : (
-                  <><Send className="mr-2 h-4 w-4" /> Send Reply</>
-                )}
-              </Button>
-            ) : (
-              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 px-3 py-1.5 text-xs font-bold shadow-sm">
-                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Already Replied
-              </Badge>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   )
 }
