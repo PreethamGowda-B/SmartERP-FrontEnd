@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Loader2, ArrowLeft } from 'lucide-react';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
+import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
 
@@ -27,6 +28,7 @@ function LoginContent() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   // Show error from OAuth redirect or success message after signup
   useEffect(() => {
@@ -156,9 +158,18 @@ function LoginContent() {
 
               {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPasswordModal(true)}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
@@ -233,6 +244,15 @@ function LoginContent() {
           </div>
         </motion.div>
       </div>
+
+      {/* 🔐 Customer Password Recovery Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        portalType="customer"
+        defaultEmail={email}
+        roleHint="customer"
+      />
     </div>
   );
 }
