@@ -33,6 +33,17 @@ import {
 } from "@/services/securityApi"
 import { formatDistanceToNow, format } from "date-fns"
 
+function safeDistanceToNow(dateInput: any, fallback = 'Recently'): string {
+  if (!dateInput) return fallback
+  try {
+    const d = new Date(dateInput)
+    if (isNaN(d.getTime())) return fallback
+    return formatDistanceToNow(d, { addSuffix: true })
+  } catch (_) {
+    return fallback
+  }
+}
+
 interface IncidentDetailModalProps {
   incidentId: string | null
   isOpen: boolean
@@ -256,7 +267,7 @@ export function IncidentDetailModal({
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-slate-400" />
                           <span className="text-xs text-slate-700">
-                            {incident.last_seen_at ? formatDistanceToNow(new Date(incident.last_seen_at), { addSuffix: true }) : 'Recently'}
+                            {safeDistanceToNow(incident.last_seen_at, 'Recently')}
                           </span>
                         </div>
                       </div>

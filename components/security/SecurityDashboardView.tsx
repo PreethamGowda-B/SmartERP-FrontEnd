@@ -48,6 +48,17 @@ import { SecurityActionDialog } from "./SecurityActionDialog"
 import { IncidentDetailModal } from "./IncidentDetailModal"
 import { formatDistanceToNow, format } from "date-fns"
 
+function safeDistanceToNow(dateInput: any, fallback = 'Recently'): string {
+  if (!dateInput) return fallback
+  try {
+    const d = new Date(dateInput)
+    if (isNaN(d.getTime())) return fallback
+    return formatDistanceToNow(d, { addSuffix: true })
+  } catch (_) {
+    return fallback
+  }
+}
+
 export function SecurityDashboardView() {
   const [stats, setStats] = useState<SecurityDashboardStats | null>(null)
   const [incidents, setIncidents] = useState<SecurityIncident[]>([])
@@ -468,7 +479,7 @@ export function SecurityDashboardView() {
                         <span>Signals: {incident.event_count}</span>
                         <span>•</span>
                         <span>
-                          {incident.last_seen_at ? formatDistanceToNow(new Date(incident.last_seen_at), { addSuffix: true }) : 'Active'}
+                          {safeDistanceToNow(incident.last_seen_at, 'Active')}
                         </span>
                       </div>
                     </div>
@@ -600,7 +611,7 @@ export function SecurityDashboardView() {
                     </div>
                     <p className="text-slate-800 font-medium">{action.details?.reason || 'Remediation rule executed'}</p>
                     <span className="text-[11px] text-slate-400 block mt-1 font-mono">
-                      Executed by: {action.executed_by || 'System'} • {formatDistanceToNow(new Date(action.created_at), { addSuffix: true })}
+                      Executed by: {action.executed_by || 'System'} • {safeDistanceToNow(action.created_at, 'Recently')}
                     </span>
                   </div>
 

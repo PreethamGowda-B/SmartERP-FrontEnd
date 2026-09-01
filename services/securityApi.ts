@@ -125,7 +125,7 @@ export interface IncidentDetailsResponse {
  * Fetch SOC Dashboard aggregation metrics and active threats
  */
 export async function getSecurityDashboard(): Promise<SecurityDashboardStats> {
-  const res = await apiClient.get<{ success: boolean; stats: SecurityDashboardStats }>(
+  const res = await apiClient<{ success: boolean; stats: SecurityDashboardStats }>(
     "/api/v1/superadmin/security/dashboard"
   )
   return res.stats
@@ -147,7 +147,7 @@ export async function getSecurityIncidents(params?: {
   if (params?.limit) query.set('limit', String(params.limit))
 
   const queryString = query.toString() ? `?${query.toString()}` : ''
-  const res = await apiClient.get<{ success: boolean; incidents: SecurityIncident[] }>(
+  const res = await apiClient<{ success: boolean; incidents: SecurityIncident[] }>(
     `/api/v1/superadmin/security/incidents${queryString}`
   )
   return res.incidents || []
@@ -157,7 +157,7 @@ export async function getSecurityIncidents(params?: {
  * Fetch full incident details, correlated telemetry events, and remediation actions
  */
 export async function getSecurityIncidentDetails(incidentId: string): Promise<IncidentDetailsResponse> {
-  return await apiClient.get<IncidentDetailsResponse>(
+  return await apiClient<IncidentDetailsResponse>(
     `/api/v1/superadmin/security/incidents/${incidentId}`
   )
 }
@@ -170,8 +170,13 @@ export async function triggerAIIncidentAnalysis(incidentId: string): Promise<{
   message: string
   enrichment: any
 }> {
-  return await apiClient.post(
-    `/api/v1/superadmin/security/incidents/${incidentId}/analyze`
+  return await apiClient<{
+    success: boolean
+    message: string
+    enrichment: any
+  }>(
+    `/api/v1/superadmin/security/incidents/${incidentId}/analyze`,
+    { method: "POST" }
   )
 }
 
@@ -187,7 +192,7 @@ export async function getSecurityActions(params?: {
   if (params?.incidentId) query.set('incidentId', params.incidentId)
 
   const queryString = query.toString() ? `?${query.toString()}` : ''
-  const res = await apiClient.get<{ success: boolean; actions: SecurityAction[] }>(
+  const res = await apiClient<{ success: boolean; actions: SecurityAction[] }>(
     `/api/v1/superadmin/security/actions${queryString}`
   )
   return res.actions || []
@@ -201,8 +206,13 @@ export async function approveSecurityAction(actionId: string): Promise<{
   message: string
   action: SecurityAction
 }> {
-  return await apiClient.post(
-    `/api/v1/superadmin/security/actions/${actionId}/approve`
+  return await apiClient<{
+    success: boolean
+    message: string
+    action: SecurityAction
+  }>(
+    `/api/v1/superadmin/security/actions/${actionId}/approve`,
+    { method: "POST" }
   )
 }
 
@@ -214,8 +224,13 @@ export async function rejectSecurityAction(actionId: string): Promise<{
   message: string
   action: SecurityAction
 }> {
-  return await apiClient.post(
-    `/api/v1/superadmin/security/actions/${actionId}/reject`
+  return await apiClient<{
+    success: boolean
+    message: string
+    action: SecurityAction
+  }>(
+    `/api/v1/superadmin/security/actions/${actionId}/reject`,
+    { method: "POST" }
   )
 }
 
@@ -227,7 +242,12 @@ export async function revertSecurityAction(actionId: string): Promise<{
   message: string
   action: SecurityAction
 }> {
-  return await apiClient.post(
-    `/api/v1/superadmin/security/actions/${actionId}/revert`
+  return await apiClient<{
+    success: boolean
+    message: string
+    action: SecurityAction
+  }>(
+    `/api/v1/superadmin/security/actions/${actionId}/revert`,
+    { method: "POST" }
   )
 }
