@@ -14,6 +14,7 @@ import { signIn, signUp } from "@/lib/auth"
 import { apiClient, clearTokens } from "@/lib/apiClient"
 import { useAuth } from "@/contexts/auth-context"
 import { Building2, Loader2, HardHat, UserPlus, CheckCircle2, RefreshCw, Mail, ArrowLeft, Eye, EyeOff, TrendingUp, Users, Clock, Calendar, Bell } from "lucide-react"
+import { ForgotPasswordModal } from "@/components/auth/ForgotPasswordModal"
 import "@/app/login-page.css"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
@@ -33,6 +34,7 @@ export function LoginForm() {
   const [mode, setMode] = useState<"login" | "signup">("signup")
   const [isFlipping, setIsFlipping] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false)
   const { setUser } = useAuth()
   const router = useRouter()
 
@@ -429,7 +431,18 @@ export function LoginForm() {
                         className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="password" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Password</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="password" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Password</Label>
+                        {mode === "login" && (
+                          <button
+                            type="button"
+                            onClick={() => setShowForgotPasswordModal(true)}
+                            className="text-[0.78rem] text-primary hover:text-primary/80 font-medium transition-colors"
+                          >
+                            Forgot password?
+                          </button>
+                        )}
+                      </div>
                       <div className="relative">
                         <Input id="password" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password}
                           onChange={(e) => setPassword(e.target.value)} required
@@ -485,7 +498,18 @@ export function LoginForm() {
                         className="lp-input h-10 rounded-xl border-slate-200 bg-slate-50 text-[0.875rem] placeholder:text-slate-400" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="password-emp" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Password</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="password-emp" className="text-[0.78rem] font-semibold text-slate-600 tracking-wide uppercase">Password</Label>
+                        {mode === "login" && (
+                          <button
+                            type="button"
+                            onClick={() => setShowForgotPasswordModal(true)}
+                            className="text-[0.78rem] text-accent hover:text-accent/80 font-medium transition-colors"
+                          >
+                            Forgot password?
+                          </button>
+                        )}
+                      </div>
                       <div className="relative">
                         <Input id="password-emp" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password}
                           onChange={(e) => setPassword(e.target.value)} required
@@ -717,6 +741,16 @@ export function LoginForm() {
           © {new Date().getFullYear()} SmartERP · Enterprise Workforce Management
         </p>
       </div>
+
+      {/* 🔐 Password Recovery Modal (Owner, Employee, HR) */}
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        portalType="staff"
+        defaultEmail={email}
+        roleHint={activeTab as any}
+        onSuccessRedirect={() => setMode("login")}
+      />
     </>
   )
 }

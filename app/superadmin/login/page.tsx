@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { ForgotPasswordModal } from "@/components/auth/ForgotPasswordModal"
 
 export default function SuperAdminLoginPage() {
   const [email, setEmail] = useState("")
@@ -18,6 +19,7 @@ export default function SuperAdminLoginPage() {
   const [rememberMe, setRememberMe] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false)
   
   const router = useRouter()
   const { setUser } = useAuth()
@@ -149,7 +151,14 @@ export default function SuperAdminLoginPage() {
               ) : (
                 <Square className="h-4 w-4 text-slate-400" />
               )}
-              <span>Remember administrator session</span>
+              <span>Remember session</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForgotPasswordModal(true)}
+              className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold transition-colors"
+            >
+              Forgot password?
             </button>
           </div>
 
@@ -179,6 +188,15 @@ export default function SuperAdminLoginPage() {
           <p className="mt-0.5 text-slate-400">Unauthorized access attempts are logged and monitored.</p>
         </div>
       </motion.div>
+
+      {/* 🔐 Super Admin Password Recovery Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        portalType="staff"
+        defaultEmail={email}
+        roleHint="owner"
+      />
     </div>
   )
 }
