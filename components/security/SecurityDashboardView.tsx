@@ -214,7 +214,7 @@ export function SecurityDashboardView() {
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="text-xs font-mono font-bold tracking-wider text-slate-400">SMARTERP PLATFORM SOC</span>
-              {stats && getThreatLevelPill(stats.healthStatus.threatLevel)}
+              {getThreatLevelPill(stats?.healthStatus?.threatLevel || 'NORMAL')}
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-white">Security Operations Center</h1>
             <p className="text-xs text-slate-400 mt-1">
