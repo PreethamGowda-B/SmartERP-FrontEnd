@@ -142,6 +142,7 @@ export function AdminSidebar({
       <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200/80 bg-white">
         <Link 
           href={secretPrefix} 
+          prefetch={false}
           onClick={() => isMobile && closeMobile?.()}
           className="flex items-center gap-3 overflow-hidden group focus:outline-none"
         >
@@ -179,6 +180,7 @@ export function AdminSidebar({
                 <Link
                   key={item.name}
                   href={fullHref}
+                  prefetch={false}
                   onClick={() => isMobile && closeMobile?.()}
                   title={!isOpen && !isMobile ? item.name : undefined}
                 >

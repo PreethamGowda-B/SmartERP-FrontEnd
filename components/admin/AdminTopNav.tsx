@@ -101,6 +101,7 @@ export function AdminTopNav({
         <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-semibold">
           <Link
             href={`/${baseSegment}`}
+            prefetch={false}
             className="text-slate-400 hover:text-slate-700 transition-colors hidden sm:inline"
           >
             {currentMeta.category}
