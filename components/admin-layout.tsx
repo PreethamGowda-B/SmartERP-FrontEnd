@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   ShieldCheck, 
+  ShieldAlert,
   LayoutDashboard, 
   Building2, 
   Users, 
@@ -53,6 +54,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Announcements", icon: Megaphone, href: "/announcements" },
     { name: "Feedback", icon: MessageSquare, href: "/feedback" },
     { name: "AI Operations", icon: Brain, href: "/ai-operations" },
+    { name: "Security Center", icon: ShieldAlert, href: "/security" },
     { name: "Analytics", icon: BarChart3, href: "/analytics" },
     { name: "System Logs", icon: ScrollText, href: "/logs" },
     { name: "Settings & Maintenance", icon: Settings, href: "/settings" },
