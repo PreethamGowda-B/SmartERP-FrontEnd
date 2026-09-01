@@ -53,34 +53,34 @@ export default function SuperAdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-slate-100 p-4 font-sans relative overflow-hidden">
-      {/* Ambient Radial Background Grid */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08)_0,transparent_70%)] pointer-events-none" />
+    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 text-slate-900 p-4 font-sans relative overflow-hidden">
+      {/* Subtle Ambient Background */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.06)_0,transparent_70%)] pointer-events-none" />
       <div 
-        className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+        className="absolute inset-0 opacity-[0.4] pointer-events-none" 
         style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(#E2E8F0 1px, transparent 1px), linear-gradient(90deg, #E2E8F0 1px, transparent 1px)`,
           backgroundSize: '40px 40px'
         }}
       />
       
       <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        initial={{ opacity: 0, y: 16, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="w-full max-w-md bg-slate-900/90 border border-slate-800/90 rounded-3xl p-8 sm:p-10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] backdrop-blur-2xl relative z-10"
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="w-full max-w-md bg-white border border-slate-200/90 rounded-3xl p-8 sm:p-10 shadow-xl shadow-slate-200/60 relative z-10 space-y-6"
       >
         {/* Header Branding */}
-        <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-xl shadow-blue-500/25 mb-4 border border-white/20">
+        <div className="flex flex-col items-center text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-600/25 mb-4 border border-indigo-400/30">
             <ShieldCheck className="h-9 w-9 text-white" />
           </div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-semibold mb-3 tracking-wider uppercase">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-bold mb-3 tracking-wider uppercase">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse" />
             Prozync Innovations Platform Control
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">Super Admin Portal</h1>
-          <p className="text-xs text-slate-400 font-medium mt-1">Platform Control & Multi-Tenant Management</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">Super Admin Portal</h1>
+          <p className="text-xs text-slate-500 font-medium mt-1">Platform Control & Multi-Tenant Management</p>
         </div>
 
         {/* Error Alert Box */}
@@ -88,48 +88,48 @@ export default function SuperAdminLoginPage() {
           <motion.div 
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-start gap-3 text-red-400 text-xs font-semibold leading-relaxed"
+            className="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-rose-700 text-xs font-semibold leading-relaxed"
           >
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600" />
             <span>{errorMsg}</span>
           </motion.div>
         )}
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Email Field */}
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Admin Email</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Admin Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@prozync.in"
-                className="pl-10 bg-slate-950/80 border-slate-800 text-white placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 h-12 rounded-xl text-sm"
+                className="pl-10 bg-slate-50/60 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500/20 h-11 rounded-xl text-xs font-medium"
               />
             </div>
           </div>
 
           {/* Password Field */}
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-300">Password</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Password</Label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="pl-10 pr-10 bg-slate-950/80 border-slate-800 text-white placeholder:text-slate-600 focus:border-blue-500 focus:ring-blue-500/20 h-12 rounded-xl text-sm"
+                className="pl-10 pr-10 bg-slate-50/60 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-indigo-500/20 h-11 rounded-xl text-xs font-medium"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
                 title={showPassword ? "Hide Password" : "Show Password"}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -142,12 +142,12 @@ export default function SuperAdminLoginPage() {
             <button
               type="button"
               onClick={() => setRememberMe(!rememberMe)}
-              className="flex items-center gap-2 text-slate-400 hover:text-slate-200 transition-colors font-medium cursor-pointer"
+              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors font-medium cursor-pointer"
             >
               {rememberMe ? (
-                <CheckSquare className="h-4 w-4 text-blue-500 fill-blue-500/20" />
+                <CheckSquare className="h-4 w-4 text-indigo-600 fill-indigo-50" />
               ) : (
-                <Square className="h-4 w-4 text-slate-600" />
+                <Square className="h-4 w-4 text-slate-400" />
               )}
               <span>Remember administrator session</span>
             </button>
@@ -157,30 +157,26 @@ export default function SuperAdminLoginPage() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full h-12 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 group mt-3 cursor-pointer"
+            className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 group mt-2 text-xs"
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                Authenticating Platform Access...
+                <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Authenticating...
               </span>
             ) : (
               <>
                 <span>Sign In to Super Admin Console</span>
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </>
             )}
           </Button>
         </form>
 
-        {/* Footer Security Badge */}
-        <div className="mt-8 pt-6 border-t border-slate-800/80 text-center space-y-1">
-          <p className="text-[11px] text-slate-500 font-mono">
-            Prozync Innovations • Enterprise Platform Security
-          </p>
-          <p className="text-[10px] text-slate-600">
-            Unauthorized access attempts are logged and monitored.
-          </p>
+        {/* Security Footer Note */}
+        <div className="pt-2 text-center text-[10px] text-slate-400 font-mono">
+          <p>Prozync Innovations • Enterprise Platform Security</p>
+          <p className="mt-0.5 text-slate-400">Unauthorized access attempts are logged and monitored.</p>
         </div>
       </motion.div>
     </div>
