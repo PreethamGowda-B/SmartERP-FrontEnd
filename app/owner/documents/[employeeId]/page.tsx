@@ -168,7 +168,7 @@ export default function EmployeeDocumentsPage() {
 
   const getFullUrl = (path: string) => {
     if (!path) return ""
-    if (path.startsWith("http://") || path.startsWith("https://")) {
+    if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) {
       return path
     }
     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in'
@@ -190,6 +190,36 @@ export default function EmployeeDocumentsPage() {
       toast.error("Document URL unavailable")
       return
     }
+
+    if (fullUrl.startsWith('data:')) {
+      const isImg = fullUrl.startsWith('data:image/')
+      const win = window.open()
+      if (win) {
+        if (isImg) {
+          win.document.write(`
+            <!DOCTYPE html>
+            <html>
+              <head><title>Document Preview</title></head>
+              <body style="margin:0;background:#0F172A;display:flex;align-items:center;justify-content:center;min-height:100vh;">
+                <img src="${fullUrl}" style="max-width:92vw;max-height:92vh;object-fit:contain;border-radius:12px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);" />
+              </body>
+            </html>
+          `)
+        } else {
+          win.document.write(`
+            <!DOCTYPE html>
+            <html>
+              <head><title>Document Preview</title></head>
+              <body style="margin:0;height:100vh;">
+                <iframe src="${fullUrl}" style="width:100%;height:100%;border:none;"></iframe>
+              </body>
+            </html>
+          `)
+        }
+      }
+      return
+    }
+
     window.open(fullUrl, '_blank', 'noopener,noreferrer')
   }
 
