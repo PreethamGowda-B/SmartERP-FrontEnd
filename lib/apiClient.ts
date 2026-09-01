@@ -43,12 +43,18 @@ const ADMIN_RT = "_admin_rt"
 const USER_AT = "_at"
 const USER_RT = "_rt"
 
-function getStorageKeys() {
+function getStorageKeys(targetPath?: string) {
   if (typeof window === "undefined") return { at: USER_AT, rt: USER_RT }
   
   const pathname = window.location.pathname
   const hostname = window.location.hostname
-  const isAdminPath = pathname.includes('/superadmin') ||
+  const isAdminPath = (targetPath && (
+                        targetPath.startsWith('/api/admin') ||
+                        targetPath.startsWith('/api/superadmin') ||
+                        targetPath.startsWith('/api/v1/superadmin') ||
+                        targetPath.startsWith('/api/ai')
+                      )) ||
+                      pathname.includes('/superadmin') ||
                       pathname.includes('/super-admin') ||
                       pathname.includes('[adminRoute]') ||
                       hostname.startsWith('superadmin.')
@@ -110,28 +116,36 @@ export function clearTokens(isAdmin?: boolean) {
 
 /**
  * SINGLE SOURCE OF TRUTH FOR AUTH TOKEN
- * Prioritize localStorage to ensure 100% cross-tab token synchronization.
+ * Prioritize target API path and localStorage to ensure 100% cross-tab token synchronization.
  */
-export function getAuthToken(): string | null {
+export function getAuthToken(targetPath?: string): string | null {
   if (typeof window === "undefined") return null
   
-  const { at } = getStorageKeys()
-  const altAt = at === ADMIN_AT ? USER_AT : ADMIN_AT
+  const { at } = getStorageKeys(targetPath)
+  const isSuperAdminTarget = at === ADMIN_AT
+
+  if (isSuperAdminTarget) {
+    const adminToken = localStorage.getItem(ADMIN_AT) || sessionStorage.getItem(ADMIN_AT)
+    if (adminToken) return adminToken
+    try {
+      const adminUserStr = localStorage.getItem("smarterp_admin_user")
+      if (adminUserStr) {
+        const u = JSON.parse(adminUserStr)
+        if (u?.accessToken) return u.accessToken
+      }
+    } catch (_) {}
+  }
   
-  // 1. Check localStorage first (shared across all browser tabs)
+  // 1. Check primary token in localStorage
   const fromLocal = localStorage.getItem(at) || 
-                    localStorage.getItem(altAt) || 
                     localStorage.getItem("accessToken") || 
-                    localStorage.getItem(USER_AT) || 
-                    localStorage.getItem(ADMIN_AT)
+                    localStorage.getItem(USER_AT)
   if (fromLocal) return fromLocal
 
   // 2. Fallback to sessionStorage
   const fromSession = sessionStorage.getItem(at) || 
-                      sessionStorage.getItem(altAt) || 
                       sessionStorage.getItem("accessToken") || 
-                      sessionStorage.getItem(USER_AT) || 
-                      sessionStorage.getItem(ADMIN_AT)
+                      sessionStorage.getItem(USER_AT)
   if (fromSession) return fromSession
 
   // 3. Fallback: Parse user profile from localStorage
@@ -146,31 +160,25 @@ export function getAuthToken(): string | null {
   return null
 }
 
-export function getAccessToken() {
-  return getAuthToken()
+export function getAccessToken(targetPath?: string) {
+  return getAuthToken(targetPath)
 }
 
-export function getRefreshToken(): string | null {
+export function getRefreshToken(targetPath?: string): string | null {
   if (typeof window !== "undefined") {
-    const { rt } = getStorageKeys()
-    const altRt = rt === ADMIN_RT ? USER_RT : ADMIN_RT
+    const { rt } = getStorageKeys(targetPath)
     
     // 1. Check localStorage first (shared across all browser tabs)
     const fromLocal = localStorage.getItem(rt) || 
-                      localStorage.getItem(altRt) || 
-                      localStorage.getItem("refreshToken") || 
-                      localStorage.getItem(USER_RT) || 
-                      localStorage.getItem(ADMIN_RT)
+                      localStorage.getItem("refreshToken") ||
+                      localStorage.getItem(USER_RT)
     if (fromLocal) return fromLocal
 
     // 2. Fallback to sessionStorage
     const fromSession = sessionStorage.getItem(rt) || 
-                        sessionStorage.getItem(altRt) || 
-                        sessionStorage.getItem("refreshToken") || 
-                        sessionStorage.getItem(USER_RT) || 
-                        sessionStorage.getItem(ADMIN_RT)
+                        sessionStorage.getItem("refreshToken") ||
+                        localStorage.getItem(USER_RT)
     if (fromSession) return fromSession
-
     // 3. Fallback: Parse user profile from localStorage
     try {
       const userStr = localStorage.getItem("smarterp_user") || localStorage.getItem("smarterp_admin_user")
@@ -244,9 +252,9 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
   }
 
   // Attach access token if available, or auto-refresh if missing
-  let currentToken = getAuthToken()
+  let currentToken = getAuthToken(path)
   if (!currentToken && !path.includes('/auth/')) {
-    const storedRt = getRefreshToken()
+    const storedRt = getRefreshToken(path)
     if (storedRt) {
       try {
         const autoRefRes = await fetch(`${baseUrl}/api/auth/refresh`, {
