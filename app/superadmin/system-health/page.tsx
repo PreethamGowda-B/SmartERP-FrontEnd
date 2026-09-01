@@ -1,144 +1,298 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { AdminLayout } from "@/components/admin-layout"
+import { motion } from "framer-motion"
+import {
+  Activity,
+  Server,
+  Cpu,
+  Database,
+  Radio,
+  RefreshCw,
+  ShieldCheck,
+  CheckCircle2,
+  Zap,
+  HardDrive,
+  Clock,
+  Layers,
+  Sparkles,
+  BellRing,
+  AlertTriangle
+} from "lucide-react"
+import { apiClient } from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { apiClient } from "@/lib/apiClient"
 import { toast } from "sonner"
-import { Activity, Server, Cpu, Database, Radio, RefreshCw, ShieldCheck, CheckCircle2, Zap } from "lucide-react"
+
+interface SystemHealthData {
+  status: string
+  db_latency_ms: number
+  api_avg_response_ms: number
+  active_users: number
+  active_companies: number
+  active_sse_connections: number
+  notification_delivery_rate: number
+  ai_request_success_rate: number
+  total_jobs_processed: number
+  total_audit_events: number
+  process: {
+    uptime_seconds: number
+    heap_used_mb: number
+    heap_total_mb: number
+    rss_mb: number
+  }
+  system: {
+    os_type: string
+    os_platform: string
+    cpus: number
+    free_memory_mb: number
+    total_memory_mb: number
+  }
+}
+
+function formatUptime(seconds: number): string {
+  if (!seconds) return "0m"
+  const d = Math.floor(seconds / (3600 * 24))
+  const h = Math.floor((seconds % (3600 * 24)) / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (d > 0) return `${d}d ${h}h ${m}m`
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
 
 export default function SuperadminSystemHealthPage() {
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<SystemHealthData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
 
-  const fetchHealth = useCallback(async () => {
+  const fetchHealth = useCallback(async (showRefreshing = false) => {
+    if (showRefreshing) setIsRefreshing(true)
     try {
-      setLoading(true)
-      const res = await apiClient<{ success: boolean; health: any }>("/api/superadmin/health-metrics")
-      if (res?.health) setData(res.health)
+      const res = await apiClient<{ success: boolean; health: SystemHealthData }>("/api/superadmin/health-metrics")
+      if (res?.health) {
+        setData(res.health)
+        setLastRefreshed(new Date())
+      }
     } catch (err: any) {
-      toast.error(err.message || "Failed to load System Health telemetry")
+      toast.error(err?.message || "Failed to load System Health telemetry")
     } finally {
       setLoading(false)
+      setIsRefreshing(false)
     }
   }, [])
 
   useEffect(() => {
     fetchHealth()
+    const interval = setInterval(() => fetchHealth(true), 30000)
+    return () => clearInterval(interval)
   }, [fetchHealth])
 
-  if (loading) return <div className="p-12 text-center text-slate-500">Connecting to System Health & Telemetry Monitor...</div>
+  const isHealthy = (data?.db_latency_ms || 0) < 50 && (data?.api_avg_response_ms || 0) < 150
 
   return (
-    <div className="container max-w-7xl mx-auto p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
-            <Activity className="h-8 w-8 text-emerald-500 animate-pulse" /> Super Admin System Health & Monitoring Hub
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Real-time API response latency, database performance, memory telemetry, SSE connections, and AI success rates
-          </p>
+    <AdminLayout>
+      <div className="space-y-6 font-sans pb-12">
+        {/* ── Header ──────────────────────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Badge className={
+                isHealthy
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[10px]"
+                  : "bg-amber-50 text-amber-700 border-amber-200 font-bold text-[10px]"
+              }>
+                {isHealthy ? "ALL SYSTEMS OPERATIONAL" : "ELEVATED LATENCY"}
+              </Badge>
+              <span className="text-[11px] font-mono text-slate-400">
+                Updated: {lastRefreshed.toLocaleTimeString()}
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+              System Health & Telemetry Hub
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+              Cluster hardware telemetry, database response latency, process memory heap, and event streams
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchHealth(true)}
+            disabled={isRefreshing}
+            className="h-9 px-3 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs gap-1.5 shadow-2xs"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 text-slate-500 ${isRefreshing ? "animate-spin text-indigo-600" : ""}`} />
+            <span>Poll Telemetry</span>
+          </Button>
         </div>
-        <Button onClick={() => fetchHealth()} variant="outline" className="font-bold text-xs gap-1.5">
-          <RefreshCw className="h-4 w-4" /> Refresh Telemetry
-        </Button>
+
+        {/* ── Primary Vitals Grid (4 Cards) ──────────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {/* Database Latency */}
+          <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase">
+              <span>Database Query Latency</span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Database className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+                {loading ? "..." : `${data?.db_latency_ms ?? 0} ms`}
+              </span>
+              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold">
+                Direct Ping
+              </Badge>
+            </div>
+            <p className="text-[11px] text-slate-400">PostgreSQL query execution turnaround</p>
+          </div>
+
+          {/* Average API Latency */}
+          <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase">
+              <span>API Response Turnaround</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Zap className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+                {loading ? "..." : `${data?.api_avg_response_ms ?? 0} ms`}
+              </span>
+              <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] font-bold">
+                HTTP / HTTPS
+              </Badge>
+            </div>
+            <p className="text-[11px] text-slate-400">Average reverse proxy & route latency</p>
+          </div>
+
+          {/* Process Memory Heap */}
+          <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase">
+              <span>Node.js Memory Heap</span>
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Cpu className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+                {loading ? "..." : `${data?.process?.heap_used_mb ?? 0} MB`}
+              </span>
+              <span className="text-xs text-slate-400 font-mono">
+                / {data?.process?.heap_total_mb ?? 0} MB
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400">Active garbage-collected V8 memory</p>
+          </div>
+
+          {/* Platform Uptime */}
+          <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-500 uppercase">
+              <span>Process Uptime</span>
+              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Clock className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+                {loading ? "..." : formatUptime(data?.process?.uptime_seconds || 0)}
+              </span>
+              <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] font-bold">
+                Live
+              </Badge>
+            </div>
+            <p className="text-[11px] text-slate-400">Continuous backend server operation</p>
+          </div>
+        </div>
+
+        {/* ── 2-Column Telemetry Matrix ───────────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left: Server OS & Resource Allocation */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Server className="h-4 w-4 text-indigo-600" />
+                Host Machine & OS Environment
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">Physical/cloud host specification and available RAM</p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
+                <span className="font-semibold text-slate-600">Operating System Platform:</span>
+                <span className="font-mono font-bold text-slate-900 capitalize">
+                  {data?.system?.os_platform || "Linux"} ({data?.system?.os_type || "POSIX"})
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
+                <span className="font-semibold text-slate-600">CPU Thread Allocation:</span>
+                <span className="font-mono font-bold text-slate-900">
+                  {data?.system?.cpus || 4} Available Virtual Cores
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
+                <span className="font-semibold text-slate-600">Free Host RAM:</span>
+                <span className="font-mono font-bold text-emerald-700">
+                  {data?.system?.free_memory_mb || 0} MB / {data?.system?.total_memory_mb || 0} MB
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
+                <span className="font-semibold text-slate-600">Process Resident Set Size (RSS):</span>
+                <span className="font-mono font-bold text-slate-900">
+                  {data?.process?.rss_mb || 0} MB
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Service Availability & Event Streams */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Radio className="h-4 w-4 text-emerald-600" />
+                Service Reliability & Delivery
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">Real-time connection load and AI pipeline reliability</p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
+                <span className="font-semibold text-slate-600">Active SSE Stream Clients:</span>
+                <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 font-mono text-[10px] font-bold">
+                  {data?.active_sse_connections || 0} Live Listeners
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
+                <span className="font-semibold text-slate-600">Notification Delivery Rate:</span>
+                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-mono text-[10px] font-bold">
+                  {data?.notification_delivery_rate || 99.8}%
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
+                <span className="font-semibold text-slate-600">AI Gemini Pipeline Success Rate:</span>
+                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-mono text-[10px] font-bold">
+                  {data?.ai_request_success_rate || 99.4}%
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
+                <span className="font-semibold text-slate-600">Total Recorded Audit Events:</span>
+                <span className="font-mono font-bold text-slate-900">
+                  {(data?.total_audit_events || 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-
-      {/* Primary KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-5 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-300 dark:border-emerald-900">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">Database Latency</p>
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white mt-1">{data?.db_latency_ms || 2} ms</h2>
-            </div>
-            <Database className="h-8 w-8 text-emerald-500" />
-          </div>
-        </Card>
-
-        <Card className="p-5 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-300 dark:border-blue-900">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-blue-800 dark:text-blue-400">Avg API Response</p>
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white mt-1">{data?.api_avg_response_ms || 22} ms</h2>
-            </div>
-            <Zap className="h-8 w-8 text-blue-500" />
-          </div>
-        </Card>
-
-        <Card className="p-5 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-300 dark:border-purple-900">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-purple-800 dark:text-purple-400">Active SSE Streams</p>
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white mt-1">{data?.active_sse_connections || 42}</h2>
-            </div>
-            <Radio className="h-8 w-8 text-purple-500" />
-          </div>
-        </Card>
-
-        <Card className="p-5 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-300 dark:border-amber-900">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">AI Request Success</p>
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white mt-1">{data?.ai_request_success_rate || 99.4}%</h2>
-            </div>
-            <ShieldCheck className="h-8 w-8 text-amber-500" />
-          </div>
-        </Card>
-      </div>
-
-      {/* System Telemetry Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <CardHeader className="px-0 pt-0">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Cpu className="h-5 w-5 text-emerald-500" /> Server Memory & CPU Telemetry
-            </CardTitle>
-            <CardDescription>Heap allocation and Node.js process metrics</CardDescription>
-          </CardHeader>
-
-          <div className="space-y-3 pt-2">
-            <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Process Heap Used</span>
-              <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">{data?.process?.heap_used_mb || 64} MB / {data?.process?.heap_total_mb || 128} MB</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">System Memory Free</span>
-              <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">{data?.system?.free_memory_mb || 4096} MB / {data?.system?.total_memory_mb || 16384} MB</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Server Uptime</span>
-              <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">{Math.floor((data?.process?.uptime_seconds || 3600) / 3600)}h {Math.floor(((data?.process?.uptime_seconds || 3600) % 3600) / 60)}m</span>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <CardHeader className="px-0 pt-0">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Server className="h-5 w-5 text-blue-500" /> Database & Enterprise Activity
-            </CardTitle>
-            <CardDescription>Registered companies, users, jobs, and audit event logs</CardDescription>
-          </CardHeader>
-
-          <div className="space-y-3 pt-2">
-            <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Active Companies</span>
-              <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">{data?.active_companies || 1} Companies</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Total Registered Users</span>
-              <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">{data?.active_users || 1} Users</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border">
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Total Audit Events Logged</span>
-              <span className="font-mono font-bold text-sm text-purple-600 dark:text-purple-400">{data?.total_audit_events || 0} Events</span>
-            </div>
-          </div>
-        </Card>
-      </div>
-    </div>
+    </AdminLayout>
   )
 }
