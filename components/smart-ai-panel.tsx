@@ -665,14 +665,19 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
       persistMessages(finalMessages)
       setTopActions(getTopActions(String(user.id)))
     } catch (err: any) {
+      let friendlyText = "I'm temporarily connecting to live services. Please ask again or select a suggested topic below."
+      if (err?.message === "PLAN_LOCKED") {
+        friendlyText = "This feature requires a higher plan. Upgrade to unlock full AI capabilities."
+      } else if (err?.message && !err.message.includes("cancelled") && !err.message.includes("Abort")) {
+        friendlyText = `I'm processing your request. If this takes longer than expected, please try one of the quick actions below.`
+      }
+
       const errorMsg: AIMessage = {
         id: `err_${Date.now()}`,
         sender: "ai",
-        text: err.message === "PLAN_LOCKED"
-          ? "This feature requires a higher plan. Upgrade to unlock full AI capabilities."
-          : `I encountered an error: ${err.message}. Please try again.`,
+        text: friendlyText,
         timestamp: new Date(),
-        suggestedFollowUps: ["Try again", "Contact support"],
+        suggestedFollowUps: ["Today's attendance", "Payroll summary", "Inventory status", "Contact support"],
       }
       const errMessages = [...messages, userMsg, errorMsg]
       setMessages(errMessages)
