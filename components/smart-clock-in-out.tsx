@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Clock, MapPin, Play, Square, AlertCircle, Loader2 } from "lucide-react"
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+const API = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
 
 interface ActiveRecord {
   id: number

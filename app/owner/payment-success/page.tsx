@@ -65,6 +65,7 @@ export default function PaymentSuccessPage() {
 
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null)
   const startTimeRef = useRef<number>(Date.now())
+  const activatedRef = useRef<boolean>(false)
 
   // Launch cinematic Apple/Stripe-grade celebration confetti
   const launchConfetti = useCallback(() => {
@@ -158,6 +159,9 @@ export default function PaymentSuccessPage() {
 
   // Complete activation & redirect flow
   const completeActivation = useCallback((planName: string) => {
+    if (activatedRef.current) return
+    activatedRef.current = true
+
     console.log(`[Frontend] Activation Completed | New Plan = ${planName}`)
     console.log(`[Frontend] Refreshing User Session & Authorizing AI Entitlements`)
 

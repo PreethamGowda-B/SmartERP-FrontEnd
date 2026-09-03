@@ -8,7 +8,7 @@ import { Users, UserCheck, UserX, Clock } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { useAuth } from "@/contexts/auth-context"
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
 
 import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"

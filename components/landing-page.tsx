@@ -591,12 +591,12 @@ export function LandingPage() {
               <h4 className="font-bold text-xs uppercase tracking-wider text-foreground mb-3">Portals</h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
                 <li>
-                  <Link href="/customer/landing" prefetch={true} className="hover:text-blue-500 transition-colors flex items-center gap-1.5 justify-center md:justify-start">
+                  <Link href="/customer/landing" className="hover:text-blue-500 transition-colors flex items-center gap-1.5 justify-center md:justify-start">
                     <UserCheck className="h-3.5 w-3.5 text-blue-500" /> Customer Portal
                   </Link>
                 </li>
-                <li><Link href="/customer/login" prefetch={true} className="hover:text-foreground transition-colors">Customer Sign In</Link></li>
-                <li><Link href="/auth/login" prefetch={true} className="hover:text-foreground transition-colors">Staff & Crew Sign In</Link></li>
+                <li><Link href="/customer/login" className="hover:text-foreground transition-colors">Customer Sign In</Link></li>
+                <li><Link href="/auth/login" className="hover:text-foreground transition-colors">Staff & Crew Sign In</Link></li>
               </ul>
             </div>
 

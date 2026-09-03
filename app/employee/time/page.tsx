@@ -10,7 +10,7 @@ import { Clock, Calendar, TrendingUp, Award, Loader2 } from "lucide-react"
 
 import { getAccessToken } from "@/lib/apiClient"
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+const API = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
 
 interface AttendanceRecord {
   id: number
