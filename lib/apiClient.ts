@@ -428,7 +428,8 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
           window.dispatchEvent(new CustomEvent('plan-limit-reached', { detail: error.details }))
         }
       }
-      if (res.status === 403 && error.upgrade_required) {
+      const isSilentBackground = path.includes('/location/update') || Boolean((options as any)?.silent403);
+      if (res.status === 403 && error.upgrade_required && !isSilentBackground) {
         triggerFeatureLock({
           feature: error.feature || "this premium feature",
           current_plan: error.current_plan,

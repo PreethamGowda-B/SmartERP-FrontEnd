@@ -44,18 +44,34 @@ export function useLocationTracking({ onPermissionChange }: UseLocationTrackingO
         if (isDisabledByTier.current || !getAccessToken()) return
 
         try {
-            await apiClient("/api/location/update", {
+            const res = await apiClient<any>("/api/location/update", {
                 method: "POST",
                 body: JSON.stringify({ latitude: lat, longitude: lng }),
-            })
+                silent403: true
+            } as any)
+
+            if (res?.disabled) {
+                logger.warn("[useLocationTracking] Disabling location tracking: Plan does not include tracking")
+                isDisabledByTier.current = true
+                if (watchIdRef.current !== null) {
+                    navigator.geolocation.clearWatch(watchIdRef.current)
+                    watchIdRef.current = null
+                }
+                return
+            }
+
             lastSentRef.current = { lat, lng }
             lastSendTime.current = Date.now()
         } catch (err: any) {
             // If Forbidden (403), it means the plan doesn't support this.
-            // Disable tracking for this session to avoid repeated modals/unnecessary requests.
+            // Disable tracking for this session and immediately clear watch to stop all requests.
             if (err?.status === 403 || (err?.message && err.message.toLowerCase().includes('upgrade'))) {
                 logger.warn("[useLocationTracking] Disabling location tracking: Tier restriction detected")
                 isDisabledByTier.current = true
+                if (watchIdRef.current !== null) {
+                    navigator.geolocation.clearWatch(watchIdRef.current)
+                    watchIdRef.current = null
+                }
             } else {
                 logger.warn("[useLocationTracking] Failed to send location:", err)
             }
