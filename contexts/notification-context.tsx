@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useAuth } from "./auth-context"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { apiClient, getAuthToken } from "@/lib/apiClient"
+import { apiClient, getAuthToken, getValidAccessToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { playEnterpriseChime } from "@/lib/sound-chime"
 
@@ -148,95 +148,121 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Establish SSE connection for real-time notifications
   useEffect(() => {
-    const token = getAuthToken()
-    if (!user || !token) {
-      if (sseConnection) {
-        sseConnection.close()
-        setSSEConnection(null)
-      }
-      setIsConnected(false)
-      return
-    }
+    let isCancelled = false
+    let activeEventSource: EventSource | null = null
 
-    fetchNotifications()
-    setupFCM()
-
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
-    const sseUrl = `${BACKEND_URL}/api/notifications/sse?token=${encodeURIComponent(token)}`
-    const eventSource = new EventSource(sseUrl, {
-      withCredentials: true,
-    })
-
-    eventSource.onopen = () => {
-      logger.log("📡 SSE connection established")
-      setIsConnected(true)
-    }
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-
-        if (data.type === "connected") {
-          logger.log("✅ SSE connected:", data.message)
-        } else if (data.type === "new_message" || data.type === "status_change" || data.type === "typing_indicator" || data.type === "receipt_update") {
-          if (messagingHandlerRef.current) {
-            messagingHandlerRef.current({ type: data.type, data: data.data })
-          }
-        } else if (data.type === "notification") {
-          let notification = data.data
-          if (notification && typeof notification.data === "string") {
-            try { notification.data = JSON.parse(notification.data) } catch {}
-          }
-          logger.log("🔔 New notification received:", notification)
-
-          // 1. Update Notification Center state
-          setNotifications((prev) => [notification, ...prev])
-
-          // 2. Play Crisp Web Audio Chime Sound (if not muted)
-          if (!isMuted) {
-            playEnterpriseChime()
-          }
-
-          // 3. Clean White Sonner Toast with Direct Action Link
-          const actionData = notification.data || {}
-          const jobId = actionData.job_id || (notification.type === "job" ? notification.id : null)
-          toast(notification.title || "New Notification", {
-            description: notification.message || "",
-            duration: 6000,
-            action: jobId
-              ? {
-                  label: "View",
-                  onClick: () => {
-                    router.push(`/owner/jobs/${jobId}`)
-                  },
-                }
-              : undefined,
-          })
+    async function initSSE() {
+      if (!user) {
+        if (sseConnection) {
+          sseConnection.close()
+          setSSEConnection(null)
         }
-      } catch (error) {
-        logger.error("❌ Error parsing SSE message:", error)
+        setIsConnected(false)
+        return
       }
+
+      // Proactively ensure fresh, non-expired token before connecting
+      const token = await getValidAccessToken()
+      if (!token || isCancelled) {
+        setIsConnected(false)
+        return
+      }
+
+      fetchNotifications()
+      setupFCM()
+
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
+      const sseUrl = `${BACKEND_URL}/api/notifications/sse?token=${encodeURIComponent(token)}`
+      const eventSource = new EventSource(sseUrl, {
+        withCredentials: true,
+      })
+      activeEventSource = eventSource
+
+      eventSource.onopen = () => {
+        logger.log("📡 SSE connection established")
+        setIsConnected(true)
+      }
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+
+          if (data.type === "connected") {
+            logger.log("✅ SSE connected:", data.message)
+          } else if (data.type === "new_message" || data.type === "status_change" || data.type === "typing_indicator" || data.type === "receipt_update") {
+            if (messagingHandlerRef.current) {
+              messagingHandlerRef.current({ type: data.type, data: data.data })
+            }
+          } else if (data.type === "notification") {
+            let notification = data.data
+            if (notification && typeof notification.data === "string") {
+              try { notification.data = JSON.parse(notification.data) } catch {}
+            }
+            logger.log("🔔 New notification received:", notification)
+
+            // 1. Update Notification Center state
+            setNotifications((prev) => [notification, ...prev])
+
+            // 2. Play Crisp Web Audio Chime Sound (if not muted)
+            if (!isMuted) {
+              playEnterpriseChime()
+            }
+
+            // 3. Clean White Sonner Toast with Direct Action Link
+            const actionData = notification.data || {}
+            const jobId = actionData.job_id || (notification.type === "job" ? notification.id : null)
+            toast(notification.title || "New Notification", {
+              description: notification.message || "",
+              duration: 6000,
+              action: jobId
+                ? {
+                    label: "View",
+                    onClick: () => {
+                      router.push(`/owner/jobs/${jobId}`)
+                    },
+                  }
+                : undefined,
+            })
+          }
+        } catch (error) {
+          logger.error("❌ Error parsing SSE message:", error)
+        }
+      }
+
+      eventSource.onerror = async () => {
+        setIsConnected(false)
+        eventSource.close()
+        
+        if (user && !isCancelled) {
+          // Re-validate token before scheduling reconnect
+          await getValidAccessToken()
+          setTimeout(() => {
+            if (!isCancelled) setReconnectTrigger(prev => prev + 1)
+          }, 3000)
+        }
+      }
+
+      setSSEConnection(eventSource)
     }
 
-    eventSource.onerror = () => {
-      setIsConnected(false)
-      eventSource.close()
-      
-      if (user) {
-        setTimeout(() => {
-          setReconnectTrigger(prev => prev + 1)
-        }, 3000)
-      }
-    }
+    initSSE()
 
-    setSSEConnection(eventSource)
+    // Listen for cross-app token refresh so SSE automatically reconnects with fresh token
+    const handleTokenRefreshed = () => {
+      setReconnectTrigger(prev => prev + 1)
+    }
+    window.addEventListener("auth-token-refreshed", handleTokenRefreshed)
 
     const pollInterval = setInterval(() => {
       if (user) fetchNotifications()
     }, 60000)
 
     return () => {
-      eventSource.close()
+      isCancelled = true
+      window.removeEventListener("auth-token-refreshed", handleTokenRefreshed)
+      if (activeEventSource) {
+        activeEventSource.close()
+      }
       clearInterval(pollInterval)
       setIsConnected(false)
       logger.log("📡 SSE connection closed")

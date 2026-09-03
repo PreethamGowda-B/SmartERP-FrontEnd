@@ -85,7 +85,25 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://api.prozync.in" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://api.prozync.in" />
+      </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+        {/* Early Backend Prewarmer — wakes sleeping Render backend during initial HTML stream */}
+        <Script id="early-backend-prewarm" strategy="beforeInteractive">{`
+          (function() {
+            try {
+              if (window.fetch) {
+                window.fetch('https://api.prozync.in/health', {
+                  method: 'GET',
+                  mode: 'no-cors',
+                  cache: 'no-store'
+                }).catch(function() {});
+              }
+            } catch(e) {}
+          })();
+        `}</Script>
         {/* Recovery script for ChunkLoadError (helps during deployments) */}
         <Script id="chunk-error-recovery" strategy="beforeInteractive">{`
           window.addEventListener('error', function(e) {

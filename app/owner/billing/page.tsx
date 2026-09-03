@@ -92,7 +92,7 @@ export default function BillingPage() {
       missing: []
     },
     {
-      id: 2, name: "Basic", limitText: "For growing businesses", price: isAnnual ? 9990 : 999,
+      id: 2, name: "Basic", limitText: "For growing businesses", price: isAnnual ? 2 : 1,
       features: [
         "Up to 50 Employees",
         "Attendance Tracking",
@@ -106,7 +106,7 @@ export default function BillingPage() {
       missing: []
     },
     {
-      id: 3, name: "Pro", limitText: "For scale and maximum impact", price: isAnnual ? 24990 : 2499,
+      id: 3, name: "Pro", limitText: "For scale and maximum impact", price: isAnnual ? 5 : 2,
       features: [
         "Unlimited Employees & Departments",
         "Multi-Company Management",

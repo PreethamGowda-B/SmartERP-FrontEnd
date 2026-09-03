@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { AntigravityBackground } from "@/components/ui/antigravity-background"
 import {
@@ -29,11 +30,13 @@ import {
 import { useState, useEffect, useRef } from "react"
 
 export function LandingPage() {
+  const router = useRouter()
   const [counters, setCounters] = useState({ users: 1500, jobs: 12500, teams: 450 })
+  const [navigatingTarget, setNavigatingTarget] = useState<string | null>(null)
 
   // Demo Video Controls
   const demoVideoRef = useRef<HTMLVideoElement | null>(null)
-  const [isDemoPlaying, setIsDemoPlaying] = useState(true)
+  const [isDemoPlaying, setIsDemoPlaying] = useState(false)
   const [isDemoMuted, setIsDemoMuted] = useState(true)
 
   // Hero Video Controls
@@ -45,6 +48,47 @@ export function LandingPage() {
   const setSectionRef = (key: string) => (el: HTMLDivElement | null) => {
     if (el) sectionRefs.current[key] = el
   }
+
+  // Pre-warm router cache for instant navigation on button clicks
+  useEffect(() => {
+    try {
+      router.prefetch("/auth/login?mode=signup")
+      router.prefetch("/auth/login?mode=login")
+      router.prefetch("/customer/landing")
+      router.prefetch("/pricing")
+      router.prefetch("/features")
+    } catch (_) {}
+  }, [router])
+
+  // Lazy load product demo video ONLY when scrolled near viewport (saves 2.7MB initial download)
+  useEffect(() => {
+    const videoEl = demoVideoRef.current
+    if (!videoEl || typeof IntersectionObserver === "undefined") return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            if (!videoEl.src || videoEl.src === window.location.href) {
+              videoEl.src = "/videos/product-demo.mp4"
+              videoEl.load()
+            }
+            videoEl.play().catch(() => {})
+            setIsDemoPlaying(true)
+          } else {
+            if (videoEl.src) {
+              videoEl.pause()
+              setIsDemoPlaying(false)
+            }
+          }
+        })
+      },
+      { rootMargin: "300px" }
+    )
+
+    observer.observe(videoEl)
+    return () => observer.disconnect()
+  }, [])
 
   // Smooth counter animation on mount
   useEffect(() => {
@@ -143,7 +187,7 @@ export function LandingPage() {
               size="sm"
               className="hidden sm:inline-flex items-center gap-2 border-border bg-card text-foreground hover:bg-muted hover:border-primary/40 transition-all font-semibold shadow-xs"
             >
-              <Link href="/customer/landing">
+              <Link href="/customer/landing" prefetch={true}>
                 <UserCheck className="h-4 w-4 text-primary" />
                 Customer Portal
               </Link>
@@ -155,7 +199,7 @@ export function LandingPage() {
               size="sm"
               className="font-semibold hover:bg-muted text-foreground"
             >
-              <Link href="/auth/login?mode=login">
+              <Link href="/auth/login?mode=login" prefetch={true}>
                 Sign In
               </Link>
             </Button>
@@ -165,7 +209,7 @@ export function LandingPage() {
               size="sm"
               className="font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30"
             >
-              <Link href="/auth/login?mode=signup">
+              <Link href="/auth/login?mode=signup" prefetch={true}>
                 Get Started
               </Link>
             </Button>
@@ -200,7 +244,7 @@ export function LandingPage() {
               size="lg"
               className="w-full sm:w-auto text-base font-bold px-8 py-6 bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/30 group cursor-pointer"
             >
-              <Link href="/auth/login?mode=signup">
+              <Link href="/auth/login?mode=signup" prefetch={true}>
                 Start Free Trial
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
@@ -212,7 +256,7 @@ export function LandingPage() {
               variant="outline"
               className="w-full sm:w-auto text-base font-semibold px-8 py-6 border-border bg-card hover:bg-muted hover:border-primary/50 text-foreground shadow-sm cursor-pointer"
             >
-              <Link href="/customer/landing">
+              <Link href="/customer/landing" prefetch={true}>
                 <UserCheck className="mr-2 h-5 w-5 text-primary" />
                 Access Customer Portal
                 <ExternalLink className="ml-2 h-4 w-4 opacity-70" />
@@ -251,6 +295,7 @@ export function LandingPage() {
                 loop
                 muted
                 playsInline
+                preload="metadata"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -329,8 +374,7 @@ export function LandingPage() {
             <div className="relative aspect-video bg-black">
               <video
                 ref={demoVideoRef}
-                src="/videos/product-demo.mp4"
-                autoPlay
+                preload="none"
                 loop
                 muted
                 playsInline
@@ -485,7 +529,7 @@ export function LandingPage() {
                 size="lg"
                 className="text-sm font-bold px-8 py-6 bg-white hover:bg-slate-100 text-slate-900 shadow-xl cursor-pointer"
               >
-                <Link href="/auth/login?mode=signup">
+                <Link href="/auth/login?mode=signup" prefetch={true}>
                   Start Your Free Trial
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
@@ -496,7 +540,7 @@ export function LandingPage() {
                 variant="outline"
                 className="text-sm font-semibold px-8 py-6 border-white/20 bg-white/10 hover:bg-white/20 text-white cursor-pointer"
               >
-                <Link href="/customer/landing">
+                <Link href="/customer/landing" prefetch={true}>
                   <UserCheck className="mr-2 h-5 w-5" />
                   Access Customer Portal
                 </Link>
@@ -547,12 +591,12 @@ export function LandingPage() {
               <h4 className="font-bold text-xs uppercase tracking-wider text-foreground mb-3">Portals</h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
                 <li>
-                  <Link href="/customer/landing" className="hover:text-blue-500 transition-colors flex items-center gap-1.5 justify-center md:justify-start">
+                  <Link href="/customer/landing" prefetch={true} className="hover:text-blue-500 transition-colors flex items-center gap-1.5 justify-center md:justify-start">
                     <UserCheck className="h-3.5 w-3.5 text-blue-500" /> Customer Portal
                   </Link>
                 </li>
-                <li><Link href="/customer/login" className="hover:text-foreground transition-colors">Customer Sign In</Link></li>
-                <li><Link href="/auth/login" className="hover:text-foreground transition-colors">Staff & Crew Sign In</Link></li>
+                <li><Link href="/customer/login" prefetch={true} className="hover:text-foreground transition-colors">Customer Sign In</Link></li>
+                <li><Link href="/auth/login" prefetch={true} className="hover:text-foreground transition-colors">Staff & Crew Sign In</Link></li>
               </ul>
             </div>
 
