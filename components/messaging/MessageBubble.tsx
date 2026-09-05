@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { cn } from "@/lib/utils"
 import { Check, CheckCheck, Play } from "lucide-react"
 import { AttachmentPreview } from "./AttachmentPreview"
