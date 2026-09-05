@@ -78,7 +78,7 @@ export function OnboardingTourModal() {
       const timer = setTimeout(() => setOpen(true), 1200)
       return () => clearTimeout(timer)
     }
-  }, [user?.id, user?.company_id, mounted])
+  }, [user, mounted])
 
   const handleNext = () => {
     if (currentStep < TOUR_STEPS.length - 1) {
@@ -114,7 +114,7 @@ export function OnboardingTourModal() {
           <DialogTitle>SmartERP Onboarding Tour</DialogTitle>
           <DialogDescription>Step-by-step guide to get you started with SmartERP.</DialogDescription>
         </div>
-        <div className="h-2 bg-gradient-to-r from-primary via-emerald-500 to-accent" />
+        <div className="h-2 bg-linear-to-r from-primary via-emerald-500 to-accent" />
 
         <div className="p-6 sm:p-8 space-y-6">
           <div className="flex items-center justify-between">

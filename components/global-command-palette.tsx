@@ -155,7 +155,7 @@ export function GlobalCommandPalette() {
   return (
     <CommandDialog open={open} onOpenChange={setOpen} title="SmartERP Quick Search" description="Type a command or search modules">
       <CommandInput placeholder="Type a command or search modules... (⌘K)" />
-      <CommandList className="max-h-[350px]">
+      <CommandList className="max-h-87.5">
         <CommandEmpty>No results found.</CommandEmpty>
 
         {/* Recent Commands Group */}

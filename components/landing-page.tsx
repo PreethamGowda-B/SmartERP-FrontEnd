@@ -156,7 +156,7 @@ export function LandingPage() {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/60 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 cursor-pointer">
-            <div className="p-2 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg shadow-blue-500/20">
+            <div className="p-2 bg-linear-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg shadow-blue-500/20">
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <span className="text-xl font-black tracking-tight text-foreground">
@@ -228,7 +228,7 @@ export function LandingPage() {
 
           <h1 className="text-4xl sm:text-7xl font-extrabold text-foreground mb-6 tracking-tight leading-tight max-w-4xl mx-auto">
             Streamline Field Crews & Operations{" "}
-            <span className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-blue-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
               With Precision.
             </span>
           </h1>
@@ -395,7 +395,7 @@ export function LandingPage() {
 
       {/* ── 4. Customer Portal Highlight Banner ─────────────────────────── */}
       <section id="customer-portal" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-500/30 p-8 sm:p-12 shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-500/30 p-8 sm:p-12 shadow-2xl">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
             <div className="lg:col-span-2 space-y-4 text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-500/30">
@@ -491,7 +491,7 @@ export function LandingPage() {
             <div className="space-y-4">
               {benefits.map((benefit, index) => (
                 <div key={index} className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
                   <span className="text-sm sm:text-base text-foreground font-medium">{benefit}</span>
                 </div>
               ))}
@@ -517,7 +517,7 @@ export function LandingPage() {
 
       {/* ── 7. Primary CTA Section ──────────────────────────────────────── */}
       <section ref={setSectionRef("cta")} id="cta" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-8 sm:p-12 text-center shadow-2xl border border-blue-500/30">
+        <div className="relative overflow-hidden bg-linear-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-8 sm:p-12 text-center shadow-2xl border border-blue-500/30">
           <div className="relative z-10 max-w-2xl mx-auto">
             <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">Ready to Modernize Your Operations?</h2>
             <p className="text-sm sm:text-base mb-8 text-blue-100/90 leading-relaxed">

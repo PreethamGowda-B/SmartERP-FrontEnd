@@ -16,6 +16,14 @@
         "Transpiles",
         "Prewarmer",
         "prewarmer",
-        "Aadhaar"
+        "Aadhaar",
+        "Geofenced",
+        "geofencing",
+        "stockouts",
+        "Automations",
+        "automations",
+        "Hrefs",
+        "normalised",
+        "Financials"
     ]
 }
