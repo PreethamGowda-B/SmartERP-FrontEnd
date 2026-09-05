@@ -88,30 +88,40 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://api.prozync.in" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.prozync.in" />
+        {/* Early Backend Prewarmer — wakes sleeping Render backend during initial HTML stream */}
+        <script
+          id="early-backend-prewarm"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  if (window.fetch) {
+                    window.fetch('https://api.prozync.in/health', {
+                      method: 'GET',
+                      mode: 'no-cors',
+                      cache: 'no-store'
+                    }).catch(function() {});
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+        {/* Recovery script for ChunkLoadError (helps during deployments) */}
+        <script
+          id="chunk-error-recovery"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('error', function(e) {
+                if (e.message && (e.message.includes('ChunkLoadError') || e.message.includes('Loading chunk'))) {
+                  window.location.reload();
+                }
+              }, true);
+            `,
+          }}
+        />
       </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
-        {/* Early Backend Prewarmer — wakes sleeping Render backend during initial HTML stream */}
-        <Script id="early-backend-prewarm" strategy="beforeInteractive">{`
-          (function() {
-            try {
-              if (window.fetch) {
-                window.fetch('https://api.prozync.in/health', {
-                  method: 'GET',
-                  mode: 'no-cors',
-                  cache: 'no-store'
-                }).catch(function() {});
-              }
-            } catch(e) {}
-          })();
-        `}</Script>
-        {/* Recovery script for ChunkLoadError (helps during deployments) */}
-        <Script id="chunk-error-recovery" strategy="beforeInteractive">{`
-          window.addEventListener('error', function(e) {
-            if (e.message && (e.message.includes('ChunkLoadError') || e.message.includes('Loading chunk'))) {
-              window.location.reload();
-            }
-          }, true);
-        `}</Script>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
           {/* Service Worker Registration */}
           <Script id="sw-registration" strategy="afterInteractive">{`

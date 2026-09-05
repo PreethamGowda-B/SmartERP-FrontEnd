@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { SmartAIPanel } from "./smart-ai-panel"
 
 /**
@@ -13,5 +14,13 @@ import { SmartAIPanel } from "./smart-ai-panel"
  * remain intact for reuse within smart-ai-panel.tsx as internal modules.
  */
 export function FloatingActionHub() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+
   return <SmartAIPanel />
 }

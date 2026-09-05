@@ -33,12 +33,14 @@ import { useAuth } from "@/contexts/auth-context"
 import { useCommandRegistry, type CommandItemDef } from "@/contexts/command-registry-context"
 
 export function GlobalCommandPalette() {
+  const [mounted, setMounted] = React.useState(false)
   const [open, setOpen] = React.useState(false)
   const router = useRouter()
   const { user, signOut } = useAuth()
   const { commands, recentCommandIds, executeCommand } = useCommandRegistry()
 
   React.useEffect(() => {
+    setMounted(true)
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
@@ -58,7 +60,7 @@ export function GlobalCommandPalette() {
     [executeCommand]
   )
 
-  if (!user) return null
+  if (!mounted || !user) return null
 
   const isOwner = user.role === "owner" || user.role === "super_admin"
   const isHR = user.role === "hr"

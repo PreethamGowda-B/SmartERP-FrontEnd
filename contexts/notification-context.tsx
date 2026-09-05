@@ -40,12 +40,13 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [isMuted, setIsMuted] = useState<boolean>(() => {
+  const [isMuted, setIsMuted] = useState<boolean>(false)
+
+  useEffect(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("smarterp_sound_muted") === "true"
+      setIsMuted(localStorage.getItem("smarterp_sound_muted") === "true")
     }
-    return false
-  })
+  }, [])
 
   const { user, isLoading } = useAuth()
   const router = useRouter()

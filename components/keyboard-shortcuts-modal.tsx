@@ -41,10 +41,12 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
 ]
 
 export function KeyboardShortcutsModal() {
+  const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
 
   useEffect(() => {
+    setMounted(true)
     const handleKeyDown = (e: KeyboardEvent) => {
       // Trigger on '?' key (Shift + /) when not inside an input/textarea
       if (
@@ -68,6 +70,8 @@ export function KeyboardShortcutsModal() {
         item.keys.some((k) => k.toLowerCase().includes(search.toLowerCase()))
     ),
   })).filter((group) => group.items.length > 0)
+
+  if (!mounted) return null
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

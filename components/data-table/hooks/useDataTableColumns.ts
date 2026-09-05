@@ -10,17 +10,22 @@ export function useDataTableColumns<TData>({
   columns,
   storageKey,
 }: UseDataTableColumnsProps<TData>) {
-  const [visibleColumnIds, setVisibleColumnIds] = React.useState<string[]>(() => {
+  const [visibleColumnIds, setVisibleColumnIds] = React.useState<string[]>(() =>
+    columns.filter((c) => c.defaultVisible !== false).map((c) => c.id)
+  )
+
+  React.useEffect(() => {
     if (typeof window !== "undefined" && storageKey) {
       try {
         const saved = localStorage.getItem(`dt_cols_${storageKey}`)
-        if (saved) return JSON.parse(saved)
+        if (saved) {
+          setVisibleColumnIds(JSON.parse(saved))
+        }
       } catch (e) {
         // Fallback to default
       }
     }
-    return columns.filter((c) => c.defaultVisible !== false).map((c) => c.id)
-  })
+  }, [storageKey])
 
   React.useEffect(() => {
     if (typeof window !== "undefined" && storageKey) {

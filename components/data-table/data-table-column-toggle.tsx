@@ -31,16 +31,8 @@ export function DataTableColumnToggle<TData>({
   onResetColumns,
   storageKey,
 }: DataTableColumnToggleProps<TData>) {
-  const [savedViews, setSavedViews] = React.useState<SavedView[]>(() => {
-    if (typeof window !== "undefined" && storageKey) {
-      try {
-        const saved = localStorage.getItem(`dt_views_${storageKey}`)
-        if (saved) return JSON.parse(saved)
-      } catch (e) {
-        // Fallback
-      }
-    }
-    return [
+  const defaultSavedViews: SavedView[] = React.useMemo(
+    () => [
       {
         id: "default",
         name: "Default View",
@@ -49,8 +41,24 @@ export function DataTableColumnToggle<TData>({
         pageSize: 10,
         isDefault: true,
       },
-    ]
-  })
+    ],
+    [visibleColumnIds]
+  )
+
+  const [savedViews, setSavedViews] = React.useState<SavedView[]>(defaultSavedViews)
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && storageKey) {
+      try {
+        const saved = localStorage.getItem(`dt_views_${storageKey}`)
+        if (saved) {
+          setSavedViews(JSON.parse(saved))
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+  }, [storageKey])
 
   const [newViewName, setNewViewName] = React.useState("")
   const [isCreating, setIsCreating] = React.useState(false)

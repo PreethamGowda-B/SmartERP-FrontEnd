@@ -304,19 +304,19 @@ export function LandingPage() {
           {/* Counters */}
           <div className="grid grid-cols-3 gap-4 sm:gap-6 max-w-3xl mx-auto mt-12">
             <div className="p-4 sm:p-5 rounded-2xl bg-card/60 backdrop-blur-md border border-border hover:border-blue-500/40 transition-all">
-              <div className="text-2xl sm:text-3xl font-extrabold text-blue-500 mb-1">
+              <div className="text-2xl sm:text-3xl font-extrabold text-blue-500 mb-1" suppressHydrationWarning>
                 {counters.users.toLocaleString()}+
               </div>
               <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Active Crews</div>
             </div>
             <div className="p-4 sm:p-5 rounded-2xl bg-card/60 backdrop-blur-md border border-border hover:border-indigo-500/40 transition-all">
-              <div className="text-2xl sm:text-3xl font-extrabold text-indigo-500 mb-1">
+              <div className="text-2xl sm:text-3xl font-extrabold text-indigo-500 mb-1" suppressHydrationWarning>
                 {counters.jobs.toLocaleString()}+
               </div>
               <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Jobs Dispatched</div>
             </div>
             <div className="p-4 sm:p-5 rounded-2xl bg-card/60 backdrop-blur-md border border-border hover:border-purple-500/40 transition-all">
-              <div className="text-2xl sm:text-3xl font-extrabold text-purple-500 mb-1">
+              <div className="text-2xl sm:text-3xl font-extrabold text-purple-500 mb-1" suppressHydrationWarning>
                 {counters.teams.toLocaleString()}+
               </div>
               <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Enterprise Teams</div>

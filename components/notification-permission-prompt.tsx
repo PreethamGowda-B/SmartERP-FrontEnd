@@ -13,9 +13,11 @@ import {
 } from "@/components/ui/dialog"
 
 export function NotificationPermissionPrompt() {
+  const [mounted, setMounted] = useState(false)
   const [showPrompt, setShowPrompt] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     // Check if browser supports notifications
     if (typeof window === "undefined" || !("Notification" in window)) return
 
@@ -37,6 +39,8 @@ export function NotificationPermissionPrompt() {
       window.location.reload() 
     }
   }
+
+  if (!mounted || !showPrompt) return null
 
   return (
     <Dialog open={showPrompt} onOpenChange={setShowPrompt}>

@@ -22,11 +22,13 @@ const JobContext = createContext<JobContextType | undefined>(undefined)
 export function JobProvider({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
 
-  const [jobs, setJobs] = useState<Job[]>(() => {
+  const [jobs, setJobs] = useState<Job[]>([])
+
+  // Load cached jobs from localStorage after mount to eliminate SSR hydration mismatch
+  useEffect(() => {
     if (typeof window !== "undefined") {
       try {
         const savedJobs = localStorage.getItem("smarterp-jobs")
-        const savedRole = localStorage.getItem("smarterp-jobs-role")
         if (savedJobs) {
           const parsed = JSON.parse(savedJobs)
           // Detect and discard mock/demo data (mock IDs are simple integers like "1","2","3")
@@ -37,7 +39,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
               return id === "1" || id === "2" || id === "3" || id === "4" || id === "5"
             })
             if (!isMockData) {
-              return parsed
+              setJobs(parsed)
             }
           }
         }
@@ -45,8 +47,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         // ignore parse errors
       }
     }
-    return []
-  })
+  }, [])
 
   const hasSyncedRef = useRef(false)
 

@@ -59,11 +59,16 @@ const TOUR_STEPS = [
 
 export function OnboardingTourModal() {
   const { user } = useAuth()
+  const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
 
   useEffect(() => {
-    if (!user) return
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!user || !mounted) return
 
     const storageKey = `smarterp_onboarding_completed_${user.id || user.company_id}`
     const isCompleted = localStorage.getItem(storageKey)
@@ -73,7 +78,7 @@ export function OnboardingTourModal() {
       const timer = setTimeout(() => setOpen(true), 1200)
       return () => clearTimeout(timer)
     }
-  }, [user?.id, user?.company_id])
+  }, [user?.id, user?.company_id, mounted])
 
   const handleNext = () => {
     if (currentStep < TOUR_STEPS.length - 1) {
@@ -96,6 +101,8 @@ export function OnboardingTourModal() {
     }
     setOpen(false)
   }
+
+  if (!mounted || !open) return null
 
   const step = TOUR_STEPS[currentStep]
   const IconComponent = step.icon

@@ -172,18 +172,22 @@ const STORAGE_KEY_GROUPS = "smarterp_owner_sidebar_groups"
 
 export function OwnerSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    if (typeof window === "undefined") {
-      return { "Command Center": true, "Service Operations": true, "Supply & Warranty": true }
-    }
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_GROUPS)
-      if (saved) {
-        return JSON.parse(saved)
-      }
-    } catch (_) {}
-    return { "Command Center": true, "Service Operations": true, "Supply & Warranty": true }
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    "Command Center": true,
+    "Service Operations": true,
+    "Supply & Warranty": true,
   })
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY_GROUPS)
+        if (saved) {
+          setOpenGroups(JSON.parse(saved))
+        }
+      } catch (_) {}
+    }
+  }, [])
 
   const [features, setFeatures] = useState<Record<string, boolean>>({
     payroll: false,
