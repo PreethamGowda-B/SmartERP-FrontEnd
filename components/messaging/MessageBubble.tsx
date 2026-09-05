@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { Check, CheckCheck, Play } from "lucide-react"
 import { AttachmentPreview } from "./AttachmentPreview"
 import { ErpChatCard } from "@/components/erp-chat-card"
-import type { Message } from "@/types/messaging"
+import type { Message, MessageAttachment } from "@/types/messaging"
 
 interface MessageBubbleProps {
   message: Message
