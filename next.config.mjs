@@ -6,7 +6,7 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), accelerometer=(), gyroscope=(), magnetometer=()" },
+  { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(self), accelerometer=(), gyroscope=(), magnetometer=()" },
 ]
 
 /** @type {import('next').NextConfig} */
@@ -40,6 +40,14 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "api.prozync.in",
+      },
+      {
+        protocol: "https",
+        hostname: "smarterp-backendend.onrender.com",
       },
     ],
   },

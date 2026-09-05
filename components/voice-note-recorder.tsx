@@ -100,7 +100,7 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel, autoStart = true 
     } catch (err: any) {
       console.error("Microphone access error:", err)
       const msg = err.name === "NotAllowedError" || err.name === "PermissionDeniedError"
-        ? "Microphone access denied. Please allow microphone permissions in browser settings."
+        ? "Microphone access blocked. Please click the lock/settings icon in your browser address bar and enable Microphone."
         : "Could not access microphone: " + (err.message || "Unknown error")
       toast.error(msg)
       onCancel?.()
