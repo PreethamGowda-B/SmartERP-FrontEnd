@@ -13,7 +13,7 @@ interface ConversationListProps {
   activeConversationId: string | null
   searchQuery: string
   onSearchChange: (q: string) => void
-  onSelect: (userId: string) => void
+  onSelect: (userId: string, conversationId?: string | null) => void
   loading: boolean
 }
 
@@ -114,7 +114,7 @@ export function ConversationList({
               isActive={item.conversationId === activeConversationId}
               isLastMessageMine={item.isLastMessageMine}
               hasConversation={item.hasConversation}
-              onClick={() => onSelect(item.userId)}
+              onClick={() => onSelect(item.userId, item.conversationId)}
             />
           ))
         )}

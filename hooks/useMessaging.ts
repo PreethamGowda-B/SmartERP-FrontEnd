@@ -225,26 +225,70 @@ export function useMessaging(currentUserId: string) {
     } catch { /* silent */ }
   }, [])
 
-  // Open a conversation with a user
-  const openConversation = useCallback(async (userId: string) => {
+  // Open a conversation with a user (instantaneous activation for known conversations)
+  const openConversation = useCallback(async (userId: string, knownConversationId?: string | null) => {
     try {
-      const { conversation_id } = await apiClient('/api/messages/conversations/start', {
-        method: 'POST',
-        body: JSON.stringify({ other_user_id: userId }),
-      })
-      setActive(conversation_id)
-      dispatch({ type: 'MARK_CONVERSATION_READ', payload: conversation_id })
-      dispatch({ type: 'SET_LOADING_MESSAGES', payload: true })
-      pageRef.current = 1
-      const data = await apiClient(`/api/messages/conversation/${conversation_id}?page=1`)
-      const msgs: Message[] = (data.messages ?? []).reverse().map((m: Message) => ({ ...m, id: String(m.id) }))
-      dispatch({ type: 'SET_MESSAGES', payload: { messages: msgs, hasMore: data.has_more ?? false } })
-      apiClient(`/api/messages/conversation/${conversation_id}/read`, { method: 'PATCH' }).catch(() => {})
+      // Check if conversation ID is already known
+      let targetConvId = knownConversationId
+      if (!targetConvId) {
+        const existing = state.conversations.find(c => c.other_user_id === userId)
+        if (existing) {
+          targetConvId = existing.conversation_id
+        }
+      }
+
+      const mapMessage = (m: any): Message => {
+        const mediaUrl = m.attachment?.media_url || m.attachment?.file_url || m.media_url
+        const isImg = m.message_type === 'image' || m.attachment?.media_type === 'image' || m.attachment?.file_type?.startsWith('image/')
+        const isAud = m.message_type === 'audio' || m.attachment?.media_type === 'audio' || m.attachment?.file_type?.startsWith('audio/')
+        const attachment = m.attachment || (mediaUrl ? {
+          file_url: mediaUrl,
+          media_url: mediaUrl,
+          file_name: m.file_name || (isAud ? 'Voice Note' : isImg ? 'Photo' : 'Attachment'),
+          file_type: isImg ? 'image/jpeg' : isAud ? 'audio/webm' : 'application/octet-stream',
+          media_type: isImg ? 'image' : isAud ? 'audio' : 'document',
+          file_size: m.file_size || 0,
+        } : undefined)
+
+        return {
+          ...m,
+          id: String(m.id),
+          attachment,
+          message_type: isAud ? 'audio' : isImg ? 'image' : (m.message_type || 'text')
+        }
+      }
+
+      if (targetConvId) {
+        // INSTANT UI RESPONSE: switch active conversation and clear unread badge immediately
+        setActive(targetConvId)
+        dispatch({ type: 'MARK_CONVERSATION_READ', payload: targetConvId })
+        dispatch({ type: 'SET_LOADING_MESSAGES', payload: true })
+        pageRef.current = 1
+
+        const data = await apiClient(`/api/messages/conversation/${targetConvId}?page=1`)
+        const msgs: Message[] = (data.messages ?? []).reverse().map(mapMessage)
+        dispatch({ type: 'SET_MESSAGES', payload: { messages: msgs, hasMore: data.has_more ?? false } })
+        apiClient(`/api/messages/conversation/${targetConvId}/read`, { method: 'PATCH' }).catch(() => {})
+      } else {
+        // First contact: create conversation via backend
+        dispatch({ type: 'SET_LOADING_MESSAGES', payload: true })
+        const { conversation_id } = await apiClient('/api/messages/conversations/start', {
+          method: 'POST',
+          body: JSON.stringify({ other_user_id: userId }),
+        })
+        setActive(conversation_id)
+        dispatch({ type: 'MARK_CONVERSATION_READ', payload: conversation_id })
+        pageRef.current = 1
+        const data = await apiClient(`/api/messages/conversation/${conversation_id}?page=1`)
+        const msgs: Message[] = (data.messages ?? []).reverse().map(mapMessage)
+        dispatch({ type: 'SET_MESSAGES', payload: { messages: msgs, hasMore: data.has_more ?? false } })
+        apiClient(`/api/messages/conversation/${conversation_id}/read`, { method: 'PATCH' }).catch(() => {})
+      }
     } catch (err: any) {
       dispatch({ type: 'SET_LOADING_MESSAGES', payload: false })
       toast.error(err?.message || 'Failed to open conversation')
     }
-  }, [setActive])
+  }, [setActive, state.conversations])
 
   // Send a message (optionally with an attachment)
   const sendMessage = useCallback(async (content: string, attachment?: MessageAttachment) => {
@@ -254,6 +298,9 @@ export function useMessaging(currentUserId: string) {
     // Stop typing indicator before sending
     sendTypingRaw(conversationId, false)
 
+    const isImg = attachment?.file_type?.startsWith('image/') || attachment?.media_type === 'image'
+    const isAud = attachment?.media_type === 'audio' || attachment?.file_type?.startsWith('audio/')
+
     const tempId = `temp_${Date.now()}`
     const optimisticMsg: Message = {
       id: tempId,
@@ -262,7 +309,7 @@ export function useMessaging(currentUserId: string) {
       sender_name: 'You',
       content: content.trim(),
       message_type: attachment
-        ? (attachment.file_type.startsWith('image/') ? 'image' : 'document')
+        ? (isImg ? 'image' : isAud ? 'audio' : 'document')
         : 'text',
       created_at: new Date().toISOString(),
       is_mine: true,

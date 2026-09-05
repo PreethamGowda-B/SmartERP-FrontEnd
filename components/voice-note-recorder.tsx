@@ -1,15 +1,33 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Mic, Square, Trash2, Send, Play, Pause, Volume2 } from "lucide-react"
+import { Mic, Square, Trash2, Send, Play, Pause } from "lucide-react"
+import { toast } from "sonner"
 
 interface VoiceNoteRecorderProps {
   onSendVoiceNote: (audioBlob: Blob, durationSeconds: number) => void
   onCancel?: () => void
+  autoStart?: boolean
 }
 
-export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecorderProps) {
+function getSupportedMimeType(): string {
+  if (typeof window === "undefined" || !("MediaRecorder" in window)) return "audio/webm"
+  const types = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+    "audio/ogg;codecs=opus",
+    "audio/ogg",
+    "audio/wav",
+  ]
+  for (const t of types) {
+    if (MediaRecorder.isTypeSupported(t)) return t
+  }
+  return ""
+}
+
+export function VoiceNoteRecorder({ onSendVoiceNote, onCancel, autoStart = true }: VoiceNoteRecorderProps) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
@@ -17,6 +35,7 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioStreamRef = useRef<MediaStream | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const audioElementRef = useRef<HTMLAudioElement | null>(null)
@@ -25,44 +44,82 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
       if (audioUrl) URL.revokeObjectURL(audioUrl)
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(t => t.stop())
+      }
     }
   }, [audioUrl])
 
-  const startRecording = async () => {
+  const stopTracks = useCallback(() => {
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach((track) => track.stop())
+      audioStreamRef.current = null
+    }
+  }, [])
+
+  const startRecording = useCallback(async () => {
+    if (typeof window === "undefined" || !navigator?.mediaDevices?.getUserMedia) {
+      toast.error("Microphone recording is not supported in this browser.")
+      onCancel?.()
+      return
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      audioStreamRef.current = stream
       audioChunksRef.current = []
-      const recorder = new MediaRecorder(stream)
+
+      const mimeType = getSupportedMimeType()
+      const options = mimeType ? { mimeType } : undefined
+      const recorder = new MediaRecorder(stream, options)
 
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data)
+        }
       }
 
       recorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+        const finalType = recorder.mimeType || mimeType || "audio/webm"
+        const blob = new Blob(audioChunksRef.current, { type: finalType })
         setAudioBlob(blob)
         const url = URL.createObjectURL(blob)
         setAudioUrl(url)
-        // Stop all audio tracks
-        stream.getTracks().forEach((track) => track.stop())
+        stopTracks()
       }
 
       mediaRecorderRef.current = recorder
-      recorder.start()
+      recorder.start(250) // slice chunks every 250ms
       setIsRecording(true)
       setRecordingTime(0)
 
+      if (timerRef.current) clearInterval(timerRef.current)
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1)
       }, 1000)
-    } catch (err) {
-      console.error("Microphone access denied:", err)
+    } catch (err: any) {
+      console.error("Microphone access error:", err)
+      const msg = err.name === "NotAllowedError" || err.name === "PermissionDeniedError"
+        ? "Microphone access denied. Please allow microphone permissions in browser settings."
+        : "Could not access microphone: " + (err.message || "Unknown error")
+      toast.error(msg)
+      onCancel?.()
     }
-  }
+  }, [onCancel, stopTracks])
+
+  useEffect(() => {
+    if (autoStart) {
+      startRecording()
+    }
+  }, [autoStart, startRecording])
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
+      try {
+        mediaRecorderRef.current.stop()
+      } catch (e) {
+        console.warn("Error stopping recorder:", e)
+      }
       setIsRecording(false)
       if (timerRef.current) clearInterval(timerRef.current)
     }
@@ -88,7 +145,7 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
 
   const handleSend = () => {
     if (audioBlob) {
-      onSendVoiceNote(audioBlob, recordingTime)
+      onSendVoiceNote(audioBlob, Math.max(1, recordingTime))
       resetState()
     }
   }
@@ -96,6 +153,7 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
   const resetState = () => {
     if (timerRef.current) clearInterval(timerRef.current)
     if (audioUrl) URL.revokeObjectURL(audioUrl)
+    stopTracks()
     setIsRecording(false)
     setRecordingTime(0)
     setAudioUrl(null)
@@ -111,52 +169,91 @@ export function VoiceNoteRecorder({ onSendVoiceNote, onCancel }: VoiceNoteRecord
   }
 
   return (
-    <div className="flex items-center gap-3 p-2 bg-card rounded-2xl border shadow-sm w-full">
+    <div className="flex items-center gap-3 p-2.5 bg-card/90 backdrop-blur-sm rounded-2xl border shadow-sm w-full transition-all">
       {!isRecording && !audioUrl ? (
-        <Button
-          type="button"
-          onClick={startRecording}
-          variant="outline"
-          size="sm"
-          className="h-9 px-3 text-xs font-bold rounded-xl border-rose-300 text-rose-600 hover:bg-rose-50 dark:bg-rose-950/40"
-        >
-          <Mic className="h-4 w-4 mr-1.5 animate-pulse" /> Hold to Record Voice Note
-        </Button>
-      ) : isRecording ? (
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2 text-rose-600 text-xs font-black animate-pulse">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-600" />
-            Recording Audio: {formatTimer(recordingTime)}
-          </div>
           <Button
             type="button"
-            onClick={stopRecording}
+            onClick={startRecording}
+            variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs font-bold rounded-xl bg-rose-600 text-white"
+            className="h-9 px-4 text-xs font-bold rounded-xl border-rose-300 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
           >
-            <Square className="h-3.5 w-3.5 mr-1 fill-white" /> Stop
+            <Mic className="h-4 w-4 mr-1.5 animate-pulse" /> Click to Record Voice Note
           </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={resetState} className="text-xs text-muted-foreground">
+            Cancel
+          </Button>
+        </div>
+      ) : isRecording ? (
+        <div className="flex items-center justify-between w-full gap-2">
+          <div className="flex items-center gap-2.5 text-rose-600 text-xs font-bold">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600"></span>
+            </span>
+            <span>Recording: {formatTimer(recordingTime)}</span>
+            <div className="hidden sm:flex items-center gap-0.5 h-3 ml-2">
+              <span className="w-1 bg-rose-500 rounded-full animate-bounce [animation-delay:-0.3s] h-3" />
+              <span className="w-1 bg-rose-500 rounded-full animate-bounce [animation-delay:-0.15s] h-4" />
+              <span className="w-1 bg-rose-500 rounded-full animate-bounce h-2" />
+              <span className="w-1 bg-rose-500 rounded-full animate-bounce [animation-delay:-0.2s] h-4" />
+              <span className="w-1 bg-rose-500 rounded-full animate-bounce [animation-delay:-0.05s] h-3" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={resetState}
+              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={stopRecording}
+              size="sm"
+              className="h-8 px-3 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
+            >
+              <Square className="h-3.5 w-3.5 mr-1 fill-white" /> Done
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="flex items-center justify-between w-full gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <Button
               type="button"
               variant="outline"
               size="icon"
-              className="h-8 w-8 rounded-full"
+              className="h-8 w-8 rounded-full border-primary/30"
               onClick={togglePlayPlayback}
             >
               {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-foreground" />}
             </Button>
-            <div className="text-xs font-bold text-foreground">Voice Note ({formatTimer(recordingTime)})</div>
+            <div className="text-xs font-bold text-foreground">
+              Voice Note ({formatTimer(recordingTime)})
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button type="button" variant="ghost" size="icon" onClick={resetState} className="h-8 w-8 text-rose-600">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={resetState}
+              className="h-8 w-8 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
-            <Button type="button" size="sm" onClick={handleSend} className="h-8 px-3 text-xs font-bold rounded-xl bg-emerald-600 text-white">
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSend}
+              className="h-8 px-3.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+            >
               <Send className="h-3.5 w-3.5 mr-1" /> Send Voice
             </Button>
           </div>

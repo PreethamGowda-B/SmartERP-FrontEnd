@@ -4,7 +4,7 @@ import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { type User, type AuthState, getCurrentUser, signOut } from "@/lib/auth"
-import { setTokens, getRefreshToken } from "@/lib/apiClient"
+import { setTokens, getRefreshToken, getAccessToken, isTokenExpired } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import * as Sentry from "@sentry/nextjs"
 
@@ -38,10 +38,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        // 3. There IS a cached user — perform token refresh with strict 3500ms timeout
+        // 3. Check access token & refresh status
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+        const at = getAccessToken()
         const rt = getRefreshToken()
         
+        if (!rt && !at) {
+          signOut()
+          if (isMounted) { setUser(null); setIsLoading(false) }
+          return
+        }
+
+        // If access token is still fresh, sync profile directly without prematurely rotating refresh token
+        if (at && !isTokenExpired(at)) {
+          try {
+            const meController = new AbortController()
+            const meTimeoutId = setTimeout(() => meController.abort(), 3500)
+
+            const meRes = await fetch(`${apiUrl}/api/auth/me`, {
+              headers: { "Authorization": `Bearer ${at}` },
+              signal: meController.signal,
+            })
+            clearTimeout(meTimeoutId)
+
+            if (meRes.ok && isMounted) {
+              const freshUser = await meRes.json()
+              setUser(freshUser)
+              localStorage.setItem("smarterp_user", JSON.stringify(freshUser))
+              if (freshUser.company_code) {
+                localStorage.setItem("company_code", freshUser.company_code)
+              }
+              logger.log("[v0] ✅ Profile synced with latest DB state")
+              return
+            } else if (meRes.status === 401 || meRes.status === 403) {
+              // Access token was rejected by server — fall through to refresh
+              logger.log("[v0] Access token rejected by server, falling back to refresh")
+            } else {
+              // Non-auth error (e.g. 500, network offline) — preserve active session
+              return
+            }
+          } catch {
+            // Profile fetch timeout/failure — keep active cached user session
+            return
+          }
+        }
+
         if (!rt) {
           signOut()
           if (isMounted) { setUser(null); setIsLoading(false) }
@@ -50,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 3500)
+          const timeoutId = setTimeout(() => controller.abort(), 4000)
 
           const refreshRes = await fetch(`${apiUrl}/api/auth/refresh`, {
             method: "POST",
@@ -62,11 +103,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           clearTimeout(timeoutId)
 
           if (refreshRes.status === 401 || refreshRes.status === 403) {
-            logger.warn("[v0] Stored session is invalid or expired — clearing session and signing out")
-            await signOut()
-            if (isMounted) {
-              setUser(null)
-              setIsLoading(false)
+            // Only sign out if the access token is also expired or missing
+            const currentAt = getAccessToken()
+            if (!currentAt || isTokenExpired(currentAt)) {
+              logger.warn("[v0] Stored session is invalid or expired — clearing session and signing out")
+              await signOut()
+              if (isMounted) {
+                setUser(null)
+                setIsLoading(false)
+              }
             }
             return
           }

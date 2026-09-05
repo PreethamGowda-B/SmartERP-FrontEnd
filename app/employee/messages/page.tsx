@@ -281,8 +281,8 @@ function InternalMessagesTab() {
   const otherUserRole = activeConv?.other_user_role ?? "employee"
   const otherUserOnline = activeConv?.other_user_online ?? false
 
-  const handleSelect = async (userId: string) => {
-    await actions.openConversation(userId)
+  const handleSelect = async (userId: string, conversationId?: string | null) => {
+    await actions.openConversation(userId, conversationId)
     setMobileShowChat(true)
   }
 

@@ -3,10 +3,11 @@
 import { useState, useRef, useCallback, type KeyboardEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Send, Loader2, Paperclip, X, FileText, Mic } from "lucide-react"
+import { Send, Loader2, Paperclip, X, FileText, Mic, Image as ImageIcon } from "lucide-react"
 import { toast } from "sonner"
 import type { MessageAttachment } from "@/types/messaging"
 import { VoiceNoteRecorder } from "@/components/voice-note-recorder"
+import { getAuthToken } from "@/lib/apiClient"
 
 interface MessageInputProps {
   onSend: (content: string, attachment?: MessageAttachment) => Promise<void>
@@ -20,11 +21,14 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-const ACCEPTED_TYPES = [
-  "image/jpeg", "image/png", "image/gif", "image/webp",
+const DOCUMENT_ACCEPTED_TYPES = [
   "application/pdf", "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/plain",
+].join(",")
+
+const IMAGE_ACCEPTED_TYPES = [
+  "image/jpeg", "image/png", "image/gif", "image/webp",
 ].join(",")
 
 export function MessageInput({ onSend, onTyping, disabled = false }: MessageInputProps) {
@@ -34,6 +38,7 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   const resetTextarea = () => {
     if (textareaRef.current) {
@@ -69,11 +74,7 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
     onTyping?.(e.target.value.length > 0)
   }
 
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ""
-
+  const uploadFile = async (file: File) => {
     if (file.size > 10 * 1024 * 1024) {
       toast.error("File too large (max 10 MB)")
       return
@@ -85,9 +86,7 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
       formData.append("attachment", file)
 
       const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
-      const token = typeof window !== "undefined"
-        ? (localStorage.getItem("token") ?? sessionStorage.getItem("token") ?? "")
-        : ""
+      const token = getAuthToken() || ""
 
       const response = await fetch(`${BACKEND_URL}/api/messages/upload`, {
         method: "POST",
@@ -96,7 +95,10 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
         credentials: "include",
       })
 
-      if (!response.ok) throw new Error("Upload failed")
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.message || "Upload failed")
+      }
       const data = await response.json()
 
       const isImage = file.type.startsWith("image/")
@@ -116,6 +118,13 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
     } finally {
       setUploading(false)
     }
+  }
+
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ""
+    await uploadFile(file)
   }, [])
 
   const handleVoiceNoteSend = async (blob: Blob, durationSeconds: number) => {
@@ -126,9 +135,7 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
       formData.append("attachment", blob, `voicenote_${Date.now()}.webm`)
 
       const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
-      const token = typeof window !== "undefined"
-        ? (localStorage.getItem("token") ?? sessionStorage.getItem("token") ?? "")
-        : ""
+      const token = getAuthToken() || ""
 
       const response = await fetch(`${BACKEND_URL}/api/messages/upload`, {
         method: "POST",
@@ -137,13 +144,16 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
         credentials: "include",
       })
 
-      if (!response.ok) throw new Error("Voice note upload failed")
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.message || "Voice note upload failed")
+      }
       const data = await response.json()
       const url = data.url || data.media_url || data.file_url || ""
       
       const attachment: MessageAttachment = {
         file_url: url,
-        file_type: "audio/webm",
+        file_type: blob.type || "audio/webm",
         file_name: `Voice Note (${durationSeconds}s)`,
         file_size: blob.size,
         media_url: url,
@@ -163,29 +173,36 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
     <div className="border-t bg-card flex flex-col">
       {pendingAttachment && (
         <div className="flex items-center justify-between p-3 border-b bg-muted/30">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             {(pendingAttachment.media_type === "image" || pendingAttachment.file_type?.startsWith("image")) ? (
               <img
                 src={pendingAttachment.media_url || pendingAttachment.file_url}
                 alt="Attachment preview"
-                className="h-8 w-8 rounded object-cover shrink-0"
+                className="h-10 w-10 rounded-lg object-cover shrink-0 border shadow-xs"
               />
             ) : (
-              <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <FileText className="h-6 w-6 shrink-0 text-muted-foreground" />
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium truncate">{pendingAttachment.file_name}</p>
+              <p className="text-xs font-semibold truncate">{pendingAttachment.file_name}</p>
               <p className="text-[10px] text-muted-foreground">{formatFileSize(pendingAttachment.file_size)}</p>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 shrink-0"
+            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
             onClick={() => setPendingAttachment(null)}
           >
             <X className="h-3.5 w-3.5" />
           </Button>
+        </div>
+      )}
+
+      {uploading && !pendingAttachment && (
+        <div className="flex items-center gap-2 px-4 py-2 border-b bg-primary/5 text-xs text-primary animate-pulse">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <span>Uploading attachment...</span>
         </div>
       )}
 
@@ -198,20 +215,43 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
         </div>
       ) : (
         <div className="flex items-end gap-2 p-3">
+          {/* File picker for documents */}
           <input
             ref={fileInputRef}
             type="file"
-            accept={ACCEPTED_TYPES}
+            accept={DOCUMENT_ACCEPTED_TYPES}
             className="hidden"
             onChange={handleFileChange}
           />
+          {/* File picker for images */}
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept={IMAGE_ACCEPTED_TYPES}
+            className="hidden"
+            onChange={handleFileChange}
+          />
+
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground"
+            className="shrink-0 h-9 w-9 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={disabled || uploading}
+            type="button"
+            title="Share Image"
+          >
+            <ImageIcon className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || uploading}
             type="button"
+            title="Attach Document"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
           </Button>
@@ -219,10 +259,11 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 h-9 w-9 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            className="shrink-0 h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
             onClick={() => setShowVoiceRecorder(true)}
             disabled={disabled || uploading}
             type="button"
+            title="Record Voice Message"
           >
             <Mic className="h-4 w-4" />
           </Button>

@@ -63,7 +63,7 @@ export interface MessagingState {
 
 // MessagingActions — the actions available from useMessaging
 export interface MessagingActions {
-  openConversation: (userId: string) => Promise<void>
+  openConversation: (userId: string, knownConversationId?: string | null) => Promise<void>
   sendMessage: (content: string, attachment?: MessageAttachment) => Promise<void>
   loadMoreMessages: () => Promise<void>
   markAsRead: (conversationId: string) => Promise<void>
