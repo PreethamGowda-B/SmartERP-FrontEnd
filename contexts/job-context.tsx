@@ -131,18 +131,21 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
           // Update only when the server data differs to avoid stomping local changes
           try {
-            const current = JSON.stringify(jobs)
             const incoming = JSON.stringify(normalized)
-            if (current !== incoming) {
-              setJobs(normalized)
-              localStorage.setItem("smarterp-jobs", incoming)
-              if (user.role) localStorage.setItem("smarterp-jobs-role", user.role.toLowerCase())
-            }
+            setJobs((prevJobs) => {
+              const current = JSON.stringify(prevJobs)
+              if (current !== incoming) {
+                localStorage.setItem("smarterp-jobs", incoming)
+                if (user.role) localStorage.setItem("smarterp-jobs-role", user.role.toLowerCase())
+                return normalized
+              }
+              return prevJobs
+            })
           } catch (err) {
             // fallback: set jobs if serialization fails
             setJobs(normalized)
             localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
-            localStorage.setItem("smarterp-jobs-role", user.role)
+            if (user.role) localStorage.setItem("smarterp-jobs-role", user.role.toLowerCase())
           }
         }
       } catch (err) {
@@ -166,7 +169,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       mounted = false
       if (intervalId) clearInterval(intervalId)
     }
-  }, [user?.id, user?.role, isLoading])
+  }, [user, isLoading])
 
   const { addNotification } = useNotifications()
 
@@ -332,7 +335,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         logger.error("[v0] Failed to refresh jobs:", err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err)))
       }
     }
-  }, [user?.id, user?.role])
+  }, [user])
 
   return (
     <JobContext.Provider

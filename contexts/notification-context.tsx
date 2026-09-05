@@ -50,7 +50,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const { user, isLoading } = useAuth()
   const router = useRouter()
-  const [sseConnection, setSSEConnection] = useState<EventSource | null>(null)
+  const sseConnectionRef = useRef<EventSource | null>(null)
   const [reconnectTrigger, setReconnectTrigger] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const messagingHandlerRef = useRef<MessagingSSEHandler | null>(null)
@@ -154,9 +154,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     async function initSSE() {
       if (!user) {
-        if (sseConnection) {
-          sseConnection.close()
-          setSSEConnection(null)
+        if (sseConnectionRef.current) {
+          sseConnectionRef.current.close()
+          sseConnectionRef.current = null
         }
         setIsConnected(false)
         return
@@ -243,7 +243,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         }
       }
 
-      setSSEConnection(eventSource)
+      sseConnectionRef.current = eventSource
     }
 
     initSSE()
@@ -264,11 +264,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (activeEventSource) {
         activeEventSource.close()
       }
+      if (sseConnectionRef.current) {
+        sseConnectionRef.current.close()
+        sseConnectionRef.current = null
+      }
       clearInterval(pollInterval)
       setIsConnected(false)
       logger.log("📡 SSE connection closed")
     }
-  }, [user?.id, isLoading, fetchNotifications, setupFCM, reconnectTrigger, isMuted])
+  }, [user, isLoading, fetchNotifications, setupFCM, reconnectTrigger, isMuted, router])
 
   const addNotification = (notificationData: Omit<Notification, "id" | "created_at" | "read">) => {
     const newNotification: Notification = {
