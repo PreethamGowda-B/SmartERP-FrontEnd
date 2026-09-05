@@ -1,4 +1,18 @@
 {
     "css.lint.unknownAtRules": "ignore",
-    "scss.lint.unknownAtRules": "ignore"
+    "scss.lint.unknownAtRules": "ignore",
+    "cSpell.words": [
+        "SAMEORIGIN",
+        "nosniff",
+        "prozync",
+        "smarterp",
+        "backendend",
+        "onrender",
+        "cmdk",
+        "jspdf",
+        "autotable",
+        "dvqnrmbdo",
+        "dvqnrmdbo",
+        "Transpiles"
+    ]
 }
