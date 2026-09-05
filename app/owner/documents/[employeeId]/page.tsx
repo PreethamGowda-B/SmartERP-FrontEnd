@@ -265,7 +265,7 @@ export default function EmployeeDocumentsPage() {
             ) : (
               documents.map((doc) => (
                 <Card key={doc.id} className="overflow-hidden group hover:shadow-md transition-all">
-                  <div className="aspect-[4/3] bg-slate-100 flex items-center justify-center overflow-hidden relative border-b border-border/50">
+                  <div className="aspect-4/3 bg-slate-100 flex items-center justify-center overflow-hidden relative border-b border-border/50">
                     {isImage(doc.file_url) ? (
                       <>
                         <Image 
@@ -278,7 +278,7 @@ export default function EmployeeDocumentsPage() {
                             (e.target as HTMLElement).style.opacity = '0';
                           }}
                         />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400 pointer-events-none -z-0">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400 pointer-events-none z-0">
                           <FileText className="h-10 w-10 text-slate-300" />
                           <span className="text-[11px] font-semibold text-slate-400">{doc.document_type}</span>
                         </div>
@@ -335,7 +335,7 @@ export default function EmployeeDocumentsPage() {
 
         {/* Upload Dialog */}
         <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-          <DialogContent className="sm:max-w-[450px] overflow-hidden">
+          <DialogContent className="sm:max-w-112.5 overflow-hidden">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Upload className="h-5 w-5 text-primary" /> Upload New Document
@@ -435,7 +435,8 @@ export default function EmployeeDocumentsPage() {
             <div className="flex-1 overflow-auto flex items-center justify-center p-6 bg-black/40">
               {previewDoc && (
                 isImage(previewDoc.file_url) ? (
-                  <div className="relative w-full h-full min-h-[400px] flex items-center justify-center">
+                  <div className="relative w-full h-full min-h-100 flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={getFullUrl(previewDoc.file_url)}
                       alt={previewDoc.document_type}

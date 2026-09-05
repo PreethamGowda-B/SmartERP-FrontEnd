@@ -93,7 +93,7 @@ export function MessageBubble({ message, isOwn }: MessageBubbleProps) {
             <div className="h-8 w-8 rounded-full flex items-center justify-center bg-black/10 dark:bg-white/10 shrink-0">
               <Play className="h-4 w-4 fill-current" />
             </div>
-            <audio src={audioSrc} controls className="h-8 max-w-[210px]" style={{ accentColor: isOwn ? "white" : undefined }} />
+            <audio src={audioSrc} controls className="h-8 max-w-52.5" style={{ accentColor: isOwn ? "white" : undefined }} />
           </div>
           {!isTemp && (
             <div className={cn("flex items-center gap-1 mt-0.5 px-1", isOwn ? "flex-row-reverse" : "flex-row")}>
