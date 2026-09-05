@@ -301,7 +301,7 @@ export default function EmployeeDocumentsPage() {
                         <CardTitle className="text-base truncate">{doc.document_type}</CardTitle>
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
                           <Calendar className="h-3 w-3" />
-                          {new Date(doc.created_at).toLocaleDateString()}
+                          <span suppressHydrationWarning>{doc.created_at ? new Date(doc.created_at).toLocaleDateString() : ""}</span>
                         </div>
                       </div>
                       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
@@ -416,7 +416,7 @@ export default function EmployeeDocumentsPage() {
               <div>
                 <DialogTitle className="font-semibold text-base text-white">{previewDoc?.document_type || "Document Preview"}</DialogTitle>
                 <DialogDescription className="text-xs text-white/60">
-                  Uploaded on {previewDoc && new Date(previewDoc.created_at).toLocaleDateString()}
+                  Uploaded on <span suppressHydrationWarning>{previewDoc && new Date(previewDoc.created_at).toLocaleDateString()}</span>
                 </DialogDescription>
               </div>
               <div className="flex items-center gap-2">

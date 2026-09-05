@@ -84,12 +84,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://api.prozync.in" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.prozync.in" />
       </head>
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
         {/* Early Backend Prewarmer — wakes sleeping Render backend during initial HTML stream */}
         <Script id="early-backend-prewarm" strategy="beforeInteractive">{`
           (function() {

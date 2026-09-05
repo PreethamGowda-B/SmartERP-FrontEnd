@@ -69,7 +69,7 @@ export function MessageBubble({ message, isOwn }: MessageBubbleProps) {
           />
           {!isTemp && (
             <div className={cn("flex items-center gap-1 mt-0.5 px-1", isOwn ? "flex-row-reverse" : "flex-row")}>
-              <span className="text-[10px] text-muted-foreground">{formatRelativeTime(message.created_at)}</span>
+              <span className="text-[10px] text-muted-foreground" suppressHydrationWarning>{formatRelativeTime(message.created_at)}</span>
             </div>
           )}
         </div>
@@ -97,7 +97,7 @@ export function MessageBubble({ message, isOwn }: MessageBubbleProps) {
           </div>
           {!isTemp && (
             <div className={cn("flex items-center gap-1 mt-0.5 px-1", isOwn ? "flex-row-reverse" : "flex-row")}>
-              <span className="text-[10px] text-muted-foreground">{formatRelativeTime(message.created_at)}</span>
+              <span className="text-[10px] text-muted-foreground" suppressHydrationWarning>{formatRelativeTime(message.created_at)}</span>
               {isOwn && <ReceiptIcon status={message.receipt} />}
             </div>
           )}
@@ -144,7 +144,7 @@ export function MessageBubble({ message, isOwn }: MessageBubbleProps) {
         {/* Timestamp + receipt */}
         {!isTemp && (
           <div className={cn("flex items-center gap-1 mt-0.5 px-1", isOwn ? "flex-row-reverse" : "flex-row")}>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-[10px] text-muted-foreground" suppressHydrationWarning>
               {formatRelativeTime(message.created_at)}
             </span>
             {isOwn && (
