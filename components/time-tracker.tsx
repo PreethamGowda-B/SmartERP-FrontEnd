@@ -41,6 +41,7 @@ export function TimeTracker() {
         () => {
           setCurrentLocation("Location unavailable")
         },
+        { timeout: 3000, maximumAge: 120000 }
       )
     }
   }, [])

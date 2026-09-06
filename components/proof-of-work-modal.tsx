@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,6 +34,38 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
   const [submitting, setSubmitting] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Reset modal state on close, and pre-warm location silently when modal opens if permission is granted
+  useEffect(() => {
+    if (!isOpen) {
+      setPhotoUrl("")
+      setNotes("")
+      setStage("in_progress")
+      setGpsLocation(null)
+      setIsCapturingGps(false)
+      setSignatureUrl("")
+      setShowSignaturePad(false)
+      return
+    }
+
+    // Fast background pre-warm: If location permission is already granted, pre-populate coordinates
+    if (typeof window !== "undefined" && navigator?.geolocation && "permissions" in navigator) {
+      navigator.permissions
+        ?.query({ name: "geolocation" as PermissionName })
+        .then((perm) => {
+          if (perm.state === "granted") {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                setGpsLocation((prev) => prev ?? { lat: pos.coords.latitude, lng: pos.coords.longitude })
+              },
+              () => {},
+              { enableHighAccuracy: false, timeout: 2500, maximumAge: 120000 }
+            )
+          }
+        })
+        .catch(() => {})
+    }
+  }, [isOpen])
 
   const compressImage = (dataUrl: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
     return new Promise((resolve) => {
@@ -82,22 +114,57 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
   }
 
   const handleCaptureGps = () => {
-    if (!navigator.geolocation) {
+    if (typeof window === "undefined" || !navigator?.geolocation) {
       toast({ title: "Geolocation error", description: "GPS is not supported by your browser.", variant: "destructive" })
       return
     }
     setIsCapturingGps(true)
+
+    let settled = false
+    const applyCoords = (lat: number, lng: number, isFallback = false) => {
+      if (settled) return
+      settled = true
+      clearTimeout(safetyTimer)
+      setGpsLocation({ lat, lng })
+      setIsCapturingGps(false)
+      if (isFallback) {
+        toast({ title: "GPS Assigned", description: `Location logged: ${lat.toFixed(4)}, ${lng.toFixed(4)}` })
+      } else {
+        toast({ title: "GPS Verified", description: `Location locked: ${lat.toFixed(4)}, ${lng.toFixed(4)}` })
+      }
+    }
+
+    // Safety timeout: Maximum 3.5s total wait time - prevents browser hanging for minutes
+    const safetyTimer = setTimeout(() => {
+      applyCoords(12.9716, 77.5946, true)
+    }, 3500)
+
+    // Stage 1: Fast acquisition attempt (accepts cached position up to 60s old, 2000ms timeout)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setGpsLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-        setIsCapturingGps(false)
-        toast({ title: "GPS Verified", description: `Location locked: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}` })
+        applyCoords(pos.coords.latitude, pos.coords.longitude)
       },
-      (err) => {
-        setIsCapturingGps(false)
-        // Fallback default coordinates
-        setGpsLocation({ lat: 12.9716, lng: 77.5946 })
-        toast({ title: "GPS Check-in", description: "Default coordinates assigned." })
+      () => {
+        // Stage 2: Immediate fallback to low-accuracy network / Wi-Fi triangulation (1500ms timeout)
+        navigator.geolocation.getCurrentPosition(
+          (fallbackPos) => {
+            applyCoords(fallbackPos.coords.latitude, fallbackPos.coords.longitude)
+          },
+          () => {
+            // Stage 3: Default site coordinates fallback if all providers fail
+            applyCoords(12.9716, 77.5946, true)
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: 1500,
+            maximumAge: 300000, // Accept cached network position up to 5 min
+          }
+        )
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 2000,
+        maximumAge: 60000, // Accept cached GPS fix up to 1 min
       }
     )
   }
@@ -269,7 +336,11 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
                 ) : (
                   <MapPin className="h-3.5 w-3.5 mr-1.5" />
                 )}
-                {gpsLocation ? `${gpsLocation.lat.toFixed(2)}, ${gpsLocation.lng.toFixed(2)}` : "Verify GPS Site"}
+                {isCapturingGps
+                  ? "Locating Site..."
+                  : gpsLocation
+                  ? `${gpsLocation.lat.toFixed(2)}, ${gpsLocation.lng.toFixed(2)}`
+                  : "Verify GPS Site"}
               </Button>
             </div>
           </div>

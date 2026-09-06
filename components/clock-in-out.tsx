@@ -79,7 +79,7 @@ export function ClockInOut({
         navigator.geolocation.getCurrentPosition(
           ({ coords }) => resolve(`GPS: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`),
           () => resolve("Location unavailable"),
-          { timeout: 5000 }
+          { timeout: 4000, maximumAge: 60000 }
         )
       } else {
         resolve("GPS not supported")
