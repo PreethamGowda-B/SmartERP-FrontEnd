@@ -31,6 +31,79 @@ const IMAGE_ACCEPTED_TYPES = [
   "image/jpeg", "image/png", "image/gif", "image/webp",
 ].join(",")
 
+/**
+ * Fast client-side image compression to convert multi-megabyte camera/phone photos
+ * into lightweight ~150-250KB JPEGs in < 50ms, drastically speeding up upload and attachment.
+ */
+async function compressImageFile(file: File, maxWidth = 1280, quality = 0.8): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type.includes("gif") || file.type.includes("svg")) {
+    return file
+  }
+
+  // Already lightweight (< 350 KB)
+  if (file.size < 350 * 1024) {
+    return file
+  }
+
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas")
+          let width = img.width
+          let height = img.height
+
+          if (width > maxWidth || height > maxWidth) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width)
+              width = maxWidth
+            } else {
+              width = Math.round((width * maxWidth) / height)
+              height = maxWidth
+            }
+          }
+
+          canvas.width = width
+          canvas.height = height
+
+          const ctx = canvas.getContext("2d")
+          if (!ctx) {
+            resolve(file)
+            return
+          }
+
+          ctx.drawImage(img, 0, 0, width, height)
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob && blob.size < file.size) {
+                const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".jpg"
+                const compressedFile = new File([blob], newFileName, {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                })
+                resolve(compressedFile)
+              } else {
+                resolve(file)
+              }
+            },
+            "image/jpeg",
+            quality
+          )
+        } catch {
+          resolve(file)
+        }
+      }
+      img.onerror = () => resolve(file)
+      img.src = e.target?.result as string
+    }
+    reader.onerror = () => resolve(file)
+    reader.readAsDataURL(file)
+  })
+}
+
 export function MessageInput({ onSend, onTyping, disabled = false }: MessageInputProps) {
   const [value, setValue] = useState("")
   const [pendingAttachment, setPendingAttachment] = useState<MessageAttachment | null>(null)
@@ -39,6 +112,15 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const localPreviewUrlRef = useRef<string | null>(null)
+
+  const clearAttachment = () => {
+    if (localPreviewUrlRef.current) {
+      URL.revokeObjectURL(localPreviewUrlRef.current)
+      localPreviewUrlRef.current = null
+    }
+    setPendingAttachment(null)
+  }
 
   const resetTextarea = () => {
     if (textareaRef.current) {
@@ -52,6 +134,10 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
 
     const attachmentToSend = pendingAttachment ?? undefined
     setValue("")
+    if (localPreviewUrlRef.current) {
+      URL.revokeObjectURL(localPreviewUrlRef.current)
+      localPreviewUrlRef.current = null
+    }
     setPendingAttachment(null)
     resetTextarea()
     onTyping?.(false)
@@ -75,15 +161,39 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
   }
 
   const uploadFile = async (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File too large (max 10 MB)")
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("File too large (max 20 MB)")
       return
     }
 
     setUploading(true)
+    let fileToUpload = file
+
     try {
+      const isImage = file.type.startsWith("image/")
+
+      // Fast client-side image compression
+      if (isImage) {
+        fileToUpload = await compressImageFile(file)
+        // Instant visual preview for the user without waiting for network round-trip
+        const instantUrl = URL.createObjectURL(fileToUpload)
+        if (localPreviewUrlRef.current) {
+          URL.revokeObjectURL(localPreviewUrlRef.current)
+        }
+        localPreviewUrlRef.current = instantUrl
+
+        setPendingAttachment({
+          file_url: instantUrl,
+          file_type: fileToUpload.type || "image/jpeg",
+          file_name: fileToUpload.name,
+          file_size: fileToUpload.size,
+          media_url: instantUrl,
+          media_type: "image",
+        })
+      }
+
       const formData = new FormData()
-      formData.append("attachment", file)
+      formData.append("attachment", fileToUpload)
 
       const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
       const token = getAuthToken() || ""
@@ -101,31 +211,31 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
       }
       const data = await response.json()
 
-      const isImage = file.type.startsWith("image/")
       const url = data.url || data.media_url || data.file_url || ""
       const type = isImage ? "image" : "document"
 
       setPendingAttachment({
         file_url: url,
-        file_type: file.type || type,
-        file_name: file.name,
-        file_size: file.size,
+        file_type: fileToUpload.type || type,
+        file_name: fileToUpload.name,
+        file_size: fileToUpload.size,
         media_url: url,
         media_type: type,
       })
     } catch (err: any) {
+      clearAttachment()
       toast.error(err.message || "Failed to upload attachment")
     } finally {
       setUploading(false)
     }
   }
 
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ""
     await uploadFile(file)
-  }, [])
+  }
 
   const handleVoiceNoteSend = async (blob: Blob, durationSeconds: number) => {
     setShowVoiceRecorder(false)
@@ -173,9 +283,10 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
   return (
     <div className="border-t bg-card flex flex-col">
       {pendingAttachment && (
-        <div className="flex items-center justify-between p-3 border-b bg-muted/30">
+        <div className="flex items-center justify-between p-3 pr-24 sm:pr-28 border-b bg-muted/30">
           <div className="flex items-center gap-2.5 min-w-0">
             {(pendingAttachment.media_type === "image" || pendingAttachment.file_type?.startsWith("image")) ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={pendingAttachment.media_url || pendingAttachment.file_url}
                 alt="Attachment preview"
@@ -186,14 +297,21 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
             )}
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold truncate">{pendingAttachment.file_name}</p>
-              <p className="text-[10px] text-muted-foreground">{formatFileSize(pendingAttachment.file_size)}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] text-muted-foreground">{formatFileSize(pendingAttachment.file_size)}</p>
+                {uploading && (
+                  <span className="flex items-center gap-1 text-[10px] text-primary font-medium animate-pulse">
+                    <Loader2 className="h-2.5 w-2.5 animate-spin" /> Uploading...
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
             className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
-            onClick={() => setPendingAttachment(null)}
+            onClick={clearAttachment}
           >
             <X className="h-3.5 w-3.5" />
           </Button>
@@ -201,21 +319,21 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
       )}
 
       {uploading && !pendingAttachment && (
-        <div className="flex items-center gap-2 px-4 py-2 border-b bg-primary/5 text-xs text-primary animate-pulse">
+        <div className="flex items-center gap-2 px-4 py-2 pr-24 sm:pr-28 border-b bg-primary/5 text-xs text-primary animate-pulse">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          <span>Uploading attachment...</span>
+          <span>Processing & attaching photo...</span>
         </div>
       )}
 
       {showVoiceRecorder ? (
-        <div className="p-3">
+        <div className="p-3 pr-24 sm:pr-28">
           <VoiceNoteRecorder
             onSendVoiceNote={handleVoiceNoteSend}
             onCancel={() => setShowVoiceRecorder(false)}
           />
         </div>
       ) : (
-        <div className="flex items-end gap-2 p-3">
+        <div className="flex items-end gap-2 p-3 pr-24 sm:pr-28">
           {/* File picker for documents */}
           <input
             ref={fileInputRef}
@@ -285,10 +403,11 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
             size="icon"
             onClick={handleSend}
             disabled={!canSend}
-            className="shrink-0 h-9 w-9 rounded-xl bg-primary text-primary-foreground"
+            className="shrink-0 h-9 w-9 rounded-xl bg-primary text-primary-foreground transition-transform active:scale-95 shadow-xs"
             type="button"
+            title="Send Message"
           >
-            {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {disabled || uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
       )}

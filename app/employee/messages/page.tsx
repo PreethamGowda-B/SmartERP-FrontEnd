@@ -258,10 +258,10 @@ function JobMessagesTab() {
                 })}
               <div ref={messagesEndRef} />
             </div>
-            <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+            <div className="p-4 pr-24 sm:pr-28 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
               <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); sendMessage() }}>
                 <Input value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Type a message…" disabled={sending} className="flex-1 rounded-full bg-gray-100 dark:bg-gray-700 border-0" maxLength={2000} />
-                <Button type="submit" size="icon" className="rounded-full bg-indigo-600 hover:bg-indigo-700 shrink-0" disabled={!messageText.trim() || sending}>
+                <Button type="submit" size="icon" className="rounded-full bg-indigo-600 hover:bg-indigo-700 shrink-0" disabled={!messageText.trim() || sending} title="Send Message">
                   {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </Button>
               </form>
