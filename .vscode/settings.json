@@ -24,6 +24,11 @@
         "automations",
         "Hrefs",
         "normalised",
-        "Financials"
+        "Financials",
+        "msword",
+        "openxmlformats",
+        "officedocument",
+        "wordprocessingml",
+        "voicenote"
     ]
 }

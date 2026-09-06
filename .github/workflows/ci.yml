@@ -31,8 +31,8 @@ jobs:
       - name: Build Next.js app
         run: npm run build
         env:
-          NEXT_PUBLIC_API_URL: https://smarterp-backendend.onrender.com
-          NEXT_PUBLIC_ADMIN_ROUTE: ${{ secrets.NEXT_PUBLIC_ADMIN_ROUTE || 'admin' }}
+          NEXT_PUBLIC_API_URL: https://api.prozync.in
+          NEXT_PUBLIC_ADMIN_ROUTE: admin
           NODE_ENV: production
 
   # ── Job 2: Lint ──────────────────────────────────────────────────────────────
