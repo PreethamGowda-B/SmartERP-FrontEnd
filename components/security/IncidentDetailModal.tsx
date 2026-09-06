@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   ShieldAlert,
@@ -65,7 +65,7 @@ export function IncidentDetailModal({
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchDetails = async () => {
+  const fetchDetails = useCallback(async () => {
     if (!incidentId) return
     try {
       setIsLoading(true)
@@ -79,7 +79,7 @@ export function IncidentDetailModal({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [incidentId])
 
   useEffect(() => {
     if (isOpen && incidentId) {
@@ -89,7 +89,7 @@ export function IncidentDetailModal({
       setEvents([])
       setActions([])
     }
-  }, [isOpen, incidentId])
+  }, [isOpen, incidentId, fetchDetails])
 
   const handleTriggerAI = async () => {
     if (!incidentId) return
@@ -291,7 +291,7 @@ export function IncidentDetailModal({
                 {activeTab === 'ai_analyst' && (
                   <div className="space-y-6">
                     {/* Clear distinction banner */}
-                    <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200/80">
+                    <div className="p-4 rounded-xl bg-linear-to-r from-indigo-50 to-blue-50 border border-indigo-200/80">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3">
                           <div className="p-2 rounded-lg bg-indigo-600 text-white shrink-0">

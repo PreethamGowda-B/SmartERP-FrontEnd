@@ -29,6 +29,8 @@
         "openxmlformats",
         "officedocument",
         "wordprocessingml",
-        "voicenote"
+        "voicenote",
+        "SUPERADMIN",
+        "IDOR"
     ]
 }
