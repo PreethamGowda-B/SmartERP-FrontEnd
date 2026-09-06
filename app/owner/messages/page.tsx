@@ -84,24 +84,29 @@ function JobMessagesTab() {
     }
   }, [])
 
+  const latestNotif = notifications[0]
+  const latestNotifType = latestNotif?.type
+  const latestNotifJobId = latestNotif?.data?.job_id
+  const latestNotifMessage = latestNotif?.message
+  const latestNotifCreatedAt = latestNotif?.created_at
+  const selectedJobId = selectedJob?.job_id
+
   useEffect(() => {
-    const latestNotif = notifications[0]
-    if (latestNotif?.type === "chat_message" && latestNotif.data?.job_id) {
-      const jobId = latestNotif.data.job_id
+    if (latestNotifType === "chat_message" && latestNotifJobId) {
       setConversations(prev => {
-        const exists = prev.some(c => c.job_id === jobId)
+        const exists = prev.some(c => c.job_id === latestNotifJobId)
         if (!exists) { fetchConversations(); return prev }
         return prev.map(c =>
-          c.job_id === jobId
-            ? { ...c, last_message: latestNotif.message, last_message_time: latestNotif.created_at,
-                unread_count: selectedJob?.job_id === jobId ? 0 : (c.unread_count || 0) + 1 }
+          c.job_id === latestNotifJobId
+            ? { ...c, last_message: latestNotifMessage, last_message_time: latestNotifCreatedAt,
+                unread_count: selectedJobId === latestNotifJobId ? 0 : (c.unread_count || 0) + 1 }
             : c
-        ).sort((a, b) => (a.job_id === jobId ? -1 : b.job_id === jobId ? 1 : 0))
+        ).sort((a, b) => (a.job_id === latestNotifJobId ? -1 : b.job_id === latestNotifJobId ? 1 : 0))
       })
-      if (selectedJob?.job_id !== jobId) fetchConversations()
-      if (selectedJob?.job_id === jobId) apiClient(`/api/messages/job/${jobId}`).catch(() => {})
+      if (selectedJobId !== latestNotifJobId) fetchConversations()
+      if (selectedJobId === latestNotifJobId) apiClient(`/api/messages/job/${latestNotifJobId}`).catch(() => {})
     }
-  }, [notifications[0]?.type, notifications[0]?.data?.job_id, notifications[0]?.message, notifications[0]?.created_at, selectedJob?.job_id, fetchConversations])
+  }, [latestNotifType, latestNotifJobId, latestNotifMessage, latestNotifCreatedAt, selectedJobId, fetchConversations])
 
   const fetchMessages = useCallback(async (jobId: string) => {
     setLoadingMsgs(true)
@@ -151,9 +156,11 @@ function JobMessagesTab() {
     setConversations(prev => prev.map(c => c.job_id === conv.job_id ? { ...c, unread_count: 0 } : c))
   }, [fetchMessages, connectSSE])
 
+  const lastMessageId = messages[messages.length - 1]?.id
+  const messagesCount = messages.length
   useEffect(() => () => { sseRef.current?.close(); if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current) }, [])
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages.length, messages[messages.length - 1]?.id])
-  useEffect(() => { fetchConversations(); const id = setInterval(fetchConversations, 30_000); return () => clearInterval(id) }, []) // eslint-disable-line
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messagesCount, lastMessageId])
+  useEffect(() => { fetchConversations(); const id = setInterval(fetchConversations, 30_000); return () => clearInterval(id) }, [fetchConversations])
 
   const sendMessage = async () => {
     if (!selectedJob || !messageText.trim() || sending) return

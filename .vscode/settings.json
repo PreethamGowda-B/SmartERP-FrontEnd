@@ -44,6 +44,11 @@
         "igst",
         "pincode",
         "gstin",
-        "ifsc"
+        "ifsc",
+        "hgetall",
+        "conv",
+        "Conv",
+        "Convs",
+        "ILIKE"
     ]
 }
