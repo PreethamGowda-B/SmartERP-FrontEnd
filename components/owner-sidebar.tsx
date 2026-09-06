@@ -144,8 +144,7 @@ const navCategories: NavCategory[] = [
   {
     title: "Communication & Insights",
     items: [
-      { name: "Messages", href: "/owner/messages", icon: MessageSquare },
-      { name: "Notifications", href: "/owner/notifications", icon: Bell },
+      { name: "Messages & Alerts", href: "/owner/messages", icon: MessageSquare },
       { name: "Reports", href: "/owner/reports", icon: BarChart3 },
     ],
   },

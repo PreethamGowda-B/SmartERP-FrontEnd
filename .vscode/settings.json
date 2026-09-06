@@ -32,6 +32,18 @@
         "voicenote",
         "SUPERADMIN",
         "IDOR",
-        "remediations"
+        "remediations",
+        "Cgst",
+        "Sgst",
+        "Igst",
+        "CGST",
+        "SGST",
+        "IGST",
+        "cgst",
+        "sgst",
+        "igst",
+        "pincode",
+        "gstin",
+        "ifsc"
     ]
 }

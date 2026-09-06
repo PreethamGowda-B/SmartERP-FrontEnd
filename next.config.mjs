@@ -22,6 +22,8 @@ const nextConfig = {
       { source: "/owner/invoice-issues", destination: "/owner/finance/invoices?tab=issues", permanent: false },
       { source: "/owner/ar-collections", destination: "/owner/finance/payments?tab=ar", permanent: false },
       { source: "/owner/finance/accounts-receivable", destination: "/owner/finance/payments?tab=ar", permanent: false },
+      // ── Owner portal backward-compat ─────────────────────────────────────
+      { source: "/owner/notifications", destination: "/owner/messages?tab=notifications", permanent: false },
       // ── Employee portal backward-compat ───────────────────────────────────
       { source: "/employee/inventory", destination: "/employee/materials?tab=inventory", permanent: false },
       { source: "/employee/notifications", destination: "/employee/messages?tab=notifications", permanent: false },
