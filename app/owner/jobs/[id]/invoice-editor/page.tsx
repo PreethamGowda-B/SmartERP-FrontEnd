@@ -1,7 +1,7 @@
 'use me';
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { 
   ArrowLeft, 
@@ -151,55 +151,64 @@ export default function DedicatedInvoiceEditorPage() {
   // Line items
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
-  useEffect(() => {
-    if (jobId) {
-      fetchEditorData();
-    }
-  }, [jobId]);
-
-  const fetchEditorData = async () => {
+  const fetchEditorData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiClient<{ success: boolean; job: any; prefilled: any }>(`/api/invoices/editor-data/${jobId}`);
+      const res = await apiClient<{ success: boolean; job: any; prefilled: any; existingInvoice?: any }>(`/api/invoices/editor-data/${jobId}`);
       if (res && res.success) {
         setJobData(res.job);
         const p = res.prefilled;
-        setLabourHours(p.labour_hours || 8);
-        setLabourRate(p.labour_rate || 500);
-        setEquipmentCharges(p.equipment_charges || 0);
-        setTransportCharges(p.transport_charges || 0);
-        setAdditionalCharges(p.additional_charges || 0);
-        setDiscountAmount(p.discount_amount || 0);
-        setGstRate(p.gst_rate || 18);
-        setIsInterState(p.is_inter_state || false);
-        setDueDays(p.due_days || 15);
+        setLabourHours(p.labour_hours ?? 8);
+        setLabourRate(p.labour_rate ?? 500);
+        setEquipmentCharges(p.equipment_charges ?? 0);
+        setTransportCharges(p.transport_charges ?? 0);
+        setAdditionalCharges(p.additional_charges ?? 0);
+        setDiscountAmount(p.discount_amount ?? 0);
+        setGstRate(p.gst_rate ?? 18);
+        setIsInterState(p.is_inter_state ?? false);
+        setDueDays(p.due_days ?? 15);
+        if (p.customer_notes) setCustomerNotes(p.customer_notes);
+        if (p.internal_notes) setInternalNotes(p.internal_notes);
+        if (p.payment_terms) setPaymentTerms(p.payment_terms);
 
-        // Pre-fill line items
-        const initialItems: LineItem[] = [
-          {
-            item_type: 'labour',
-            description: 'Labour & Technical Charges',
-            hsn_code: '998311',
-            quantity: p.labour_hours || 8,
-            unit_price: p.labour_rate || 500,
-            total_amount: (p.labour_hours || 8) * (p.labour_rate || 500),
-          },
-        ];
-
-        if (p.materials_used && p.materials_used.length > 0) {
-          p.materials_used.forEach((m: any) => {
-            initialItems.push({
-              item_type: 'material',
-              description: `Material: ${m.item_name}`,
+        // Pre-fill line items: prioritize existing line items if invoice already existed
+        if (p.line_items && p.line_items.length > 0) {
+          setLineItems(p.line_items.map((it: any) => ({
+            id: it.id,
+            item_type: it.item_type || 'service',
+            description: it.description || '',
+            hsn_code: it.hsn_code || '998311',
+            quantity: parseFloat(it.quantity || 1),
+            unit_price: parseFloat(it.unit_price || 0),
+            total_amount: parseFloat(it.total_amount || 0),
+          })));
+        } else {
+          const initialItems: LineItem[] = [
+            {
+              item_type: 'labour',
+              description: 'Labour & Technical Charges',
               hsn_code: '998311',
-              quantity: m.quantity || 1,
-              unit_price: m.unit_cost || 150,
-              total_amount: (m.quantity || 1) * (m.unit_cost || 150),
-            });
-          });
-        }
+              quantity: p.labour_hours || 8,
+              unit_price: p.labour_rate || 500,
+              total_amount: (p.labour_hours || 8) * (p.labour_rate || 500),
+            },
+          ];
 
-        setLineItems(initialItems);
+          if (p.materials_used && p.materials_used.length > 0) {
+            p.materials_used.forEach((m: any) => {
+              initialItems.push({
+                item_type: 'material',
+                description: `Material: ${m.item_name}`,
+                hsn_code: '998311',
+                quantity: m.quantity || 1,
+                unit_price: m.unit_cost || m.unit_price || 150,
+                total_amount: (m.quantity || 1) * (m.unit_cost || m.unit_price || 150),
+              });
+            });
+          }
+
+          setLineItems(initialItems);
+        }
       }
     } catch (err: any) {
       toast({
@@ -210,7 +219,13 @@ export default function DedicatedInvoiceEditorPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [jobId, toast]);
+
+  useEffect(() => {
+    if (jobId) {
+      fetchEditorData();
+    }
+  }, [jobId, fetchEditorData]);
 
   const handleAddLineItem = () => {
     setLineItems([
@@ -294,7 +309,7 @@ export default function DedicatedInvoiceEditorPage() {
       setSaving(true);
 
       const payload = {
-        jobId,
+        jobId: jobData?.id || jobId,
         labour_hours: labourHours,
         labour_rate: labourRate,
         equipment_charges: equipmentCharges,

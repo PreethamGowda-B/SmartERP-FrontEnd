@@ -7,6 +7,7 @@ import { FileText, Eye, Download, Edit3, CheckCircle2, Clock } from "lucide-reac
 interface JobCardFinancialsProps {
   invoice?: {
     id: string
+    job_id?: string
     invoice_number: string
     version_number?: number
     edited_count?: number
@@ -15,11 +16,12 @@ interface JobCardFinancialsProps {
     viewed_at?: string
     downloaded_at?: string
   } | null
+  jobId?: string
   budget?: number
   role?: "owner" | "employee"
 }
 
-export function JobCardFinancials({ invoice, budget = 0, role = "owner" }: JobCardFinancialsProps) {
+export function JobCardFinancials({ invoice, jobId, budget = 0, role = "owner" }: JobCardFinancialsProps) {
   if (!invoice) {
     return (
       <div className="p-2.5 rounded-xl bg-muted/40 border border-dashed border-border/70 flex items-center justify-between text-xs">
@@ -39,7 +41,7 @@ export function JobCardFinancials({ invoice, budget = 0, role = "owner" }: JobCa
   const editedCount = invoice.edited_count || 0
   const handleInvoiceClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    const targetJobId = (invoice as any)?.job_id || (invoice as any)?.jobId || invoice?.id
+    const targetJobId = jobId || (invoice as any)?.job_id || (invoice as any)?.jobId || invoice?.id
     if (role === "owner" && targetJobId) {
       window.location.href = `/owner/jobs/${targetJobId}/invoice-editor`
     }

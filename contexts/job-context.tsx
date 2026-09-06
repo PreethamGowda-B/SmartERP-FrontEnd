@@ -93,9 +93,11 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
             const flatInvoiceTotal = s.invoice_total_amount ?? s.invoiceTotal ?? null
             const nestedInvoice = s.invoice && typeof s.invoice === "object" ? s.invoice : null
 
+            const normalizedJobId = s.id?.toString?.() ?? String(s._db_row?.id ?? s.id ?? "")
             const invoice = flatInvoiceId
               ? {
                   id: String(flatInvoiceId),
+                  job_id: normalizedJobId,
                   invoice_number: s.invoice_number ?? nestedInvoice?.invoice_number ?? "",
                   version_number: s.invoice_version_number ?? s.version_number ?? nestedInvoice?.version_number ?? 1,
                   edited_count: s.invoice_edited_count ?? s.edited_count ?? nestedInvoice?.edited_count ?? 0,
@@ -106,11 +108,11 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
                   viewed_at: s.invoice_viewed_at ?? nestedInvoice?.viewed_at ?? null,
                   downloaded_at: s.invoice_downloaded_at ?? nestedInvoice?.downloaded_at ?? null,
                 }
-              : (nestedInvoice ?? null)
+              : (nestedInvoice ? { ...nestedInvoice, job_id: nestedInvoice.job_id || normalizedJobId } : null)
 
             return {
               // prefer server-provided fields but ensure id and assignedEmployees exist
-              id: s.id?.toString?.() ?? String(s._db_row?.id ?? s.id ?? ""),
+              id: normalizedJobId,
               title: s.title ?? s.name ?? s.jobTitle ?? "",
               description: s.description ?? s.details ?? "",
               assignedEmployees,

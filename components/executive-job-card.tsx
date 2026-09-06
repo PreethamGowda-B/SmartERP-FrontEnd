@@ -114,6 +114,7 @@ export function ExecutiveJobCard({
         {/* 3. Financial Breakdown Block */}
         <JobCardFinancials
           invoice={job.invoice}
+          jobId={job.id}
           budget={job.budget || job.estimated_cost}
           role={role}
         />
