@@ -43,14 +43,26 @@ export function JobCardExecution({
   const [isUpdating, setIsUpdating] = React.useState(false)
   const [isAccepting, setIsAccepting] = React.useState(false)
   const [isDeclining, setIsDeclining] = React.useState(false)
+  const [isOptimisticallyCompleted, setIsOptimisticallyCompleted] = React.useState(false)
 
   React.useEffect(() => {
     setCurrentProgress(Math.min(100, Math.max(0, progress)))
-  }, [progress])
+    if (status === "completed" || status === "verified" || stage?.toLowerCase() === "completed") {
+      setIsOptimisticallyCompleted(true)
+    } else {
+      setIsOptimisticallyCompleted(false)
+    }
+  }, [progress, status, stage])
+
+  const isCompleted =
+    status === "completed" ||
+    status === "verified" ||
+    stage?.toLowerCase() === "completed" ||
+    isOptimisticallyCompleted
 
   const stages = ["Open", "Assigned", "In Progress", "Completed"]
   const currentStageIndex =
-    status === "completed" || status === "verified"
+    isCompleted
       ? 3
       : status === "active" || status === "in_progress" || status === "in progress"
       ? 2
@@ -65,7 +77,12 @@ export function JobCardExecution({
         method: "POST",
         body: JSON.stringify({ progress: currentProgress }),
       })
-      toast.success(`Progress updated to ${currentProgress}%!`)
+      if (currentProgress === 100) {
+        setIsOptimisticallyCompleted(true)
+        toast.success("Job marked as completed successfully!")
+      } else {
+        toast.success(`Progress updated to ${currentProgress}%!`)
+      }
       if (onActionComplete) onActionComplete()
     } catch (err: any) {
       toast.error(err?.message || "Failed to update progress")
@@ -144,7 +161,7 @@ export function JobCardExecution({
         <Progress value={currentProgress} className="h-2 rounded-full bg-muted" />
 
         {/* ── CASE 1: EMPLOYEE PORTAL — ASSIGNED / ACCEPTED BY CURRENT USER ── */}
-        {role === "employee" && isAcceptedByCurrentUser && status !== "cancelled" && (
+        {role === "employee" && isAcceptedByCurrentUser && !isCompleted && status !== "cancelled" && (
           <div className="pt-1 space-y-2">
             <div className="flex justify-between items-center text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
               <span className="flex items-center gap-1 font-bold">
@@ -162,12 +179,22 @@ export function JobCardExecution({
             {isProgressChanged && (
               <Button
                 size="sm"
-                className="w-full h-8 text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs transition-all active:scale-[0.99]"
+                className={`w-full h-8 text-xs font-black text-white rounded-xl shadow-xs transition-all active:scale-[0.99] ${
+                  currentProgress === 100
+                    ? "bg-emerald-700 hover:bg-emerald-800 ring-2 ring-emerald-500/20"
+                    : "bg-emerald-600 hover:bg-emerald-700"
+                }`}
                 onClick={handleSaveProgress}
                 disabled={isUpdating}
               >
-                {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-                Save Field Progress ({currentProgress}%)
+                {isUpdating ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                ) : currentProgress === 100 ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                ) : null}
+                {currentProgress === 100
+                  ? "Mark as Completed (100%)"
+                  : `Save Field Progress (${currentProgress}%)`}
               </Button>
             )}
           </div>
@@ -190,7 +217,7 @@ export function JobCardExecution({
         )}
 
         {/* ── CASE 3: EMPLOYEE PORTAL — UNASSIGNED / PENDING ACCEPTANCE ── */}
-        {role === "employee" && !isAcceptedByCurrentUser && !acceptedByName && status !== "completed" && status !== "cancelled" && (
+        {role === "employee" && !isAcceptedByCurrentUser && !acceptedByName && !isCompleted && status !== "cancelled" && (
           <div className="flex items-center gap-2 pt-1">
             <Button
               size="sm"

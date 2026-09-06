@@ -11,7 +11,7 @@ interface ClockInOutProps {
   currentStatus: "clocked-out" | "clocked-in"
   currentLocation?: string
   hoursToday: number
-  /** full attendance record from today so we can show late/auto-clockout badges */
+  /** full attendance record from today so we can show late/auto-clock-out badges */
   attendanceRecord?: {
     is_late?: boolean
     is_auto_clocked_out?: boolean
@@ -158,9 +158,9 @@ export function ClockInOut({
               }`}
           >
             {clockMsg.type === "cutoff" || clockMsg.type === "late" ? (
-              <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
             ) : (
-              <Timer className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <Timer className="h-4 w-4 mt-0.5 shrink-0" />
             )}
             <span>{clockMsg.message}</span>
           </div>
@@ -169,7 +169,7 @@ export function ClockInOut({
         {/* Error from backend */}
         {error && (
           <div className="flex items-start gap-2 text-sm text-red-700 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
-            <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-red-500" />
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
             <span>{error}</span>
           </div>
         )}

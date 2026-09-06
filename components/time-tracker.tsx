@@ -55,7 +55,7 @@ export function TimeTracker() {
       }, 1000)
     }
     return () => clearInterval(interval)
-  }, [isTracking, isPaused, currentSession?.startTime])
+  }, [isTracking, isPaused, currentSession])
 
   const formatTime = (milliseconds: number) => {
     const seconds = Math.floor(milliseconds / 1000)

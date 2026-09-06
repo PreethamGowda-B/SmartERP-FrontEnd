@@ -42,7 +42,7 @@ export function SmartClockInOut() {
     } else {
       setElapsedMs(0)
     }
-  }, [activeRecord?.clockIn, activeRecord?.date, currentTime])
+  }, [activeRecord, currentTime])
 
   // ─── On mount: ask the backend if we have an open record today ─────────
   const fetchOpenRecord = useCallback(async () => {
@@ -107,7 +107,7 @@ export function SmartClockInOut() {
       setNotification("You have been automatically clocked out at 7:00 PM")
       handleClockOutRef.current()
     }
-  }, [currentTime, activeRecord?.id])
+  }, [activeRecord, currentTime])
 
   // ─── Get GPS location ───────────────────────────────────────────────────
   const getLocation = (): Promise<string> =>
@@ -223,7 +223,7 @@ export function SmartClockInOut() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Status bar */}
-          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-accent/10 to-primary/10 rounded-lg border border-accent/20">
+          <div className="flex items-center justify-between p-4 bg-linear-to-r from-accent/10 to-primary/10 rounded-lg border border-accent/20">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Status</p>
               <Badge variant={activeRecord ? "default" : "secondary"} className="text-base py-1">
@@ -290,7 +290,7 @@ export function SmartClockInOut() {
               onClick={handleClockIn}
               disabled={submitting}
               size="lg"
-              className="w-full bg-gradient-to-r from-accent to-primary"
+              className="w-full bg-linear-to-r from-accent to-primary"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
               {submitting ? "Clocking in..." : "Clock In"}

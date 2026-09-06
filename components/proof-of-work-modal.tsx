@@ -254,6 +254,7 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
 
             {photoUrl ? (
               <div className="relative rounded-xl overflow-hidden border border-border/60 bg-muted/30 p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={photoUrl}
                   alt="Site proof preview"
@@ -300,7 +301,7 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
               placeholder="Describe work completed, materials installed, or inspection observations..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="text-xs rounded-xl min-h-[70px]"
+              className="text-xs rounded-xl min-h-17.5"
             />
           </div>
 
