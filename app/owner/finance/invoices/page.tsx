@@ -6,7 +6,7 @@ import { OwnerLayout } from "@/components/owner-layout"
 import {
   FileText, Download, Send, Eye, MessageSquare, Mail, CheckCircle2, Clock,
   AlertTriangle, Search, Filter, Loader2, Plus, Zap, Printer, CreditCard,
-  Banknote, Receipt, ArrowRight, UserPlus, Sparkles, IndianRupee
+  Banknote, Receipt, ArrowRight, UserPlus, Sparkles, IndianRupee, ChevronDown
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -115,11 +115,23 @@ export default function OwnerInvoicesListPage() {
           </div>
 
           {/* Action CTAs */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <Button
+              onClick={() => setIsDirectModalOpen(true)}
+              className="rounded-xl text-xs font-bold gap-2 shadow-sm bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              <Plus className="h-4 w-4" /> Create Invoice
+            </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="rounded-xl text-xs font-bold gap-2 shadow-sm bg-primary hover:bg-primary/90 text-primary-foreground">
-                  <Plus className="h-4 w-4" /> Create Invoice
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-xl h-9 w-9 shadow-sm border-border"
+                  title="More invoice options"
+                >
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1.5 shadow-xl">
