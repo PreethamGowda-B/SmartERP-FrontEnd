@@ -1,8 +1,8 @@
-'use me';
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { OwnerLayout } from '@/components/owner-layout';
 import { 
   ArrowLeft, 
   FileText, 
@@ -42,21 +42,22 @@ interface LineItem {
 
 function InvoiceEditorSkeleton() {
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6 animate-pulse">
-      {/* Header Bar Skeleton */}
-      <div className="flex items-center justify-between border-b pb-4">
-        <div className="flex items-center space-x-3">
-          <div className="h-9 w-28 bg-slate-200 rounded-md" />
-          <div className="space-y-2">
-            <div className="h-6 w-48 bg-slate-200 rounded-md" />
-            <div className="h-4 w-72 bg-slate-100 rounded-md" />
+    <OwnerLayout>
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 animate-pulse">
+        {/* Header Bar Skeleton */}
+        <div className="flex items-center justify-between border-b pb-4">
+          <div className="flex items-center space-x-3">
+            <div className="h-9 w-28 bg-slate-200 rounded-md" />
+            <div className="space-y-2">
+              <div className="h-6 w-48 bg-slate-200 rounded-md" />
+              <div className="h-4 w-72 bg-slate-100 rounded-md" />
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <div className="h-6 w-24 bg-emerald-100 rounded-full" />
+            <div className="h-10 w-48 bg-indigo-200 rounded-md" />
           </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <div className="h-6 w-24 bg-emerald-100 rounded-full" />
-          <div className="h-10 w-48 bg-indigo-200 rounded-md" />
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols Skeleton */}
@@ -121,6 +122,7 @@ function InvoiceEditorSkeleton() {
         </div>
       </div>
     </div>
+    </OwnerLayout>
   );
 }
 
@@ -133,6 +135,11 @@ export default function DedicatedInvoiceEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [jobData, setJobData] = useState<any>(null);
+
+  // Customer contact state (editable if not preset)
+  const [customerName, setCustomerName] = useState<string>('');
+  const [customerEmail, setCustomerEmail] = useState<string>('');
+  const [customerPhone, setCustomerPhone] = useState<string>('');
 
   // Form State
   const [labourHours, setLabourHours] = useState<number>(8);
@@ -157,6 +164,10 @@ export default function DedicatedInvoiceEditorPage() {
       const res = await apiClient<{ success: boolean; job: any; prefilled: any; existingInvoice?: any }>(`/api/invoices/editor-data/${jobId}`);
       if (res && res.success) {
         setJobData(res.job);
+        setCustomerName(res.job?.customer_name || '');
+        setCustomerEmail(res.job?.customer_email || '');
+        setCustomerPhone(res.job?.customer_phone || '');
+
         const p = res.prefilled;
         setLabourHours(p.labour_hours ?? 8);
         setLabourRate(p.labour_rate ?? 500);
@@ -310,6 +321,9 @@ export default function DedicatedInvoiceEditorPage() {
 
       const payload = {
         jobId: jobData?.id || jobId,
+        customer_name: customerName || jobData?.customer_name || 'Customer',
+        customer_email: customerEmail || jobData?.customer_email || '',
+        customer_phone: customerPhone || jobData?.customer_phone || '',
         labour_hours: labourHours,
         labour_rate: labourRate,
         equipment_charges: equipmentCharges,
@@ -341,10 +355,10 @@ export default function DedicatedInvoiceEditorPage() {
         const isEdit = res.reason === 'invoice_updated';
         toast({
           title: isEdit ? `Invoice Updated (Edited ${res.edited_count || 1}x) 📄` : 'Invoice Finalized & Issued! 💰',
-          description: `Invoice ${invNum} saved successfully. Returning to jobs...`,
+          description: `Invoice ${invNum} saved successfully. Returning to invoices...`,
         });
         setTimeout(() => {
-          router.push('/owner/jobs');
+          router.push('/owner/finance/invoices');
         }, 500);
       } else {
         toast({
@@ -369,67 +383,82 @@ export default function DedicatedInvoiceEditorPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Header Bar */}
-      <div className="flex items-center justify-between border-b pb-4">
-        <div className="flex items-center space-x-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold"
-            onClick={() => router.push('/owner/jobs')}
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back to Jobs
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <FileText className="h-6 w-6 text-indigo-600" /> Invoice Editor
-            </h1>
-            <p className="text-sm text-slate-500">
-              Review and finalize billing for completed job: <span className="font-semibold text-slate-700">{jobData?.title}</span>
-            </p>
+    <OwnerLayout>
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+        {/* Header Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 gap-3">
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold"
+              onClick={() => router.push('/owner/finance/invoices')}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back to Invoices
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <FileText className="h-6 w-6 text-indigo-600" /> Invoice Editor
+              </h1>
+              <p className="text-sm text-slate-500">
+                Review and finalize billing for: <span className="font-semibold text-slate-700 dark:text-slate-300">{jobData?.title}</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-3 py-1">
+              {jobData?.status?.toUpperCase() || 'COMPLETED'}
+            </Badge>
+            <Button onClick={handleFinalizeInvoice} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+              Finalize & Issue Invoice
+            </Button>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-3 py-1">
-            Job Completed
-          </Badge>
-          <Button onClick={handleFinalizeInvoice} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-            Finalize & Issue Invoice
-          </Button>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Form Sections */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Customer & Job Info Card */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <User className="h-4 w-4 text-indigo-600" /> Client & Service Info
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <Label className="text-xs text-slate-500">Customer Name</Label>
-                <div className="font-semibold text-slate-900">{jobData?.customer_name}</div>
-              </div>
-              <div>
-                <Label className="text-xs text-slate-500">Contact Details</Label>
-                <div className="text-slate-700">{jobData?.customer_email || jobData?.customer_phone || 'N/A'}</div>
-              </div>
-              <div>
-                <Label className="text-xs text-slate-500">Job Title</Label>
-                <div className="font-medium text-slate-900">{jobData?.title}</div>
-              </div>
-              <div>
-                <Label className="text-xs text-slate-500">Completion Timestamp</Label>
-                <div className="text-slate-700">{jobData?.completed_at ? new Date(jobData.completed_at).toLocaleString() : 'Just now'}</div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left 2 Cols: Form Sections */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Customer & Job Info Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <User className="h-4 w-4 text-indigo-600" /> Client & Service Info
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Customer Name</Label>
+                  <Input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Enter customer name"
+                    className="h-8 text-sm font-semibold"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Contact Phone / Email</Label>
+                  <Input
+                    value={customerPhone || customerEmail}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.includes('@')) setCustomerEmail(val);
+                      else setCustomerPhone(val);
+                    }}
+                    placeholder="Phone or email"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Job Reference</Label>
+                  <div className="font-medium text-slate-900 dark:text-slate-100 py-1">{jobData?.title}</div>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Completion Timestamp</Label>
+                  <div className="text-slate-700 dark:text-slate-300 py-1">{jobData?.completed_at ? new Date(jobData.completed_at).toLocaleString() : 'Just now'}</div>
+                </div>
+              </CardContent>
+            </Card>
 
           {/* Line Items & Charges Table Card */}
           <Card>
@@ -728,5 +757,6 @@ export default function DedicatedInvoiceEditorPage() {
         </div>
       </div>
     </div>
+    </OwnerLayout>
   );
 }

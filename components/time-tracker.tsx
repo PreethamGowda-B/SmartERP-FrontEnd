@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { mockJobs } from "@/lib/data"
+import { apiClient } from "@/lib/apiClient"
 import { useAuth } from "@/contexts/auth-context"
 import { logger } from "@/lib/logger"
 import { Clock, MapPin, Play, Square, Pause } from "lucide-react"
@@ -25,24 +25,46 @@ export function TimeTracker() {
   const [selectedJob, setSelectedJob] = useState("")
   const [currentLocation, setCurrentLocation] = useState("Getting location...")
 
-  // Get user's assigned jobs
-  const assignedJobs = mockJobs.filter(
-    (job) => job.assignedEmployees.includes(user?.id || "") && job.status === "active",
-  )
+  const [realJobs, setRealJobs] = useState<any[]>([])
 
-  // Mock location detection
   useEffect(() => {
-    if (navigator.geolocation) {
+    async function loadAssignedJobs() {
+      try {
+        const res = await apiClient<{ success?: boolean; jobs?: any[] }>("/api/jobs")
+        if (res && res.jobs) {
+          setRealJobs(res.jobs)
+        } else if (Array.isArray(res)) {
+          setRealJobs(res)
+        }
+      } catch (err) {
+        logger.error("Failed to load jobs for time tracker", err)
+      }
+    }
+    loadAssignedJobs()
+  }, [])
+
+  // Filter assigned active jobs
+  const assignedJobs = realJobs.filter((job) => {
+    if (user?.role === "owner") return true
+    const assignedId = String(job.assigned_to || job.assigned_employee_id || "")
+    const employeeMatches = Array.isArray(job.assignedEmployees) && job.assignedEmployees.includes(user?.id || "")
+    return assignedId === String(user?.id || "") || employeeMatches
+  })
+
+  // Geolocation detection
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          // Mock reverse geocoding
-          setCurrentLocation("Downtown Office Complex, 123 Main St")
+          setCurrentLocation(`GPS: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`)
         },
         () => {
-          setCurrentLocation("Location unavailable")
+          setCurrentLocation("Office / Worksite")
         },
-        { timeout: 3000, maximumAge: 120000 }
+        { timeout: 4000, maximumAge: 60000 }
       )
+    } else {
+      setCurrentLocation("Office / Worksite")
     }
   }, [])
 

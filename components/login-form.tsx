@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { signIn, signUp } from "@/lib/auth"
 import { apiClient, clearTokens } from "@/lib/apiClient"
+import { safeLocalStorage } from "@/lib/storage"
 import { useAuth } from "@/contexts/auth-context"
 import { Building2, Loader2, HardHat, UserPlus, CheckCircle2, RefreshCw, Mail, ArrowLeft, Eye, EyeOff, TrendingUp, Users, Clock, Calendar, Bell } from "lucide-react"
 import { ForgotPasswordModal } from "@/components/auth/ForgotPasswordModal"
@@ -107,24 +108,47 @@ export function LoginForm() {
         body: JSON.stringify({ email: pendingSignupRef.current.email, otp }),
       })
 
-      // 2. OTP verified â€” create the account
-      const user = await signUp(pendingSignupRef.current)
-      if (user) {
+      // 2. OTP verified — create the account
+      const signupData = pendingSignupRef.current
+      const createdUser = await signUp(signupData)
+      if (createdUser) {
         setShowOtpModal(false)
         setOtp("")
         pendingSignupRef.current = null
-        setSuccess("Account created successfully! You can now sign in.")
-        setMode("login")
-        setPassword(""); setName(""); setPhone(""); setPosition(""); setDepartment("")
+
+        // Seamless zero-friction handoff: Immediately sign in and enter portal
+        try {
+          const loggedInUser: any = await signIn(signupData.email, signupData.password)
+          if (loggedInUser) {
+            const isSuperAdmin = loggedInUser.role === "super_admin"
+            const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
+            safeLocalStorage.setJSON(userKey, loggedInUser)
+            setUser(loggedInUser)
+
+            if (loggedInUser.role === "owner") {
+              router.push("/owner")
+            } else if (loggedInUser.role === "hr") {
+              router.push("/hr")
+            } else {
+              router.push("/employee")
+            }
+            return
+          }
+        } catch {
+          // Fallback if instant auto-login encountered network glitch
+          setSuccess("Account created successfully! Please sign in.")
+          setMode("login")
+          setPassword(""); setName(""); setPhone(""); setPosition(""); setDepartment("")
+        }
       } else {
-        setOtpError("Account creation failed. This email may already be registered â€” try signing in instead.")
+        setOtpError("Account creation failed. This email may already be registered — try signing in instead.")
       }
     } catch (err: any) {
       const msg: string = err.message || ""
       if (msg.toLowerCase().includes("already") || msg.toLowerCase().includes("exists") || msg.toLowerCase().includes("duplicate")) {
         setOtpError("This email is already registered. Please sign in instead.")
       } else if (msg.toLowerCase().includes("validation")) {
-        setOtpError("Please check your details â€” make sure your password is at least 10 characters with uppercase, number, and special character.")
+        setOtpError("Please check your details — make sure your password is at least 10 characters with uppercase, number, and special character.")
       } else {
         setOtpError(msg || "Verification failed. Please try again.")
       }
@@ -133,7 +157,7 @@ export function LoginForm() {
     }
   }
 
-  // â”€â”€ Main form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Main form submit ──────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -146,7 +170,7 @@ export function LoginForm() {
         if (user) {
           const isSuperAdmin = user.role === "super_admin"
           const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
-          localStorage.setItem(userKey, JSON.stringify(user))
+          safeLocalStorage.setJSON(userKey, user)
 
           // Sync tokens with Android native bridge if available
           if (typeof window !== "undefined" && (window as any).Android?.saveToken && user.accessToken) {
@@ -163,7 +187,6 @@ export function LoginForm() {
           }
         } else {
           // If signIn returned null but didn't throw, it might have handled a redirect (suspension)
-          // We only set the generic error if we are still on the page
           setError("Invalid email or password. Please check your credentials or create an account.")
         }
       } else {
@@ -279,7 +302,7 @@ export function LoginForm() {
               disabled={otpVerifying || otp.length !== 6}
             >
               {otpVerifying
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifyingâ€¦</>
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</>
                 : <><CheckCircle2 className="mr-2 h-4 w-4" />Verify &amp; Create Account</>
               }
             </Button>
@@ -294,7 +317,7 @@ export function LoginForm() {
                   className="text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1.5 mx-auto disabled:opacity-50 transition-colors"
                 >
                   <RefreshCw className="h-3 w-3" />
-                  {otpSending ? "Sendingâ€¦" : "Resend code"}
+                  {otpSending ? "Sending..." : "Resend code"}
                 </button>
               )}
             </div>
@@ -355,8 +378,8 @@ export function LoginForm() {
           <div className="lp-deco-float-a absolute bottom-[12%] left-[2%] w-24 h-16 rounded-xl opacity-[0.06] lp-glass" />
         </div>
 
-        {/* â”€â”€ Main Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <div className="lp-card-wrapper w-full max-w-[900px] mx-4 sm:mx-6 flex min-h-[540px] rounded-[24px] overflow-hidden shadow-[0_24px_64px_rgba(0,0,0,0.13),0_0_0_1px_rgba(255,255,255,0.8)] lp-enter lp-enter-d1"
+        {/* ── Main Card ────────────────────────────────────────────────────────── */}
+        <div className="lp-card-wrapper w-full max-w-225 mx-4 sm:mx-6 flex min-h-135 rounded-3xl overflow-hidden shadow-[0_24px_64px_rgba(0,0,0,0.13),0_0_0_1px_rgba(255,255,255,0.8)] lp-enter lp-enter-d1"
           style={{ background: "rgba(255,255,255,0.97)" }}>
 
           {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -473,7 +496,7 @@ export function LoginForm() {
                     </Button>
                     {mode === "login" && (
                       <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-primary/5 border border-primary/10">
-                        <Building2 className="h-3.5 w-3.5 text-primary flex-shrink-0" aria-hidden />
+                        <Building2 className="h-3.5 w-3.5 text-primary shrink-0" aria-hidden />
                         <p className="text-[0.78rem] text-primary/80 font-medium">Access full business management features</p>
                       </div>
                     )}
@@ -561,7 +584,7 @@ export function LoginForm() {
                     </Button>
                     {mode === "login" && (
                       <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-accent/5 border border-accent/10">
-                        <HardHat className="h-3.5 w-3.5 text-accent flex-shrink-0" aria-hidden />
+                        <HardHat className="h-3.5 w-3.5 text-accent shrink-0" aria-hidden />
                         <p className="text-[0.78rem] text-accent/80 font-medium">Access your jobs, time tracking &amp; more</p>
                       </div>
                     )}
@@ -574,7 +597,7 @@ export function LoginForm() {
             <div className="relative my-3 lp-enter lp-enter-d4">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100" /></div>
               <div className="relative flex justify-center">
-                <span className="bg-white px-3 text-[0.72rem] uppercase tracking-[0.1em] text-slate-400 font-semibold">or continue with</span>
+                <span className="bg-white px-3 text-[0.72rem] uppercase tracking-widest text-slate-400 font-semibold">or continue with</span>
               </div>
             </div>
 
@@ -589,7 +612,7 @@ export function LoginForm() {
               }}
               className="lp-btn-google w-full h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center gap-2.5 text-[0.875rem] font-semibold text-slate-700 lp-enter lp-enter-d5"
             >
-              <svg className="h-[18px] w-[18px] flex-shrink-0" viewBox="0 0 24 24" aria-hidden>
+              <svg className="h-4.5 w-4.5 shrink-0" viewBox="0 0 24 24" aria-hidden>
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
@@ -641,7 +664,7 @@ export function LoginForm() {
                 <h2 className="text-white font-black text-2xl leading-tight mb-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
                   Manage your entire<br />business from one place
                 </h2>
-                <p className="text-white/70 text-[0.82rem] font-medium max-w-[260px]">
+                <p className="text-white/70 text-[0.82rem] font-medium max-w-65">
                   Jobs, payroll, attendance, HR, and AI-powered insights - all in SmartERP.
                 </p>
               </div>

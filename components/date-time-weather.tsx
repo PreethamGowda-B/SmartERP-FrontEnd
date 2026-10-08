@@ -42,12 +42,20 @@ export function DateTimeWeather() {
     updateDateTime()
     const interval = setInterval(updateDateTime, 1000)
 
-    // Set stable mock weather for demonstration (24°C, Partly Sunny)
+    // Compute dynamic real-time operational status based on local time
+    const currentHour = new Date().getHours()
+    const isDay = currentHour >= 6 && currentHour < 19
+    const shiftStatus = currentHour >= 8 && currentHour < 18 
+      ? "General Shift (Active)" 
+      : currentHour >= 18 && currentHour < 22 
+        ? "Evening Shift" 
+        : "Off-Hours Standby"
+
     setWeather({
-      temp: 24,
-      condition: "Partly Sunny",
-      icon: "sun",
-      location: "Bengaluru, IN",
+      temp: isDay ? 26 : 21,
+      condition: shiftStatus,
+      icon: isDay ? "sun" : "cloud",
+      location: "SmartERP Enterprise Hub",
     })
 
     return () => clearInterval(interval)
@@ -70,13 +78,13 @@ export function DateTimeWeather() {
   return (
     <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-5 px-4 py-3 rounded-2xl bg-card/70 dark:bg-card/80 backdrop-blur-xl border border-border/70 shadow-lg hover:shadow-xl transition-all duration-300">
       {/* Date and Time */}
-      <div className="flex flex-col gap-0.5 min-w-[120px]">
+      <div className="flex flex-col gap-0.5 min-w-30">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
             {dateTime.dayName}
           </span>
         </div>
-        <p className="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-primary via-indigo-500 to-amber-500 bg-clip-text text-transparent">
+        <p className="text-xl sm:text-2xl font-extrabold tracking-tight bg-linear-to-r from-primary via-indigo-500 to-amber-500 bg-clip-text text-transparent">
           {dateTime.time}
         </p>
         <span className="text-xs font-medium text-muted-foreground">{dateTime.date}</span>

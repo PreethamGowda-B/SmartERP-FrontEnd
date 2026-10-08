@@ -5,6 +5,8 @@ import { LandingPage } from "@/components/landing-page"
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 
+import { safeSessionStorage } from "@/lib/storage"
+
 export default function HomePage() {
   const { user } = useAuth()
 
@@ -14,35 +16,44 @@ export default function HomePage() {
   const [contentVisible, setContentVisible] = useState(false)
   const [progress, setProgress] = useState(0)
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const fallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     // Skip intro loader if already seen in current session
-    if (typeof window !== "undefined" && sessionStorage.getItem("smarterp_intro_seen")) {
+    if (safeSessionStorage.getItem("smarterp_intro_seen")) {
       setShutterOpen(true)
       setLoaderDone(true)
       setContentVisible(true)
       return
     }
 
-    // Fast 300ms progress animation for smooth first impression without hanging
+    const dismissLoader = () => {
+      if (progressRef.current) clearInterval(progressRef.current)
+      setShutterOpen(true)
+      safeSessionStorage.setItem("smarterp_intro_seen", "true")
+      setTimeout(() => {
+        setLoaderDone(true)
+        setContentVisible(true)
+      }, 100)
+    }
+
+    // Safety fallback: guaranteed dismissal within 450ms even if interval stutters
+    fallbackTimeoutRef.current = setTimeout(dismissLoader, 450)
+
+    // Fast progress animation for smooth first impression without hanging
     let current = 0
     progressRef.current = setInterval(() => {
       current += 34
       if (current >= 100) {
         current = 100
-        if (progressRef.current) clearInterval(progressRef.current)
-        setShutterOpen(true)
-        if (typeof window !== "undefined") sessionStorage.setItem("smarterp_intro_seen", "true")
-        setTimeout(() => {
-          setLoaderDone(true)
-          setContentVisible(true)
-        }, 150)
+        dismissLoader()
       }
       setProgress(Math.min(current, 100))
-    }, 60)
+    }, 50)
 
     return () => {
       if (progressRef.current) clearInterval(progressRef.current)
+      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current)
     }
   }, [])
 

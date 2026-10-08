@@ -66,19 +66,21 @@ function getStorageKeys(targetPath?: string) {
   return { at: USER_AT, rt: USER_RT }
 }
 
+import { safeLocalStorage, safeSessionStorage } from "./storage"
+
 export function setTokens(accessToken: string, refreshToken: string, isAdmin = false) {
   if (typeof window !== "undefined") {
     const { at, rt } = isAdmin ? { at: ADMIN_AT, rt: ADMIN_RT } : { at: USER_AT, rt: USER_RT }
     
     // Store in both sessionStorage and localStorage for persistent cross-tab & cross-session logins
-    sessionStorage.setItem(at, accessToken)
-    sessionStorage.setItem(rt, refreshToken)
-    localStorage.setItem(at, accessToken)
-    localStorage.setItem(rt, refreshToken)
+    safeSessionStorage.setItem(at, accessToken)
+    safeSessionStorage.setItem(rt, refreshToken)
+    safeLocalStorage.setItem(at, accessToken)
+    safeLocalStorage.setItem(rt, refreshToken)
 
     if (!isAdmin) {
-      localStorage.setItem("accessToken", accessToken)
-      localStorage.setItem("refreshToken", refreshToken)
+      safeLocalStorage.setItem("accessToken", accessToken)
+      safeLocalStorage.setItem("refreshToken", refreshToken)
     }
 
     // Android WebView bridge — native token handoff
@@ -106,15 +108,15 @@ export function clearTokens(isAdmin?: boolean) {
                        [{at: ADMIN_AT, rt: ADMIN_RT}, {at: USER_AT, rt: USER_RT}]
     
     keysToClear.forEach(k => {
-      sessionStorage.removeItem(k.at)
-      sessionStorage.removeItem(k.rt)
-      localStorage.removeItem(k.at)
-      localStorage.removeItem(k.rt)
+      safeSessionStorage.removeItem(k.at)
+      safeSessionStorage.removeItem(k.rt)
+      safeLocalStorage.removeItem(k.at)
+      safeLocalStorage.removeItem(k.rt)
     })
     
     if (isAdmin !== true) {
-      localStorage.removeItem("accessToken")
-      localStorage.removeItem("refreshToken")
+      safeLocalStorage.removeItem("accessToken")
+      safeLocalStorage.removeItem("refreshToken")
     }
   }
 }
@@ -130,36 +132,31 @@ export function getAuthToken(targetPath?: string): string | null {
   const isSuperAdminTarget = at === ADMIN_AT
 
   if (isSuperAdminTarget) {
-    const adminToken = localStorage.getItem(ADMIN_AT) || sessionStorage.getItem(ADMIN_AT)
+    const adminToken = safeLocalStorage.getItem(ADMIN_AT) || safeSessionStorage.getItem(ADMIN_AT)
     if (adminToken) return adminToken
     try {
-      const adminUserStr = localStorage.getItem("smarterp_admin_user")
-      if (adminUserStr) {
-        const u = JSON.parse(adminUserStr)
-        if (u?.accessToken) return u.accessToken
-      }
+      const u = safeLocalStorage.getJSON<{ accessToken?: string }>("smarterp_admin_user")
+      if (u?.accessToken) return u.accessToken
     } catch (_) {}
   }
   
   // 1. Check primary token in localStorage
-  const fromLocal = localStorage.getItem(at) || 
-                    localStorage.getItem("accessToken") || 
-                    localStorage.getItem(USER_AT)
+  const fromLocal = safeLocalStorage.getItem(at) || 
+                    safeLocalStorage.getItem("accessToken") || 
+                    safeLocalStorage.getItem(USER_AT)
   if (fromLocal) return fromLocal
 
   // 2. Fallback to sessionStorage
-  const fromSession = sessionStorage.getItem(at) || 
-                      sessionStorage.getItem("accessToken") || 
-                      sessionStorage.getItem(USER_AT)
+  const fromSession = safeSessionStorage.getItem(at) || 
+                      safeSessionStorage.getItem("accessToken") || 
+                      safeSessionStorage.getItem(USER_AT)
   if (fromSession) return fromSession
 
   // 3. Fallback: Parse user profile from localStorage
   try {
-    const userStr = localStorage.getItem("smarterp_user") || localStorage.getItem("smarterp_admin_user")
-    if (userStr) {
-      const u = JSON.parse(userStr)
-      if (u?.accessToken) return u.accessToken
-    }
+    const u = safeLocalStorage.getJSON<{ accessToken?: string }>("smarterp_user") ||
+              safeLocalStorage.getJSON<{ accessToken?: string }>("smarterp_admin_user")
+    if (u?.accessToken) return u.accessToken
   } catch (_) {}
 
   return null
@@ -174,23 +171,22 @@ export function getRefreshToken(targetPath?: string): string | null {
     const { rt } = getStorageKeys(targetPath)
     
     // 1. Check localStorage first (shared across all browser tabs)
-    const fromLocal = localStorage.getItem(rt) || 
-                      localStorage.getItem("refreshToken") ||
-                      localStorage.getItem(USER_RT)
+    const fromLocal = safeLocalStorage.getItem(rt) || 
+                      safeLocalStorage.getItem("refreshToken") ||
+                      safeLocalStorage.getItem(USER_RT)
     if (fromLocal) return fromLocal
 
     // 2. Fallback to sessionStorage
-    const fromSession = sessionStorage.getItem(rt) || 
-                        sessionStorage.getItem("refreshToken") ||
-                        localStorage.getItem(USER_RT)
+    const fromSession = safeSessionStorage.getItem(rt) || 
+                        safeSessionStorage.getItem("refreshToken") ||
+                        safeSessionStorage.getItem(USER_RT)
     if (fromSession) return fromSession
+
     // 3. Fallback: Parse user profile from localStorage
     try {
-      const userStr = localStorage.getItem("smarterp_user") || localStorage.getItem("smarterp_admin_user")
-      if (userStr) {
-        const u = JSON.parse(userStr)
-        if (u?.refreshToken) return u.refreshToken
-      }
+      const u = safeLocalStorage.getJSON<{ refreshToken?: string }>("smarterp_user") ||
+                safeLocalStorage.getJSON<{ refreshToken?: string }>("smarterp_admin_user")
+      if (u?.refreshToken) return u.refreshToken
     } catch (_) {}
   }
   return null

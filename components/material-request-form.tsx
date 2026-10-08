@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { mockJobs, type MaterialRequest } from "@/lib/data"
+import { type MaterialRequest } from "@/lib/data"
+import { apiClient } from "@/lib/apiClient"
 import { materialsCatalog } from "@/lib/materials-data"
 import { useAuth } from "@/contexts/auth-context"
 import { Plus, Trash2, Loader2, Search, Upload, X } from "lucide-react"
@@ -46,11 +47,29 @@ export function MaterialRequestForm({ request, onSubmit, onCancel, isLoading }: 
   const [image, setImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string>(request?.imageUrl || "")
 
+  const [jobs, setJobs] = useState<any[]>([])
+
+  useEffect(() => {
+    async function loadJobs() {
+      try {
+        const res = await apiClient<{ success?: boolean; jobs?: any[] }>("/api/jobs")
+        if (res && res.jobs) {
+          setJobs(res.jobs)
+        } else if (Array.isArray(res)) {
+          setJobs(res)
+        }
+      } catch (e) {
+        // silently fallback to empty
+      }
+    }
+    loadJobs()
+  }, [])
+
   // Get user's assigned jobs for employees, all jobs for owners
   const availableJobs =
     user?.role === "owner"
-      ? mockJobs
-      : mockJobs.filter((job) => job.assignedEmployees.includes(user?.id || "") && job.status === "active")
+      ? jobs
+      : jobs.filter((job: any) => (job.assignedEmployees || []).includes(user?.id || "") && (job.status === "active" || job.status === "in_progress"))
 
   const filteredMaterials = materialsCatalog.filter((material) =>
     material.name.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -132,9 +151,9 @@ export function MaterialRequestForm({ request, onSubmit, onCancel, isLoading }: 
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableJobs.map((job) => (
+                  {availableJobs.map((job: any) => (
                     <SelectItem key={job.id} value={job.id}>
-                      {job.title} - {job.client}
+                      {job.title || job.job_number || `Job #${job.id.slice(0, 8)}`} - {job.client || job.customer_name || "Direct"}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -26,6 +26,8 @@ import {
   ChevronRight,
   Mail,
   Phone,
+  Menu,
+  X,
 } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 
@@ -33,6 +35,7 @@ export function LandingPage() {
   const router = useRouter()
   const [counters, setCounters] = useState({ users: 1500, jobs: 12500, teams: 450 })
   const [navigatingTarget, setNavigatingTarget] = useState<string | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // Demo Video Controls
   const demoVideoRef = useRef<HTMLVideoElement | null>(null)
@@ -179,7 +182,7 @@ export function LandingPage() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Customer Portal Quick Action */}
             <Button
               asChild
@@ -197,7 +200,7 @@ export function LandingPage() {
               asChild
               variant="ghost"
               size="sm"
-              className="font-semibold hover:bg-muted text-foreground"
+              className="font-semibold hover:bg-muted text-foreground text-xs sm:text-sm px-2.5 sm:px-3"
             >
               <Link href="/auth/login?mode=login" prefetch={true}>
                 Sign In
@@ -207,14 +210,66 @@ export function LandingPage() {
             <Button
               asChild
               size="sm"
-              className="font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30"
+              className="font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 text-xs sm:text-sm px-3 sm:px-4"
             >
               <Link href="/auth/login?mode=signup" prefetch={true}>
                 Get Started
               </Link>
             </Button>
+
+            {/* Mobile Menu Hamburger */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-border/80 bg-background/95 backdrop-blur-2xl px-4 py-4 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+            <a
+              href="#demo"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2.5 rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              Product Demo
+            </a>
+            <Link
+              href="/features"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2.5 rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              Features
+            </Link>
+            <Link
+              href="/pricing"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2.5 rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              Pricing
+            </Link>
+            <a
+              href="#benefits"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2.5 rounded-xl text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              Why SmartERP
+            </a>
+            <Link
+              href="/customer/landing"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-blue-500 bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
+            >
+              <Sparkles className="h-4 w-4" />
+              Customer Portal
+            </Link>
+          </div>
+        )}
       </header>
 
       {/* ── 2. Hero Section ──────────────────────────────────────────────── */}
@@ -302,20 +357,20 @@ export function LandingPage() {
           </div>
 
           {/* Counters */}
-          <div className="grid grid-cols-3 gap-4 sm:gap-6 max-w-3xl mx-auto mt-12">
-            <div className="p-4 sm:p-5 rounded-2xl bg-card/60 backdrop-blur-md border border-border hover:border-blue-500/40 transition-all">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 max-w-3xl mx-auto mt-12">
+            <div className="p-4 sm:p-5 rounded-2xl bg-card/60 backdrop-blur-md border border-border hover:border-blue-500/40 transition-all text-center">
               <div className="text-2xl sm:text-3xl font-extrabold text-blue-500 mb-1" suppressHydrationWarning>
                 {counters.users.toLocaleString()}+
               </div>
               <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Active Crews</div>
             </div>
-            <div className="p-4 sm:p-5 rounded-2xl bg-card/60 backdrop-blur-md border border-border hover:border-indigo-500/40 transition-all">
+            <div className="p-4 sm:p-5 rounded-2xl bg-card/60 backdrop-blur-md border border-border hover:border-indigo-500/40 transition-all text-center">
               <div className="text-2xl sm:text-3xl font-extrabold text-indigo-500 mb-1" suppressHydrationWarning>
                 {counters.jobs.toLocaleString()}+
               </div>
               <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Jobs Dispatched</div>
             </div>
-            <div className="p-4 sm:p-5 rounded-2xl bg-card/60 backdrop-blur-md border border-border hover:border-purple-500/40 transition-all">
+            <div className="p-4 sm:p-5 rounded-2xl bg-card/60 backdrop-blur-md border border-border hover:border-purple-500/40 transition-all text-center">
               <div className="text-2xl sm:text-3xl font-extrabold text-purple-500 mb-1" suppressHydrationWarning>
                 {counters.teams.toLocaleString()}+
               </div>

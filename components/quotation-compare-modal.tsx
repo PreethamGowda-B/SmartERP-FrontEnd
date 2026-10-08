@@ -15,13 +15,14 @@ interface QuotationCompareModalProps {
 export function QuotationCompareModal({ isOpen, onClose, quotation }: QuotationCompareModalProps) {
   if (!quotation) return null
 
-  // Mock V1 vs V2 baseline values for side-by-side comparison
-  const v1Labor = Number(quotation.labor_amount || 5000) * 0.85
-  const v2Labor = Number(quotation.labor_amount || 5000)
-  const v1Spares = Number(quotation.spares_amount || 12000) * 0.90
-  const v2Spares = Number(quotation.spares_amount || 12000)
-  const v1Travel = Number(quotation.travel_amount || 2500)
-  const v2Travel = Number(quotation.travel_amount || 2500)
+  // Compare current version against previous version if present, or show actual baseline values
+  const prev = quotation.previous_version || quotation.v1_data || {}
+  const v1Labor = Number(prev.labor_amount ?? quotation.labor_amount ?? 0)
+  const v2Labor = Number(quotation.labor_amount ?? 0)
+  const v1Spares = Number(prev.spares_amount ?? quotation.spares_amount ?? 0)
+  const v2Spares = Number(quotation.spares_amount ?? 0)
+  const v1Travel = Number(prev.travel_amount ?? quotation.travel_amount ?? 0)
+  const v2Travel = Number(quotation.travel_amount ?? 0)
 
   const v1Total = v1Labor + v1Spares + v1Travel
   const v2Total = v2Labor + v2Spares + v2Travel

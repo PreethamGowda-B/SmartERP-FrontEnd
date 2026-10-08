@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Eye, Download, Edit3, CheckCircle2, Clock } from "lucide-react"
 
@@ -22,6 +23,7 @@ interface JobCardFinancialsProps {
 }
 
 export function JobCardFinancials({ invoice, jobId, budget = 0, role = "owner" }: JobCardFinancialsProps) {
+  const router = useRouter()
   if (!invoice) {
     return (
       <div className="p-2.5 rounded-xl bg-muted/40 border border-dashed border-border/70 flex items-center justify-between text-xs">
@@ -43,7 +45,7 @@ export function JobCardFinancials({ invoice, jobId, budget = 0, role = "owner" }
     e.stopPropagation()
     const targetJobId = jobId || (invoice as any)?.job_id || (invoice as any)?.jobId || invoice?.id
     if (role === "owner" && targetJobId) {
-      window.location.href = `/owner/jobs/${targetJobId}/invoice-editor`
+      router.push(`/owner/jobs/${targetJobId}/invoice-editor`)
     }
   }
 

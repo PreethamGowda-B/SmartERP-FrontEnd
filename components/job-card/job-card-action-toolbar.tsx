@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Eye, FileText, Zap, Edit, Trash2, CheckCircle2, UserCheck, ShieldAlert, Camera } from "lucide-react"
 
@@ -27,6 +28,7 @@ export function JobCardActionToolbar({
   onOpenJobActions,
   onEmergencyOverride,
 }: JobCardActionToolbarProps) {
+  const router = useRouter()
   const status = (job.status || "open").toLowerCase()
 
   const handleOpenJobActions = (e: React.MouseEvent) => {
@@ -45,11 +47,11 @@ export function JobCardActionToolbar({
 
   const handleOpenInvoiceEditor = (e: React.MouseEvent) => {
     e.stopPropagation()
-    window.location.href = `/owner/jobs/${job.id}/invoice-editor`
+    router.push(`/owner/jobs/${job.id}/invoice-editor`)
   }
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-border/40" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-1.5 flex-wrap pt-2 border-border/40" onClick={(e) => e.stopPropagation()}>
       {/* ── ROLE: OWNER MANAGEMENT CONSOLE ACTIONS ── */}
       {role === "owner" && (
         <div className="w-full flex items-center justify-between gap-2">
@@ -60,11 +62,11 @@ export function JobCardActionToolbar({
             onClick={(e) => {
               e.stopPropagation()
               if (onView) onView(job)
-              else window.location.href = `/owner/jobs/${job.id}`
+              else router.push(`/owner/jobs/${job.id}`)
             }}
           >
             <Eye className="h-3.5 w-3.5" />
-            View Details &amp; Operations
+            View Details & Operations
           </Button>
         </div>
       )}

@@ -17,13 +17,13 @@ interface MonthlyAttendanceChartProps {
 }
 
 export function MonthlyAttendanceChart({ data }: MonthlyAttendanceChartProps) {
-  // Mock data if not provided
+  // Use real data or zero defaults
   const summary = data || {
-    totalPresents: 18,
-    totalLates: 2,
-    totalAbsents: 1,
-    totalHolidays: 4,
-    workingDays: 22,
+    totalPresents: 0,
+    totalLates: 0,
+    totalAbsents: 0,
+    totalHolidays: 0,
+    workingDays: 0,
   }
 
   const chartData = [
@@ -33,9 +33,10 @@ export function MonthlyAttendanceChart({ data }: MonthlyAttendanceChartProps) {
     { name: "Holidays", value: summary.totalHolidays, color: "#3b82f6" },
   ]
 
-  const attendanceRate = Math.round(
-    ((summary.totalPresents + summary.totalLates) / (summary.workingDays - summary.totalHolidays)) * 100,
-  )
+  const effectiveDays = summary.workingDays - summary.totalHolidays
+  const attendanceRate = effectiveDays > 0
+    ? Math.round(((summary.totalPresents + summary.totalLates) / effectiveDays) * 100)
+    : 0
 
   return (
     <Card className="hover-lift">
@@ -68,7 +69,7 @@ export function MonthlyAttendanceChart({ data }: MonthlyAttendanceChartProps) {
         </div>
 
         {/* Attendance Rate */}
-        <div className="p-4 bg-gradient-to-r from-accent/10 to-primary/10 rounded-lg border border-accent/20">
+        <div className="p-4 bg-linear-to-r from-accent/10 to-primary/10 rounded-lg border border-accent/20">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Attendance Rate</p>

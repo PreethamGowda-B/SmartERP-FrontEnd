@@ -1,5 +1,5 @@
 // Extended material request data and utilities
-import { type MaterialRequest, mockJobs } from "./data"
+import { type MaterialRequest } from "./data"
 
 export interface MaterialItem {
   id: string
@@ -92,83 +92,9 @@ export const materialsCatalog: MaterialItem[] = [
   },
 ]
 
-// Generate more comprehensive mock material requests
-export const generateMockMaterialRequests = (): MaterialRequestWithDetails[] => {
-  const baseRequests: MaterialRequest[] = [
-    {
-      id: "1",
-      jobId: "1",
-      requestedBy: "Sarah Johnson",
-      items: [
-        { name: "Steel Beams (I-Beam)", quantity: 20, unit: "pieces", estimatedCost: 15000 },
-        { name: "Concrete Mix (Ready Mix)", quantity: 50, unit: "cubic yards", estimatedCost: 6000 },
-        { name: "Rebar (#4)", quantity: 100, unit: "pieces", estimatedCost: 2500 },
-      ],
-      status: "pending",
-      requestDate: "2024-01-14",
-      urgency: "high",
-      notes: "Needed for foundation work by end of week. Please expedite delivery.",
-    },
-    {
-      id: "2",
-      jobId: "2",
-      requestedBy: "Mike Rodriguez",
-      items: [
-        { name: "Lumber (2x4x8)", quantity: 200, unit: "pieces", estimatedCost: 1600 },
-        { name: "Drywall Sheets (4x8)", quantity: 150, unit: "sheets", estimatedCost: 2250 },
-      ],
-      status: "approved",
-      requestDate: "2024-01-12",
-      urgency: "medium",
-      notes: "For framing phase of residential units 1-3",
-    },
-    {
-      id: "3",
-      jobId: "1",
-      requestedBy: "Emily Chen",
-      items: [
-        { name: "Roofing Shingles", quantity: 80, unit: "bundles", estimatedCost: 2800 },
-        { name: "PVC Pipe (4 inch)", quantity: 500, unit: "feet", estimatedCost: 6000 },
-      ],
-      status: "ordered",
-      requestDate: "2024-01-10",
-      urgency: "low",
-      notes: "Roofing materials for final phase",
-    },
-    {
-      id: "4",
-      jobId: "2",
-      requestedBy: "David Wilson",
-      items: [{ name: "Electrical Wire (12 AWG)", quantity: 1000, unit: "feet", estimatedCost: 2000 }],
-      status: "delivered",
-      requestDate: "2024-01-08",
-      urgency: "medium",
-      notes: "Electrical rough-in for units 4-6",
-    },
-    {
-      id: "5",
-      jobId: "1",
-      requestedBy: "Sarah Johnson",
-      items: [{ name: "Steel Beams (I-Beam)", quantity: 10, unit: "pieces", estimatedCost: 7500 }],
-      status: "rejected",
-      requestDate: "2024-01-06",
-      urgency: "low",
-      notes: "Additional beams - rejected due to budget constraints",
-    },
-  ]
-
-  return baseRequests.map((request) => {
-    const job = mockJobs.find((j) => j.id === request.jobId)
-    const totalCost = request.items.reduce((sum, item) => sum + item.estimatedCost, 0)
-    return {
-      ...request,
-      jobTitle: job?.title,
-      totalCost,
-    }
-  })
-}
-
-export const mockMaterialRequestsWithDetails = generateMockMaterialRequests()
+// Dynamic material requests list - populated from backend
+export const generateMockMaterialRequests = (): MaterialRequestWithDetails[] => []
+export const mockMaterialRequestsWithDetails: MaterialRequestWithDetails[] = []
 
 export const getMaterialRequestStats = (requests: MaterialRequestWithDetails[]) => {
   const pending = requests.filter((r) => r.status === "pending").length

@@ -17,6 +17,8 @@ interface EmployeeLayoutProps {
   children: React.ReactNode
 }
 
+const EMPLOYEE_ROLES = ["employee", "manager"]
+
 export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const { user, isLoading } = useAuth()
   const { isConnected } = useNotifications()
@@ -26,9 +28,6 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   // Must be called at the top level to follow the Rules of Hooks
   useLocationTracking({})
   // ───────────────────────────────────────────────────────────────────────────
-
-  // ── Enterprise RBAC: only employee and manager roles may access Employee Portal ──
-  const EMPLOYEE_ROLES = ["employee", "manager"]
 
   useEffect(() => {
     if (!isLoading) {
@@ -40,7 +39,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
         }
       }
     }
-  }, [user?.id, user?.role, user?.company_id, isLoading, router])
+  }, [user, isLoading, router])
 
   if (isLoading) {
     return (
@@ -73,7 +72,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     <div className="min-h-screen bg-background">
       <EmployeeSidebar />
       <div className="lg:pl-64 flex flex-col min-h-screen">
-        <header className="h-16 border-b border-border/50 flex items-center justify-between px-8 bg-background/50 backdrop-blur-md sticky top-0 z-40">
+        <header className="h-16 border-b border-border/50 flex items-center justify-between pl-16 pr-4 sm:px-8 bg-background/50 backdrop-blur-md sticky top-0 z-40">
           <div className="flex items-center gap-4">
              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50 border border-border/50 shadow-inner">
               <div className={cn(

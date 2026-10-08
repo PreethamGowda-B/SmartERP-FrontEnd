@@ -1,5 +1,6 @@
 import { setTokens, clearTokens } from "@/lib/apiClient"
 import { logger } from "./logger"
+import { safeLocalStorage } from "./storage"
 export interface User {
   id: string
   email: string
@@ -57,8 +58,8 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
   logger.log("[v0] Backend signup successful:", user.email)
 
   const userWithMeta = { ...user, company_code: company_code || user.company_code }
-  localStorage.setItem("smarterp_user", JSON.stringify(userWithMeta))
-  if (company_code) localStorage.setItem("company_code", company_code)
+  safeLocalStorage.setJSON("smarterp_user", userWithMeta)
+  if (company_code) safeLocalStorage.setItem("company_code", company_code)
 
   return userWithMeta
 }
@@ -108,7 +109,7 @@ export const signIn = async (email: string, password: string): Promise<User | nu
       ...(data.accessToken && { accessToken: data.accessToken }),
       ...(data.refreshToken && { refreshToken: data.refreshToken }),
     }
-    localStorage.setItem(userKey, JSON.stringify(userObj))
+    safeLocalStorage.setJSON(userKey, userObj)
 
     return userObj
   } catch (error) {
@@ -136,8 +137,8 @@ export const signOut = async (): Promise<void> => {
   }
 
   clearTokens()
-  localStorage.removeItem("smarterp_user")
-  localStorage.removeItem("smarterp_admin_user")
+  safeLocalStorage.removeItem("smarterp_user")
+  safeLocalStorage.removeItem("smarterp_admin_user")
 
   // ✅ Notify Android bridge to clear native session
   if (typeof window !== "undefined" && (window as any).Android?.logout) {
@@ -157,10 +158,9 @@ export const getCurrentUser = (): User | null => {
                       hostname.startsWith('superadmin.')
 
   if (isAdminPath) {
-    const adminStored = localStorage.getItem("smarterp_admin_user")
-    if (adminStored) return JSON.parse(adminStored)
+    const adminUser = safeLocalStorage.getJSON<User>("smarterp_admin_user")
+    if (adminUser) return adminUser
   }
 
-  const stored = localStorage.getItem("smarterp_user") || localStorage.getItem("smarterp_admin_user")
-  return stored ? JSON.parse(stored) : null
+  return safeLocalStorage.getJSON<User>("smarterp_user") || safeLocalStorage.getJSON<User>("smarterp_admin_user")
 }

@@ -14,36 +14,37 @@ import { TrialWelcomeModal } from '@/components/trial-welcome-modal'
 import { LockedFeaturePrompt } from '@/components/locked-feature-prompt'
 import { DashboardTrialBanner } from '@/components/dashboard-trial-banner'
 
+import { safeLocalStorage } from "@/lib/storage"
+
 interface OwnerLayoutProps {
   children: React.ReactNode
 }
+
+// ── Enterprise RBAC: only owner, admin, and super_admin may access Owner Portal ──
+const OWNER_ROLES = ["owner", "admin", "super_admin"]
 
 export function OwnerLayout({ children }: OwnerLayoutProps) {
   const { user, isLoading } = useAuth()
   const router = useRouter()
 
-
-  // ── Enterprise RBAC: only owner, admin, and super_admin may access Owner Portal ──
-  const OWNER_ROLES = ["owner", "admin", "super_admin"]
-
   useEffect(() => {
     if (!isLoading && (!user || !OWNER_ROLES.includes(user.role))) {
       router.push("/")
     } else if (user && OWNER_ROLES.includes(user.role) && typeof window !== "undefined") {
-      const stored = localStorage.getItem("company_info") || localStorage.getItem("company_name")
+      const stored = safeLocalStorage.getItem("company_info") || safeLocalStorage.getItem("company_name")
       if (!stored) {
         import("@/lib/apiClient").then(({ apiClient }) => {
           apiClient("/api/settings/company").then((c) => {
             if (c && (c.name || c.legal_name)) {
-              localStorage.setItem("company_info", JSON.stringify(c))
-              localStorage.setItem("smarterp-company-profile", JSON.stringify(c))
-              localStorage.setItem("company_name", c.legal_name || c.name)
+              safeLocalStorage.setItem("company_info", JSON.stringify(c))
+              safeLocalStorage.setItem("smarterp-company-profile", JSON.stringify(c))
+              safeLocalStorage.setItem("company_name", c.legal_name || c.name)
             }
           }).catch(() => {})
         })
       }
     }
-  }, [user?.id, user?.role, isLoading, router])
+  }, [user, isLoading, router])
 
   if (isLoading) {
     return (
@@ -66,7 +67,7 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       <OwnerSidebar />
-      <div className="lg:pl-64">
+      <div className="lg:pl-64 pt-14 lg:pt-0">
         <DashboardTrialBanner />
         <MainContent>{children}</MainContent>
       </div>

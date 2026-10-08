@@ -114,40 +114,9 @@ export const calculatePayrollForEmployee = (
   }
 }
 
-export const generatePayrollPeriods = (): PayrollPeriod[] => {
-  const periods: PayrollPeriod[] = []
-  const today = new Date()
-
-  for (let i = 0; i < 6; i++) {
-    const endDate = new Date(today.getFullYear(), today.getMonth() - i, 0) // Last day of month
-    const startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1) // First day of month
-
-    const payrollRecords = mockEmployees.map((emp) =>
-      calculatePayrollForEmployee(emp.id, startDate.toISOString().split("T")[0], endDate.toISOString().split("T")[0]),
-    )
-
-    const validRecords = payrollRecords.filter((record): record is DetailedPayrollRecord => record !== null)
-
-    const totalGrossPay = validRecords.reduce((sum, record) => sum + record.grossPay, 0)
-    const totalDeductions = validRecords.reduce((sum, record) => sum + record.deductions, 0)
-    const totalNetPay = validRecords.reduce((sum, record) => sum + record.netPay, 0)
-
-    periods.push({
-      id: `${startDate.getFullYear()}-${(startDate.getMonth() + 1).toString().padStart(2, "0")}`,
-      startDate: startDate.toISOString().split("T")[0],
-      endDate: endDate.toISOString().split("T")[0],
-      status: i === 0 ? "draft" : i === 1 ? "completed" : "paid",
-      totalEmployees: validRecords.length,
-      totalGrossPay,
-      totalDeductions,
-      totalNetPay,
-    })
-  }
-
-  return periods.reverse()
-}
-
-export const mockPayrollPeriods = generatePayrollPeriods()
+// Dynamic payroll periods - populated from backend
+export const generatePayrollPeriods = (): PayrollPeriod[] => []
+export const mockPayrollPeriods: PayrollPeriod[] = []
 
 export const getPayrollSummary = (records: DetailedPayrollRecord[]): PayrollSummary => {
   const totalEmployees = records.length

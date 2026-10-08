@@ -23,7 +23,7 @@ export function HRLayout({ children }: HRLayoutProps) {
     if (!isLoading && (!user || (user.role !== "hr" && user.role !== "owner"))) {
       router.push("/")
     }
-  }, [user?.id, user?.role, isLoading, router])
+  }, [user, isLoading, router])
 
   if (isLoading) {
     return (
@@ -46,7 +46,7 @@ export function HRLayout({ children }: HRLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       <HRSidebar />
-      <div className="lg:pl-64">
+      <div className="lg:pl-64 pt-14 lg:pt-0">
         <MainContent>{children}</MainContent>
       </div>
 
