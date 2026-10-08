@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -309,6 +310,9 @@ export function InvoiceViewModal({
               <DialogTitle className="text-xl font-bold">
                 Tax Invoice <span className="font-mono text-indigo-600">#{invoice?.invoice_number || "..."}</span>
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                Tax invoice view and payment record
+              </DialogDescription>
             </div>
             {invoice && (
               <div className="flex items-center gap-2">

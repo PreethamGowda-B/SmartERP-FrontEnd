@@ -98,11 +98,11 @@ export default function HomePage() {
       )}
 
       {/* ── Entrance-revealed Landing Page ───────────────────────────────── */}
-      <div className={`entrance-content${contentVisible ? " visible" : ""}`}>
+      <div className={`entrance-content${contentVisible ? " visible" : ""} w-full max-w-full overflow-x-hidden`}>
         {/* Logged-in user quick-access bar */}
         {user && (
-          <div className="bg-primary text-primary-foreground text-xs py-2 px-4 text-center flex items-center justify-center gap-3 font-semibold shadow-xs z-50 relative">
-            <span>
+          <div className="bg-primary text-primary-foreground text-xs py-2 px-3 text-center flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-3 font-semibold shadow-xs z-50 relative w-full overflow-hidden">
+            <span className="truncate max-w-full">
               You are signed in as <strong>{user.name || user.email}</strong>
             </span>
             <Link
@@ -113,7 +113,7 @@ export default function HomePage() {
                   ? "/hr"
                   : "/employee"
               }
-              className="underline hover:text-white transition-colors bg-primary-foreground/20 px-2.5 py-1 rounded-md"
+              className="underline hover:text-white transition-colors bg-primary-foreground/20 px-2.5 py-1 rounded-md shrink-0 inline-flex items-center gap-1"
             >
               Go to Workspace Dashboard →
             </Link>

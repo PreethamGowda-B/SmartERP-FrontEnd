@@ -149,20 +149,20 @@ export function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen relative bg-background text-foreground">
+    <div className="min-h-screen relative bg-background text-foreground w-full max-w-full overflow-x-hidden">
       <AntigravityBackground />
 
       {/* Main content wrapper — must be above z-0 background */}
-      <div className="relative z-10">
+      <div className="relative z-10 w-full max-w-full overflow-x-hidden">
 
       {/* ── 1. Navigation Header ─────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/60 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 cursor-pointer">
-            <div className="p-2 bg-linear-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg shadow-blue-500/20">
-              <Building2 className="h-6 w-6 text-white" />
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/60 shadow-xs w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink-0">
+            <div className="p-1.5 sm:p-2 bg-linear-to-tr from-blue-600 to-indigo-500 rounded-xl shadow-lg shadow-blue-500/20">
+              <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
-            <span className="text-xl font-black tracking-tight text-foreground">
+            <span className="text-lg sm:text-xl font-black tracking-tight text-foreground">
               SmartERP<span className="text-blue-500">.</span>
             </span>
           </Link>
@@ -182,7 +182,7 @@ export function LandingPage() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Customer Portal Quick Action */}
             <Button
               asChild
@@ -196,11 +196,12 @@ export function LandingPage() {
               </Link>
             </Button>
 
+            {/* Sign in hidden on mobile to prevent navbar overflow */}
             <Button
               asChild
               variant="ghost"
               size="sm"
-              className="font-semibold hover:bg-muted text-foreground text-xs sm:text-sm px-2.5 sm:px-3"
+              className="hidden sm:inline-flex font-semibold hover:bg-muted text-foreground text-xs sm:text-sm px-2.5 sm:px-3"
             >
               <Link href="/auth/login?mode=login" prefetch={true}>
                 Sign In
@@ -210,7 +211,7 @@ export function LandingPage() {
             <Button
               asChild
               size="sm"
-              className="font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 text-xs sm:text-sm px-3 sm:px-4"
+              className="font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 text-xs sm:text-sm px-2.5 sm:px-4 shrink-0"
             >
               <Link href="/auth/login?mode=signup" prefetch={true}>
                 Get Started
@@ -221,7 +222,7 @@ export function LandingPage() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="md:hidden p-1.5 sm:p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -232,6 +233,13 @@ export function LandingPage() {
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-border/80 bg-background/95 backdrop-blur-2xl px-4 py-4 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+            <Link
+              href="/auth/login?mode=login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-foreground bg-muted/60 hover:bg-muted transition-colors"
+            >
+              Sign In to Account
+            </Link>
             <a
               href="#demo"
               onClick={() => setMobileMenuOpen(false)}
@@ -328,7 +336,7 @@ export function LandingPage() {
                 <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
                 <div className="w-3 h-3 rounded-full bg-green-500/80" />
               </div>
-              <div className="text-xs text-slate-400 font-mono flex items-center gap-2 bg-slate-950 px-3 py-1 rounded-md border border-white/10">
+              <div className="hidden sm:flex text-xs text-slate-400 font-mono items-center gap-2 bg-slate-950 px-3 py-1 rounded-md border border-white/10">
                 <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
                 smarterp.in/platform-overview
               </div>
@@ -404,7 +412,7 @@ export function LandingPage() {
                 <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
                 <div className="w-3 h-3 rounded-full bg-green-500/80" />
               </div>
-              <div className="text-xs font-mono text-slate-400 bg-slate-900 px-4 py-1 rounded-md border border-white/10">
+              <div className="hidden sm:block text-xs font-mono text-slate-400 bg-slate-900 px-4 py-1 rounded-md border border-white/10">
                 app.smarterp.in/live-demo
               </div>
               <div className="flex items-center gap-3">

@@ -323,6 +323,10 @@ export function DirectInvoiceModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl w-[96vw] max-h-[92vh] overflow-y-auto rounded-3xl p-5 sm:p-8">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Direct Invoice Generator</DialogTitle>
+          <DialogDescription>Create and issue counter and walk-in tax invoices</DialogDescription>
+        </DialogHeader>
         
         {/* SUCCESS VIEW */}
         {step === "success" && createdInvoiceResult && (

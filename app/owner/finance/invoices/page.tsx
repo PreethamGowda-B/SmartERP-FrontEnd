@@ -64,26 +64,46 @@ export default function OwnerInvoicesListPage() {
   }, [fetchInvoices])
 
   const handleSendWhatsApp = async (inv: any) => {
+    let phone = inv.customer_phone
+    if (!phone || !phone.trim()) {
+      phone = window.prompt("Enter customer WhatsApp phone number (with country code, e.g. 919876543210):")
+      if (!phone) return
+    }
+
     try {
       await apiClient(`/api/invoices/${inv.id}/send-whatsapp`, {
         method: "POST",
-        body: JSON.stringify({ phone: inv.customer_phone }),
+        body: JSON.stringify({ phone: phone.trim() }),
       })
-      toast({ title: "WhatsApp Dispatched", description: `Invoice link sent via WhatsApp to ${inv.customer_name || 'client'}.` })
+      toast({ title: "WhatsApp Dispatched", description: `Invoice link sent via WhatsApp to ${phone}.` })
     } catch (err: any) {
-      toast({ title: "WhatsApp Failed", description: err.message, variant: "destructive" })
+      // Direct Web WhatsApp fallback
+      const cleanPhone = phone.replace(/[^0-9]/g, "")
+      const invoiceNumber = inv.invoice_number || "Invoice"
+      const total = inv.total_amount || 0
+      const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
+        `Hello ${inv.customer_name || 'Customer'},\nHere is your invoice #${invoiceNumber} for ₹${Number(total).toLocaleString('en-IN')}.\nThank you for choosing us!`
+      )}`
+      window.open(waUrl, "_blank")
+      toast({ title: "Direct WhatsApp", description: "Opened WhatsApp chat directly with invoice details." })
     }
   }
 
   const handleSendEmail = async (inv: any) => {
+    let email = inv.customer_email
+    if (!email || !email.trim()) {
+      email = window.prompt("Enter customer email address:")
+      if (!email) return
+    }
+
     try {
       await apiClient(`/api/invoices/${inv.id}/send-email`, {
         method: "POST",
-        body: JSON.stringify({ email: inv.customer_email }),
+        body: JSON.stringify({ email: email.trim() }),
       })
-      toast({ title: "Email Dispatched", description: `Invoice PDF emailed to ${inv.customer_email || 'client'}.` })
+      toast({ title: "Email Dispatched", description: `Invoice PDF emailed to ${email}.` })
     } catch (err: any) {
-      toast({ title: "Email Failed", description: err.message, variant: "destructive" })
+      toast({ title: "Email Failed", description: err.message || "Email dispatch failed. Verify email settings.", variant: "destructive" })
     }
   }
 
