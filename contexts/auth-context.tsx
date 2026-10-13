@@ -4,7 +4,7 @@ import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { type User, type AuthState, getCurrentUser, signOut } from "@/lib/auth"
-import { setTokens, getRefreshToken, getAccessToken, isTokenExpired } from "@/lib/apiClient"
+import { setTokens, getRefreshToken, getAccessToken, isTokenExpired, refreshAccessToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import * as Sentry from "@sentry/nextjs"
 
@@ -90,19 +90,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         try {
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 4000)
+          const freshToken = await refreshAccessToken()
 
-          const refreshRes = await fetch(`${apiUrl}/api/auth/refresh`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ refreshToken: rt }),
-            signal: controller.signal,
-          })
-          clearTimeout(timeoutId)
-
-          if (refreshRes.status === 401 || refreshRes.status === 403) {
+          if (!freshToken) {
             // Only sign out if the access token is also expired or missing
             const currentAt = getAccessToken()
             if (!currentAt || isTokenExpired(currentAt)) {
@@ -116,35 +106,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return
           }
 
-          if (refreshRes.ok && isMounted) {
-            const data = await refreshRes.json()
-            if (data.accessToken) {
-              const isAdmin = currentUser?.role === 'super_admin'
-              setTokens(data.accessToken, data.refreshToken || rt || "", isAdmin)
-              
-              // Fetch fresh profile with 3000ms timeout
-              try {
-                const meController = new AbortController()
-                const meTimeoutId = setTimeout(() => meController.abort(), 3000)
+          if (isMounted) {
+            // Fetch fresh profile with 3000ms timeout
+            try {
+              const meController = new AbortController()
+              const meTimeoutId = setTimeout(() => meController.abort(), 3000)
 
-                const meRes = await fetch(`${apiUrl}/api/auth/me`, {
-                  headers: { "Authorization": `Bearer ${data.accessToken}` },
-                  signal: meController.signal,
-                })
-                clearTimeout(meTimeoutId)
+              const meRes = await fetch(`${apiUrl}/api/auth/me`, {
+                headers: { "Authorization": `Bearer ${freshToken}` },
+                signal: meController.signal,
+              })
+              clearTimeout(meTimeoutId)
 
-                if (meRes.ok && isMounted) {
-                  const freshUser = await meRes.json()
-                  setUser(freshUser)
-                  localStorage.setItem("smarterp_user", JSON.stringify(freshUser))
-                  if (freshUser.company_code) {
-                    localStorage.setItem("company_code", freshUser.company_code)
-                  }
-                  logger.log("[v0] ✅ Profile synced with latest DB state")
+              if (meRes.ok && isMounted) {
+                const freshUser = await meRes.json()
+                setUser(freshUser)
+                localStorage.setItem("smarterp_user", JSON.stringify(freshUser))
+                if (freshUser.company_code) {
+                  localStorage.setItem("company_code", freshUser.company_code)
                 }
-              } catch {
-                // Profile fetch timeout/failure — keep cached user session
+                logger.log("[v0] ✅ Profile synced with latest DB state")
               }
+            } catch {
+              // Profile fetch timeout/failure — keep cached user session
             }
           }
         } catch (fetchErr: any) {
@@ -174,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       Sentry.setUser(null)
     }
-  }, [user?.id, user?.email, user?.role, user?.company_id])
+  }, [user])
 
   const handleSignOut = async () => {
     await signOut()

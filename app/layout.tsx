@@ -122,7 +122,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
+        <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false} disableTransitionOnChange={false}>
           {/* Service Worker Registration */}
           <Script id="sw-registration" strategy="afterInteractive">{`
             if ('serviceWorker' in navigator) {

@@ -189,22 +189,22 @@ export default function CustomerMachinesPage() {
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                <div className="grid grid-cols-2 gap-2 text-xs p-3 rounded-xl bg-slate-50 border border-slate-100">
                   <div>
                     <span className="text-slate-400">Make & Model:</span>
-                    <p className="font-semibold text-slate-800 dark:text-slate-200">{m.make} {m.model}</p>
+                    <p className="font-semibold text-slate-800">{m.make} {m.model}</p>
                   </div>
                   <div>
                     <span className="text-slate-400">Controller:</span>
-                    <p className="font-semibold text-slate-800 dark:text-slate-200">{m.controller_type}</p>
+                    <p className="font-semibold text-slate-800">{m.controller_type}</p>
                   </div>
                   <div>
                     <span className="text-slate-400">Health Score:</span>
-                    <p className="font-semibold text-emerald-600 dark:text-emerald-400">{m.health_score || 100}%</p>
+                    <p className="font-semibold text-emerald-600">{m.health_score || 100}%</p>
                   </div>
                   <div>
                     <span className="text-slate-400">Spindle Hours:</span>
-                    <p className="font-semibold text-slate-800 dark:text-slate-200">{m.spindle_hours || 0} hrs</p>
+                    <p className="font-semibold text-slate-800">{m.spindle_hours || 0} hrs</p>
                   </div>
                 </div>
 

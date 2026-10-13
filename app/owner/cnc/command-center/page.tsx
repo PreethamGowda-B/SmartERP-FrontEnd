@@ -34,10 +34,8 @@ export default function CommandCenterPage() {
     return () => clearInterval(interval)
   }, [fetchCommandCenter])
 
-  if (loading && !data) return <div className="p-12 text-center text-slate-500">Connecting to Executive Command Center...</div>
-
   return (
-    <div className="container max-w-7xl mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
         <div>
@@ -57,7 +55,7 @@ export default function CommandCenterPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Card
           onClick={() => router.push("/owner/jobs")}
-          className="p-5 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-300 dark:border-amber-900 cursor-pointer hover:shadow-lg transition-all"
+          className="p-5 bg-linear-to-br from-amber-500/10 to-amber-600/5 border-amber-300 dark:border-amber-900 cursor-pointer hover:shadow-lg transition-all"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -70,7 +68,7 @@ export default function CommandCenterPage() {
 
         <Card
           onClick={() => router.push("/owner/machines")}
-          className="p-5 bg-gradient-to-br from-rose-500/10 to-rose-600/5 border-rose-300 dark:border-rose-900 cursor-pointer hover:shadow-lg transition-all"
+          className="p-5 bg-linear-to-br from-rose-500/10 to-rose-600/5 border-rose-300 dark:border-rose-900 cursor-pointer hover:shadow-lg transition-all"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -83,7 +81,7 @@ export default function CommandCenterPage() {
 
         <Card
           onClick={() => router.push("/owner/cnc/sla")}
-          className="p-5 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-300 dark:border-purple-900 cursor-pointer hover:shadow-lg transition-all"
+          className="p-5 bg-linear-to-br from-purple-500/10 to-purple-600/5 border-purple-300 dark:border-purple-900 cursor-pointer hover:shadow-lg transition-all"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -96,7 +94,7 @@ export default function CommandCenterPage() {
 
         <Card
           onClick={() => router.push("/owner/attendance")}
-          className="p-5 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-300 dark:border-emerald-900 cursor-pointer hover:shadow-lg transition-all"
+          className="p-5 bg-linear-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-300 dark:border-emerald-900 cursor-pointer hover:shadow-lg transition-all"
         >
           <div className="flex items-center justify-between">
             <div>

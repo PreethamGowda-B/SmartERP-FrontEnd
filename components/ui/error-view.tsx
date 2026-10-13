@@ -26,7 +26,7 @@ export function ErrorView({
           {message}
         </p>
         {onRetry && (
-          <Button variant="outline" size="sm" onClick={onRetry} className="gap-2 btn-premium">
+          <Button variant="outline" size="sm" onClick={onRetry} className="gap-2 shadow-xs hover:shadow-sm">
             <RefreshCw className="h-4 w-4" />
             Retry
           </Button>

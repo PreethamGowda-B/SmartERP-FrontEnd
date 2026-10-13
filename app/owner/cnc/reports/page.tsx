@@ -21,7 +21,7 @@ export default function ExecutiveReportsPage() {
   }
 
   return (
-    <div className="container max-w-7xl mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">

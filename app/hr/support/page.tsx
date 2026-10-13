@@ -83,21 +83,21 @@ export default function HRSupportPage() {
       <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
         
         {/* Modern Header Section */}
-        <div className="relative overflow-hidden rounded-[2.5rem] bg-zinc-950 px-8 py-16 md:px-16 md:py-20 shadow-2xl border border-white/5 text-white">
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-gradient-to-br from-primary/30 to-purple-500/0 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-gradient-to-tr from-blue-500/20 to-emerald-500/0 blur-3xl pointer-events-none" />
+        <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-slate-50 via-white to-indigo-50/50 p-8 md:p-12 border border-border shadow-xs text-slate-900">
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-gradient-to-br from-indigo-200/20 to-purple-200/0 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-gradient-to-tr from-blue-200/20 to-emerald-200/0 blur-3xl pointer-events-none" />
           
           <div className="relative z-10 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold mb-8 text-primary uppercase tracking-widest">
-              <LifeBuoy className="w-4 h-4" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-semibold mb-4 text-indigo-700">
+              <LifeBuoy className="w-3.5 h-3.5 text-indigo-600" />
               Help Center
             </div>
             
-            <h1 className="text-4xl md:text-5xl lg:text-7xl font-black tracking-tight mb-6 leading-[1.1]">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3 text-slate-900">
               How can we <span className="text-primary italic">help</span> you?
             </h1>
             
-            <p className="text-lg md:text-xl text-zinc-400 leading-relaxed max-w-2xl font-medium">
+            <p className="text-base text-muted-foreground leading-relaxed max-w-2xl font-normal">
               As an HR Administrator, you have access to our priority support channels. Choose your preferred way to connect.
             </p>
           </div>

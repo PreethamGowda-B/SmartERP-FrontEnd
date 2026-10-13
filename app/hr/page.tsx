@@ -77,14 +77,14 @@ export default function HRDashboard() {
 
   return (
     <HRLayout>
-      <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto">
+      <div className="space-y-6 max-w-7xl mx-auto">
         {/* Title Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-border/80">
           <div>
-            <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-primary via-indigo-600 to-accent bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
               HR People Operations Console
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-0.5">
               Master workforce administration, employee lifecycle, attendance, & ESS requests.
             </p>
           </div>

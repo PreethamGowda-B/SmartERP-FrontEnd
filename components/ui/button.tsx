@@ -10,15 +10,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/30 active:bg-primary/95',
+          'bg-primary text-primary-foreground shadow-xs hover:bg-primary/95 hover:shadow-sm active:bg-primary/90 border border-primary/20',
         destructive:
-          'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
+          'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90 border border-destructive/20 focus-visible:ring-destructive/20',
         outline:
-          'border border-border/80 bg-background/50 text-foreground shadow-xs hover:bg-muted/80 hover:text-foreground dark:border-border/80 dark:bg-card/60 dark:hover:bg-muted/70 dark:hover:text-foreground',
+          'border border-border/80 bg-background text-foreground shadow-2xs hover:bg-muted/70 hover:border-border',
         secondary:
-          'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80',
+          'bg-secondary text-secondary-foreground shadow-2xs hover:bg-secondary/80 border border-border/50',
         ghost:
-          'text-foreground hover:bg-muted/70 hover:text-foreground dark:hover:bg-muted/60 dark:hover:text-foreground',
+          'text-foreground hover:bg-muted/70 hover:text-foreground',
         link: 'text-primary underline-offset-4 hover:underline font-semibold',
       },
       size: {

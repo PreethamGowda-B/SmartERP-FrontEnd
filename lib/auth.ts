@@ -152,9 +152,11 @@ export const getCurrentUser = (): User | null => {
   // Priority: If on an admin path, check admin user first
   const pathname = window.location.pathname
   const hostname = window.location.hostname
+  const dynamicAdminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE || ""
   const isAdminPath = pathname.includes('/superadmin') ||
                       pathname.includes('/super-admin') ||
                       pathname.includes('[adminRoute]') ||
+                      (Boolean(dynamicAdminRoute) && pathname.includes(`/${dynamicAdminRoute}`)) ||
                       hostname.startsWith('superadmin.')
 
   if (isAdminPath) {

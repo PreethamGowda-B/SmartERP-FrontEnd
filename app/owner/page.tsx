@@ -85,13 +85,13 @@ export default function OwnerDashboard() {
       setMetrics(metricsData)
       setRecentActivity(Array.isArray(activityData) ? activityData : [])
 
-      const reqs = approvalData?.requests || []
-      setPendingApprovals(reqs.length)
+      const workRequests = approvalData?.requests || []
+      setPendingApprovals(workRequests.length)
       setApprovalCounts({
-        employee: reqs.filter((r: any) => r.category === "jobs").length,
-        customer: reqs.filter((r: any) => r.category === "customers").length,
-        invoice: reqs.filter((r: any) => r.category === "finance").length,
-        inventory: reqs.filter((r: any) => r.category === "inventory").length,
+        employee: workRequests.filter((r: any) => r.category === "jobs").length,
+        customer: workRequests.filter((r: any) => r.category === "customers").length,
+        invoice: workRequests.filter((r: any) => r.category === "finance").length,
+        inventory: workRequests.filter((r: any) => r.category === "inventory").length,
       })
     } catch (err: any) {
       logger.error("Error fetching dashboard data:", err)
@@ -139,8 +139,8 @@ export default function OwnerDashboard() {
           </div>
           <SkeletonList count={4} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <SkeletonCard className="h-[400px]" />
-            <SkeletonCard className="h-[400px]" />
+            <SkeletonCard className="h-100" />
+            <SkeletonCard className="h-100" />
           </div>
         </div>
       </OwnerLayout>
@@ -163,19 +163,19 @@ export default function OwnerDashboard() {
 
   return (
     <OwnerLayout>
-      <div className="space-y-8 animate-in fade-in duration-1000">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-border/60">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Dashboard Overview
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
               Welcome back! Here&apos;s what&apos;s happening with your business today.
             </p>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-            <Button variant="outline" size="icon" onClick={fetchDashboardData} title="Refresh" className="shrink-0">
+            <Button variant="outline" size="icon" onClick={fetchDashboardData} title="Refresh" className="shrink-0 h-9 w-9 rounded-lg">
               <RefreshCw className="h-4 w-4" />
             </Button>
             <DateTimeWeather />
@@ -188,7 +188,7 @@ export default function OwnerDashboard() {
         <ProactiveAIInsights />
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
               label: "Active Jobs", value: activeJobs, sub: "Revenue generating",
@@ -208,16 +208,16 @@ export default function OwnerDashboard() {
               icon: DollarSign, color: "text-yellow-600", bg: "bg-yellow-500/10", border: "border-yellow-500/20"
             },
           ].map((stat) => (
-            <Card key={stat.label} className={cn("premium-card hover-lift-subtle border", stat.border)}>
-              <CardContent className="p-6">
+            <Card key={stat.label} className={cn("hover:border-primary/30 transition-all border", stat.border)}>
+              <CardContent className="p-4 sm:p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">{stat.label}</p>
-                    <div className={cn("text-3xl font-black tracking-tighter", stat.color)}>{stat.value}</div>
-                    <p className="text-[10px] font-medium text-muted-foreground mt-1">{stat.sub}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">{stat.label}</p>
+                    <div className={cn("text-2xl sm:text-3xl font-bold tracking-tight", stat.color)}>{stat.value}</div>
+                    <p className="text-[11px] font-medium text-muted-foreground mt-0.5">{stat.sub}</p>
                   </div>
-                  <div className={cn("p-3 rounded-2xl", stat.bg)}>
-                    <stat.icon className={cn("h-6 w-6", stat.color)} />
+                  <div className={cn("p-2.5 rounded-xl", stat.bg)}>
+                    <stat.icon className={cn("h-5 w-5", stat.color)} />
                   </div>
                 </div>
               </CardContent>
@@ -367,27 +367,27 @@ export default function OwnerDashboard() {
         <ApprovalCenter />
 
         {/* Activity Stream + Audit Trail Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ActivityTimeline />
           <AuditLogsTable />
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-tight">System Controls</h2>
-            <span className="text-meta">Common workflows</span>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">System Controls</h2>
+            <span className="text-xs text-muted-foreground">Common workflows</span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {quickActions.map(({ label, icon: Icon, href }) => (
               <button
                 key={label}
                 onClick={() => router.push(href)}
-                className="premium-card p-6 flex flex-col items-center justify-center gap-4 group cursor-pointer border hover:border-primary/40 active:scale-95 transition-all"
+                className="p-3.5 flex items-center gap-3 rounded-xl border border-border/80 bg-card hover:border-primary/40 hover:bg-muted/40 active:scale-[0.99] transition-all text-left group cursor-pointer"
               >
-                <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300">
-                  <Icon className="h-6 w-6" />
+                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                  <Icon className="h-4.5 w-4.5" />
                 </div>
-                <p className="text-sm font-bold tracking-tight group-hover:text-primary transition-colors">{label}</p>
+                <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors leading-tight">{label}</p>
               </button>
             ))}
           </div>

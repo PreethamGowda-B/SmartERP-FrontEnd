@@ -122,7 +122,7 @@ customerApi.interceptors.response.use(
       } catch (refreshError) {
         // Refresh failed — clear queued requests and redirect to login
         onRefreshed();
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/customer') && window.location.pathname !== '/customer/login') {
           window.location.href = '/customer/login';
         }
         return Promise.reject(refreshError);

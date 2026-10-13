@@ -411,11 +411,11 @@ export default function EmployeeDocumentsPage() {
 
         {/* Preview Dialog */}
         <Dialog open={!!previewDoc} onOpenChange={(open) => !open && setPreviewDoc(null)}>
-          <DialogContent className="max-w-4xl h-[85vh] p-0 overflow-hidden flex flex-col bg-slate-950 text-white border-slate-800">
-            <DialogHeader className="p-4 flex flex-row items-center justify-between border-b border-white/10 shrink-0 space-y-0 text-left">
+          <DialogContent className="max-w-4xl h-[85vh] p-0 overflow-hidden flex flex-col bg-white text-slate-900 border-border shadow-lg">
+            <DialogHeader className="p-4 flex flex-row items-center justify-between border-b border-border bg-slate-50/70 shrink-0 space-y-0 text-left">
               <div>
-                <DialogTitle className="font-semibold text-base text-white">{previewDoc?.document_type || "Document Preview"}</DialogTitle>
-                <DialogDescription className="text-xs text-white/60">
+                <DialogTitle className="font-semibold text-base text-slate-900">{previewDoc?.document_type || "Document Preview"}</DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
                   Uploaded on <span suppressHydrationWarning>{previewDoc && new Date(previewDoc.created_at).toLocaleDateString()}</span>
                 </DialogDescription>
               </div>
@@ -425,14 +425,14 @@ export default function EmployeeDocumentsPage() {
                     size="sm"
                     variant="outline"
                     onClick={() => handleOpenDocument(previewDoc.file_url)}
-                    className="text-xs gap-1 bg-white/10 text-white border-white/20 hover:bg-white/20"
+                    className="text-xs gap-1 shadow-xs"
                   >
                     <ExternalLink className="h-4 w-4" /> Open Full Document
                   </Button>
                 )}
               </div>
             </DialogHeader>
-            <div className="flex-1 overflow-auto flex items-center justify-center p-6 bg-black/40">
+            <div className="flex-1 overflow-auto flex items-center justify-center p-6 bg-slate-100/60">
               {previewDoc && (
                 isImage(previewDoc.file_url) ? (
                   <div className="relative w-full h-full min-h-100 flex items-center justify-center">
@@ -440,37 +440,37 @@ export default function EmployeeDocumentsPage() {
                     <img
                       src={getFullUrl(previewDoc.file_url)}
                       alt={previewDoc.document_type}
-                      className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
+                      className="max-h-full max-w-full object-contain rounded-lg shadow-sm border border-slate-200"
                       onError={(e) => {
                         (e.target as HTMLElement).style.display = 'none';
                         const fallback = document.getElementById('preview-error-fallback');
                         if (fallback) fallback.style.display = 'flex';
                       }}
                     />
-                    <div id="preview-error-fallback" style={{ display: 'none' }} className="flex-col items-center justify-center text-center p-8 bg-white/5 rounded-2xl border border-white/10 max-w-md space-y-4">
-                      <FileText className="h-16 w-16 text-indigo-400" />
+                    <div id="preview-error-fallback" style={{ display: 'none' }} className="flex-col items-center justify-center text-center p-8 bg-white rounded-2xl border border-border shadow-xs max-w-md space-y-4">
+                      <FileText className="h-14 w-14 text-indigo-600" />
                       <div>
-                        <h4 className="text-white font-bold text-base">{previewDoc.document_type}</h4>
-                        <p className="text-white/60 text-xs mt-1">Image preview unavailable or file relocated.</p>
+                        <h4 className="text-slate-900 font-semibold text-base">{previewDoc.document_type}</h4>
+                        <p className="text-muted-foreground text-xs mt-1">Image preview unavailable or file relocated.</p>
                       </div>
                       <Button
                         onClick={() => handleOpenDocument(previewDoc.file_url)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-2"
+                        className="font-medium text-xs gap-2 shadow-xs"
                       >
                         <ExternalLink className="h-4 w-4" /> Open / Download File
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-center p-8 bg-white/5 rounded-2xl border border-white/10 max-w-md space-y-4">
-                    <FileText className="h-16 w-16 text-indigo-400 animate-pulse" />
+                  <div className="flex flex-col items-center justify-center text-center p-8 bg-white rounded-2xl border border-border shadow-xs max-w-md space-y-4">
+                    <FileText className="h-14 w-14 text-indigo-600" />
                     <div>
-                      <h4 className="text-white font-bold text-base">{previewDoc.document_type}</h4>
-                      <p className="text-white/60 text-xs mt-1">PDF / External Document Record</p>
+                      <h4 className="text-slate-900 font-semibold text-base">{previewDoc.document_type}</h4>
+                      <p className="text-muted-foreground text-xs mt-1">PDF / External Document Record</p>
                     </div>
                     <Button
                       onClick={() => handleOpenDocument(previewDoc.file_url)}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-2"
+                      className="font-medium text-xs gap-2 shadow-xs"
                     >
                       <ExternalLink className="h-4 w-4" /> View / Download Document
                     </Button>

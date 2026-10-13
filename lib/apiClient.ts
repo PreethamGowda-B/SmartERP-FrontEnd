@@ -48,6 +48,7 @@ function getStorageKeys(targetPath?: string) {
   
   const pathname = window.location.pathname
   const hostname = window.location.hostname
+  const dynamicAdminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE || ""
   const isAdminPath = (targetPath && (
                         targetPath.startsWith('/api/admin') ||
                         targetPath.startsWith('/api/superadmin') ||
@@ -57,6 +58,7 @@ function getStorageKeys(targetPath?: string) {
                       pathname.includes('/superadmin') ||
                       pathname.includes('/super-admin') ||
                       pathname.includes('[adminRoute]') ||
+                      (Boolean(dynamicAdminRoute) && pathname.includes(`/${dynamicAdminRoute}`)) ||
                       hostname.startsWith('superadmin.')
   
   if (isAdminPath) {
@@ -392,7 +394,7 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
 
     // ── 401 Interception (Fallback if server rejected active token) ───────────
     if (res.status === 401) {
-      const storedRefreshToken = getRefreshToken()
+      const storedRefreshToken = getRefreshToken(path)
       if (!storedRefreshToken) {
         handleLogout()
         throw new Error("Session expired. Please log in again.")

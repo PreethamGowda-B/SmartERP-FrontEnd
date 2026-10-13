@@ -1,4 +1,3 @@
-'use me';
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -42,13 +41,7 @@ export default function CustomerInvoiceDetailPage() {
   const [issueDescription, setIssueDescription] = useState('');
   const [submittingDispute, setSubmittingDispute] = useState(false);
 
-  useEffect(() => {
-    if (invoiceId) {
-      fetchInvoiceDetails();
-    }
-  }, [invoiceId]);
-
-  const fetchInvoiceDetails = async () => {
+  const fetchInvoiceDetails = React.useCallback(async () => {
     try {
       setLoading(true);
       const res = await customerApi.get<{ success: boolean; invoice: any; company?: any; lineItems: any[] }>(`/api/customer/jobs/${invoiceId}/invoice`);
@@ -75,7 +68,13 @@ export default function CustomerInvoiceDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [invoiceId, toast]);
+
+  useEffect(() => {
+    if (invoiceId) {
+      fetchInvoiceDetails();
+    }
+  }, [invoiceId, fetchInvoiceDetails]);
 
   const handleDownloadPDF = async () => {
     try {

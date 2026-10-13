@@ -42,56 +42,72 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950 text-white">
-      <form onSubmit={handleSubmit} className="w-96 bg-gray-900 p-8 rounded-xl shadow-lg">
-        <h1 className="text-2xl font-bold mb-4">Create Owner Account</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4 text-slate-900">
+      <form onSubmit={handleSubmit} className="w-full max-w-md bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+        <h1 className="text-2xl font-bold tracking-tight mb-2 text-slate-900">Create Owner Account</h1>
+        <p className="text-sm text-slate-500 mb-6">Enter your details to register as a company owner.</p>
 
-        <input
-          name="fullName"
-          placeholder="Full Name"
-          value={form.fullName}
-          onChange={handleChange}
-          className="w-full mb-3 p-2 rounded bg-gray-800 border border-gray-700"
-          required
-        />
-        <input
-          name="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          className="w-full mb-3 p-2 rounded bg-gray-800 border border-gray-700"
-          required
-        />
-        <input
-          name="password"
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          className="w-full mb-3 p-2 rounded bg-gray-800 border border-gray-700"
-          required
-        />
-        <input
-          name="phone"
-          placeholder="Phone (optional)"
-          value={form.phone}
-          onChange={handleChange}
-          className="w-full mb-3 p-2 rounded bg-gray-800 border border-gray-700"
-        />
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">Full Name</label>
+            <input
+              name="fullName"
+              placeholder="e.g. John Doe"
+              value={form.fullName}
+              onChange={handleChange}
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              required
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">Email</label>
+            <input
+              name="email"
+              type="email"
+              placeholder="e.g. owner@example.com"
+              value={form.email}
+              onChange={handleChange}
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              required
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">Password</label>
+            <input
+              name="password"
+              type="password"
+              placeholder="••••••••"
+              value={form.password}
+              onChange={handleChange}
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              required
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1">Phone (Optional)</label>
+            <input
+              name="phone"
+              placeholder="e.g. +91 9876543210"
+              value={form.phone}
+              onChange={handleChange}
+              className="w-full px-3.5 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            />
+          </div>
+        </div>
 
-        {error && <p className="text-red-400 mb-3">{error}</p>}
+        {error && <p className="text-destructive text-sm mt-4">{error}</p>}
 
         <button
           disabled={loading}
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 p-2 rounded font-semibold"
+          className="w-full mt-6 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 px-4 rounded-lg font-medium text-sm shadow-xs transition-colors disabled:opacity-50"
         >
-          {loading ? "Creating..." : "Create Account"}
+          {loading ? "Creating account..." : "Create Account"}
         </button>
 
-        <p className="mt-4 text-center">
+        <p className="mt-5 text-center text-sm text-slate-600">
           Already have an account?{" "}
-          <a href="/auth/login" className="text-blue-400 hover:underline">
+          <a href="/auth/login" className="text-primary font-medium hover:underline">
             Login
           </a>
         </p>

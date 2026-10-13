@@ -35,7 +35,7 @@ export function EmptyState({
         {description}
       </p>
       {actionLabel && onAction && (
-        <Button onClick={onAction} className="gap-2 shadow-lg shadow-primary/20 btn-premium">
+        <Button onClick={onAction} className="gap-2 shadow-xs hover:shadow-sm">
           <Plus className="h-4 w-4" />
           {actionLabel}
         </Button>

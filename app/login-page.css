@@ -120,14 +120,14 @@
   position: relative; overflow: hidden;
   transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
-.lp-btn-primary:hover  { transform: translateY(-1px); box-shadow: 0 8px 24px oklch(0.45 0.15 240 / 0.35); }
+.lp-btn-primary:hover  { transform: translateY(-1px); box-shadow: 0 2px 4px 0 rgba(0,0,0,0.1); }
 .lp-btn-primary:active { transform: translateY(0px); }
 
 .lp-btn-accent {
   position: relative; overflow: hidden;
   transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
-.lp-btn-accent:hover  { transform: translateY(-1px); box-shadow: 0 8px 24px oklch(0.65 0.18 45 / 0.35); }
+.lp-btn-accent:hover  { transform: translateY(-1px); box-shadow: 0 2px 4px 0 rgba(0,0,0,0.1); }
 .lp-btn-accent:active { transform: translateY(0px); }
 
 .lp-btn-google {
@@ -135,8 +135,8 @@
 }
 .lp-btn-google:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px oklch(0 0 0 / 0.10);
-  border-color: oklch(0.82 0 0) !important;
+  box-shadow: 0 2px 4px 0 rgba(0,0,0,0.06);
+  border-color: #cbd5e1 !important;
 }
 
 /* ── Tab transitions ──────────────────────────────── */

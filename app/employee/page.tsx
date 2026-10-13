@@ -130,9 +130,9 @@ export default function EmployeeDashboard() {
       }
 
       if (materialsRes.status === "fulfilled") {
-        const reqs = materialsRes.value as any[]
-        if (Array.isArray(reqs)) {
-          setPendingRequests(reqs.filter((r) => r.status === "pending").length)
+        const materialRequests = materialsRes.value as any[]
+        if (Array.isArray(materialRequests)) {
+          setPendingRequests(materialRequests.filter((r) => r.status === "pending").length)
         }
       }
     } catch (err: any) {
@@ -159,15 +159,15 @@ export default function EmployeeDashboard() {
 
   return (
     <EmployeeLayout>
-      <div className="space-y-7">
+      <div className="space-y-5">
         {/* Location Consent Banner */}
         {!bannerDismissed && locationPermission !== null && (
           <div
             className={cn(
               "flex items-center justify-between gap-3 px-4 py-2 rounded-xl text-xs font-medium border shadow-xs transition-all",
               locationPermission === "denied" || locationPermission === "unsupported"
-                ? "bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30"
-                : "bg-blue-500/10 text-blue-800 dark:text-blue-300 border-blue-500/30"
+                ? "bg-amber-500/10 text-amber-800 border-amber-500/30"
+                : "bg-blue-500/10 text-blue-800 border-blue-500/30"
             )}
           >
             <div className="flex items-center gap-2">
@@ -189,16 +189,16 @@ export default function EmployeeDashboard() {
         )}
 
         {/* Executive Header & Weather */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-1 border-b border-border/60">
+          <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
                 Good {new Date().getHours() < 12 ? "Morning" : new Date().getHours() < 18 ? "Afternoon" : "Evening"},{" "}
-                <span className="bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">
+                <span className="text-amber-600">
                   {user?.name?.split(" ")[0] || "Specialist"}
                 </span>
               </h1>
-              <Badge variant="outline" className="text-[10px] font-mono tracking-wider font-bold py-0.5 px-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
+              <Badge variant="outline" className="text-[10px] font-mono tracking-wider font-bold py-0.5 px-2 bg-amber-500/10 text-amber-700 border-amber-500/30">
                 {user?.position || "Field Service"}
               </Badge>
             </div>
@@ -369,7 +369,7 @@ export default function EmployeeDashboard() {
             />
 
             {/* Quick Diagnostic Card for Field Service */}
-            <Card className="border-border/80 shadow-xs bg-gradient-to-br from-card to-secondary/30">
+            <Card className="border-border/80 shadow-xs bg-linear-to-br from-card to-secondary/30">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
