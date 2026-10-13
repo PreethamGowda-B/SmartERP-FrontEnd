@@ -277,16 +277,16 @@ export default function MachineDashboardPage() {
               {machineData.remote_sessions?.length === 0 ? (
                 <p className="text-xs text-slate-400">No remote support sessions logged for this machine.</p>
               ) : (
-                machineData.remote_sessions?.map((sess: any) => (
-                  <div key={sess.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                machineData.remote_sessions?.map((session: any) => (
+                  <div key={session.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                     <div>
                       <Badge variant="outline" className="uppercase text-[10px] font-mono text-indigo-600">
-                        {sess.support_channel}
+                        {session.support_channel}
                       </Badge>
-                      <p className="text-xs font-medium text-slate-900 mt-1">{sess.resolution_summary}</p>
+                      <p className="text-xs font-medium text-slate-900 mt-1">{session.resolution_summary}</p>
                     </div>
-                    <Badge className={sess.status === "resolved" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}>
-                      {sess.status === "resolved" ? "Resolved" : "Dispatched"}
+                    <Badge className={session.status === "resolved" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}>
+                      {session.status === "resolved" ? "Resolved" : "Dispatched"}
                     </Badge>
                   </div>
                 ))
