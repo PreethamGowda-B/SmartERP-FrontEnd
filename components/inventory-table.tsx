@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Search, Edit, Archive, Trash2, Package } from "lucide-react"
-import { getAccessToken } from "@/lib/apiClient"
+import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { cn } from "@/lib/utils"
 import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
@@ -70,28 +70,17 @@ export default function InventoryTable({
   const fetchItems = useCallback(async () => {
     try {
       setLoading(true)
-
-      const token = getAccessToken()
-      const response = await fetch(api + "/api/inventory", {
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
-      })
-
-      if (!response.ok) throw new Error("Failed to fetch")
-      const data = await response.json()
+      const data = await apiClient<any[]>("/api/inventory")
       const itemsData = Array.isArray(data) ? data : []
       setItems(itemsData)
       onItemsChangeRef.current?.(itemsData)
     } catch (err) {
-      logger.error(err)
+      logger.error("Failed to fetch inventory:", err)
       setItems([])
     } finally {
       setLoading(false)
     }
-  }, [api]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     fetchItems()
@@ -107,25 +96,15 @@ export default function InventoryTable({
     }
 
     try {
-      const response = await fetch(`${api}/api/inventory/${item.id}/archive`, {
+      await apiClient(`/api/inventory/${item.id}/archive`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
-        },
-        credentials: "include",
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to archive")
-      }
 
       alert("Item archived successfully")
       fetchItems() // Refresh the list
-    } catch (err) {
-      logger.error(err)
-      alert(err instanceof Error ? err.message : "Error archiving item")
+    } catch (err: any) {
+      logger.error("Error archiving item:", err)
+      alert(err.message || "Error archiving item")
     }
   }
 
@@ -135,26 +114,15 @@ export default function InventoryTable({
     }
 
     try {
-      const token = getAccessToken()
-      const response = await fetch(`${api}/api/inventory/${item.id}`, {
+      await apiClient(`/api/inventory/${item.id}`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to delete")
-      }
 
       alert("Item deleted successfully")
       fetchItems() // Refresh the list
-    } catch (err) {
-      logger.error(err)
-      alert(err instanceof Error ? err.message : "Error deleting item")
+    } catch (err: any) {
+      logger.error("Error deleting item:", err)
+      alert(err.message || "Error deleting item")
     }
   }
 

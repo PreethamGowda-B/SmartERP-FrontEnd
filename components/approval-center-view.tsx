@@ -125,18 +125,18 @@ export function ApprovalCenterView({ initialCategory = "all" }: { initialCategor
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="h-3.5 w-3.5 absolute left-3 top-3 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1 sm:w-64 min-w-0">
+            <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Search request, job, or requester..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-9 text-xs rounded-xl"
+              className="pl-9 h-9 text-xs rounded-xl"
             />
           </div>
 
-          <div className="flex rounded-xl border border-border p-1 bg-muted/40">
+          <div className="flex rounded-xl border border-border p-1 bg-muted/40 shrink-0 justify-between sm:justify-start">
             {(["pending", "approved", "rejected"] as const).map((st) => (
               <Button
                 key={st}

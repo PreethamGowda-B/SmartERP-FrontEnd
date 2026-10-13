@@ -47,7 +47,7 @@ export function TableToolbar({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-2 mb-3">
       {/* Left side: Search & Filters */}
-      <div className="flex flex-1 items-center gap-2 max-w-md">
+      <div className="flex flex-1 items-center gap-2 w-full max-w-full sm:max-w-md min-w-0">
         {onSearchChange && (
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />

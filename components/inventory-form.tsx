@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { getAccessToken } from "@/lib/apiClient"
+import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 
 type InventoryItem = {
@@ -109,41 +109,33 @@ export default function InventoryForm({
     setLoading(true)
     try {
       const formData = new FormData()
-      formData.append("name", name)
-      formData.append("description", description)
-      formData.append("quantity", String(quantity))
+      formData.append("name", name.trim())
+      formData.append("description", description.trim())
+      formData.append("quantity", String(quantity || 0))
       formData.append("category", category)
       formData.append("unit", unit)
-      formData.append("min_quantity", String(minQuantity))
-      formData.append("supplier_name", supplierName)
-      formData.append("supplier_contact", supplierContact)
-      formData.append("supplier_email", supplierEmail)
+      formData.append("min_quantity", String(minQuantity || 0))
+      formData.append("supplier_name", supplierName.trim())
+      formData.append("supplier_contact", supplierContact.trim())
+      formData.append("supplier_email", supplierEmail.trim())
       if (imageFile) {
         formData.append("image", imageFile)
       }
 
-      const url = item ? `${api}/api/inventory/${item.id}` : `${api}/api/inventory`
+      const endpoint = item ? `/api/inventory/${item.id}` : "/api/inventory"
       const method = item ? "PUT" : "POST"
 
-      const token = getAccessToken()
-      const headers: Record<string, string> = {}
-      if (token) headers["Authorization"] = `Bearer ${token}`
-
-      const res = await fetch(url, {
+      await apiClient(endpoint, {
         method,
-        headers,
-        credentials: "include", // Send HttpOnly cookies
         body: formData,
       })
-
-      if (!res.ok) throw new Error("Failed to submit")
 
       alert(item ? "Item updated successfully" : "Item added successfully")
       resetForm()
       onItemAdded?.()
-    } catch (err) {
-      logger.error(err)
-      alert("Error submitting form")
+    } catch (err: any) {
+      logger.error("Inventory submission error:", err)
+      alert(err.message || "Error submitting form")
     } finally {
       setLoading(false)
     }

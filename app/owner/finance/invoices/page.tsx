@@ -186,19 +186,19 @@ export default function OwnerInvoicesListPage() {
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-          <div className="relative flex-1 max-w-md w-full">
-            <Search className="h-3.5 w-3.5 absolute left-3 top-3 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between w-full">
+          <div className="relative flex-1 max-w-md w-full min-w-0">
+            <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Search invoice #, customer, or job..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-9 text-xs rounded-xl"
+              className="pl-9 h-9 text-xs rounded-xl"
             />
           </div>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48 h-9 text-xs rounded-xl">
+            <SelectTrigger className="w-full sm:w-48 h-9 text-xs rounded-xl">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>

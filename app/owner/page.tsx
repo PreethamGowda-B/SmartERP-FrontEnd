@@ -270,45 +270,51 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {/* Active Projects + Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Operational Focus: Active Projects & Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Active Projects */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                Active Projects
-              </CardTitle>
-              <CardDescription>Jobs currently in progress or accepted</CardDescription>
+          <Card className="border border-border/70 shadow-xs flex flex-col">
+            <CardHeader className="pb-3 border-b border-border/60 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  Active Projects
+                </CardTitle>
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-primary" onClick={() => router.push("/owner/jobs")}>
+                  View All Jobs <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </div>
+              <CardDescription className="text-xs">Jobs currently in progress or accepted</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 flex-1 space-y-3">
               {Array.isArray(metrics?.activeProjects) && metrics.activeProjects.length > 0 ? (
-                metrics.activeProjects.map((job) => (
+                metrics.activeProjects.slice(0, 5).map((job) => (
                   <div
                     key={job.id}
-                    className="space-y-2 p-3 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-accent/20 transition-all duration-300 cursor-pointer"
+                    className="p-3 rounded-xl border border-border/60 hover:border-primary/40 hover:bg-muted/30 transition-all cursor-pointer space-y-2"
                     onClick={() => router.push("/owner/jobs")}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium truncate mr-2">{job.title || "Untitled Project"}</span>
-                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest", statusColor(job.employee_status !== 'pending' ? job.employee_status : job.status))}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-xs text-foreground truncate">{job.title || "Untitled Project"}</span>
+                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold uppercase shrink-0", statusColor(job.employee_status !== 'pending' ? job.employee_status : job.status))}>
                         {job.employee_status !== 'pending' ? job.employee_status : job.status}
                       </span>
                     </div>
-                    <Progress value={Number(job.progress || 0)} className="h-2" />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{Number(job.progress || 0)}% complete</span>
-                      <span className={cn("capitalize px-1.5 py-0.5 rounded text-[10px] font-bold", statusColor(job.priority))}>
-                        {job.priority || "medium"} priority
+                    <Progress value={Number(job.progress || 0)} className="h-1.5" />
+                    <div className="flex justify-between items-center text-[11px] text-muted-foreground">
+                      <span>{Number(job.progress || 0)}% completed</span>
+                      <span className={cn("capitalize px-1.5 py-0.2 rounded font-semibold text-[10px]", statusColor(job.priority))}>
+                        {job.priority || "medium"}
                       </span>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8">
-                  <Briefcase className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
-                  <p className="text-sm text-muted-foreground">No active projects</p>
-                  <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push("/owner/jobs")}>
+                <div className="text-center py-10 flex flex-col items-center justify-center h-full">
+                  <Briefcase className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                  <p className="text-xs font-semibold text-foreground">No active projects</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">All jobs are currently completed or closed.</p>
+                  <Button variant="outline" size="sm" className="mt-3 text-xs h-8 rounded-xl" onClick={() => router.push("/owner/jobs")}>
                     Create a Job
                   </Button>
                 </div>
@@ -316,78 +322,71 @@ export default function OwnerDashboard() {
             </CardContent>
           </Card>
 
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Recent Activity
-              </CardTitle>
-              <CardDescription>Latest updates and notifications</CardDescription>
+          {/* Recent Operational Activity */}
+          <Card className="border border-border/70 shadow-xs flex flex-col">
+            <CardHeader className="pb-3 border-b border-border/60 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Recent Operational Activity
+                </CardTitle>
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-primary" onClick={() => router.push("/owner/messages")}>
+                  View Alerts <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </div>
+              <CardDescription className="text-xs">Latest business updates and audit notifications</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="p-4 flex-1 space-y-2.5">
               {Array.isArray(recentActivity) && recentActivity.length > 0 ? (
-                recentActivity.slice(0, 8).map((activity) => (
+                recentActivity.slice(0, 6).map((activity) => (
                   <div
                     key={activity.id}
-                    className="flex items-start gap-3 p-2 rounded-lg hover:bg-accent/50 transition-all duration-200"
+                    className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-muted/40 transition-colors"
                   >
                     <div className="mt-0.5 shrink-0">
                       {activity.priority === "high" || activity.type === "alert" ? (
-                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                        <AlertTriangle className="h-4 w-4 text-rose-500" />
                       ) : (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <CheckCircle className="h-4 w-4 text-emerald-500" />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0 space-y-0.5">
-                      <p className="text-sm font-black truncate tracking-tight">{activity.title}</p>
-                      <p className="text-xs text-muted-foreground truncate leading-relaxed">{activity.message}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground/40">
-                        {new Date(activity.created_at).toLocaleString("en-IN", {
-                          dateStyle: "short", timeStyle: "short"
-                        })}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-foreground truncate">{activity.title}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{activity.message}</p>
                     </div>
+                    <span className="text-[10px] text-muted-foreground/60 shrink-0 font-medium whitespace-nowrap">
+                      {new Date(activity.created_at).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                    </span>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8">
-                  <TrendingUp className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
-                  <p className="text-sm text-muted-foreground">No recent activity</p>
+                <div className="text-center py-10 flex flex-col items-center justify-center h-full">
+                  <TrendingUp className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                  <p className="text-xs font-semibold text-foreground">No recent activity</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Your operational stream is up to date.</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Executive Analytics Dashboard */}
-        <ExecutiveAnalyticsDashboard />
-
-        {/* Centralized Approval Center */}
-        <ApprovalCenter />
-
-        {/* Activity Stream + Audit Trail Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ActivityTimeline />
-          <AuditLogsTable />
-        </div>
-
-        <div className="space-y-3 pt-2">
+        {/* System Controls / Quick Workflows */}
+        <div className="space-y-3 pt-1">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold tracking-tight text-foreground">System Controls</h2>
-            <span className="text-xs text-muted-foreground">Common workflows</span>
+            <h2 className="text-sm font-bold tracking-tight uppercase text-muted-foreground">Quick System Workflows</h2>
+            <span className="text-xs text-muted-foreground">Direct module access</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {quickActions.map(({ label, icon: Icon, href }) => (
               <button
                 key={label}
                 onClick={() => router.push(href)}
-                className="p-3.5 flex items-center gap-3 rounded-xl border border-border/80 bg-card hover:border-primary/40 hover:bg-muted/40 active:scale-[0.99] transition-all text-left group cursor-pointer"
+                className="p-3 flex items-center gap-3 rounded-xl border border-border/80 bg-card hover:border-primary/40 hover:bg-muted/30 active:scale-[0.99] transition-all text-left group cursor-pointer shadow-xs"
               >
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
-                  <Icon className="h-4.5 w-4.5" />
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                  <Icon className="h-4 w-4" />
                 </div>
-                <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors leading-tight">{label}</p>
+                <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors leading-tight truncate">{label}</p>
               </button>
             ))}
           </div>

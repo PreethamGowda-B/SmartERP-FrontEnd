@@ -503,20 +503,20 @@ export default function OwnerPayrollPage() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-          <div className="flex-1 relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row gap-3 items-center w-full">
+          <div className="flex-1 relative w-full min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Search by employee name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-10"
+              className="pl-9 h-9 text-xs rounded-xl"
             />
           </div>
 
           <div className="flex gap-2 w-full sm:w-auto">
             <Select value={monthFilter} onValueChange={setMonthFilter}>
-              <SelectTrigger className="w-full sm:w-45 h-10">
+              <SelectTrigger className="w-full sm:w-44 h-9 text-xs rounded-xl">
                 <SelectValue placeholder="Filter by month" />
               </SelectTrigger>
               <SelectContent>
@@ -530,7 +530,7 @@ export default function OwnerPayrollPage() {
             </Select>
 
             <Select value={yearFilter} onValueChange={setYearFilter}>
-              <SelectTrigger className="w-full sm:w-37.5 h-10">
+              <SelectTrigger className="w-full sm:w-36 h-9 text-xs rounded-xl">
                 <SelectValue placeholder="Filter by year" />
               </SelectTrigger>
               <SelectContent>
