@@ -96,7 +96,7 @@ export default function CustomerMachinesPage() {
 
       {/* Analytics Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-200 dark:border-amber-900/50">
+        <Card className="p-4 bg-linear-to-br from-amber-500/10 to-amber-600/5 border-amber-200 dark:border-amber-900/50">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">Total Registered</p>
@@ -106,7 +106,7 @@ export default function CustomerMachinesPage() {
           </div>
         </Card>
 
-        <Card className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-200 dark:border-emerald-900/50">
+        <Card className="p-4 bg-linear-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-200 dark:border-emerald-900/50">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">Operational Health</p>
@@ -121,7 +121,7 @@ export default function CustomerMachinesPage() {
           </div>
         </Card>
 
-        <Card className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200 dark:border-blue-900/50">
+        <Card className="p-4 bg-linear-to-br from-blue-500/10 to-blue-600/5 border-blue-200 dark:border-blue-900/50">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-blue-800 dark:text-blue-400">Active Controllers</p>
@@ -133,7 +133,7 @@ export default function CustomerMachinesPage() {
           </div>
         </Card>
 
-        <Card className="p-4 bg-gradient-to-br from-rose-500/10 to-rose-600/5 border-rose-200 dark:border-rose-900/50">
+        <Card className="p-4 bg-linear-to-br from-rose-500/10 to-rose-600/5 border-rose-200 dark:border-rose-900/50">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-rose-800 dark:text-rose-400">Under Breakdown</p>

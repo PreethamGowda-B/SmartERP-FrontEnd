@@ -83,9 +83,9 @@ export default function HRSupportPage() {
       <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
         
         {/* Modern Header Section */}
-        <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-slate-50 via-white to-indigo-50/50 p-8 md:p-12 border border-border shadow-xs text-slate-900">
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-gradient-to-br from-indigo-200/20 to-purple-200/0 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-gradient-to-tr from-blue-200/20 to-emerald-200/0 blur-3xl pointer-events-none" />
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-50 via-white to-indigo-50/50 p-8 md:p-12 border border-border shadow-xs text-slate-900">
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-linear-to-br from-indigo-200/20 to-purple-200/0 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-linear-to-tr from-blue-200/20 to-emerald-200/0 blur-3xl pointer-events-none" />
           
           <div className="relative z-10 max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-semibold mb-4 text-indigo-700">
@@ -104,7 +104,7 @@ export default function HRSupportPage() {
         </div>
 
         {!hasAccess && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 p-6 rounded-[1.5rem] flex items-center gap-4">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 p-6 rounded-3xl flex items-center gap-4">
              <div className="p-3 bg-yellow-500/20 rounded-xl">
                 <Zap className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
              </div>
@@ -120,9 +120,9 @@ export default function HRSupportPage() {
           {supportCards.map((card) => (
             <div 
               key={card.id}
-              className="group relative flex flex-col bg-card hover:bg-accent/40 border border-border/80 rounded-[2rem] p-10 shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden"
+              className="group relative flex flex-col bg-card hover:bg-accent/40 border border-border/80 rounded-4xl p-10 shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden"
             >
-              <div className={`absolute inset-0 bg-gradient-to-b ${card.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
+              <div className={`absolute inset-0 bg-linear-to-b ${card.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
               
               <div className="relative z-10 flex-1 flex flex-col">
                 <div className="mb-8 inline-flex p-5 rounded-2xl bg-muted border border-border group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-sm">

@@ -104,7 +104,7 @@ export default function SupportPage() {
       <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700 pb-12">
         
         {/* Header Section */}
-        <div className="relative overflow-hidden rounded-[1.5rem] bg-linear-to-br from-slate-50 via-white to-indigo-50/50 p-8 md:p-12 border border-border shadow-xs text-slate-900">
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-50 via-white to-indigo-50/50 p-8 md:p-12 border border-border shadow-xs text-slate-900">
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-linear-to-br from-indigo-200/20 to-purple-200/0 blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 rounded-full bg-linear-to-tr from-blue-200/20 to-emerald-200/0 blur-3xl pointer-events-none" />
           
@@ -129,9 +129,9 @@ export default function SupportPage() {
           {supportCards.map((card) => (
             <div 
               key={card.id}
-              className="group relative flex flex-col bg-card hover:bg-accent/50 border border-border rounded-[1.5rem] p-8 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1"
+              className="group relative flex flex-col bg-card hover:bg-accent/50 border border-border rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1"
             >
-              <div className={`absolute inset-0 bg-gradient-to-b ${card.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
+              <div className={`absolute inset-0 bg-linear-to-b ${card.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
               
               <div className="relative z-10 flex-1 flex flex-col">
                 <div className="mb-6 inline-flex p-4 rounded-xl bg-accent border border-border/50 group-hover:scale-110 transition-transform duration-300 shadow-sm">
