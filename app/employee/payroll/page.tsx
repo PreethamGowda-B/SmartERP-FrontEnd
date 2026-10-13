@@ -345,7 +345,7 @@ export default function EmployeePayrollPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/50">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-primary via-indigo-600 to-accent bg-clip-text text-transparent">
+              <h1 className="text-3xl font-black tracking-tight bg-linear-to-r from-primary via-indigo-600 to-accent bg-clip-text text-transparent">
                 Earnings & Payroll Console
               </h1>
               <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold px-2.5 py-0.5">
@@ -373,7 +373,7 @@ export default function EmployeePayrollPage() {
 
         {/* Executive YTD Earnings Summary Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <Card className="premium-card border-blue-500/20 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent">
+          <Card className="premium-card border-blue-500/20 bg-linear-to-br from-blue-500/5 via-transparent to-transparent">
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -390,7 +390,7 @@ export default function EmployeePayrollPage() {
             </CardContent>
           </Card>
 
-          <Card className="premium-card border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent">
+          <Card className="premium-card border-emerald-500/20 bg-linear-to-br from-emerald-500/5 via-transparent to-transparent">
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -409,7 +409,7 @@ export default function EmployeePayrollPage() {
             </CardContent>
           </Card>
 
-          <Card className="premium-card border-purple-500/20 bg-gradient-to-br from-purple-500/5 via-transparent to-transparent">
+          <Card className="premium-card border-purple-500/20 bg-linear-to-br from-purple-500/5 via-transparent to-transparent">
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -426,7 +426,7 @@ export default function EmployeePayrollPage() {
             </CardContent>
           </Card>
 
-          <Card className="premium-card border-indigo-500/20 bg-gradient-to-br from-indigo-500/5 via-transparent to-transparent">
+          <Card className="premium-card border-indigo-500/20 bg-linear-to-br from-indigo-500/5 via-transparent to-transparent">
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -449,7 +449,7 @@ export default function EmployeePayrollPage() {
           <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <Select value={monthFilter} onValueChange={setMonthFilter}>
-                <SelectTrigger className="w-[180px] h-9 rounded-xl text-xs font-semibold">
+                <SelectTrigger className="w-45 h-9 rounded-xl text-xs font-semibold">
                   <SelectValue placeholder="Filter by month" />
                 </SelectTrigger>
                 <SelectContent>
@@ -463,7 +463,7 @@ export default function EmployeePayrollPage() {
               </Select>
 
               <Select value={yearFilter} onValueChange={setYearFilter}>
-                <SelectTrigger className="w-[140px] h-9 rounded-xl text-xs font-semibold">
+                <SelectTrigger className="w-35 h-9 rounded-xl text-xs font-semibold">
                   <SelectValue placeholder="Filter by year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -509,7 +509,7 @@ export default function EmployeePayrollPage() {
               return (
                 <Card key={payroll.id} className="premium-card hover:border-primary/40 hover:shadow-xl transition-all duration-300 overflow-hidden border">
                   {/* Top Highlight Strip */}
-                  <div className="h-1.5 w-full bg-gradient-to-r from-primary via-indigo-500 to-emerald-500" />
+                  <div className="h-1.5 w-full bg-linear-to-r from-primary via-indigo-500 to-emerald-500" />
                   
                   <CardHeader className="pb-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -581,7 +581,7 @@ export default function EmployeePayrollPage() {
                     </div>
 
                     {/* Net Take-Home Salary Banner */}
-                    <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div className="p-4 rounded-2xl bg-linear-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                       <div>
                         <p className="text-xs font-black uppercase tracking-widest text-emerald-800 dark:text-emerald-300">
                           NET TAKE-HOME DISBURSEMENT
