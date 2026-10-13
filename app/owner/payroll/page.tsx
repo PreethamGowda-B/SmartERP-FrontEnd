@@ -466,10 +466,10 @@ export default function OwnerPayrollPage() {
                       </div>
                     </div>
 
-                    <div className="p-6 bg-slate-50 dark:bg-zinc-900 rounded-3xl border border-dashed border-border/60">
+                    <div className="p-5 bg-slate-50 rounded-2xl border border-dashed border-border">
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Net Disbursement</span>
-                        <span className="text-3xl font-black text-primary tracking-tighter">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Net Disbursement</span>
+                        <span className="text-2xl font-bold text-primary tracking-tight">
                           ₹{Number(calculateTotal() || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </span>
                       </div>

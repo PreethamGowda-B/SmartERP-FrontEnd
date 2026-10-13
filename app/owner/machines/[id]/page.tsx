@@ -73,28 +73,30 @@ export default function MachineDashboardPage() {
       </Button>
 
       {/* Machine Header */}
-      <Card className="p-6 bg-slate-900 text-white rounded-3xl border-slate-800 shadow-xl">
+      <Card className="p-6 bg-linear-to-br from-slate-50 via-white to-amber-50/30 rounded-2xl border border-border shadow-xs text-slate-900">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <Cpu className="h-9 w-9 text-amber-400" />
+              <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200/60">
+                <Cpu className="h-7 w-7 text-amber-600" />
+              </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-black">{machineData.machine_name}</h1>
-                <p className="text-xs text-slate-400 font-mono">S/N: {machineData.serial_number} • Customer: {machineData.customer_name || "N/A"}</p>
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">{machineData.machine_name}</h1>
+                <p className="text-xs text-muted-foreground font-mono">S/N: {machineData.serial_number} • Customer: {machineData.customer_name || "N/A"}</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-2">
-              <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40">
+              <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 font-medium">
                 Controller: {machineData.controller_type}
               </Badge>
-              <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/40">
+              <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 font-medium">
                 Make: {machineData.make} {machineData.model}
               </Badge>
               <Badge
                 className={
                   machineData.status === "breakdown"
-                    ? "bg-rose-500 text-white font-bold"
-                    : "bg-emerald-500 text-white font-bold"
+                    ? "bg-rose-100 text-rose-800 border-rose-300 font-semibold"
+                    : "bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold"
                 }
               >
                 {machineData.status === "breakdown" ? "🚨 Breakdown" : "🟢 Operational"}
@@ -102,17 +104,17 @@ export default function MachineDashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
+          <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
             <div className="text-center px-2">
-              <p className="text-[10px] text-slate-400 font-semibold uppercase">Dynamic Health</p>
-              <h2 className="text-3xl font-black text-emerald-400">
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Dynamic Health</p>
+              <h2 className="text-2xl font-extrabold text-emerald-600">
                 {Math.max(25, 100 - (machineData.recent_jobs?.length || 0) * 8 - (machineData.alarm_history?.length || 0) * 5)}%
               </h2>
             </div>
-            <div className="h-8 w-px bg-slate-700" />
+            <div className="h-8 w-px bg-slate-200" />
             <div className="text-center px-2">
-              <p className="text-[10px] text-slate-400 font-semibold uppercase">Spindle Hours</p>
-              <h2 className="text-2xl font-black text-white">{machineData.spindle_hours || 0} hrs</h2>
+              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Spindle Hours</p>
+              <h2 className="text-2xl font-bold text-slate-900">{machineData.spindle_hours || 0} hrs</h2>
             </div>
           </div>
         </div>
@@ -125,17 +127,17 @@ export default function MachineDashboardPage() {
       <AiActionableRecommendations machine={machineData} />
 
       {/* AI Machine Timeline Summary Box */}
-      <Card className="p-5 bg-gradient-to-r from-amber-500/10 via-amber-600/5 to-indigo-500/10 border border-amber-500/30 rounded-3xl">
+      <Card className="p-5 bg-linear-to-r from-amber-500/10 via-amber-600/5 to-indigo-500/10 border border-amber-500/30 rounded-2xl">
         <div className="flex items-start gap-4">
-          <div className="p-3 rounded-2xl bg-amber-500 text-white font-bold shadow-md">🤖</div>
+          <div className="p-2.5 rounded-xl bg-amber-500 text-white font-bold shadow-xs">🤖</div>
           <div className="space-y-1">
-            <h3 className="font-bold text-sm text-amber-900 dark:text-amber-300 uppercase tracking-wide">
+            <h3 className="font-bold text-sm text-amber-900 uppercase tracking-wide">
               SmartERP Intelligence AI — Machine Health Analysis
             </h3>
-            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-700 leading-relaxed">
               Over the last 12 months, <strong>{machineData.machine_name}</strong> recorded{" "}
               <strong>{machineData.recent_jobs?.length || 0} breakdown event(s)</strong>. Most frequent alarm code:{" "}
-              <span className="font-mono font-bold text-amber-700 dark:text-amber-400">
+              <span className="font-mono font-bold text-amber-700">
                 {machineData.alarm_history?.[0]?.alarm_code || "SV0401"}
               </span>{" "}
               ({machineData.alarm_history?.[0]?.frequency || 1} occurrences). Preventive maintenance compliance is{" "}
@@ -147,7 +149,7 @@ export default function MachineDashboardPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="timeline" className="w-full">
-        <TabsList className="grid grid-cols-5 md:w-auto bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
+        <TabsList className="grid grid-cols-5 md:w-auto bg-slate-100 p-1 rounded-xl">
           <TabsTrigger value="timeline" className="rounded-xl font-bold text-xs">
             📜 Lifecycle Timeline
           </TabsTrigger>
@@ -181,15 +183,15 @@ export default function MachineDashboardPage() {
               ) : (
                 timeline.map((evt, idx) => (
                   <div key={evt.id || idx} className="relative pl-6">
-                    <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full bg-amber-500 border-2 border-white dark:border-slate-900" />
+                    <div className="absolute -left-2.25 top-1 h-4 w-4 rounded-full bg-amber-500 border-2 border-white shadow-xs" />
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">{evt.title}</h4>
+                        <h4 className="text-sm font-semibold text-slate-900">{evt.title}</h4>
                         <span className="text-[10px] text-slate-400 font-mono">
                           {new Date(evt.created_at).toLocaleDateString()}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">{evt.description}</p>
+                      <p className="text-xs text-slate-600 mt-1">{evt.description}</p>
                     </div>
                   </div>
                 ))
@@ -215,10 +217,10 @@ export default function MachineDashboardPage() {
                 <p className="text-xs text-slate-400">No sub-components registered.</p>
               ) : (
                 machineData.subcomponents?.map((sub: any) => (
-                  <Card key={sub.id} className="p-4 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                  <Card key={sub.id} className="p-4 bg-slate-50 border border-slate-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-white">{sub.name}</h4>
+                        <h4 className="font-semibold text-sm text-slate-900">{sub.name}</h4>
                         <p className="text-xs text-slate-500 font-mono">Type: {sub.component_type}</p>
                       </div>
                       <Badge variant="outline">{sub.make_model || "Generic"}</Badge>
@@ -245,7 +247,7 @@ export default function MachineDashboardPage() {
                 <p className="text-xs text-slate-400">No alarm code history recorded for this machine.</p>
               ) : (
                 machineData.alarm_history?.map((alm: any, i: number) => (
-                  <Card key={i} className="p-4 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <Card key={i} className="p-4 bg-slate-50 border border-slate-200 flex items-center justify-between">
                     <div>
                       <Badge className="bg-rose-500 text-white font-mono font-bold">{alm.alarm_code}</Badge>
                       <p className="text-xs text-slate-500 mt-1">Controller: {alm.controller_type}</p>
@@ -276,12 +278,12 @@ export default function MachineDashboardPage() {
                 <p className="text-xs text-slate-400">No remote support sessions logged for this machine.</p>
               ) : (
                 machineData.remote_sessions?.map((sess: any) => (
-                  <div key={sess.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border flex items-center justify-between">
+                  <div key={sess.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                     <div>
                       <Badge variant="outline" className="uppercase text-[10px] font-mono text-indigo-600">
                         {sess.support_channel}
                       </Badge>
-                      <p className="text-xs font-semibold text-slate-900 dark:text-white mt-1">{sess.resolution_summary}</p>
+                      <p className="text-xs font-medium text-slate-900 mt-1">{sess.resolution_summary}</p>
                     </div>
                     <Badge className={sess.status === "resolved" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}>
                       {sess.status === "resolved" ? "Resolved" : "Dispatched"}
@@ -308,11 +310,11 @@ export default function MachineDashboardPage() {
                 <p className="text-xs text-slate-400">No machine documents uploaded yet.</p>
               ) : (
                 machineData.documents?.map((doc: any) => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <div key={doc.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
                     <div className="flex items-center gap-3">
                       <FileText className="h-5 w-5 text-emerald-500" />
                       <div>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">{doc.title}</p>
+                        <p className="text-sm font-semibold text-slate-900">{doc.title}</p>
                         <p className="text-[10px] text-slate-400 uppercase font-mono">{doc.document_type}</p>
                       </div>
                     </div>

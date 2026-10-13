@@ -69,17 +69,17 @@ export default function SuspendedPage() {
               </Link>
               <Button 
                 onClick={() => window.location.href = "mailto:prozyncinnovations@gmail.com"}
-                className="flex-1 bg-red-600 hover:bg-red-700 h-12 rounded-xl shadow-lg shadow-red-200"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white h-12 rounded-xl shadow-xs"
               >
                 Contact Support Now
               </Button>
             </div>
           </div>
 
-          <div className="bg-slate-900 p-4 text-center">
+          <div className="bg-slate-100 border-t border-slate-200 p-4 text-center">
             <div className="flex items-center justify-center gap-2">
-              <Building2 className="h-4 w-4 text-slate-400" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">
+              <Building2 className="h-4 w-4 text-slate-500" />
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">
                 SmartERP Security Protocol
               </span>
             </div>

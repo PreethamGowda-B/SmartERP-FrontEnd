@@ -42,25 +42,25 @@ export default function RouteOptimizationPage() {
             Calculate shortest travel paths, fuel savings, and arrival times for multi-stop engineer dispatches
           </p>
         </div>
-        <Button onClick={handleOptimize} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2">
+        <Button onClick={handleOptimize} disabled={loading} className="gap-2 shadow-xs">
           <Zap className="h-4 w-4" /> {loading ? "Optimizing..." : "Calculate Optimized Route"}
         </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 bg-slate-900 text-white rounded-3xl">
-          <p className="text-xs font-semibold text-slate-400 uppercase">Total Stops</p>
-          <h2 className="text-3xl font-black text-indigo-400 mt-1">{route?.total_stops || 3} Plant Locations</h2>
+        <Card className="p-6 bg-white border border-border shadow-xs rounded-2xl">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Stops</p>
+          <h2 className="text-2xl font-bold text-slate-900 mt-1">{route?.total_stops || 3} Plant Locations</h2>
         </Card>
 
-        <Card className="p-6 bg-slate-900 text-white rounded-3xl">
-          <p className="text-xs font-semibold text-slate-400 uppercase">Estimated Travel Distance</p>
-          <h2 className="text-3xl font-black text-emerald-400 mt-1">{route?.estimated_distance_km || 25.2} km</h2>
+        <Card className="p-6 bg-white border border-border shadow-xs rounded-2xl">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Estimated Travel Distance</p>
+          <h2 className="text-2xl font-bold text-slate-900 mt-1">{route?.estimated_distance_km || 25.2} km</h2>
         </Card>
 
-        <Card className="p-6 bg-slate-900 text-white rounded-3xl">
-          <p className="text-xs font-semibold text-slate-400 uppercase">Estimated Travel Duration</p>
-          <h2 className="text-3xl font-black text-amber-400 mt-1">{route?.estimated_travel_time_minutes || 66} mins</h2>
+        <Card className="p-6 bg-white border border-border shadow-xs rounded-2xl">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Estimated Travel Duration</p>
+          <h2 className="text-2xl font-bold text-slate-900 mt-1">{route?.estimated_travel_time_minutes || 66} mins</h2>
         </Card>
       </div>
     </div>

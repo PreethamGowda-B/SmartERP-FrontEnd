@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { AdminLayout } from "@/components/admin-layout"
 import { motion, AnimatePresence } from "framer-motion"
@@ -46,11 +46,7 @@ export default function CompanyDetailPage() {
   const [expiresAt, setExpiresAt] = useState("")
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    fetchCompanyDetail()
-  }, [companyId])
-
-  const fetchCompanyDetail = async () => {
+  const fetchCompanyDetail = useCallback(async () => {
     setLoading(true)
     try {
       const res = await apiClient(`/api/admin/companies/${companyId}`)
@@ -59,12 +55,16 @@ export default function CompanyDetailPage() {
       if (res.company.subscription_expires_at) {
         setExpiresAt(format(new Date(res.company.subscription_expires_at), "yyyy-MM-dd"))
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to load company details")
     } finally {
       setLoading(false)
     }
-  }
+  }, [companyId])
+
+  useEffect(() => {
+    fetchCompanyDetail()
+  }, [fetchCompanyDetail])
 
   const handlePlanSave = async () => {
     setSaving(true)
@@ -167,8 +167,8 @@ export default function CompanyDetailPage() {
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-6">
             <div className="flex items-start gap-5">
-              <div className="w-20 h-20 rounded-2xl bg-slate-900 flex items-center justify-center shadow-xl shrink-0">
-                <Building2 className="h-10 w-10 text-white" />
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shadow-xs shrink-0">
+                <Building2 className="h-8 w-8 text-indigo-600" />
               </div>
               <div>
                 <div className="flex items-center gap-3 flex-wrap">
@@ -322,7 +322,7 @@ export default function CompanyDetailPage() {
                   <Button
                     onClick={handlePlanSave}
                     disabled={saving}
-                    className="w-full bg-slate-900 hover:bg-black text-white rounded-xl font-black text-xs uppercase tracking-widest"
+                    className="w-full font-semibold text-xs shadow-xs"
                   >
                     {saving ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                     {saving ? "Saving..." : "Apply Plan Override"}
@@ -351,7 +351,7 @@ export default function CompanyDetailPage() {
                 users.map((user) => (
                   <div key={user.id} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/50 transition-all">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white text-xs font-black shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 border border-primary/20">
                         {user.name?.charAt(0)?.toUpperCase() || "?"}
                       </div>
                       <div>

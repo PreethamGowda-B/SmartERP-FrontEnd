@@ -48,30 +48,32 @@ export default function SlaMonitoringPage() {
 
       {/* Compliance Meter */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-6 bg-slate-900 text-white rounded-3xl md:col-span-2">
+        <Card className="p-6 bg-white border border-border shadow-xs rounded-2xl md:col-span-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase">SLA Compliance Rate</p>
-              <h2 className="text-4xl font-black text-emerald-400 mt-1">{metrics?.sla_compliance_percentage || 100}%</h2>
-              <p className="text-xs text-slate-400 mt-2">Monitored Jobs: {metrics?.total_jobs_monitored || 0}</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">SLA Compliance Rate</p>
+              <h2 className="text-3xl font-extrabold text-emerald-600 mt-1">{metrics?.sla_compliance_percentage || 100}%</h2>
+              <p className="text-xs text-slate-500 mt-2">Monitored Jobs: {metrics?.total_jobs_monitored || 0}</p>
             </div>
-            <ShieldCheck className="h-12 w-12 text-emerald-400/80" />
+            <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100">
+              <ShieldCheck className="h-8 w-8 text-emerald-600" />
+            </div>
           </div>
         </Card>
 
-        <Card className="p-6 bg-slate-900 text-white rounded-3xl">
-          <p className="text-xs font-semibold text-slate-400 uppercase">Avg Response Time</p>
-          <h2 className="text-3xl font-black text-purple-400 mt-1">{metrics?.average_response_minutes || 0} mins</h2>
+        <Card className="p-6 bg-white border border-border shadow-xs rounded-2xl">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avg Response Time</p>
+          <h2 className="text-2xl font-bold text-slate-900 mt-1">{metrics?.average_response_minutes || 0} mins</h2>
         </Card>
 
-        <Card className="p-6 bg-slate-900 text-white rounded-3xl">
-          <p className="text-xs font-semibold text-slate-400 uppercase">Avg Resolution Time</p>
-          <h2 className="text-3xl font-black text-indigo-400 mt-1">{metrics?.average_resolution_minutes || 0} mins</h2>
+        <Card className="p-6 bg-white border border-border shadow-xs rounded-2xl">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avg Resolution Time</p>
+          <h2 className="text-2xl font-bold text-slate-900 mt-1">{metrics?.average_resolution_minutes || 0} mins</h2>
         </Card>
       </div>
 
       {/* Monitored Jobs List */}
-      <Card className="p-6">
+      <Card className="p-6 bg-white border border-border shadow-xs rounded-2xl">
         <CardHeader className="px-0 pt-0">
           <CardTitle className="text-lg font-bold">Monitored Service Jobs</CardTitle>
           <CardDescription>Target vs actual response & repair durations per job</CardDescription>
@@ -82,10 +84,10 @@ export default function SlaMonitoringPage() {
             <p className="text-xs text-slate-400 text-center py-6">No jobs currently under SLA monitoring.</p>
           ) : (
             jobs.map((j) => (
-              <div key={j.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div key={j.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-white">{j.title}</h4>
+                    <h4 className="font-semibold text-sm text-slate-900">{j.title}</h4>
                     <Badge variant="outline" className="text-[10px] capitalize">{j.priority}</Badge>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">

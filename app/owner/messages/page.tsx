@@ -185,40 +185,40 @@ function JobMessagesTab() {
   }
 
   return (
-    <div className="h-full flex overflow-hidden bg-gray-50 dark:bg-gray-900">
+    <div className="h-full flex overflow-hidden bg-slate-50 border border-slate-200 rounded-2xl shadow-xs min-h-150">
       {/* Left */}
-      <div className={cn("w-full md:w-80 shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col", mobileShowChat && "hidden md:flex")}>
-        <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">Customer Job Chats</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Chats with customers on jobs</p>
+      <div className={cn("w-full md:w-80 shrink-0 border-r border-slate-200 bg-white flex flex-col", mobileShowChat && "hidden md:flex")}>
+        <div className="p-4 border-b border-slate-100">
+          <h2 className="text-base font-semibold text-slate-900 tracking-tight">Customer Job Chats</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Chats with customers on jobs</p>
         </div>
         <div className="flex-1 overflow-y-auto">
           {loadingConvs ? (
-            <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+            <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
           ) : conversations.length === 0 ? (
             <div className="text-center py-16 px-4">
-              <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium text-sm">No conversations yet</p>
+              <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium text-sm">No conversations yet</p>
             </div>
           ) : conversations.map((conv) => (
             <button key={conv.job_id} onClick={() => selectJob(conv)} className={cn(
-              "w-full text-left p-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors",
-              selectedJob?.job_id === conv.job_id ? "bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-l-indigo-500"
-                : (conv.unread_count && conv.unread_count > 0) ? "bg-red-50/50 dark:bg-red-900/5 border-l-4 border-l-red-500" : ""
+              "w-full text-left p-3.5 px-4 border-b border-slate-100 hover:bg-slate-50 transition-colors",
+              selectedJob?.job_id === conv.job_id ? "bg-primary/5 border-l-2 border-l-primary"
+                : (conv.unread_count && conv.unread_count > 0) ? "bg-amber-50/50 border-l-2 border-l-amber-500" : ""
             )}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">{conv.customer_name || "Customer"}</span>
+                    <span className="font-semibold text-sm text-slate-900 truncate">{conv.customer_name || "Customer"}</span>
                     {Number(conv.unread_count || 0) > 0 && (
-                      <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-4.5 text-center animate-pulse">{conv.unread_count}</span>
+                      <span className="bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-4.5 text-center">{conv.unread_count}</span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 truncate mt-0.5">{conv.job_title}</p>
-                  {conv.last_message && <p className="text-xs text-gray-400 truncate mt-1">{conv.last_message}</p>}
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.job_title}</p>
+                  {conv.last_message && <p className="text-xs text-slate-400 truncate mt-1">{conv.last_message}</p>}
                 </div>
                 {conv.last_message_time && (
-                  <span className="text-xs text-gray-400 shrink-0 flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(conv.last_message_time)}</span>
+                  <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(conv.last_message_time)}</span>
                 )}
               </div>
             </button>
@@ -227,39 +227,39 @@ function JobMessagesTab() {
       </div>
 
       {/* Right */}
-      <div className={cn("flex-1 flex flex-col", !mobileShowChat && "hidden md:flex")}>
+      <div className={cn("flex-1 flex flex-col bg-white", !mobileShowChat && "hidden md:flex")}>
         {!selectedJob ? (
-          <div className="flex-1 flex items-center justify-center text-center p-8">
-            <div><MessageSquare className="w-16 h-16 text-gray-200 mx-auto mb-4" /><p className="text-gray-500 font-medium text-sm">Select a conversation</p></div>
+          <div className="flex-1 flex items-center justify-center text-center p-8 bg-slate-50/50">
+            <div><MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" /><p className="text-muted-foreground font-medium text-sm">Select a conversation</p></div>
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3 p-4 border-b bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3 p-4 border-b bg-slate-50/70 border-slate-200">
               <Button variant="ghost" size="sm" className="md:hidden" onClick={() => setMobileShowChat(false)}><ChevronLeft className="w-4 h-4" /></Button>
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-sm">{(selectedJob.customer_name || "C").charAt(0).toUpperCase()}</div>
-              <div><p className="font-semibold text-gray-900 dark:text-white">{selectedJob.customer_name || "Customer"}</p><p className="text-xs text-gray-500 truncate">{selectedJob.job_title}</p></div>
+              <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm border border-primary/20">{(selectedJob.customer_name || "C").charAt(0).toUpperCase()}</div>
+              <div><p className="font-semibold text-sm text-slate-900">{selectedJob.customer_name || "Customer"}</p><p className="text-xs text-muted-foreground truncate">{selectedJob.job_title}</p></div>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900">
-              {loadingMsgs ? <div className="flex justify-center pt-8"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
-                : messages.length === 0 ? <div className="text-center py-8 text-gray-400 text-sm">No messages yet — say hello!</div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white">
+              {loadingMsgs ? <div className="flex justify-center pt-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                : messages.length === 0 ? <div className="text-center py-8 text-muted-foreground text-sm">No messages yet — start the conversation!</div>
                 : messages.map((msg) => {
                   const isMine = msg.sender_type === "employee"
                   return (
                     <div key={msg.id} className={cn("flex", isMine ? "justify-end" : "justify-start")}>
-                      <div className={cn("max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-sm", isMine ? "bg-indigo-600 text-white rounded-br-sm" : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-sm border border-gray-100 dark:border-gray-600")}>
-                        {!isMine && <p className="text-xs font-black text-indigo-500 mb-1">{msg.sender_name}</p>}
+                      <div className={cn("max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-xs", isMine ? "bg-primary text-primary-foreground rounded-tr-xs" : "bg-slate-100 text-slate-900 rounded-tl-xs border border-slate-200/80")}>
+                        {!isMine && <p className="text-xs font-semibold text-primary mb-1">{msg.sender_name}</p>}
                         <p className="leading-relaxed">{msg.message}</p>
-                        <p className={cn("text-[10px] font-bold uppercase tracking-tighter mt-1.5", isMine ? "text-indigo-200" : "text-gray-400")}>{formatTime(msg.created_at)}</p>
+                        <p className={cn("text-[10px] mt-1.5", isMine ? "text-primary-foreground/70" : "text-muted-foreground")}>{formatTime(msg.created_at)}</p>
                       </div>
                     </div>
                   )
                 })}
               <div ref={messagesEndRef} />
             </div>
-            <div className="p-4 pr-24 sm:pr-28 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+            <div className="p-3.5 sm:p-4 border-t border-slate-200 bg-slate-50/60">
               <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); sendMessage() }}>
-                <Input value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Type a message…" disabled={sending} className="flex-1 rounded-full bg-gray-100 dark:bg-gray-700 border-0" maxLength={2000} />
-                <Button type="submit" size="icon" className="rounded-full bg-indigo-600 hover:bg-indigo-700 shrink-0" disabled={!messageText.trim() || sending} title="Send Message">
+                <Input value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Type a message…" disabled={sending} className="flex-1 rounded-xl bg-white border border-slate-200 text-sm shadow-xs" maxLength={2000} />
+                <Button type="submit" size="icon" className="rounded-xl shadow-xs shrink-0" disabled={!messageText.trim() || sending} title="Send Message">
                   {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </Button>
               </form>
