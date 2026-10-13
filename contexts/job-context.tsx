@@ -2,9 +2,11 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react"
+import { usePathname } from "next/navigation"
 import { type Job } from "@/lib/data"
 import { useAuth } from "@/contexts/auth-context"
-import { apiClient, getAuthToken } from "@/lib/apiClient"
+import { apiClient, getAuthToken, isTokenExpired } from "@/lib/apiClient"
+import { isPublicRoute } from "@/lib/route-utils"
 import { useNotifications } from "@/contexts/notification-context"
 import { logger } from "@/lib/logger"
 
@@ -21,6 +23,8 @@ const JobContext = createContext<JobContextType | undefined>(undefined)
 
 export function JobProvider({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
+  const pathname = usePathname()
+  const isPublic = isPublicRoute(pathname)
 
   const [jobs, setJobs] = useState<Job[]>([])
 
@@ -58,7 +62,10 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     let intervalId: ReturnType<typeof setInterval> | null = null
 
     async function loadJobs() {
-      if (!user) return
+      if (isPublic || !user) return
+      const token = getAuthToken()
+      if (!token || isTokenExpired(token)) return
+
       try {
         logger.log("[v0] Fetching jobs from backend...")
 
@@ -171,7 +178,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       mounted = false
       if (intervalId) clearInterval(intervalId)
     }
-  }, [user, isLoading])
+  }, [user, isLoading, isPublic])
 
   const { addNotification } = useNotifications()
 
@@ -304,7 +311,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
   }, [jobs])
 
   const refreshJobs = useCallback(async () => {
-    if (!user || !getAuthToken()) return
+    if (isPublic || !user || !getAuthToken() || isTokenExpired(getAuthToken())) return
     try {
       logger.log("[v0] Manually refreshing jobs...")
       const serverJobs = await apiClient("/api/jobs", { method: "GET" })
@@ -337,7 +344,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         logger.error("[v0] Failed to refresh jobs:", err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err)))
       }
     }
-  }, [user])
+  }, [user, isPublic])
 
   return (
     <JobContext.Provider

@@ -1,15 +1,23 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { apiClient, getAccessToken } from "@/lib/apiClient"
+import { usePathname } from "next/navigation"
+import { apiClient, getAccessToken, isTokenExpired } from "@/lib/apiClient"
+import { isPublicRoute } from "@/lib/route-utils"
 import { useToast } from "@/hooks/use-toast"
 import { logger } from "@/lib/logger"
 
 export function BackgroundSubscriptionPoller() {
   const { toast } = useToast()
+  const pathname = usePathname()
+  const isPublic = isPublicRoute(pathname)
   const pollerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
+    if (isPublic) return
+    const token = getAccessToken()
+    if (!token || isTokenExpired(token)) return
+
     // Check if there is an unconfirmed payment pending in localStorage
     const pendingPayment = typeof window !== "undefined" ? localStorage.getItem("smarterp_pending_payment") : null
 
@@ -18,7 +26,11 @@ export function BackgroundSubscriptionPoller() {
     logger.log("[PAYMENT POLLER] Background activation poller active for pending transaction...")
 
     const checkActivation = async () => {
-      if (!getAccessToken()) return
+      const at = getAccessToken()
+      if (!at || isTokenExpired(at)) {
+        if (pollerRef.current) clearInterval(pollerRef.current)
+        return
+      }
 
       try {
         const res = await apiClient("/api/subscription/status")
@@ -38,8 +50,11 @@ export function BackgroundSubscriptionPoller() {
             description: `Upgraded to ${res.plan.name || "Pro"} Plan. All features are now unlocked.`,
           })
         }
-      } catch (err) {
-        logger.error("[PAYMENT POLLER] Background status check error", err)
+      } catch (err: any) {
+        if (err?.message?.includes("expired") || err?.message?.includes("log in") || err?.message?.includes("401")) {
+          if (pollerRef.current) clearInterval(pollerRef.current)
+          localStorage.removeItem("smarterp_pending_payment")
+        }
       }
     }
 
@@ -56,7 +71,7 @@ export function BackgroundSubscriptionPoller() {
       if (pollerRef.current) clearInterval(pollerRef.current)
       clearTimeout(timeoutTimer)
     }
-  }, [toast])
+  }, [toast, isPublic])
 
   return null
 }

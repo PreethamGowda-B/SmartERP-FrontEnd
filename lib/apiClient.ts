@@ -301,12 +301,19 @@ export async function refreshAccessToken(targetPath?: string): Promise<string | 
           return data.accessToken
         }
       }
+      if (r.status === 401 || r.status === 403) {
+        clearTokens()
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("smarterp_user")
+          localStorage.removeItem("smarterp_admin_user")
+        }
+      }
       notifySubscribers(null)
       return null
     })
-    .catch((err) => {
+    .catch(() => {
       notifySubscribers(null)
-      throw err
+      return null
     })
     .finally(() => {
       refreshPromise = null
@@ -388,7 +395,12 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
       }
 
       const safeOriginal = error instanceof Error ? error.message : String(error);
-      logger.error(`[apiClient] Connection Error: ${path}`, { error: safeOriginal });
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (!isOffline) {
+        logger.error(`[apiClient] Connection Error: ${path}`, { error: safeOriginal });
+      } else {
+        logger.warn(`[apiClient] Offline connection notice: ${path}`);
+      }
       throw new Error("Unable to connect to the server. Please check your internet connection and try again.")
     }
 

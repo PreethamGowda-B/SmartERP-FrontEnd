@@ -1,7 +1,9 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react"
-import { apiClient, getAccessToken } from "@/lib/apiClient"
+import { usePathname } from "next/navigation"
+import { apiClient, getAccessToken, isTokenExpired } from "@/lib/apiClient"
+import { isPublicRoute } from "@/lib/route-utils"
 import { useAuth } from "./auth-context"
 
 export interface PlanFeatures {
@@ -69,10 +71,19 @@ const SubscriptionContext = createContext<SubscriptionContextType>({
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
+  const pathname = usePathname()
+  const isPublic = isPublicRoute(pathname)
   const [plan, setPlan] = useState<SubscriptionPlan>(DEFAULT_PLAN)
   const [loading, setLoading] = useState(true)
 
   const fetchSubscriptionStatus = useCallback(async () => {
+    // Never query company subscription on public landing/marketing/auth routes
+    if (isPublic) {
+      setPlan(DEFAULT_PLAN)
+      setLoading(false)
+      return
+    }
+
     if (!user) {
       setPlan(DEFAULT_PLAN)
       setLoading(false)
@@ -118,7 +129,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
 
     try {
-      if (!getAccessToken()) {
+      const at = getAccessToken()
+      if (!at || isTokenExpired(at)) {
         setLoading(false)
         return
       }
@@ -131,7 +143,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [user, isPublic])
 
   useEffect(() => {
     fetchSubscriptionStatus()
@@ -140,12 +152,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   // Listen for real-time payment activation events
   useEffect(() => {
     const handleActivation = () => {
-      console.log("⚡ [SubscriptionContext] Subscription Activation Event Detected — Reloading State...")
       fetchSubscriptionStatus()
     }
 
     const handleFocus = () => {
-      if (user?.role === 'owner' && getAccessToken()) {
+      const at = getAccessToken()
+      if (!isPublic && user?.role === 'owner' && at && !isTokenExpired(at)) {
         fetchSubscriptionStatus()
       }
     }
@@ -161,7 +173,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         window.removeEventListener("focus", handleFocus)
       }
     }
-  }, [fetchSubscriptionStatus, user?.role])
+  }, [fetchSubscriptionStatus, user?.role, isPublic])
 
   const isPro = plan.id >= 3 || plan.name?.toLowerCase().includes("pro")
   const isBasic = plan.id === 2 || plan.name?.toLowerCase().includes("basic")

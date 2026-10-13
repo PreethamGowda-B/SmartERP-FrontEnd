@@ -5,6 +5,7 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { type User, type AuthState, getCurrentUser, signOut } from "@/lib/auth"
 import { setTokens, getRefreshToken, getAccessToken, isTokenExpired, refreshAccessToken } from "@/lib/apiClient"
+import { isPublicRoute } from "@/lib/route-utils"
 import { logger } from "@/lib/logger"
 import * as Sentry from "@sentry/nextjs"
 
@@ -25,23 +26,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function initAuth() {
       try {
         const currentUser = getCurrentUser()
-        
-        // 1. Immediately update user state & stop loading from cache for instant UI rendering
-        if (currentUser && isMounted) {
+        const pathname = typeof window !== "undefined" ? window.location.pathname : ""
+        const isPublic = isPublicRoute(pathname)
+        const at = getAccessToken()
+        const rt = getRefreshToken()
+
+        // 1. If on a public page and tokens are missing or already expired, clear stale cache
+        if (isPublic && (!at || isTokenExpired(at)) && !rt) {
+          if (currentUser) {
+            await signOut()
+          }
+          if (isMounted) {
+            setUser(null)
+            setIsLoading(false)
+          }
+          return
+        }
+
+        // 2. Only optimistically update user state if on a private route or access token is still valid
+        if (currentUser && isMounted && (!isPublic || (at && !isTokenExpired(at)))) {
           setUser(currentUser)
           setIsLoading(false)
         }
         
-        // 2. If there is NO cached user, stop loading immediately
+        // 3. If there is NO cached user, stop loading immediately
         if (!currentUser) {
           if (isMounted) setIsLoading(false)
           return
         }
 
-        // 3. Check access token & refresh status
+        // 4. Check access token & refresh status
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
-        const at = getAccessToken()
-        const rt = getRefreshToken()
         
         if (!rt && !at) {
           signOut()

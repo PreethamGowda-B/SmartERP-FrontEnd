@@ -28,6 +28,7 @@ import {
   Phone,
   Menu,
   X,
+  RefreshCw,
 } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 
@@ -45,6 +46,7 @@ export function LandingPage() {
   // Hero Video Controls
   const heroVideoRef = useRef<HTMLVideoElement | null>(null)
   const [isHeroMuted, setIsHeroMuted] = useState(true)
+  const [heroVideoError, setHeroVideoError] = useState(false)
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -350,17 +352,58 @@ export function LandingPage() {
             </div>
 
             {/* Video Element */}
-            <div className="relative aspect-video w-full bg-black">
-              <video
-                ref={heroVideoRef}
-                src="/videos/hero-showcase.mp4"
-                autoPlay
-                loop
-                muted
-                playsInline
-                preload="metadata"
-                className="w-full h-full object-cover"
-              />
+            <div className="relative aspect-video w-full bg-slate-950 overflow-hidden">
+              {!heroVideoError ? (
+                <video
+                  ref={heroVideoRef}
+                  src="/videos/hero-showcase.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  preload="metadata"
+                  onError={() => setHeroVideoError(true)}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="relative w-full h-full flex flex-col items-center justify-center bg-linear-to-br from-slate-950 via-slate-900 to-blue-950/70 p-6 sm:p-8 text-center text-white">
+                  <div className="max-w-md mx-auto space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30">
+                      <ShieldCheck className="h-4 w-4 text-blue-400" />
+                      SmartERP Platform Preview
+                    </div>
+                    <h3 className="text-lg sm:text-2xl font-bold tracking-tight text-white">
+                      Field Crews, Jobs & Real-Time Tracking
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                      All-in-one SaaS platform for dispatching field operations, attendance, automated payroll, and GST invoices.
+                    </p>
+                    <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setHeroVideoError(false)
+                          if (heroVideoRef.current) {
+                            heroVideoRef.current.load()
+                          }
+                        }}
+                        className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold gap-1.5"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Reload Video
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => router.push("/auth/login?mode=signup")}
+                        className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-semibold"
+                      >
+                        Start Free Trial
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

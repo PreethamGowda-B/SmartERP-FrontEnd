@@ -1,7 +1,10 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
-import { apiClient } from "@/lib/apiClient"
+import { usePathname } from "next/navigation"
+import { apiClient, isTokenExpired } from "@/lib/apiClient"
+import { isPublicRoute } from "@/lib/route-utils"
+import { useAuth } from "@/contexts/auth-context"
 import { ClockInRequiredModal } from "@/components/clock-in-required-modal"
 
 interface ClockInGatekeeperContextType {
@@ -21,14 +24,23 @@ const ClockInGatekeeperContext = createContext<ClockInGatekeeperContextType>({
 })
 
 export function ClockInGatekeeperProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  const pathname = usePathname()
   const [isClockedIn, setIsClockedIn] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 
   const refreshAttendance = useCallback(async () => {
     try {
+      // Clock-in gatekeeper is only active for employees inside the employee portal
+      if (isPublicRoute(pathname) || user?.role !== 'employee' || !pathname?.startsWith('/employee')) {
+        setIsClockedIn(false)
+        setLoading(false)
+        return
+      }
+
       const token = typeof window !== "undefined" ? localStorage.getItem("_at") || localStorage.getItem("accessToken") : null
-      if (!token) {
+      if (!token || isTokenExpired(token)) {
         setIsClockedIn(false)
         setLoading(false)
         return
@@ -50,13 +62,13 @@ export function ClockInGatekeeperProvider({ children }: { children: React.ReactN
         att?.clockOut
       )
       setIsClockedIn(hasClockIn && !hasClockOut)
-    } catch (err) {
+    } catch {
       // Fail-safe: assume false if check fails so gatekeeper protects operational actions
       setIsClockedIn(false)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user?.role, pathname])
 
   useEffect(() => {
     refreshAttendance()
