@@ -42,7 +42,7 @@ export function DataTablePagination({
         <span className="font-semibold text-foreground">{totalItems}</span> records
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-6 w-full sm:w-auto">
         {/* Page size selector */}
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground hidden sm:inline">Rows per page:</span>

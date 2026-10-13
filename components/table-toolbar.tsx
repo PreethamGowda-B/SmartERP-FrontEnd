@@ -72,7 +72,7 @@ export function TableToolbar({
       </div>
 
       {/* Right side: Density & Export & Controls */}
-      <div className="flex items-center gap-2 justify-end">
+      <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end w-full sm:w-auto">
         {/* Selected Rows Counter Pill */}
         {selectedCount > 0 && (
           <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded-md text-xs font-medium animate-in fade-in duration-200">
