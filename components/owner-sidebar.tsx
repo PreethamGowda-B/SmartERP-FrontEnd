@@ -384,7 +384,7 @@ export function OwnerSidebar() {
 
                           {/* Nested Child Items */}
                           {isOpen && (
-                            <div className="ml-3 pl-2.5 border-l-2 border-border/60 space-y-1 pt-0.5">
+                            <div className="ml-3 pl-2.25 border-l-2 border-border/60 space-y-1 pt-0.5">
                               {item.children.map((child) => {
                                 const isChildActive = isRouteActive(pathname, child.href, allNavHrefs)
                                 return (
