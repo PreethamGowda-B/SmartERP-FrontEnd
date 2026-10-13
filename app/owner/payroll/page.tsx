@@ -286,7 +286,7 @@ export default function OwnerPayrollPage() {
                   New Disbursement
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[650px] p-0 overflow-hidden border-none shadow-2xl">
+              <DialogContent className="sm:max-w-162.5 p-0 overflow-hidden border border-border shadow-lg">
                 <div className="bg-primary p-8 text-white">
                   <DialogHeader>
                     <DialogTitle className="text-2xl font-black tracking-tight text-white">Create Disbursement</DialogTitle>
@@ -349,7 +349,7 @@ export default function OwnerPayrollPage() {
                                       setEmployeeSearch("")
                                     }}
                                   >
-                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">
                                       {emp.name.charAt(0).toUpperCase()}
                                     </div>
                                     <div className="min-w-0">
@@ -357,7 +357,7 @@ export default function OwnerPayrollPage() {
                                       <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
                                     </div>
                                     {formData.employee_email === emp.email && (
-                                      <svg className="h-4 w-4 text-primary ml-auto flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                      <svg className="h-4 w-4 text-primary ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                     )}
                                   </div>
                                 ))
@@ -516,7 +516,7 @@ export default function OwnerPayrollPage() {
 
           <div className="flex gap-2 w-full sm:w-auto">
             <Select value={monthFilter} onValueChange={setMonthFilter}>
-              <SelectTrigger className="w-full sm:w-[180px] h-10">
+              <SelectTrigger className="w-full sm:w-45 h-10">
                 <SelectValue placeholder="Filter by month" />
               </SelectTrigger>
               <SelectContent>
@@ -530,7 +530,7 @@ export default function OwnerPayrollPage() {
             </Select>
 
             <Select value={yearFilter} onValueChange={setYearFilter}>
-              <SelectTrigger className="w-full sm:w-[150px] h-10">
+              <SelectTrigger className="w-full sm:w-37.5 h-10">
                 <SelectValue placeholder="Filter by year" />
               </SelectTrigger>
               <SelectContent>
