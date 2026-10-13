@@ -17,7 +17,6 @@ import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { SkeletonList } from "@/components/ui/skeleton-card"
 import { cn } from "@/lib/utils"
-import jsPDF from "jspdf"
 import { getCompanyBranding } from "@/lib/export-utils"
 
 interface PayrollRecord {
@@ -90,7 +89,8 @@ export default function EmployeePayrollPage() {
   }
 
   // Generate Executive PDF salary report
-  const generatePDF = (payroll: PayrollRecord) => {
+  const generatePDF = async (payroll: PayrollRecord) => {
+    const { default: jsPDF } = await import("jspdf")
     const doc = new jsPDF()
     const pageW = doc.internal.pageSize.getWidth()
     const company = getCompanyBranding()

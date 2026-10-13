@@ -1,6 +1,4 @@
-import jsPDF from "jspdf"
-import autoTable from "jspdf-autotable"
-import * as XLSX from "xlsx"
+import type jsPDF from "jspdf"
 import { logger } from "./logger"
 
 // ── Brand constants ────────────────────────────────────────────────────────────
@@ -351,7 +349,7 @@ function drawFooter(doc: jsPDF, pageNumber: number, totalPages?: number): void {
  * Signature is fully backward-compatible — subtitle is the only new optional field
  * that callers may also not pass.
  */
-export const exportToPDF = ({
+export const exportToPDF = async ({
   filename,
   title,
   subtitle,
@@ -367,7 +365,11 @@ export const exportToPDF = ({
     title, columnsCount: columns.length, dataCount: data.length,
   })
 
-  const doc = new jsPDF({ orientation, unit: "mm", format: "a4" })
+  const { default: jsPDFClass } = await import("jspdf")
+  const autoTableModule = await import("jspdf-autotable")
+  const autoTable = (autoTableModule.default || autoTableModule) as any
+
+  const doc = new jsPDFClass({ orientation, unit: "mm", format: "a4" })
   const pageW = doc.internal.pageSize.getWidth()
 
   const now = fmtDateTime(new Date().toISOString())
@@ -461,7 +463,7 @@ export const exportToPDF = ({
     rowPageBreak: "avoid", // Prevent row splitting across pages
 
     // ── Per-cell colour overrides for status / priority and header widths ────
-    didParseCell: (hookData) => {
+    didParseCell: (hookData: any) => {
       // Prevent header text wrapping by enforcing a minimum width based on char count
       if (hookData.section === "head") {
         const textLen = hookData.cell.text[0]?.length || 10
@@ -493,7 +495,7 @@ export const exportToPDF = ({
     },
 
     // ── Per-page header + footer ─────────────────────────────────────────────
-    didDrawPage: (hookData) => {
+    didDrawPage: (hookData: any) => {
       // Draw header on pages after the first
       if (hookData.pageNumber > 1) {
         drawHeader(doc, title, now, generatedBy, companyName, logoUrl)
@@ -514,7 +516,7 @@ export const exportToPDF = ({
  * Generate and download an Excel spreadsheet.
  * No changes to logic — only column width improvements.
  */
-export const exportToExcel = ({
+export const exportToExcel = async ({
   filename,
   title,
   columns,
@@ -523,6 +525,8 @@ export const exportToExcel = ({
   logger.log(`[export-utils] Starting Excel Export: ${filename}`, {
     title, columnsCount: columns.length, dataCount: data.length,
   })
+
+  const XLSX = await import("xlsx")
 
   const worksheetData = data.map(item => {
     const row: any = {}

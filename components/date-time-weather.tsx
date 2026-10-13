@@ -32,7 +32,6 @@ export function DateTimeWeather() {
       const time = now.toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
-        second: "2-digit",
         hour12: true,
       })
 
@@ -40,7 +39,7 @@ export function DateTimeWeather() {
     }
 
     updateDateTime()
-    const interval = setInterval(updateDateTime, 1000)
+    const interval = setInterval(updateDateTime, 30000)
 
     // Compute dynamic real-time operational status based on local time
     const currentHour = new Date().getHours()

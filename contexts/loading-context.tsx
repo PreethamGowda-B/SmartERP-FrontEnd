@@ -13,8 +13,8 @@ type LoadingContextType = {
 
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined)
 
-const ANTI_FLICKER_DELAY = 100 // ms - faster feedback for clicking
-const MIN_DISPLAY_TIME = 2000 // ms - user requested 2 seconds
+const ANTI_FLICKER_DELAY = 150 // ms - avoids flicker for fast page transitions
+const MIN_DISPLAY_TIME = 0 // ms - instant page display without artificial delay
 
 export function LoadingProvider({ children }: { children: React.ReactNode }) {
   const [isActivelyLoading, setIsActivelyLoading] = useState(false)
@@ -29,15 +29,9 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
     if (timerRef.current) clearTimeout(timerRef.current)
     
     setIsActivelyLoading(false)
-    const now = Date.now()
-    const elapsed = displayStartTimeRef.current ? now - displayStartTimeRef.current : 0
-    const remaining = Math.max(0, MIN_DISPLAY_TIME - elapsed)
-
-    setTimeout(() => {
-      setShouldShow(false)
-      setMessage(null)
-      displayStartTimeRef.current = null
-    }, remaining)
+    setShouldShow(false)
+    setMessage(null)
+    displayStartTimeRef.current = null
   }, [])
 
   const startLoading = useCallback((msg?: string) => {

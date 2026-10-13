@@ -27,10 +27,12 @@ export function useDataTableFiltering<TData>({
     [onSearchChange]
   )
 
-  const filteredData = React.useMemo(() => {
-    if (!searchQuery.trim()) return data
+  const deferredSearchQuery = React.useDeferredValue(searchQuery)
 
-    const query = searchQuery.toLowerCase().trim()
+  const filteredData = React.useMemo(() => {
+    if (!deferredSearchQuery.trim()) return data
+
+    const query = deferredSearchQuery.toLowerCase().trim()
     return data.filter((row: any) => {
       if (searchableKey && row[searchableKey] !== undefined) {
         return String(row[searchableKey]).toLowerCase().includes(query)
@@ -39,7 +41,7 @@ export function useDataTableFiltering<TData>({
         (val) => val !== null && val !== undefined && String(val).toLowerCase().includes(query)
       )
     })
-  }, [data, searchQuery, searchableKey])
+  }, [data, deferredSearchQuery, searchableKey])
 
   return {
     searchQuery,

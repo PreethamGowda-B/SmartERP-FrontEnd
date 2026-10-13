@@ -103,7 +103,20 @@ export function setTokens(accessToken: string, refreshToken: string, isAdmin = f
   }
 }
 
+// ── In-Flight Request Deduplication & Fast Memory Cache ─────────────────────
+// Deduplicates simultaneous GET requests and caches GET responses for 3 seconds
+// strictly partitioned by user auth token (preserving multi-tenant isolation).
+const inFlightGets = new Map<string, Promise<any>>()
+const getCache = new Map<string, { data: any; expiresAt: number }>()
+const GET_CACHE_TTL_MS = 3000 // 3 seconds
+
+export function clearApiCache() {
+  inFlightGets.clear()
+  getCache.clear()
+}
+
 export function clearTokens(isAdmin?: boolean) {
+  clearApiCache()
   if (typeof window !== "undefined") {
     const keysToClear = isAdmin === true ? [{at: ADMIN_AT, rt: ADMIN_RT}] : 
                        isAdmin === false ? [{at: USER_AT, rt: USER_RT}] :
@@ -358,121 +371,159 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
     headers["Authorization"] = `Bearer ${currentToken}`
   }
 
-  const requestId = Math.random().toString(36).substring(7)
-  markRequestStart(requestId)
+  const method = (options.method || "GET").toUpperCase()
+  const isGet = method === "GET"
+  const skipCache = Boolean((options as any)?.skipCache) || Boolean(options.signal)
 
-  try {
-    let res: Response
-    try {
-      // Use controller to handle potential timeouts if needed
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
-
-      res = await fetch(`${baseUrl}${path}`, {
-        ...options,
-        headers,
-        credentials: "include",
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-    } catch (error: any) {
-      // 🚀 PART 2: API RETRY SYSTEM (NETWORK RESILIENCE)
-      // Retry failed requests ONLY IF: network error OR timeout
-      // NOT for 401 / 403 (handled separately)
-      const isTransientError = error.name === 'TypeError' || error.name === 'TimeoutError' || error.message?.includes('fetch')
-      const isGetRequest = !options.method || options.method.toUpperCase() === 'GET'
-      const canRetry = retries > 0 && isTransientError && isGetRequest
-
-      if (canRetry) {
-        const delay = retries === 2 ? 500 : 1000 // 500ms -> 1000ms
-        await new Promise(resolve => setTimeout(resolve, delay))
-        return apiClient(path, options, retries - 1)
-      }
-
-      // Handle direct cancellations (e.g. navigation) - don't log these to Sentry
-      if (error.name === 'AbortError') {
-        throw { name: 'AbortError', message: 'Request cancelled' };
-      }
-
-      const safeOriginal = error instanceof Error ? error.message : String(error);
-      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-      if (!isOffline) {
-        logger.error(`[apiClient] Connection Error: ${path}`, { error: safeOriginal });
-      } else {
-        logger.warn(`[apiClient] Offline connection notice: ${path}`);
-      }
-      throw new Error("Unable to connect to the server. Please check your internet connection and try again.")
-    }
-
-    // ── 401 Interception (Fallback if server rejected active token) ───────────
-    if (res.status === 401) {
-      const storedRefreshToken = getRefreshToken(path)
-      if (!storedRefreshToken) {
-        handleLogout()
-        throw new Error("Session expired. Please log in again.")
-      }
-
-      try {
-        const freshToken = await refreshAccessToken(path)
-        if (freshToken) {
-          headers["Authorization"] = `Bearer ${freshToken}`
-          res = await fetch(`${baseUrl}${path}`, { ...options, headers, credentials: "include" })
-          if (res.status === 401) {
-            handleLogout()
-            throw new Error("Authentication required. Please log in again.")
-          }
-        } else {
-          handleLogout()
-          throw new Error("Session refresh failed. Please log in again.")
-        }
-      } catch (refreshErr) {
-        handleLogout()
-        throw refreshErr
-      }
-    }
-
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ message: res.statusText }))
-      if (res.status === 403 && (error.code === 'PLAN_LIMIT_REACHED' || error.details?.limitType)) {
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('plan-limit-reached', { detail: error.details }))
-        }
-      }
-      const isSilentBackground = path.includes('/location/update') || Boolean((options as any)?.silent403);
-      if (res.status === 403 && error.upgrade_required && !isSilentBackground) {
-        triggerFeatureLock({
-          feature: error.feature || "this premium feature",
-          current_plan: error.current_plan,
-          message: error.message
-        })
-        return new Promise(() => {})
-      }
-      throw { ...error, status: res.status }
-    }
-
-    return await res.json()
-  } catch (error: any) {
-    if (error.name === 'AbortError') throw error;
-
-    if (error.status >= 500 || !error.status) {
-      const safeOriginal = error instanceof Error ? error.message : (typeof error === 'object' && error !== null ? JSON.stringify(error) : String(error));
-      logger.error(`[apiClient] ${error.status ? 'API Error' : 'Connection Error'}: ${path}`, {
-        path,
-        status: error.status,
-        method: options.method || 'GET',
-        error: safeOriginal
-      });
-    }
-
-    if (error.status || error.message?.includes("internet connection")) {
-      throw error;
-    }
-    
-    const safeErrorForThrow = error instanceof Error ? error.message : (typeof error === 'object' && error !== null ? JSON.stringify(error).substring(0, 200) : String(error));
-    throw { message: "Something went wrong. Please try again.", originalError: safeErrorForThrow };
-  } finally {
-    markRequestEnd(requestId)
+  if (!isGet) {
+    getCache.clear()
   }
+
+  // Deduplication & cache key uses token to enforce strict multi-tenant isolation
+  const cacheKey = (isGet && !skipCache) ? `${currentToken || "anon"}:${path}` : null
+
+  if (cacheKey) {
+    const cached = getCache.get(cacheKey)
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.data
+    }
+    const inFlight = inFlightGets.get(cacheKey)
+    if (inFlight) {
+      return inFlight
+    }
+  }
+
+  const executeRequest = async (): Promise<T> => {
+    const requestId = Math.random().toString(36).substring(7)
+    markRequestStart(requestId)
+
+    try {
+      let res: Response
+      try {
+        // Use controller to handle potential timeouts if needed
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+
+        res = await fetch(`${baseUrl}${path}`, {
+          ...options,
+          headers,
+          credentials: "include",
+          signal: controller.signal
+        })
+        clearTimeout(timeoutId)
+      } catch (error: any) {
+        // 🚀 PART 2: API RETRY SYSTEM (NETWORK RESILIENCE)
+        // Retry failed requests ONLY IF: network error OR timeout
+        // NOT for 401 / 403 (handled separately)
+        const isTransientError = error.name === 'TypeError' || error.name === 'TimeoutError' || error.message?.includes('fetch')
+        const isGetRequest = !options.method || options.method.toUpperCase() === 'GET'
+        const canRetry = retries > 0 && isTransientError && isGetRequest
+
+        if (canRetry) {
+          const delay = retries === 2 ? 500 : 1000 // 500ms -> 1000ms
+          await new Promise(resolve => setTimeout(resolve, delay))
+          return apiClient(path, options, retries - 1)
+        }
+
+        // Handle direct cancellations (e.g. navigation) - don't log these to Sentry
+        if (error.name === 'AbortError') {
+          throw { name: 'AbortError', message: 'Request cancelled' };
+        }
+
+        const safeOriginal = error instanceof Error ? error.message : String(error);
+        const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+        if (!isOffline) {
+          logger.error(`[apiClient] Connection Error: ${path}`, { error: safeOriginal });
+        } else {
+          logger.warn(`[apiClient] Offline connection notice: ${path}`);
+        }
+        throw new Error("Unable to connect to the server. Please check your internet connection and try again.")
+      }
+
+      // ── 401 Interception (Fallback if server rejected active token) ───────────
+      if (res.status === 401) {
+        const storedRefreshToken = getRefreshToken(path)
+        if (!storedRefreshToken) {
+          handleLogout()
+          throw new Error("Session expired. Please log in again.")
+        }
+
+        try {
+          const freshToken = await refreshAccessToken(path)
+          if (freshToken) {
+            headers["Authorization"] = `Bearer ${freshToken}`
+            res = await fetch(`${baseUrl}${path}`, { ...options, headers, credentials: "include" })
+            if (res.status === 401) {
+              handleLogout()
+              throw new Error("Authentication required. Please log in again.")
+            }
+          } else {
+            handleLogout()
+            throw new Error("Session refresh failed. Please log in again.")
+          }
+        } catch (refreshErr) {
+          handleLogout()
+          throw refreshErr
+        }
+      }
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: res.statusText }))
+        if (res.status === 403 && (error.code === 'PLAN_LIMIT_REACHED' || error.details?.limitType)) {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('plan-limit-reached', { detail: error.details }))
+          }
+        }
+        const isSilentBackground = path.includes('/location/update') || Boolean((options as any)?.silent403);
+        if (res.status === 403 && error.upgrade_required && !isSilentBackground) {
+          triggerFeatureLock({
+            feature: error.feature || "this premium feature",
+            current_plan: error.current_plan,
+            message: error.message
+          })
+          return new Promise(() => {})
+        }
+        throw { ...error, status: res.status }
+      }
+
+      const result = await res.json()
+      if (cacheKey) {
+        getCache.set(cacheKey, { data: result, expiresAt: Date.now() + GET_CACHE_TTL_MS })
+      }
+      return result
+    } catch (error: any) {
+      if (error.name === 'AbortError') throw error;
+
+      if (error.status >= 500 || !error.status) {
+        const safeOriginal = error instanceof Error ? error.message : (typeof error === 'object' && error !== null ? JSON.stringify(error) : String(error));
+        logger.error(`[apiClient] ${error.status ? 'API Error' : 'Connection Error'}: ${path}`, {
+          path,
+          status: error.status,
+          method: options.method || 'GET',
+          error: safeOriginal
+        });
+      }
+
+      if (error.status || error.message?.includes("internet connection")) {
+        throw error;
+      }
+      
+      const safeErrorForThrow = error instanceof Error ? error.message : (typeof error === 'object' && error !== null ? JSON.stringify(error).substring(0, 200) : String(error));
+      throw { message: "Something went wrong. Please try again.", originalError: safeErrorForThrow };
+    } finally {
+      markRequestEnd(requestId)
+    }
+  }
+
+  if (cacheKey) {
+    const promise = executeRequest().finally(() => {
+      inFlightGets.delete(cacheKey)
+    })
+    inFlightGets.set(cacheKey, promise)
+    return promise
+  }
+
+  return executeRequest()
 }
 
 apiClient.get = <T = any>(path: string, options: RequestInit = {}) => apiClient<T>(path, { ...options, method: "GET" })
