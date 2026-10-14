@@ -463,7 +463,7 @@ export default function OwnerDashboard() {
                       >
                         {/* timeline line */}
                         {idx < deduplicatedActivity.length - 1 && (
-                          <div className="absolute left-[22px] top-8 bottom-0 w-px bg-border/60" />
+                          <div className="absolute left-5.5 top-8 bottom-0 w-px bg-border/60" />
                         )}
 
                         <div className={cn(

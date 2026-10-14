@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { DollarSign, Plus, Loader2, Search, Calendar, FileText, ShieldCheck } from "lucide-react"
+import { DollarSign, Plus, Loader2, Search, Calendar, FileText, ShieldCheck, AlertCircle } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"
@@ -96,6 +96,8 @@ function OwnerPayrollContent() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [manualEmailInput, setManualEmailInput] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [monthFilter, setMonthFilter] = useState("all")
   const [yearFilter, setYearFilter] = useState("all")
@@ -126,7 +128,7 @@ function OwnerPayrollContent() {
     const extra = parseFloat(formData.extra_amount) || 0
     const increment = parseFloat(formData.salary_increment) || 0
     const deduction = parseFloat(formData.deduction) || 0
-    return base + extra + increment - deduction
+    return Math.max(0, base + extra + increment - deduction)
   }
 
   // Fetch employees for dropdown
@@ -186,16 +188,30 @@ function OwnerPayrollContent() {
   // Submit new payroll
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setFormError(null)
+
+    const email = formData.employee_email?.trim()
+    if (!email) {
+      setFormError("Please select a staff member or enter their email address.")
+      return
+    }
+
+    const baseSalaryNum = parseFloat(formData.base_salary)
+    if (isNaN(baseSalaryNum) || baseSalaryNum <= 0) {
+      setFormError("Please enter a valid base salary amount (greater than ₹0).")
+      return
+    }
+
     setSubmitting(true)
 
     try {
       await apiClient("/api/payroll", {
         method: "POST",
         body: JSON.stringify({
-          employee_email: formData.employee_email,
+          employee_email: email,
           payroll_month: formData.payroll_month,
           payroll_year: formData.payroll_year,
-          base_salary: parseFloat(formData.base_salary),
+          base_salary: baseSalaryNum,
           extra_amount: parseFloat(formData.extra_amount) || 0,
           salary_increment: parseFloat(formData.salary_increment) || 0,
           deduction: parseFloat(formData.deduction) || 0,
@@ -216,6 +232,7 @@ function OwnerPayrollContent() {
       })
       setEmployeeSearch("")
       setShowEmployeeDropdown(false)
+      setFormError(null)
 
       // Refresh payrolls
       await fetchPayrolls()
@@ -223,9 +240,9 @@ function OwnerPayrollContent() {
       // Close dialog
       setDialogOpen(false)
 
-      alert("Payroll created successfully!")
+      alert("Payroll disbursement created successfully!")
     } catch (err: any) {
-      alert(err.message || "Failed to create payroll")
+      setFormError(err.message || "Failed to create payroll disbursement")
     } finally {
       setSubmitting(false)
     }
@@ -304,101 +321,160 @@ function OwnerPayrollContent() {
               ]}
             />
             {/* Create Payroll Button */}
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open)
+              if (!open) {
+                setFormError(null)
+                setShowEmployeeDropdown(false)
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button size="lg" className="h-10 px-6 shadow-lg shadow-primary/20 btn-premium">
                   <Plus className="h-4 w-4 mr-2" />
                   New Disbursement
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-162.5 p-0 overflow-hidden border border-border shadow-lg">
-                <div className="bg-primary p-8 text-white">
+              <DialogContent className="sm:max-w-xl max-h-[92vh] flex flex-col p-0 overflow-hidden border border-border shadow-2xl rounded-2xl">
+                <div className="bg-gradient-to-r from-primary to-primary/90 p-6 text-white shrink-0">
                   <DialogHeader>
-                    <DialogTitle className="text-2xl font-black tracking-tight text-white">Create Disbursement</DialogTitle>
-                    <DialogDescription className="text-primary-foreground/80 font-medium">
-                      Authorize a new salary payment for your staff member.
+                    <DialogTitle className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                      <DollarSign className="h-6 w-6 text-emerald-300" />
+                      Create Salary Disbursement
+                    </DialogTitle>
+                    <DialogDescription className="text-primary-foreground/85 font-medium text-xs sm:text-sm">
+                      Authorize a new compensation payout for your staff member.
                     </DialogDescription>
                   </DialogHeader>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-background">
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="employee_email" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Staff Member</Label>
-                      <div className="relative">
-                        <div
-                          className="h-11 px-3 flex items-center justify-between border rounded-md bg-background cursor-pointer hover:border-primary/50 transition-colors"
-                          onClick={() => setShowEmployeeDropdown(!showEmployeeDropdown)}
-                        >
-                          {formData.employee_email ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                                {(employees.find(e => e.email === formData.employee_email)?.name || formData.employee_email).charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <span className="text-sm font-medium">{employees.find(e => e.email === formData.employee_email)?.name || formData.employee_email}</span>
-                                <span className="text-xs text-muted-foreground ml-2">{formData.employee_email}</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">Select a staff member...</span>
-                          )}
-                          <svg className={`h-4 w-4 text-muted-foreground transition-transform ${showEmployeeDropdown ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                        </div>
+                <form onSubmit={handleSubmit} className="p-6 space-y-5 bg-background overflow-y-auto flex-1">
+                  {formError && (
+                    <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold flex items-start gap-2.5">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div className="flex-1">{formError}</div>
+                    </div>
+                  )}
 
-                        {showEmployeeDropdown && (
-                          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-hidden">
-                            <div className="p-2 border-b">
-                              <Input
-                                autoFocus
-                                placeholder="Search by name or email..."
-                                value={employeeSearch}
-                                onChange={(e) => setEmployeeSearch(e.target.value)}
-                                className="h-8 text-sm"
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                            <div className="overflow-y-auto max-h-44">
-                              {employees
-                                .filter(emp =>
-                                  emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-                                  emp.email.toLowerCase().includes(employeeSearch.toLowerCase())
-                                )
-                                .map(emp => (
-                                  <div
-                                    key={emp.id}
-                                    className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-accent transition-colors ${formData.employee_email === emp.email ? "bg-primary/10" : ""}`}
-                                    onClick={() => {
-                                      setFormData({ ...formData, employee_email: emp.email })
-                                      setShowEmployeeDropdown(false)
-                                      setEmployeeSearch("")
-                                    }}
-                                  >
-                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">
-                                      {emp.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="min-w-0">
-                                      <p className="text-sm font-medium truncate">{emp.name}</p>
-                                      <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
-                                    </div>
-                                    {formData.employee_email === emp.email && (
-                                      <svg className="h-4 w-4 text-primary ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                    )}
-                                  </div>
-                                ))
-                              }
-                              {employees.filter(emp =>
-                                emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-                                emp.email.toLowerCase().includes(employeeSearch.toLowerCase())
-                              ).length === 0 && (
-                                <p className="text-center text-sm text-muted-foreground py-4">No employees found</p>
-                              )}
-                            </div>
-                          </div>
-                        )}
+                  <div className="space-y-4">
+                    {/* Staff Member Selection */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Staff Member</Label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setManualEmailInput(!manualEmailInput)
+                            setShowEmployeeDropdown(false)
+                          }}
+                          className="text-[11px] text-primary hover:underline font-semibold"
+                        >
+                          {manualEmailInput ? "← Select from staff roster" : "Enter email manually →"}
+                        </button>
                       </div>
-                      {/* Hidden input to satisfy required validation */}
-                      <input type="hidden" value={formData.employee_email} required />
+
+                      {manualEmailInput ? (
+                        <Input
+                          type="email"
+                          placeholder="employee@company.com"
+                          value={formData.employee_email}
+                          onChange={(e) => {
+                            setFormData({ ...formData, employee_email: e.target.value })
+                            if (formError) setFormError(null)
+                          }}
+                          className="h-11 text-sm rounded-xl"
+                          required
+                        />
+                      ) : (
+                        <div className="relative">
+                          <div
+                            className="h-11 px-3 flex items-center justify-between border rounded-xl bg-background cursor-pointer hover:border-primary/50 transition-colors"
+                            onClick={() => setShowEmployeeDropdown(!showEmployeeDropdown)}
+                          >
+                            {formData.employee_email ? (
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                                  {(employees.find(e => e.email === formData.employee_email)?.name || formData.employee_email).charAt(0).toUpperCase()}
+                                </div>
+                                <div className="truncate">
+                                  <span className="text-sm font-medium">{employees.find(e => e.email === formData.employee_email)?.name || formData.employee_email}</span>
+                                  <span className="text-xs text-muted-foreground ml-2">({formData.employee_email})</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">Select a staff member...</span>
+                            )}
+                            <svg className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${showEmployeeDropdown ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                          </div>
+
+                          {showEmployeeDropdown && (
+                            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border rounded-xl shadow-xl max-h-60 overflow-hidden">
+                              <div className="p-2 border-b">
+                                <Input
+                                  autoFocus
+                                  placeholder="Search by name or email..."
+                                  value={employeeSearch}
+                                  onChange={(e) => setEmployeeSearch(e.target.value)}
+                                  className="h-8 text-xs"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              <div className="overflow-y-auto max-h-44">
+                                {employees
+                                  .filter(emp =>
+                                    emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+                                    emp.email.toLowerCase().includes(employeeSearch.toLowerCase())
+                                  )
+                                  .map(emp => (
+                                    <div
+                                      key={emp.id}
+                                      className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-accent transition-colors ${formData.employee_email === emp.email ? "bg-primary/10" : ""}`}
+                                      onClick={() => {
+                                        setFormData({ ...formData, employee_email: emp.email })
+                                        setShowEmployeeDropdown(false)
+                                        setEmployeeSearch("")
+                                        if (formError) setFormError(null)
+                                      }}
+                                    >
+                                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                                        {emp.name.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-semibold truncate text-foreground">{emp.name}</p>
+                                        <p className="text-[11px] text-muted-foreground truncate">{emp.email}</p>
+                                      </div>
+                                      {formData.employee_email === emp.email && (
+                                        <svg className="h-4 w-4 text-primary ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                      )}
+                                    </div>
+                                  ))
+                                }
+                                {employees.length === 0 ? (
+                                  <div className="p-3 text-center">
+                                    <p className="text-xs text-muted-foreground mb-1">No employees found in directory</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setManualEmailInput(true)
+                                        setShowEmployeeDropdown(false)
+                                      }}
+                                      className="text-xs text-primary font-semibold underline"
+                                    >
+                                      Type email address manually
+                                    </button>
+                                  </div>
+                                ) : (
+                                  employees.filter(emp =>
+                                    emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+                                    emp.email.toLowerCase().includes(employeeSearch.toLowerCase())
+                                  ).length === 0 && (
+                                    <p className="text-center text-xs text-muted-foreground py-4">No matching staff members</p>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -409,12 +485,12 @@ function OwnerPayrollContent() {
                           onValueChange={(value) => setFormData({ ...formData, payroll_month: parseInt(value) })}
                           required
                         >
-                          <SelectTrigger className="h-11">
+                          <SelectTrigger className="h-11 rounded-xl text-xs font-medium">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {MONTHS.map((month, index) => (
-                              <SelectItem key={index + 1} value={(index + 1).toString()}>
+                              <SelectItem key={index + 1} value={(index + 1).toString()} className="text-xs">
                                 {month}
                               </SelectItem>
                             ))}
@@ -429,32 +505,35 @@ function OwnerPayrollContent() {
                           type="number"
                           value={formData.payroll_year}
                           onChange={(e) => setFormData({ ...formData, payroll_year: parseInt(e.target.value) })}
-                          className="h-11"
+                          className="h-11 rounded-xl text-xs font-medium"
                           required
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-1.5 pt-2">
+                    <div className="space-y-1.5 pt-1">
                       <Label htmlFor="base_salary" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Base Salary (INR)</Label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">₹</span>
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-muted-foreground text-sm">₹</span>
                         <Input
                           id="base_salary"
                           type="number"
                           step="0.01"
                           value={formData.base_salary}
-                          onChange={(e) => setFormData({ ...formData, base_salary: e.target.value })}
-                          className="h-12 pl-8 text-lg font-black tracking-tight"
+                          onChange={(e) => {
+                            setFormData({ ...formData, base_salary: e.target.value })
+                            if (formError) setFormError(null)
+                          }}
+                          className="h-12 pl-8 text-base font-bold tracking-tight rounded-xl"
                           placeholder="0.00"
                           required
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1.5">
-                        <Label htmlFor="extra_amount" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Extra</Label>
+                        <Label htmlFor="extra_amount" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Bonus / Extra</Label>
                         <Input
                           id="extra_amount"
                           type="number"
@@ -462,6 +541,7 @@ function OwnerPayrollContent() {
                           value={formData.extra_amount}
                           onChange={(e) => setFormData({ ...formData, extra_amount: e.target.value })}
                           placeholder="0.00"
+                          className="h-10 text-xs rounded-xl"
                         />
                       </div>
 
@@ -474,6 +554,7 @@ function OwnerPayrollContent() {
                           value={formData.salary_increment}
                           onChange={(e) => setFormData({ ...formData, salary_increment: e.target.value })}
                           placeholder="0.00"
+                          className="h-10 text-xs rounded-xl"
                         />
                       </div>
 
@@ -486,15 +567,15 @@ function OwnerPayrollContent() {
                           value={formData.deduction}
                           onChange={(e) => setFormData({ ...formData, deduction: e.target.value })}
                           placeholder="0.00"
-                          className="border-red-200 focus-visible:ring-red-500"
+                          className="h-10 text-xs rounded-xl border-red-200 focus-visible:ring-red-500"
                         />
                       </div>
                     </div>
 
-                    <div className="p-5 bg-slate-50 rounded-2xl border border-dashed border-border">
+                    <div className="p-4 bg-muted/40 rounded-xl border border-dashed border-border/80">
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Net Disbursement</span>
-                        <span className="text-2xl font-bold text-primary tracking-tight">
+                        <span className="text-2xl font-black text-primary tracking-tight">
                           ₹{Number(calculateTotal() || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
@@ -506,17 +587,18 @@ function OwnerPayrollContent() {
                         id="remarks"
                         value={formData.remarks}
                         onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                        placeholder="Add disbursement context..."
-                        className="resize-none"
+                        placeholder="Add disbursement context, payslip notes..."
+                        className="resize-none text-xs rounded-xl"
+                        rows={2}
                       />
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full h-12 text-md font-bold shadow-xl shadow-primary/20 btn-premium" disabled={submitting}>
+                  <Button type="submit" className="w-full h-12 text-sm font-bold shadow-lg shadow-primary/20 btn-premium rounded-xl" disabled={submitting}>
                     {submitting ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Processing...
+                        Authorizing Disbursement...
                       </>
                     ) : (
                       "Authorize Disbursement"
