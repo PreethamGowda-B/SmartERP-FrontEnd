@@ -772,8 +772,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
             style={{ overscrollBehavior: "contain" }}
             className={cn(
-              "fixed right-0 top-0 z-[9998] h-screen overscroll-contain",
-              "w-full sm:w-[440px]",
+              "fixed right-0 top-0 z-9998 h-screen overscroll-contain",
+              "w-full sm:w-110",
               "flex flex-col",
               "bg-background/95 backdrop-blur-2xl",
               "border-l border-border/80",
@@ -784,12 +784,12 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
             {/* ── Panel Header ───────────────────────────────────────────────── */}
             <div className={cn(
               "flex items-center justify-between px-4 py-3 border-b border-border/80",
-              "bg-gradient-to-r from-violet-600/10 via-purple-600/5 to-indigo-600/10",
+              "bg-linear-to-r from-violet-600/10 via-purple-600/5 to-indigo-600/10",
               "backdrop-blur-md shrink-0",
               isMinimized && "rounded-2xl"
             )}>
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                <div className="w-8 h-8 rounded-xl bg-linear-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg">
                   <Sparkles className="h-4 w-4 text-white" />
                 </div>
                 <div>
@@ -974,7 +974,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                                       : "border-border/40 bg-muted/20 hover:bg-muted/50"
                                   )}
                                 >
-                                  <div className={cn("w-6 h-6 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0", model.color)}>
+                                  <div className={cn("w-6 h-6 rounded-lg bg-linear-to-br flex items-center justify-center shrink-0", model.color)}>
                                     <model.icon className="h-3.5 w-3.5 text-white" />
                                   </div>
                                   <div className="min-w-0">
@@ -1213,7 +1213,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                               : `Ask ${MODEL_DISPLAY_NAMES[selectedModel] || "AI"}...`
                           }
                           rows={1}
-                          className="resize-none text-sm pr-2 rounded-xl border-border/60 bg-muted/30 focus:bg-background transition-all min-h-[44px] max-h-[120px] overflow-y-auto"
+                          className="resize-none text-sm pr-2 rounded-xl border-border/60 bg-muted/30 focus:bg-background transition-all min-h-11 max-h-30 overflow-y-auto"
                           style={{ height: "auto" }}
                         />
                       </div>
@@ -1231,7 +1231,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                         onClick={() => sendMessage()}
                         disabled={!input.trim() || isLoading}
                         size="icon"
-                        className="h-11 w-11 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-lg shrink-0"
+                        className="h-11 w-11 rounded-xl bg-linear-to-br from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-lg shrink-0"
                       >
                         {isLoading
                           ? <Loader2 className="h-4 w-4 animate-spin text-white" />
@@ -1284,7 +1284,7 @@ function MessageBubble({
   if (msg.isTyping) {
     return (
       <div className="flex gap-2.5 items-start">
-        <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shrink-0">
+        <div className="w-7 h-7 rounded-xl bg-linear-to-br from-violet-500 to-indigo-600 flex items-center justify-center shrink-0">
           <Sparkles className="h-3.5 w-3.5 text-white" />
         </div>
         <div className="bg-muted/60 border border-border/40 rounded-2xl rounded-tl-sm px-4 py-3">
@@ -1310,8 +1310,8 @@ function MessageBubble({
       <div className={cn(
         "w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
         isUser
-          ? "bg-gradient-to-br from-blue-500 to-blue-700"
-          : "bg-gradient-to-br from-violet-500 to-indigo-600"
+          ? "bg-linear-to-br from-blue-500 to-blue-700"
+          : "bg-linear-to-br from-violet-500 to-indigo-600"
       )}>
         {isUser ? <User className="h-3.5 w-3.5 text-white" /> : <Sparkles className="h-3.5 w-3.5 text-white" />}
       </div>
@@ -1324,7 +1324,7 @@ function MessageBubble({
           className={cn(
             "relative rounded-2xl px-4 py-3 text-sm leading-relaxed",
             isUser
-              ? "bg-gradient-to-br from-violet-600 to-indigo-700 text-white rounded-tr-sm"
+              ? "bg-linear-to-br from-violet-600 to-indigo-700 text-white rounded-tr-sm"
               : "bg-muted/60 border border-border/40 text-foreground rounded-tl-sm"
           )}
         >
