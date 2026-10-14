@@ -619,7 +619,7 @@ function OwnerPayrollContent() {
                 className="rounded-lg px-4 sm:px-5 py-2 text-xs font-bold gap-2 data-[state=active]:bg-background data-[state=active]:shadow-xs transition-all"
               >
                 <DollarSign className="h-4 w-4 text-emerald-600" />
-                Payroll Records & Disbursals
+                Payroll Records & Disbursements
               </TabsTrigger>
               <TabsTrigger 
                 value="audit" 
