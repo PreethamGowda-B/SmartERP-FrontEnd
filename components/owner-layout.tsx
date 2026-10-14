@@ -15,15 +15,17 @@ import { LockedFeaturePrompt } from '@/components/locked-feature-prompt'
 import { DashboardTrialBanner } from '@/components/dashboard-trial-banner'
 
 import { safeLocalStorage } from "@/lib/storage"
+import { cn } from "@/lib/utils"
 
 interface OwnerLayoutProps {
   children: React.ReactNode
+  noPadding?: boolean
 }
 
 // ── Enterprise RBAC: only owner, admin, and super_admin may access Owner Portal ──
 const OWNER_ROLES = ["owner", "admin", "super_admin"]
 
-export function OwnerLayout({ children }: OwnerLayoutProps) {
+export function OwnerLayout({ children, noPadding = false }: OwnerLayoutProps) {
   const { user, isLoading } = useAuth()
   const router = useRouter()
 
@@ -65,11 +67,11 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn("min-h-screen bg-background", noPadding && "h-dvh overflow-hidden flex flex-col")}>
       <OwnerSidebar />
-      <div className="lg:pl-64 pt-14 lg:pt-0">
+      <div className={cn("lg:pl-64 pt-14 lg:pt-0", noPadding && "flex-1 flex flex-col h-full min-h-0 overflow-hidden")}>
         <DashboardTrialBanner />
-        <MainContent>{children}</MainContent>
+        <MainContent noPadding={noPadding}>{children}</MainContent>
       </div>
 
       <PageTransition />
@@ -80,11 +82,18 @@ export function OwnerLayout({ children }: OwnerLayoutProps) {
   )
 }
 
-function MainContent({ children }: { children: React.ReactNode }) {
+function MainContent({ children, noPadding = false }: { children: React.ReactNode; noPadding?: boolean }) {
   const { isActivelyLoading } = useLoading()
   return (
     <main
-      className={`p-4 lg:p-8 transition-opacity duration-150 ease-out ${isActivelyLoading ? 'opacity-40' : 'opacity-100'}`}>
+      className={cn(
+        "transition-opacity duration-150 ease-out",
+        isActivelyLoading ? "opacity-40" : "opacity-100",
+        noPadding
+          ? "p-0 pb-0 sm:pb-0 h-[calc(100dvh-3.5rem)] lg:h-dvh overflow-hidden flex flex-col flex-1 min-h-0"
+          : "p-4 lg:p-6 pb-24 sm:pb-28"
+      )}
+    >
       {children}
     </main>
   )

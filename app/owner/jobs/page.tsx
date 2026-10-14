@@ -39,8 +39,16 @@ function OwnerJobsPageContent() {
   const searchParams = useSearchParams()
 
   // Tab switcher state: all | customer | approvals | completed | archived
-  const initialView = searchParams.get("view") === "approvals" ? "approvals" : "all"
+  const paramView = searchParams.get("view") || searchParams.get("tab")
+  const initialView = paramView === "approvals" ? "approvals" : paramView === "customer" ? "customer" : paramView === "completed" ? "completed" : paramView === "archived" ? "archived" : "all"
   const [activeTab, setActiveTab] = useState<"all" | "customer" | "approvals" | "completed" | "archived">(initialView as any)
+
+  useEffect(() => {
+    const v = searchParams.get("view") || searchParams.get("tab")
+    if (v && ["all", "customer", "approvals", "completed", "archived"].includes(v)) {
+      setActiveTab(v as any)
+    }
+  }, [searchParams])
 
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")

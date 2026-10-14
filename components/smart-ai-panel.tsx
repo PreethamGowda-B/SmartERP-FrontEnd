@@ -732,30 +732,31 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-6 right-6 z-[9999] flex flex-col items-center gap-1"
+            className={cn(
+              "fixed z-40 flex items-center gap-1.5 transition-all duration-300",
+              pathname?.includes("/messages")
+                ? "bottom-24 right-4 sm:bottom-28 sm:right-6"
+                : "bottom-4 right-4 sm:bottom-6 sm:right-6"
+            )}
           >
             <motion.button
-              whileHover={{ scale: 1.08 }}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleOpen}
               id="smart-ai-panel-trigger"
+              title="Open SmartERP AI Operations Assistant"
               className={cn(
-                "relative w-14 h-14 rounded-2xl",
-                "bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700",
-                "shadow-[0_8px_32px_rgba(124,58,237,0.5)]",
+                "relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl",
+                "bg-linear-to-br from-violet-600 via-purple-600 to-indigo-700",
+                "shadow-lg shadow-violet-600/25",
                 "flex items-center justify-center",
                 "transition-all duration-300",
-                "hover:shadow-[0_12px_40px_rgba(124,58,237,0.7)]",
-                "ring-2 ring-violet-500/30 hover:ring-violet-400/60"
+                "hover:shadow-xl hover:shadow-violet-600/40",
+                "ring-2 ring-violet-500/20 hover:ring-violet-400/50"
               )}
             >
-              {/* Pulse ring */}
-              <span className="absolute inset-0 rounded-2xl animate-ping opacity-20 bg-violet-500" />
-              <Sparkles className="h-6 w-6 text-white drop-shadow" />
+              <Sparkles className="h-5 w-5 text-white drop-shadow-xs" />
             </motion.button>
-            <span className="text-[10px] font-bold text-muted-foreground/80 tracking-wide whitespace-nowrap">
-              SmartERP AI
-            </span>
           </motion.div>
         )}
       </AnimatePresence>

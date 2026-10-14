@@ -67,22 +67,22 @@ export function ConversationList({
   }, [mergedList, searchQuery])
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-background">
       {/* Search */}
-      <div className="p-3 border-b">
+      <div className="p-3 border-b shrink-0 bg-background">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search people…"
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
-            className="pl-9 h-9"
+            className="pl-9 h-9 text-xs"
           />
         </div>
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border/20">
         {loading ? (
           <div className="p-3 space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (

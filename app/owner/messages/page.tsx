@@ -185,7 +185,7 @@ function JobMessagesTab() {
   }
 
   return (
-    <div className="h-full flex overflow-hidden bg-slate-50 border border-slate-200 rounded-2xl shadow-xs min-h-150">
+    <div className="h-full w-full min-h-0 flex overflow-hidden bg-background">
       {/* Left */}
       <div className={cn("w-full md:w-80 shrink-0 border-r border-slate-200 bg-white flex flex-col", mobileShowChat && "hidden md:flex")}>
         <div className="p-4 border-b border-slate-100">
@@ -425,63 +425,61 @@ function OwnerMessagesPageContent() {
   }, [tabParam])
 
   return (
-    <OwnerLayout>
-      <div className="-m-4 lg:-m-8">
-        <MessagingProvider>
-          <div className="flex flex-col h-[calc(100vh-3.5rem)] lg:h-[calc(100vh-4rem)]">
-            {/* Tab bar */}
-            <div className="flex border-b bg-background shrink-0 overflow-x-auto no-scrollbar">
-              <button
-                onClick={() => setActiveTab("internal")}
-                className={cn(
-                  "flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors",
-                  activeTab === "internal"
-                    ? "border-primary text-primary font-bold"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Users className="h-4 w-4" />
-                Team Chat
-              </button>
-              <button
-                onClick={() => setActiveTab("jobs")}
-                className={cn(
-                  "flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors",
-                  activeTab === "jobs"
-                    ? "border-primary text-primary font-bold"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <MessageSquare className="h-4 w-4" />
-                Customer Jobs
-              </button>
-              <button
-                onClick={() => setActiveTab("notifications")}
-                className={cn(
-                  "flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors",
-                  activeTab === "notifications"
-                    ? "border-primary text-primary font-bold"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Clock className="h-4 w-4" />
-                System Alerts & Notifications
-              </button>
-            </div>
-
-            {/* Tab content */}
-            <div className="flex-1 overflow-hidden">
-              {activeTab === "internal" ? (
-                <InternalMessagesTab />
-              ) : activeTab === "jobs" ? (
-                <JobMessagesTab />
-              ) : (
-                <NotificationsTab />
+    <OwnerLayout noPadding>
+      <MessagingProvider>
+        <div className="flex flex-col h-full w-full overflow-hidden">
+          {/* Tab bar */}
+          <div className="flex border-b bg-background shrink-0 overflow-x-auto no-scrollbar">
+            <button
+              onClick={() => setActiveTab("internal")}
+              className={cn(
+                "flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors shrink-0",
+                activeTab === "internal"
+                  ? "border-primary text-primary font-bold"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               )}
-            </div>
+            >
+              <Users className="h-4 w-4" />
+              Team Chat
+            </button>
+            <button
+              onClick={() => setActiveTab("jobs")}
+              className={cn(
+                "flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors shrink-0",
+                activeTab === "jobs"
+                  ? "border-primary text-primary font-bold"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Customer Jobs
+            </button>
+            <button
+              onClick={() => setActiveTab("notifications")}
+              className={cn(
+                "flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors shrink-0",
+                activeTab === "notifications"
+                  ? "border-primary text-primary font-bold"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Clock className="h-4 w-4" />
+              System Alerts & Notifications
+            </button>
           </div>
-        </MessagingProvider>
-      </div>
+
+          {/* Tab content */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {activeTab === "internal" ? (
+              <InternalMessagesTab />
+            ) : activeTab === "jobs" ? (
+              <JobMessagesTab />
+            ) : (
+              <NotificationsTab />
+            )}
+          </div>
+        </div>
+      </MessagingProvider>
     </OwnerLayout>
   )
 }

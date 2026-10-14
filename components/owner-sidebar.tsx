@@ -288,7 +288,7 @@ export function OwnerSidebar() {
       <aside
         aria-label="Owner navigation sidebar"
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0 shadow-xs",
+          "fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border flex flex-col transform transition-transform duration-200 ease-in-out lg:translate-x-0 shadow-xs h-dvh overflow-hidden",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -317,7 +317,7 @@ export function OwnerSidebar() {
         <div
           ref={navRef}
           onScroll={handleNavScroll}
-          className="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+          className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4"
         >
           {navCategories.map((category) => {
             return (
@@ -447,7 +447,7 @@ export function OwnerSidebar() {
         </div>
 
         {/* Footer - user info */}
-        <div className="p-3 border-t border-sidebar-border shrink-0">
+        <div className="p-3 border-t border-sidebar-border shrink-0 mt-auto bg-card">
           <div className="p-3 rounded-xl bg-sidebar-accent/40 border border-sidebar-border/60 backdrop-blur-xs">
             <div className="flex items-center gap-3 mb-2.5">
               <div className="w-8 h-8 rounded-full bg-primary/20 text-primary border border-primary/30 flex items-center justify-center font-bold text-xs shrink-0">

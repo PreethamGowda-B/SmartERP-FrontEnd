@@ -87,10 +87,14 @@ export function ChatArea({
 
   if (!conversationId) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
-        <MessageSquare className="h-16 w-16 mb-4 opacity-20" />
-        <p className="text-lg font-medium">Select a conversation</p>
-        <p className="text-sm mt-1">Choose someone from the list to start chatting</p>
+      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-muted-foreground my-auto h-full">
+        <div className="w-16 h-16 rounded-2xl bg-muted/60 border border-border/40 flex items-center justify-center mb-3 text-muted-foreground shadow-xs">
+          <MessageSquare className="h-8 w-8 text-primary/60" />
+        </div>
+        <p className="text-base font-semibold text-foreground">Select a conversation</p>
+        <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+          Choose a team member from the directory to start chatting
+        </p>
       </div>
     )
   }
@@ -98,37 +102,37 @@ export function ChatArea({
   const initials = otherUserName.charAt(0).toUpperCase()
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b bg-background shrink-0">
         {onBack && (
-          <Button variant="ghost" size="icon" className="md:hidden -ml-2" onClick={onBack}>
+          <Button variant="ghost" size="icon" className="md:hidden -ml-2 shrink-0 h-8 w-8 text-foreground" onClick={onBack} aria-label="Back to conversations">
             <ChevronLeft className="h-5 w-5" />
           </Button>
         )}
-        <div className="relative">
+        <div className="relative shrink-0">
           <Avatar className="h-9 w-9">
-            <AvatarFallback className="text-sm font-semibold">{initials}</AvatarFallback>
+            <AvatarFallback className="text-xs font-semibold bg-muted text-foreground">{initials}</AvatarFallback>
           </Avatar>
           {otherUserOnline && (
-            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />
+            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
           )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-tight truncate">{otherUserName}</p>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 capitalize">
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 capitalize font-medium">
               {otherUserRole}
             </Badge>
             {otherUserOnline && (
-              <span className="text-[10px] text-green-600 font-medium">Online</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Online</span>
             )}
           </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-0.5">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-1">
         {/* Load more button */}
         {hasMore && (
           <div className="flex justify-center pb-2">
@@ -157,8 +161,23 @@ export function ChatArea({
 
         {/* Empty state */}
         {!loadingMessages && messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-40 text-center text-muted-foreground">
-            <p className="text-sm">No messages yet — say hello!</p>
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center my-auto min-h-55">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center mb-3 shadow-xs">
+              <MessageSquare className="h-6 w-6" />
+            </div>
+            <h3 className="text-sm font-bold text-foreground">No messages yet</h3>
+            <p className="text-xs text-muted-foreground max-w-xs mt-1 leading-relaxed">
+              Start the conversation with <span className="font-semibold text-foreground">{otherUserName || "your team member"}</span>. Real-time updates and attachments are supported.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 max-w-sm">
+              <button
+                type="button"
+                onClick={() => onSend("Hi there! Checking in on today's tasks.")}
+                className="text-[11px] px-3 py-1.5 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/60 transition-colors"
+              >
+                👋 &ldquo;Hi there! Checking in on today&apos;s tasks.&rdquo;
+              </button>
+            </div>
           </div>
         )}
 
@@ -185,11 +204,13 @@ export function ChatArea({
       </div>
 
       {/* Input */}
-      <MessageInput
-        onSend={onSend}
-        onTyping={onTyping}
-        disabled={sending}
-      />
+      <div className="shrink-0 border-t bg-background">
+        <MessageInput
+          onSend={onSend}
+          onTyping={onTyping}
+          disabled={sending}
+        />
+      </div>
     </div>
   )
 }

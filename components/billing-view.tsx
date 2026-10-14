@@ -1,0 +1,481 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
+import { Sparkles, CheckCircle2, Zap, Clock, ShieldCheck, ArrowRight, Minus, Loader2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import Script from "next/script"
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
+import { apiClient } from "@/lib/apiClient"
+import { logger } from "@/lib/logger"
+
+declare global {
+  interface Window {
+    Razorpay: any
+  }
+}
+
+type PlanInfo = {
+  id: number
+  name: string
+  is_trial: boolean
+  days_remaining: number
+  employee_limit: number | null
+  max_inventory_items: number | null
+  features: Record<string, boolean>
+}
+
+type UsageInfo = { employees: number, inventory_items: number }
+
+export function BillingView() {
+  const router = useRouter()
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [upgrading, setUpgrading] = useState(false)
+  const [plan, setPlan] = useState<PlanInfo | null>(null)
+  const [usage, setUsage] = useState<UsageInfo | null>(null)
+  const [isAnnual, setIsAnnual] = useState(true)
+
+  useEffect(() => {
+    async function fetchStatus() {
+      try {
+        const res = await apiClient("/api/subscription/status")
+        setPlan(res.plan)
+        setUsage(res.usage)
+      } catch (err) {
+        logger.error("Failed to fetch billing status", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStatus()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+      </div>
+    )
+  }
+
+  const renderProgress = (used: number, limit: number | null) => {
+    if (limit === null) return <Progress value={100} className="h-2 opacity-50 bg-emerald-100 dark:bg-emerald-950 [&>div]:bg-emerald-500" />
+    const pct = Math.min((used / limit) * 100, 100)
+    let colorClass = "[&>div]:bg-indigo-600"
+    if (pct > 90) colorClass = "[&>div]:bg-rose-500"
+    else if (pct > 75) colorClass = "[&>div]:bg-amber-500"
+    
+    return <Progress value={pct} className={`h-2 ${colorClass}`} />
+  }
+
+  const plans = [
+    {
+      id: 1, name: "Free", limitText: "For small teams starting out", price: 0,
+      features: [
+        "Up to 15 Employees",
+        "Basic Attendance Tracking",
+        "Job / Task Management",
+        "Limited Inventory Management",
+        "Basic Reports"
+      ],
+      missing: []
+    },
+    {
+      id: 2, name: "Basic", limitText: "For growing businesses", price: isAnnual ? 9990 : 999,
+      features: [
+        "Up to 50 Employees",
+        "Attendance Tracking",
+        "Payroll Generation (Basic)",
+        "Leave Management System",
+        "Inventory Management",
+        "Location Tracking",
+        "Basic Reports & Exports",
+        "90-day Message History"
+      ],
+      missing: []
+    },
+    {
+      id: 3, name: "Pro", limitText: "For scale and maximum impact", price: isAnnual ? 24990 : 2499,
+      features: [
+        "Unlimited Employees & Departments",
+        "Multi-Company Management",
+        "Advanced Payroll Automation (Auto Calculations + Deductions)",
+        "AI Chat Assistant (Ask anything about payroll, attendance & system usage)",
+        "Attendance with Offline Sync (PWA Enabled)",
+        "Real-Time Leave Approval System",
+        "Employee Document & Payslip Management",
+        "Smart Reports & Export (PDF/Excel)",
+        "Role-Based Access Control (Owner / HR / Employee)",
+        "Push Notifications (Real-Time Alerts)",
+        "Background Job Processing (Fast Payroll Generation)",
+        "SaaS Billing & Subscription Management",
+        "Priority Support"
+      ],
+      missing: [],
+      popular: true
+    }
+  ]
+
+  const formatPrice = (price: number) => {
+    if (price === 0) return "Free"
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(price)
+  }
+
+  const handleUpgrade = async (planId: number) => {
+    if (upgrading) return
+    setUpgrading(true)
+
+    try {
+      const billingCycle = isAnnual ? 'yearly' : 'monthly'
+      
+      const orderRes = await apiClient("/api/subscription/create-order", {
+        method: "POST",
+        body: JSON.stringify({ planId, billingCycle })
+      })
+
+      if (!orderRes.id) {
+        throw new Error(orderRes.message || "Failed to create order")
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderRes.amount,
+        currency: orderRes.currency,
+        name: "SmartERP",
+        description: `Upgrade to ${plans.find(p => p.id === planId)?.name || 'Basic'} Plan`,
+        order_id: orderRes.id,
+        notes: {
+          companyId: user?.company_id,
+          planId: planId.toString(),
+          billingCycle,
+          userId: user?.id
+        },
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await apiClient("/api/subscription/verify-payment", {
+              method: "POST",
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                planId,
+                billingCycle
+              })
+            })
+
+            if (verifyRes.ok || verifyRes.success) {
+              toast({
+                title: "Upgrade Successful! 🎉",
+                description: "Your plan has been upgraded. Redirecting...",
+              })
+              router.push(`/owner/payment-success?order_id=${response.razorpay_order_id}&payment_id=${response.razorpay_payment_id}&plan_id=${planId}&billing_cycle=${billingCycle}&verified=true`)
+            } else {
+              throw new Error(verifyRes.message || "Verification failed")
+            }
+          } catch (err: any) {
+            logger.error("[Razorpay] Payment verification handler catch:", err)
+            router.push(`/owner/payment-success?order_id=${response?.razorpay_order_id || 'N/A'}&payment_id=${response?.razorpay_payment_id || 'N/A'}&plan_id=${planId}&billing_cycle=${billingCycle}&signature=${response?.razorpay_signature || ''}`)
+          } finally {
+            setUpgrading(false)
+          }
+        },
+        prefill: {
+          name: user?.name,
+          email: user?.email,
+        },
+        theme: {
+          color: "#4f46e5",
+        },
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.open()
+
+    } catch (err: any) {
+      logger.error("Upgrade error:", err)
+      toast({
+        title: "Upgrade Error",
+        description: err.message || "Failed to initiate upgrade process.",
+        variant: "destructive"
+      })
+    } finally {
+      setUpgrading(false)
+    }
+  }
+
+  return (
+    <>
+      <Script
+        id="razorpay-checkout-js"
+        src="https://checkout.razorpay.com/v1/checkout.js"
+      />
+      <div className="space-y-10 animate-in fade-in duration-700 pb-10 max-w-6xl mx-auto">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight bg-linear-to-r from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-400 bg-clip-text text-transparent mb-1">
+              Subscription & Billing
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Manage your subscription and view your real-time company usage quotas.
+            </p>
+          </div>
+          
+          <div className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 p-1.5 rounded-full inline-flex items-center transition-colors shadow-inner self-start">
+            <button 
+              onClick={() => setIsAnnual(false)}
+              className={`px-5 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 ${!isAnnual ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400'}`}
+            >
+              Monthly
+            </button>
+            <button 
+              onClick={() => setIsAnnual(true)}
+              className={`px-5 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 ${isAnnual ? 'bg-indigo-600 dark:bg-indigo-600 text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400'}`}
+            >
+              Yearly <span className="ml-1 text-[10px] uppercase font-bold text-emerald-200 bg-emerald-600/20 px-1.5 py-0.5 rounded-full">Save 20%</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Current Plan Overview Card */}
+        {plan && (
+          <Card className="border-2 border-indigo-100 dark:border-indigo-900/50 shadow-xl shadow-indigo-100/20 dark:shadow-indigo-900/10 overflow-hidden relative">
+            <div className={`absolute top-0 left-0 w-2 h-full ${plan.is_trial ? 'bg-amber-500' : 'bg-indigo-600'}`}></div>
+            <CardHeader className="bg-muted/30 pb-6">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    Current Plan: <span className="text-indigo-600 dark:text-indigo-400 font-black">{plan.name}</span>
+                    {plan.is_trial && (
+                      <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800 px-3 py-1 text-xs">
+                         <Clock className="w-3.5 h-3.5 mr-1.5" />
+                         Trial ends in {plan.days_remaining} {plan.days_remaining === 1 ? 'day' : 'days'}
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-1.5">
+                    {plan.is_trial 
+                      ? "You are currently experiencing all our premium features for free." 
+                      : "You are on an active subscription plan."}
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2 bg-white dark:bg-zinc-950 px-3 py-1.5 rounded-full border shadow-xs text-xs">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                  <span className="font-medium">Status: Active</span>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+                <div className="space-y-3">
+                  <div className="flex justify-between text-xs font-medium mb-1">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                        Users / Employees
+                    </span>
+                    <span><span className="font-bold text-foreground">{usage?.employees || 0}</span> / {plan.employee_limit === null ? 'Unlimited' : plan.employee_limit}</span>
+                  </div>
+                  {renderProgress(usage?.employees || 0, plan.employee_limit)}
+                  <p className="text-[11px] text-muted-foreground">Active team members registered to your company.</p>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-xs font-medium mb-1">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                        Inventory Items
+                    </span>
+                    <span><span className="font-bold text-foreground">{usage?.inventory_items || 0}</span> / {plan.max_inventory_items === null ? 'Unlimited' : plan.max_inventory_items}</span>
+                  </div>
+                  {renderProgress(usage?.inventory_items || 0, plan.max_inventory_items)}
+                  <p className="text-[11px] text-muted-foreground">Total distinct items in your inventory catalog.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Plan Comparison Board */}
+        <div>
+           <div className="text-center mb-8">
+               <h3 className="text-xl font-bold">Choose the right plan for your business</h3>
+               <p className="text-muted-foreground text-xs mt-1">No hidden fees, no surprise charges.</p>
+           </div>
+           
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+             {plans.map((p) => {
+               const isCurrent = plan && !plan.is_trial && plan.id === p.id;
+               const isProTrial = plan?.is_trial && p.id === 3;
+               
+               return (
+                 <motion.div 
+                    key={p.id}
+                    whileHover={{ y: -4 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                 >
+                    <Card className={`relative h-full flex flex-col ${p.popular ? 'border-2 border-indigo-600 shadow-xl shadow-indigo-600/10' : 'border border-border'}`}>
+                        {p.popular && (
+                            <div className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-md flex items-center gap-1">
+                                <Sparkles className="w-3 h-3" /> Most Popular
+                            </div>
+                        )}
+                        
+                        <CardHeader className="text-center pt-8 pb-5">
+                            <CardTitle className="text-xl font-bold flex items-center justify-center gap-2">
+                              {p.name}
+                            </CardTitle>
+                            <CardDescription className="min-h-8 mt-1.5 text-xs">{p.limitText}</CardDescription>
+                            <div className="mt-3 flex flex-col items-center justify-center">
+                                <div className="flex items-end gap-1">
+                                    <span className="text-3xl lg:text-4xl font-extrabold tracking-tighter">{formatPrice(p.price)}</span>
+                                    {p.price > 0 && <span className="text-muted-foreground mb-1 font-medium text-xs">/ {isAnnual ? 'yr' : 'mo'}</span>}
+                                </div>
+                                {p.price > 0 && isAnnual && (
+                                    <span className="text-[10px] text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 font-medium px-2 py-0.5 rounded mt-1.5">
+                                        Equivalent to ~{formatPrice(Math.floor(p.price / 12))} / mo
+                                    </span>
+                                )}
+                            </div>
+                        </CardHeader>
+                        
+                        <CardContent className="flex-grow space-y-4 pt-2">
+                            <ul className="space-y-2.5 text-xs">
+                                {p.features.map((f, i) => (
+                                    <li key={i} className="flex items-start gap-2.5">
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                                        <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-tight">{f}</span>
+                                    </li>
+                                ))}
+                                {p.missing.map((m, i) => (
+                                    <li key={`m-${i}`} className="flex items-start gap-2.5 opacity-60">
+                                        <Minus className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
+                                        <span className="text-zinc-500 line-through leading-tight">{m}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                        
+                        <CardFooter className="pt-4 pb-6">
+                            {isCurrent ? (
+                                <Button className="w-full bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 shadow-none pointer-events-none cursor-default text-xs h-9" variant="secondary">
+                                    Current Plan
+                                </Button>
+                            ) : isProTrial ? (
+                                <Button className="w-full border-2 border-indigo-600 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-300 pointer-events-none cursor-default shadow-none text-xs h-9">
+                                    <Clock className="w-3.5 h-3.5 mr-1.5" /> Trial Active
+                                </Button>
+                            ) : (
+                                <Button 
+                                    onClick={() => handleUpgrade(p.id)} 
+                                    disabled={upgrading}
+                                    className={`w-full text-white font-medium shadow-md text-xs h-9 ${p.popular ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900'}`}
+                                >
+                                    {upgrading ? (
+                                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                    ) : (
+                                      <>
+                                        {plan && p.id < plan.id ? "Downgrade" : "Upgrade"} <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                                      </>
+                                    )}
+                                </Button>
+                            )}
+                        </CardFooter>
+                    </Card>
+                 </motion.div>
+               )
+             })}
+           </div>
+        </div>
+
+        {/* Job Invoices Section */}
+        <JobInvoicesSection />
+      </div>
+    </>
+  )
+}
+
+function JobInvoicesSection() {
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadInvoices() {
+      try {
+        const data = await apiClient("/api/jobs/invoices/all")
+        setInvoices(Array.isArray(data) ? data : [])
+      } catch (err) {
+        logger.error("Failed to load job invoices", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadInvoices()
+  }, [])
+
+  return (
+    <Card className="mt-8 border border-slate-200">
+      <CardHeader>
+        <CardTitle className="text-lg font-bold flex items-center gap-2">
+          Service Invoices
+          <Badge variant="outline" className="ml-auto font-mono text-[11px]">
+            Auto-retry Backoff: 3 Attempts Active
+          </Badge>
+        </CardTitle>
+        <CardDescription className="text-xs">Generated invoices and billing records for completed service jobs.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="py-8 text-center text-xs text-muted-foreground">Loading job invoices...</div>
+        ) : invoices.length === 0 ? (
+          <div className="py-8 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
+            No job invoices generated yet. Click "Generate Invoice" on any completed job in the Jobs tab.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-4">Invoice #</th>
+                  <th className="py-3 px-4">Job Title</th>
+                  <th className="py-3 px-4">Customer</th>
+                  <th className="py-3 px-4">Amount</th>
+                  <th className="py-3 px-4">Generated Date</th>
+                  <th className="py-3 px-4 text-right">PDF Invoice</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-slate-50">
+                    <td className="py-3 px-4 font-mono font-bold text-indigo-600">{inv.invoice_number}</td>
+                    <td className="py-3 px-4 font-medium text-slate-900">{inv.job_title || 'Service Job'}</td>
+                    <td className="py-3 px-4 text-slate-600">{inv.customer_name || 'Client'}</td>
+                    <td className="py-3 px-4 font-bold">₹{parseFloat(inv.total_amount || 0).toLocaleString()}</td>
+                    <td className="py-3 px-4 text-slate-500 text-xs">{new Date(inv.generated_at).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-right">
+                      {inv.pdf_url ? (
+                        <a
+                          href={inv.pdf_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition-colors"
+                        >
+                          Download Invoice PDF
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-400">PDF Ready</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

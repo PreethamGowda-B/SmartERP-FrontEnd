@@ -319,21 +319,21 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
       )}
 
       {uploading && !pendingAttachment && (
-        <div className="flex items-center gap-2 px-4 py-2 pr-24 sm:pr-28 border-b bg-primary/5 text-xs text-primary animate-pulse">
+        <div className="flex items-center gap-2 px-3 sm:px-4 py-2 border-b bg-primary/5 text-xs text-primary animate-pulse">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           <span>Processing & attaching photo...</span>
         </div>
       )}
 
       {showVoiceRecorder ? (
-        <div className="p-3 pr-24 sm:pr-28">
+        <div className="p-2.5 sm:p-3">
           <VoiceNoteRecorder
             onSendVoiceNote={handleVoiceNoteSend}
             onCancel={() => setShowVoiceRecorder(false)}
           />
         </div>
       ) : (
-        <div className="flex items-end gap-2 p-3 pr-24 sm:pr-28">
+        <div className="flex items-end gap-1.5 sm:gap-2 p-2.5 sm:p-3">
           {/* File picker for documents */}
           <input
             ref={fileInputRef}
@@ -354,7 +354,7 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 h-9 w-9 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+            className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40"
             onClick={() => imageInputRef.current?.click()}
             disabled={disabled || uploading}
             type="button"
@@ -366,7 +366,7 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || uploading}
             type="button"
@@ -378,7 +378,7 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+            className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
             onClick={() => setShowVoiceRecorder(true)}
             disabled={disabled || uploading}
             type="button"
@@ -396,14 +396,14 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
             disabled={disabled}
             maxLength={2000}
             rows={1}
-            className="flex-1 min-h-9 max-h-28 text-xs rounded-xl resize-none"
+            className="flex-1 min-h-8 sm:min-h-9 max-h-28 text-xs rounded-xl resize-none py-1.5 sm:py-2 px-2.5 sm:px-3"
           />
 
           <Button
             size="icon"
             onClick={handleSend}
             disabled={!canSend}
-            className="shrink-0 h-9 w-9 rounded-xl bg-primary text-primary-foreground transition-transform active:scale-95 shadow-xs"
+            className="shrink-0 h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-primary text-primary-foreground transition-transform active:scale-95 shadow-xs"
             type="button"
             title="Send Message"
           >

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { OwnerLayout } from "@/components/owner-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -67,6 +68,12 @@ const PRIORITY_CONFIG: Record<string, { label: string; className: string }> = {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function OwnerCustomerJobsPage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    router.replace("/owner/jobs?view=customer")
+  }, [router])
+
   const [jobs, setJobs] = useState<CustomerJob[]>([])
   const [total, setTotal] = useState(0)
   const [isLoading, setIsLoading] = useState(true)

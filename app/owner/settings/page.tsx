@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,10 +11,13 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
-import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader2, Eye, EyeOff, Sparkles, Download, Database } from "lucide-react"
+import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader2, Eye, EyeOff, Sparkles, Download, Database, CreditCard, Headset } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { DangerZoneAccountDeletion } from "@/components/danger-zone-account-deletion"
+import { BillingView } from "@/components/billing-view"
+import { SupportView } from "@/components/support-view"
 import Link from "next/link"
 
 import { getAuthToken, apiClient } from "@/lib/apiClient"
@@ -28,7 +32,27 @@ function authHeaders(): Record<string, string> {
   return headers
 }
 
-export default function SettingsPage() {
+function SettingsContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get("tab")
+  const [activeTab, setActiveTab] = useState("profile")
+
+  useEffect(() => {
+    if (tabParam === "billing" || tabParam === "plans") {
+      setActiveTab("billing")
+    } else if (tabParam === "support") {
+      setActiveTab("support")
+    } else if (tabParam === "profile" || tabParam === "settings") {
+      setActiveTab("profile")
+    }
+  }, [tabParam])
+
+  const handleTabChange = (val: string) => {
+    setActiveTab(val)
+    router.replace(`/owner/settings?tab=${val}`, { scroll: false })
+  }
+
   const { user } = useAuth()
   const { toast } = useToast()
 
@@ -274,18 +298,48 @@ export default function SettingsPage() {
 
   return (
     <OwnerLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <Button asChild className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 shadow-md">
-            <Link href="/owner/billing">
-              <Sparkles className="h-4 w-4 mr-2" />
-              Upgrade Plan
-            </Link>
-          </Button>
-        </div>
+      <div className="p-4 md:p-6 space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-linear-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                Settings & Account Hub
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Manage organization profile, subscription tier, billing, and dedicated support.
+              </p>
+            </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TabsList className="grid grid-cols-3 w-full sm:w-auto h-10 p-1 bg-muted/70">
+              <TabsTrigger value="profile" className="flex items-center gap-1.5 text-xs font-medium">
+                <SettingsIcon className="h-3.5 w-3.5" />
+                <span>Company & Profile</span>
+              </TabsTrigger>
+              <TabsTrigger value="billing" className="flex items-center gap-1.5 text-xs font-medium">
+                <CreditCard className="h-3.5 w-3.5" />
+                <span>Plan & Billing</span>
+              </TabsTrigger>
+              <TabsTrigger value="support" className="flex items-center gap-1.5 text-xs font-medium">
+                <Headset className="h-3.5 w-3.5" />
+                <span>Priority Support</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* Sub-Tab 1: Profile & Settings */}
+          <TabsContent value="profile" className="space-y-6 mt-0">
+            <div className="flex items-center justify-between pb-2">
+              <h2 className="text-lg font-bold">General Business Settings</h2>
+              <Button
+                onClick={() => handleTabChange("billing")}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white border-0 shadow-sm text-xs h-8 px-3"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                Manage Plan
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* ── Company Information ── */}
           <Card>
@@ -697,8 +751,37 @@ export default function SettingsPage() {
             userEmail={user?.email}
           />
 
-        </div>
+            </div>
+          </TabsContent>
+
+          {/* Sub-Tab 2: Plan & Billing */}
+          <TabsContent value="billing" className="mt-0">
+            <BillingView />
+          </TabsContent>
+
+          {/* Sub-Tab 3: Priority Support */}
+          <TabsContent value="support" className="mt-0">
+            <SupportView />
+          </TabsContent>
+        </Tabs>
       </div>
     </OwnerLayout>
+  )
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <OwnerLayout>
+          <div className="p-6">
+            <div className="h-8 w-48 bg-muted animate-pulse rounded-md mb-6" />
+            <div className="h-64 bg-muted/40 animate-pulse rounded-xl" />
+          </div>
+        </OwnerLayout>
+      }
+    >
+      <SettingsContent />
+    </Suspense>
   )
 }

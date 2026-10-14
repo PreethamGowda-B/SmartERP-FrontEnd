@@ -1,9 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Cloud, CloudRain, Sun, Compass } from "lucide-react"
-import { logger } from "@/lib/logger"
-import { cn } from "@/lib/utils"
+import { Cloud, CloudRain, Sun, Clock, Calendar } from "lucide-react"
 
 export function DateTimeWeather() {
   const [dateTime, setDateTime] = useState<{
@@ -19,11 +17,10 @@ export function DateTimeWeather() {
   } | null>(null)
 
   useEffect(() => {
-    // Update date and time
     const updateDateTime = () => {
       const now = new Date()
 
-      const dayName = now.toLocaleDateString("en-US", { weekday: "long" })
+      const dayName = now.toLocaleDateString("en-US", { weekday: "short" })
       const date = now.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -41,20 +38,19 @@ export function DateTimeWeather() {
     updateDateTime()
     const interval = setInterval(updateDateTime, 30000)
 
-    // Compute dynamic real-time operational status based on local time
     const currentHour = new Date().getHours()
     const isDay = currentHour >= 6 && currentHour < 19
     const shiftStatus = currentHour >= 8 && currentHour < 18 
-      ? "General Shift (Active)" 
+      ? "General Shift" 
       : currentHour >= 18 && currentHour < 22 
         ? "Evening Shift" 
-        : "Off-Hours Standby"
+        : "Standby"
 
     setWeather({
       temp: isDay ? 26 : 21,
       condition: shiftStatus,
       icon: isDay ? "sun" : "cloud",
-      location: "SmartERP Enterprise Hub",
+      location: "Enterprise Hub",
     })
 
     return () => clearInterval(interval)
@@ -63,54 +59,43 @@ export function DateTimeWeather() {
   const getWeatherIcon = (icon: string | undefined) => {
     switch (icon) {
       case "sun":
-        return <Sun className="w-5 h-5 text-amber-500 animate-pulse" />
+        return <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
       case "rain":
-        return <CloudRain className="w-5 h-5 text-blue-400" />
+        return <CloudRain className="w-3.5 h-3.5 text-blue-400 shrink-0" />
       case "cloud":
       default:
-        return <Cloud className="w-5 h-5 text-indigo-400" />
+        return <Cloud className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
     }
   }
 
   if (!dateTime) return null
 
   return (
-    <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-5 px-4 py-3 rounded-2xl bg-card/70 dark:bg-card/80 backdrop-blur-xl border border-border/70 shadow-lg hover:shadow-xl transition-all duration-300">
-      {/* Date and Time */}
-      <div className="flex flex-col gap-0.5 min-w-30">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-            {dateTime.dayName}
-          </span>
-        </div>
-        <p className="text-xl sm:text-2xl font-extrabold tracking-tight bg-linear-to-r from-primary via-indigo-500 to-amber-500 bg-clip-text text-transparent">
-          {dateTime.time}
-        </p>
-        <span className="text-xs font-medium text-muted-foreground">{dateTime.date}</span>
+    <div className="flex items-center gap-2 sm:gap-3 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-card border border-border/70 shadow-xs text-xs">
+      {/* Date & Time */}
+      <div className="flex items-center gap-2 font-mono">
+        <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+        <span className="font-extrabold text-foreground text-xs sm:text-sm tracking-tight">{dateTime.time}</span>
       </div>
 
-      {/* Vertical Divider */}
-      <div className="hidden sm:block w-px h-10 bg-border/80" />
+      <div className="w-px h-3.5 bg-border/80 shrink-0" />
 
-      {/* Weather Info */}
+      <div className="flex items-center gap-1.5 text-muted-foreground">
+        <Calendar className="w-3 h-3 shrink-0" />
+        <span className="font-medium whitespace-nowrap">{dateTime.dayName}, {dateTime.date}</span>
+      </div>
+
       {weather && (
-        <div className="flex items-center gap-3 pl-1 sm:pl-0">
-          <div className="p-2.5 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 flex items-center justify-center shrink-0">
+        <>
+          <div className="hidden sm:block w-px h-3.5 bg-border/80 shrink-0" />
+          <div className="hidden sm:flex items-center gap-1.5 shrink-0">
             {getWeatherIcon(weather.icon)}
+            <span className="font-bold text-foreground">{weather.temp}°C</span>
+            <span className="text-[10px] font-semibold px-2 py-0.2 rounded-full bg-primary/10 text-primary border border-primary/20">
+              {weather.condition}
+            </span>
           </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <span className="text-base font-bold text-foreground">{weather.temp}°C</span>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                {weather.condition}
-              </span>
-            </div>
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
-              <Compass className="w-3 h-3 text-muted-foreground shrink-0" />
-              <span>{weather.location}</span>
-            </div>
-          </div>
-        </div>
+        </>
       )}
     </div>
   )
