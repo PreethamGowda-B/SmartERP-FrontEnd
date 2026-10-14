@@ -119,7 +119,6 @@ const navCategories: NavCategory[] = [
       { name: "Employees", href: "/owner/employees", icon: Users },
       { name: "Attendance", href: "/owner/attendance", icon: Clock },
       { name: "Payroll", href: "/owner/payroll", icon: DollarSign },
-      { name: "Payroll Audit", href: "/owner/payroll/pre-run-validation", icon: ShieldCheck },
       { name: "HR Hub", href: "/owner/hr-hub", icon: Megaphone },
     ],
   },

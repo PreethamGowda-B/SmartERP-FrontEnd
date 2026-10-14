@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,7 +23,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, Plus, Loader2, Search, Calendar, FileText } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { DollarSign, Plus, Loader2, Search, Calendar, FileText, ShieldCheck } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"
@@ -33,6 +35,7 @@ import { SkeletonList } from "@/components/ui/skeleton-card"
 import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
 import { LockedFeatureScreen } from "@/components/locked-feature-screen"
 import { useSubscription } from "@/contexts/subscription-context"
+import { PayrollAuditView } from "@/components/payroll-audit-view"
 
 interface Employee {
   id: string
@@ -60,9 +63,31 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ]
 
-export default function OwnerPayrollPage() {
+function OwnerPayrollContent() {
   const [mounted, setMounted] = useState(false)
   const { isFree } = useSubscription()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const tabParam = searchParams.get("tab")
+  const [activeTab, setActiveTab] = useState<string>(tabParam === "audit" ? "audit" : "management")
+
+  useEffect(() => {
+    if (tabParam === "audit") {
+      setActiveTab("audit")
+    } else {
+      setActiveTab("management")
+    }
+  }, [tabParam])
+
+  const handleTabChange = (val: string) => {
+    setActiveTab(val)
+    if (val === "audit") {
+      router.replace("/owner/payroll?tab=audit", { scroll: false })
+    } else {
+      router.replace("/owner/payroll", { scroll: false })
+    }
+  }
+
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [employeeSearch, setEmployeeSearch] = useState("")
@@ -503,11 +528,36 @@ export default function OwnerPayrollPage() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 items-center w-full">
-          <div className="flex-1 relative w-full min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search by employee name or email..."
+        {/* Unified Tab Switcher */}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-3">
+            <TabsList className="bg-muted/70 p-1 rounded-xl h-11 border border-border/60">
+              <TabsTrigger 
+                value="management" 
+                className="rounded-lg px-4 sm:px-5 py-2 text-xs font-bold gap-2 data-[state=active]:bg-background data-[state=active]:shadow-xs transition-all"
+              >
+                <DollarSign className="h-4 w-4 text-emerald-600" />
+                Payroll Records & Disbursals
+              </TabsTrigger>
+              <TabsTrigger 
+                value="audit" 
+                className="rounded-lg px-4 sm:px-5 py-2 text-xs font-bold gap-2 data-[state=active]:bg-background data-[state=active]:shadow-xs transition-all"
+              >
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                Pre-Run Audit & Anomaly Engine
+              </TabsTrigger>
+            </TabsList>
+            <span className="text-xs text-muted-foreground font-medium hidden sm:inline-block">
+              {activeTab === "management" ? "Managing compensation records & active payouts" : "Automated 7-point pre-disbursal compliance checks"}
+            </span>
+          </div>
+
+          <TabsContent value="management" className="space-y-6 mt-0 outline-none">
+            <div className="flex flex-col sm:flex-row gap-3 items-center w-full">
+              <div className="flex-1 relative w-full min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search by employee name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 h-9 text-xs rounded-xl"
@@ -661,7 +711,27 @@ export default function OwnerPayrollPage() {
             />
           </CardContent>
         </Card>
-      </div>
-    </OwnerLayout>
+      </TabsContent>
+
+      <TabsContent value="audit" className="space-y-6 mt-0 outline-none">
+        <PayrollAuditView />
+      </TabsContent>
+    </Tabs>
+  </div>
+</OwnerLayout>
+  )
+}
+
+export default function OwnerPayrollPage() {
+  return (
+    <Suspense fallback={
+      <OwnerLayout>
+        <div className="p-6 space-y-6">
+          <SkeletonList count={3} />
+        </div>
+      </OwnerLayout>
+    }>
+      <OwnerPayrollContent />
+    </Suspense>
   )
 }
