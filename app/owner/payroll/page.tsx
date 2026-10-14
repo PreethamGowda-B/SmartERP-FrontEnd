@@ -335,7 +335,7 @@ function OwnerPayrollContent() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-xl max-h-[92vh] flex flex-col p-0 overflow-hidden border border-border shadow-2xl rounded-2xl">
-                <div className="bg-gradient-to-r from-primary to-primary/90 p-6 text-white shrink-0">
+                <div className="bg-linear-to-r from-primary to-primary/90 p-6 text-white shrink-0">
                   <DialogHeader>
                     <DialogTitle className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
                       <DollarSign className="h-6 w-6 text-emerald-300" />
