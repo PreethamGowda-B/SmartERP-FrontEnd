@@ -88,10 +88,14 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
   }, [refreshProfile]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await customerApi.post<{ ok: boolean; user: CustomerProfile }>(
+    const res = await customerApi.post<{ ok: boolean; user: CustomerProfile; token?: string }>(
       '/api/customer/auth/login',
       { email, password }
     );
+    if (res.data.token && typeof window !== 'undefined') {
+      localStorage.setItem('_customer_at', res.data.token);
+      sessionStorage.setItem('_customer_at', res.data.token);
+    }
     if (res.data.user) {
       setCustomer(res.data.user);
     } else {
@@ -106,6 +110,10 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
       await customerApi.post('/api/customer/auth/logout');
     } catch {
       // Ignore errors — clear state regardless
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('_customer_at');
+      sessionStorage.removeItem('_customer_at');
     }
     setCustomer(null);
     if (typeof window !== 'undefined') {

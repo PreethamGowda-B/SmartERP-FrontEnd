@@ -182,6 +182,7 @@ export default function TimeTrackingPage() {
       setTodayAttendance(data)
       fetchHistory()
       if (typeof window !== "undefined") {
+        localStorage.setItem("_clocked_in_date", new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }))
         window.dispatchEvent(new CustomEvent("attendance-status-changed"))
       }
     } catch (err: any) {
@@ -213,6 +214,7 @@ export default function TimeTrackingPage() {
       )
       setLoading(false)
       if (typeof window !== "undefined") {
+        localStorage.removeItem("_clocked_in_date")
         window.dispatchEvent(new CustomEvent("attendance-status-changed"))
       }
       return
@@ -223,6 +225,7 @@ export default function TimeTrackingPage() {
       setTodayAttendance(data)
       fetchHistory()
       if (typeof window !== "undefined") {
+        localStorage.removeItem("_clocked_in_date")
         window.dispatchEvent(new CustomEvent("attendance-status-changed"))
       }
     } catch (err: any) {

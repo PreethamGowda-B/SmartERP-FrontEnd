@@ -102,6 +102,9 @@ export function ClockInOut({
         })
         const isLate = getClockStatusMessage().type === "late"
         setStatus("clocked-in")
+        if (typeof window !== "undefined") {
+          localStorage.setItem("_clocked_in_date", new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }))
+        }
         setSuccessMsg(isLate ? "✅ Clocked in — marked as late." : "✅ Clocked in on time!")
       } else {
         await apiClient("/api/attendance/clock-out", {
@@ -109,6 +112,9 @@ export function ClockInOut({
           body: JSON.stringify({ method: "manual" }),
         })
         setStatus("clocked-out")
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("_clocked_in_date")
+        }
         setSuccessMsg("✅ Clocked out successfully. See you tomorrow!")
       }
       if (typeof window !== "undefined") {

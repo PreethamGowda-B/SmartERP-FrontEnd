@@ -71,23 +71,29 @@ export default function CreateJobPage() {
       return;
     }
 
+    if (requestTab === 'machine' && !selectedMachineId) {
+      setError('Please select a machine unit for your machine-based request');
+      return;
+    }
+
     setIsLoading(true);
     try {
+      const isoScheduledAt = scheduledAt ? new Date(scheduledAt).toISOString() : undefined;
       await customerApi.post('/api/customer/jobs', {
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
-        scheduled_at: scheduledAt || undefined,
-        machine_id: selectedMachineId || undefined,
-        alarm_code: alarmCode ? alarmCode.trim() : undefined,
+        scheduled_at: isoScheduledAt,
+        machine_id: requestTab === 'machine' ? (selectedMachineId || undefined) : undefined,
+        alarm_code: (requestTab === 'machine' && alarmCode) ? alarmCode.trim() : undefined,
         service_type: requestTab === 'machine' ? (serviceType || 'breakdown') : 'general',
       });
       setSuccess(true);
       setTimeout(() => router.push('/customer/dashboard'), 2000);
     } catch (err: any) {
       setError(
-        err?.response?.data?.message ||
         err?.response?.data?.error ||
+        err?.response?.data?.message ||
         'Failed to submit request. Please try again.'
       );
     } finally {

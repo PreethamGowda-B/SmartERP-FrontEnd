@@ -64,11 +64,17 @@ const customerApi: AxiosInstance = axios.create({
   },
 });
 
-// ── Request interceptor: attach X-CSRF-Token on mutating requests ─────────────
+// ── Request interceptor: attach X-CSRF-Token and Bearer token ─────────────
 customerApi.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const method = (config.method || 'get').toLowerCase();
   if (['post', 'put', 'patch', 'delete'].includes(method) && csrfToken) {
     config.headers['X-CSRF-Token'] = csrfToken;
+  }
+  if (typeof window !== 'undefined') {
+    const custToken = localStorage.getItem('_customer_at') || sessionStorage.getItem('_customer_at');
+    if (custToken && !config.headers['Authorization']) {
+      config.headers['Authorization'] = `Bearer ${custToken}`;
+    }
   }
   return config;
 });
@@ -114,12 +120,20 @@ customerApi.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await customerApi.post('/api/customer/auth/refresh');
+        const refreshRes = await customerApi.post<{ ok: boolean; token?: string }>('/api/customer/auth/refresh');
+        if (refreshRes.data?.token && typeof window !== 'undefined') {
+          localStorage.setItem('_customer_at', refreshRes.data.token);
+          sessionStorage.setItem('_customer_at', refreshRes.data.token);
+        }
         // Refresh new CSRF token after token rotation
         await fetchCsrfToken();
         onRefreshed();
         return customerApi(originalRequest);
       } catch (refreshError) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('_customer_at');
+          sessionStorage.removeItem('_customer_at');
+        }
         // Refresh failed — clear queued requests and redirect to login
         onRefreshed();
         if (typeof window !== 'undefined' && window.location.pathname.startsWith('/customer') && window.location.pathname !== '/customer/login') {
