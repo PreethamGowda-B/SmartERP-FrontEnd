@@ -150,7 +150,7 @@ export interface TrackingData {
 
 // ── SSE Events ────────────────────────────────────────────────────────────────
 
-export type SSEEventType = 'connected' | 'job_accepted' | 'job_progress' | 'job_completed' | 'job_approved' | 'job_rejected' | 'employee_arrived' | 'reconnect' | 'chat_message';
+export type SSEEventType = 'connected' | 'job_accepted' | 'job_progress' | 'job_completed' | 'job_approved' | 'job_rejected' | 'employee_arrived' | 'location_update' | 'invoice_created' | 'invoice_issued' | 'reconnect' | 'chat_message';
 
 export interface SSEEvent {
   type: SSEEventType;
@@ -165,6 +165,9 @@ export interface SSEEvent {
   progress?: number;
   status?: JobStatus;
   completedAt?: string;
+  lat?: number;
+  lng?: number;
+  updatedAt?: string;
   reason?: string;
   message?: ChatMessage;
 }
@@ -177,6 +180,10 @@ export interface ChatMessage {
   sender_id: string;
   sender_name: string;
   message: string;
+  media_url?: string | null;
+  media_type?: string | null;
+  file_name?: string | null;
+  file_size?: number | null;
   created_at: string;
 }
 

@@ -38,6 +38,9 @@ interface JobMessage {
   sender_id: string
   sender_name: string
   message: string
+  media_url?: string | null
+  media_type?: string | null
+  file_name?: string | null
   created_at: string
 }
 
@@ -251,6 +254,8 @@ function JobMessagesTab() {
                       <div className={cn("max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-sm", isMine ? "bg-indigo-600 text-white rounded-br-sm" : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-sm border border-gray-100 dark:border-gray-600")}>
                         {!isMine && <p className="text-xs font-black text-indigo-500 mb-1">{msg.sender_name}</p>}
                         <p className="leading-relaxed">{msg.message}</p>
+                        {msg.media_url && msg.media_type === "image" && <a href={msg.media_url} target="_blank" rel="noreferrer"><img src={msg.media_url} alt={msg.file_name || "Chat attachment"} className="mt-2 max-h-48 rounded-lg object-contain" /></a>}
+                        {msg.media_url && msg.media_type !== "image" && <a href={msg.media_url} target="_blank" rel="noreferrer" className="mt-2 block underline text-xs">📎 {msg.file_name || "Open attachment"}</a>}
                         <p className={cn("text-[10px] font-bold uppercase tracking-tighter mt-1.5", isMine ? "text-indigo-200" : "text-gray-400")}>{formatTime(msg.created_at)}</p>
                       </div>
                     </div>

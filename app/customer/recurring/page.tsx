@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -45,6 +45,10 @@ export default function RecurringJobsPage() {
 
   const [jobs, setJobs] = useState<RecurringJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
+  const requestSequence = useRef(0);
+  const hasJobsRef = useRef(false);
+  hasJobsRef.current = jobs.length > 0;
   const [showForm, setShowForm] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -69,14 +73,17 @@ export default function RecurringJobsPage() {
   };
 
   const fetchJobs = useCallback(async () => {
-    setIsLoading(true);
+    const requestId = ++requestSequence.current;
+    if (!hasJobsRef.current) setIsLoading(true);
+    setListError(null);
     try {
       const res = await customerApi.get<{ success: boolean; data: RecurringJob[] }>('/api/customer/recurring');
-      setJobs(res.data.data ?? []);
-    } catch {
-      setJobs([]);
+      if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error('The server returned an incomplete recurring jobs response.');
+      if (requestId === requestSequence.current) setJobs(res.data.data);
+    } catch (err: any) {
+      if (requestId === requestSequence.current) setListError(err?.message || 'Could not refresh recurring jobs. Existing results are still shown.');
     } finally {
-      setIsLoading(false);
+      if (requestId === requestSequence.current) setIsLoading(false);
     }
   }, []);
 
@@ -308,6 +315,7 @@ export default function RecurringJobsPage() {
         </AnimatePresence>
 
         {/* Job list */}
+        {listError && <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">Showing the last loaded recurring jobs. Refresh failed: {listError}</p>}
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2].map(i => (

@@ -8,6 +8,7 @@ import {
   ArrowLeft, MapPin, Activity, AlertCircle, Loader2,
   Receipt, Package, User, Clock, CheckCircle, XCircle,
   Calendar, Download, Info, MessageCircle, Send, Star, AlertTriangle, ChevronDown,
+  Paperclip,
 } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { JobStatusBadge } from '@/components/customer/ui/JobStatusBadge';
@@ -58,6 +59,7 @@ export default function JobDetailPage() {
   const { isAuthenticated, isLoading: authLoading } = useCustomerAuth();
 
   const [job, setJob] = useState<Job | null>(null);
+  const isCompleted = !!job && (job.status === 'completed' || Number(job.progress || 0) >= 100);
   const [invoice, setInvoice] = useState<Invoice | null | undefined>(undefined);
   const [materials, setMaterials] = useState<JobMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,9 +69,11 @@ export default function JobDetailPage() {
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [chatFile, setChatFile] = useState<File | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const trackedInvoiceId = useRef<string | null>(null);
 
   // Review state
   const [review, setReview] = useState<JobReview | null | undefined>(undefined); // undefined = not loaded
@@ -96,6 +100,7 @@ export default function JobDetailPage() {
   useEffect(() => {
     setJob(null);
     setInvoice(undefined);
+    trackedInvoiceId.current = null;
     setMaterials([]);
     setIsLoading(true);
     setError('');
@@ -112,7 +117,8 @@ export default function JobDetailPage() {
       );
       const invData = res.data.data ?? null;
       setInvoice(invData);
-      if (invData && invData.id) {
+      if (invData && invData.id && trackedInvoiceId.current !== invData.id) {
+        trackedInvoiceId.current = invData.id;
         customerApi.post(`/api/invoices/${invData.id}/track`, { actionType: 'viewed' }).catch(() => {});
       }
     } catch {
@@ -144,11 +150,39 @@ export default function JobDetailPage() {
   }, [jobId]);
 
   const sendMessage = useCallback(async () => {
-    if (!chatInput.trim()) return;
+    if (!chatInput.trim() && !chatFile) return;
     setChatLoading(true);
     setChatError('');
     try {
-      await customerApi.post(`/api/customer/jobs/${jobId}/messages`, { message: chatInput.trim() });
+      let attachment;
+      if (chatFile) {
+        const formData = new FormData();
+        formData.append('attachment', chatFile);
+        const uploaded = await customerApi.post('/api/customer/jobs/' + jobId + '/messages/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        attachment = uploaded.data.data;
+      }
+      await customerApi.post(`/api/customer/jobs/${jobId}/messages`, {
+        message: chatInput.trim(),
+        attachment,
+      });
+      setChatInput('');
+      setChatFile(null);
+      await fetchMessages();
+    } catch (err: any) {
+      setChatError(err?.response?.data?.error || 'Failed to send message');
+    } finally {
+      setChatLoading(false);
+    }
+  }, [jobId, chatInput, chatFile, fetchMessages]);
+
+  const sendQuickReply = useCallback(async (message: string) => {
+    setChatInput(message);
+    setChatLoading(true);
+    setChatError('');
+    try {
+      await customerApi.post(`/api/customer/jobs/${jobId}/messages`, { message });
       setChatInput('');
       await fetchMessages();
     } catch (err: any) {
@@ -156,7 +190,7 @@ export default function JobDetailPage() {
     } finally {
       setChatLoading(false);
     }
-  }, [jobId, chatInput, fetchMessages]);
+  }, [jobId, fetchMessages]);
 
   const fetchReview = useCallback(async () => {
     try {
@@ -197,9 +231,8 @@ export default function JobDetailPage() {
       const res = await customerApi.get<{ success: boolean; data: Job }>(`/api/customer/jobs/${jobId}`, { signal });
       const jobData = res.data.data ?? (res.data as any);
       setJob(jobData);
-      if (jobData.employee_status === 'accepted' && jobData.status !== 'completed') {
-        setTrackingActive(true);
-      }
+      const completed = jobData.status === 'completed' || Number(jobData.progress) >= 100;
+      setTrackingActive(!completed && ['accepted', 'arrived'].includes(jobData.employee_status));
       if (jobData.status === 'completed') {
         fetchInvoice();
         fetchReview();
@@ -224,6 +257,8 @@ export default function JobDetailPage() {
     return () => controller.abort();
   }, [isAuthenticated, fetchJob]);
 
+  const { tracking, setTracking } = useJobTracking({ jobId, active: trackingActive, intervalMs: 15_000 });
+
   const handleSSEEvent = useCallback((event: SSEEvent) => {
     if (event.type === 'job_approved') {
       fetchJob();
@@ -237,14 +272,35 @@ export default function JobDetailPage() {
       fetchJob();
     }
     if (event.type === 'job_progress') {
+      const completed = event.status === 'completed' || Number(event.progress) >= 100;
       setJob(prev => prev ? {
-        ...prev, progress: event.progress ?? prev.progress, status: event.status || prev.status,
+        ...prev, progress: event.progress ?? prev.progress,
+        status: completed ? 'completed' : (event.status || prev.status),
       } : prev);
+      if (completed) {
+        setTrackingActive(false);
+        fetchJob();
+        fetchInvoice();
+        fetchReview();
+      }
     }
     if (event.type === 'job_completed') {
       fetchJob();
       setTrackingActive(false);
       setTimeout(() => { fetchInvoice(); fetchMaterials(); fetchReview(); }, 2000);
+    }
+    if (event.type === 'location_update' && Number.isFinite(event.lat) && Number.isFinite(event.lng)) {
+      setTracking(prev => ({
+        available: true,
+        employeeName: prev?.employeeName || job?.assigned_employee_name || undefined,
+        latitude: event.lat!,
+        longitude: event.lng!,
+        location_updated_at: event.updatedAt || new Date().toISOString(),
+        is_online: true,
+      }));
+    }
+    if (event.type === 'invoice_created' || event.type === 'invoice_issued') {
+      fetchInvoice();
     }
     if (event.type === 'chat_message' && event.message) {
       setMessages(prev => {
@@ -255,10 +311,18 @@ export default function JobDetailPage() {
         return updated;
       });
     }
-  }, [fetchJob, fetchInvoice, fetchMaterials, fetchMessages, fetchReview]);
+  }, [fetchJob, fetchInvoice, fetchMaterials, fetchMessages, fetchReview, job?.assigned_employee_name, setTracking]);
+
+  // Owners may issue the invoice after the employee completes the job. Keep
+  // the pending invoice card fresh even if an invoice event is missed.
+  useEffect(() => {
+    if (!isCompleted) return;
+    fetchInvoice();
+    const interval = setInterval(fetchInvoice, 10_000);
+    return () => clearInterval(interval);
+  }, [isCompleted, fetchInvoice]);
 
   const { isConnected: sseConnected } = useSSE({ jobId, onEvent: handleSSEEvent, enabled: isAuthenticated && !!job });
-  const { tracking } = useJobTracking({ jobId, active: trackingActive, sseConnected, intervalMs: 15_000 });
 
   if (authLoading || isLoading) {
     return (
@@ -308,8 +372,6 @@ export default function JobDetailPage() {
   }
 
   const priority = PRIORITY_CONFIG[job.priority] || PRIORITY_CONFIG.medium;
-  const isCompleted = job.status === 'completed';
-
   return (
     <div className="min-h-screen bg-gray-50">
       <CustomerNavbar />
@@ -491,7 +553,7 @@ export default function JobDetailPage() {
             )}
 
             {/* Tracking map */}
-            {trackingActive && (
+            {!isCompleted && trackingActive && (
               <motion.div
                 id="tracking"
                 variants={fadeUp} initial="hidden" animate="visible" custom={3}
@@ -523,7 +585,7 @@ export default function JobDetailPage() {
             )}
 
             {/* Chat panel — only when technician has accepted */}
-            {(job.employee_status === 'accepted' || job.employee_status === 'arrived') && (
+            {!isCompleted && (job.employee_status === 'accepted' || job.employee_status === 'arrived') && (
               <motion.div
                 variants={fadeUp} initial="hidden" animate="visible" custom={4}
                 className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
@@ -566,6 +628,16 @@ export default function JobDetailPage() {
                             <p className="text-xs font-semibold text-indigo-600 mb-0.5">{msg.sender_name}</p>
                           )}
                           <p className="text-sm leading-relaxed">{msg.message}</p>
+                          {msg.media_url && msg.media_type === 'image' && (
+                            <a href={msg.media_url} target="_blank" rel="noreferrer" className="block mt-2">
+                              <img src={msg.media_url} alt={msg.file_name || 'Chat attachment'} className="max-h-48 max-w-full rounded-lg object-contain" />
+                            </a>
+                          )}
+                          {msg.media_url && msg.media_type !== 'image' && (
+                            <a href={msg.media_url} target="_blank" rel="noreferrer" className={`mt-2 inline-flex items-center gap-1 text-xs underline ${msg.sender_type === 'customer' ? 'text-indigo-100' : 'text-indigo-700'}`}>
+                              <Paperclip className="h-3 w-3" />{msg.file_name || 'Open attachment'}
+                            </a>
+                          )}
                           <p className={`text-xs mt-1 ${msg.sender_type === 'customer' ? 'text-indigo-200' : 'text-gray-400'}`}>
                             {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                           </p>
@@ -581,7 +653,30 @@ export default function JobDetailPage() {
                   {chatError && (
                     <p className="text-xs text-red-600 mb-2">{chatError}</p>
                   )}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {['When will you arrive?', 'Please come as soon as possible', 'I am at the service location'].map(reply => (
+                      <button
+                        key={reply}
+                        type="button"
+                        onClick={() => sendQuickReply(reply)}
+                        disabled={chatLoading}
+                        className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
+                      >
+                        {reply}
+                      </button>
+                    ))}
+                  </div>
                   <div className="flex items-center gap-2">
+                    <label className="w-9 h-9 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center cursor-pointer shrink-0" title="Attach an image or PDF">
+                      <Paperclip className="h-4 w-4" />
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        className="hidden"
+                        onChange={e => setChatFile(e.target.files?.[0] || null)}
+                        disabled={chatLoading}
+                      />
+                    </label>
                     <input
                       type="text"
                       value={chatInput}
@@ -593,12 +688,13 @@ export default function JobDetailPage() {
                     />
                     <button
                       onClick={sendMessage}
-                      disabled={chatLoading || !chatInput.trim()}
+                      disabled={chatLoading || (!chatInput.trim() && !chatFile)}
                       className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                     >
                       {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </button>
                   </div>
+                  {chatFile && <p className="mt-2 text-xs text-gray-500">Attachment ready: {chatFile.name}</p>}
                 </div>
               </motion.div>
             )}
@@ -667,7 +763,7 @@ export default function JobDetailPage() {
                     <Loader2 className="h-4 w-4 animate-spin" />Loading invoice...
                   </div>
                 ) : invoice === null ? (
-                  <p className="text-sm text-gray-500 py-2">Invoice is being generated. Check back shortly.</p>
+                  <p className="text-sm text-gray-500 py-2">Your service is complete. The company owner will prepare and issue your invoice here.</p>
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">

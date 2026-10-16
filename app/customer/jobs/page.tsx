@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Search, Filter, RefreshCw, Briefcase } from 'lucide-react';
@@ -43,6 +43,9 @@ export default function AllJobsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [error, setError] = useState<{ title: string; message: string } | null>(null);
+  const requestSequence = useRef(0);
+  const hasJobsRef = useRef(false);
+  hasJobsRef.current = jobs.length > 0;
 
   const LIMIT = 20;
 
@@ -51,7 +54,8 @@ export default function AllJobsPage() {
   }, [authLoading, isAuthenticated, router]);
 
   const fetchJobs = useCallback(async (p = 1, refresh = false) => {
-    if (refresh) setIsRefreshing(true);
+    const requestId = ++requestSequence.current;
+    if (refresh || hasJobsRef.current) setIsRefreshing(true);
     else setIsLoading(true);
     setError(null);
     try {
@@ -59,19 +63,28 @@ export default function AllJobsPage() {
       const res = await customerApi.get<{ success: boolean; data: JobListResponse }>(
         `/api/customer/jobs?${params}`
       );
+      if (!res.data?.success) throw new Error((res.data as any)?.error || 'The server returned an invalid jobs response.');
       const data = res.data.data ?? (res.data as any);
-      setJobs(Array.isArray(data.jobs) ? data.jobs : []);
-      setTotal(Number(data.total || 0));
-      setPage(p);
+      if (!Array.isArray(data?.jobs) || !Number.isFinite(Number(data.total))) {
+        throw new Error('The server returned an incomplete jobs response.');
+      }
+      if (requestId === requestSequence.current) {
+        setJobs(data.jobs);
+        setTotal(Number(data.total));
+        setPage(p);
+      }
     } catch (err: any) {
-      setError({
-        title: "Something went wrong",
-        message: err.message || "Failed to load your service requests. Please check your connection."
-      });
-      setJobs([]);
+      if (requestId === requestSequence.current) {
+        setError({
+          title: hasJobsRef.current ? "Showing saved requests" : "Something went wrong",
+          message: err.message || "Failed to refresh your service requests. Please check your connection."
+        });
+      }
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (requestId === requestSequence.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
   }, []);
 
@@ -168,6 +181,7 @@ export default function AllJobsPage() {
           </motion.div>
         ) : (
           <div className="space-y-3">
+            {error && <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{error.message}</p>}
             {Array.isArray(filtered) && filtered.map((job, i) => (
               <motion.div key={job.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
                 <JobCard job={job} />

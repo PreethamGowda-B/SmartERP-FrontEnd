@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import { usePathname } from "next/navigation"
 import { type Job } from "@/lib/data"
 import { useAuth } from "@/contexts/auth-context"
-import { apiClient, getAuthToken, isTokenExpired } from "@/lib/apiClient"
+import { apiClient } from "@/lib/apiClient"
 import { isPublicRoute } from "@/lib/route-utils"
 import { useNotifications } from "@/contexts/notification-context"
 import { logger } from "@/lib/logger"
@@ -27,33 +27,47 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
   const isPublic = isPublicRoute(pathname)
 
   const [jobs, setJobs] = useState<Job[]>([])
-
-  // Load cached jobs from localStorage after mount to eliminate SSR hydration mismatch
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const savedJobs = localStorage.getItem("smarterp-jobs")
-        if (savedJobs) {
-          const parsed = JSON.parse(savedJobs)
-          // Detect and discard mock/demo data (mock IDs are simple integers like "1","2","3")
-          // Real IDs from the backend are UUIDs or larger integers
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const isMockData = parsed.every((j: any) => {
-              const id = String(j.id || "")
-              return id === "1" || id === "2" || id === "3" || id === "4" || id === "5"
-            })
-            if (!isMockData) {
-              setJobs(parsed)
-            }
-          }
-        }
-      } catch (e) {
-        // ignore parse errors
-      }
-    }
-  }, [])
-
+  const [refreshError, setRefreshError] = useState(false)
   const hasSyncedRef = useRef(false)
+  const loadedScopeRef = useRef<string | null>(null)
+  const activeScopeRef = useRef<string | null>(null)
+  const jobsScopeRef = useRef<string | null>(null)
+  const requestInFlightRef = useRef(false)
+  const scope = user
+    ? `${String(user.company_id ?? (user as any).companyId ?? "no-company")}:${String(user.id)}:${String(user.role || "").toLowerCase()}`
+    : null
+  const storageKey = scope ? `smarterp-jobs:${scope}` : null
+
+  // Hydrate only after the authenticated identity is known. The old unscoped
+  // key could leak another user's cached list and an initial [] could overwrite it.
+  useEffect(() => {
+    if (isLoading || !user || !storageKey) return
+    if (activeScopeRef.current !== scope) {
+      activeScopeRef.current = scope
+      loadedScopeRef.current = null
+      jobsScopeRef.current = null
+      hasSyncedRef.current = false
+    }
+
+    try {
+      const savedJobs = localStorage.getItem(storageKey)
+      let scopedJobs: Job[] = []
+      if (savedJobs) {
+        const parsed = JSON.parse(savedJobs)
+        const isMockData = Array.isArray(parsed) && parsed.length > 0 && parsed.every((j: any) =>
+          ["1", "2", "3", "4", "5"].includes(String(j.id || "")),
+        )
+        if (Array.isArray(parsed) && !isMockData) scopedJobs = parsed
+      }
+      jobsScopeRef.current = scope
+      setJobs(scopedJobs)
+    } catch {
+      // A malformed cache is ignored; the authenticated API remains authoritative.
+      jobsScopeRef.current = scope
+      setJobs([])
+    }
+    loadedScopeRef.current = scope
+  }, [isLoading, user, scope, storageKey])
 
   // When authenticated, fetch jobs from the backend. If that fails, keep using
   // localStorage/mock data so the UI remains functional offline.
@@ -62,24 +76,15 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     let intervalId: ReturnType<typeof setInterval> | null = null
 
     async function loadJobs() {
-      if (isPublic || !user) return
-      const token = getAuthToken()
-      if (!token || isTokenExpired(token)) return
+      if (isPublic || !user || !storageKey || loadedScopeRef.current !== scope || requestInFlightRef.current) return
+      requestInFlightRef.current = true
 
       try {
         logger.log("[v0] Fetching jobs from backend...")
-
-        // Clear cached jobs only if the role has genuinely changed between users
-        const cachedRole = localStorage.getItem("smarterp-jobs-role")
-        if (cachedRole && user?.role && cachedRole.toLowerCase() !== user.role.toLowerCase()) {
-          localStorage.removeItem("smarterp-jobs")
-          localStorage.removeItem("smarterp-jobs-role")
-          setJobs([])
-        }
-
-        const serverJobs = await apiClient("/api/jobs", { method: "GET" })
+        const serverJobs = await apiClient("/api/jobs", { method: "GET", skipCache: true } as RequestInit)
         logger.log("[v0] Successfully fetched jobs:", serverJobs)
-        if (mounted && Array.isArray(serverJobs)) {
+        if (mounted && activeScopeRef.current === scope && Array.isArray(serverJobs)) {
+          setRefreshError(false)
           // Normalize server jobs so each job has a stable shape the UI expects.
           const normalized = serverJobs.map((s: any) => {
             // prefer an explicit assignedEmployees array if present
@@ -144,24 +149,31 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
             setJobs((prevJobs) => {
               const current = JSON.stringify(prevJobs)
               if (current !== incoming) {
-                localStorage.setItem("smarterp-jobs", incoming)
-                if (user.role) localStorage.setItem("smarterp-jobs-role", user.role.toLowerCase())
+                jobsScopeRef.current = scope
+                localStorage.setItem(storageKey, incoming)
                 return normalized
               }
               return prevJobs
             })
           } catch (err) {
             // fallback: set jobs if serialization fails
+            jobsScopeRef.current = scope
             setJobs(normalized)
-            localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
-            if (user.role) localStorage.setItem("smarterp-jobs-role", user.role.toLowerCase())
+            localStorage.setItem(storageKey, JSON.stringify(normalized))
           }
         }
+        else if (mounted && activeScopeRef.current === scope) {
+          setRefreshError(true)
+          throw new Error("The server returned an incomplete jobs response.")
+        }
       } catch (err) {
+        if (mounted && activeScopeRef.current === scope) setRefreshError(true)
         logger.log(
           "[v0] Backend unavailable, using local jobs. Error:",
           err instanceof Error ? err.message : String(err),
         )
+      } finally {
+        requestInFlightRef.current = false
       }
     }
 
@@ -178,18 +190,18 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       mounted = false
       if (intervalId) clearInterval(intervalId)
     }
-  }, [user, isLoading, isPublic])
+  }, [user, isLoading, isPublic, scope, storageKey])
 
   const { addNotification } = useNotifications()
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && storageKey && loadedScopeRef.current === scope && jobsScopeRef.current === scope) {
       const timeoutId = setTimeout(() => {
-        localStorage.setItem("smarterp-jobs", JSON.stringify(jobs))
+        localStorage.setItem(storageKey, JSON.stringify(jobs))
       }, 500)
       return () => clearTimeout(timeoutId)
     }
-  }, [jobs])
+  }, [jobs, scope, storageKey])
 
   // Keep jobs in sync across tabs in the same browser: when another tab writes
   // to localStorage we should pick up the new jobs so users see updates
@@ -198,11 +210,12 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return
 
     const handler = (e: StorageEvent) => {
-      if (e.key === "smarterp-jobs") {
+      if (storageKey && e.key === storageKey && activeScopeRef.current === scope) {
         try {
           if (e.newValue) {
             const parsed = JSON.parse(e.newValue)
             if (Array.isArray(parsed)) {
+              jobsScopeRef.current = scope
               setJobs(parsed)
             }
           }
@@ -215,7 +228,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener("storage", handler)
     return () => window.removeEventListener("storage", handler)
-  }, [])
+  }, [scope, storageKey])
 
   const addJob = useCallback((job: Job) => {
     setJobs((prev) => [job, ...prev])
@@ -311,11 +324,13 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
   }, [jobs])
 
   const refreshJobs = useCallback(async () => {
-    if (isPublic || !user || !getAuthToken() || isTokenExpired(getAuthToken())) return
+    if (isPublic || !user || !storageKey || loadedScopeRef.current !== scope || requestInFlightRef.current) return
+    requestInFlightRef.current = true
     try {
       logger.log("[v0] Manually refreshing jobs...")
-      const serverJobs = await apiClient("/api/jobs", { method: "GET" })
-      if (Array.isArray(serverJobs)) {
+      const serverJobs = await apiClient("/api/jobs", { method: "GET", skipCache: true } as RequestInit)
+      if (!Array.isArray(serverJobs)) throw new Error("The server returned an incomplete jobs response.")
+      if (activeScopeRef.current === scope && Array.isArray(serverJobs)) {
         const normalized = serverJobs.map((s: any) => {
           const assignedArr = Array.isArray(s.assignedEmployees) ? s.assignedEmployees : null
           const topAssigned = (s as any).assigned_to ?? (s as any).assignedTo ?? null
@@ -334,17 +349,21 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
           }
         })
 
+        setRefreshError(false)
+        jobsScopeRef.current = scope
         setJobs(normalized)
-        localStorage.setItem("smarterp-jobs", JSON.stringify(normalized))
-        if (user.role) localStorage.setItem("smarterp-jobs-role", user.role.toLowerCase())
+        localStorage.setItem(storageKey, JSON.stringify(normalized))
       }
     } catch (err: any) {
+      setRefreshError(true)
       const isAuthErr = err?.status === 401 || err?.status === '401' || err?.message === "Authentication required" || JSON.stringify(err || {}).includes('401')
       if (!isAuthErr) {
         logger.error("[v0] Failed to refresh jobs:", err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err)))
       }
+    } finally {
+      requestInFlightRef.current = false
     }
-  }, [user, isPublic])
+  }, [user, isPublic, scope, storageKey])
 
   return (
     <JobContext.Provider
@@ -357,7 +376,14 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         refreshJobs,
       }}
     >
-      {children}
+      <>
+        {refreshError && !isPublic && (
+          <div role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900">
+            {jobs.length > 0 ? "Showing the last loaded jobs. The latest refresh failed." : "Could not refresh the jobs list. It may be incomplete."} <button type="button" className="font-semibold underline" onClick={() => void refreshJobs()}>Retry</button>
+          </div>
+        )}
+        {children}
+      </>
     </JobContext.Provider>
   )
 }

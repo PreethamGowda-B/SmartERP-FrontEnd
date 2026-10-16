@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, History, CheckCircle, TrendingUp, RefreshCw, BarChart2 } from 'lucide-react';
@@ -25,20 +25,29 @@ export default function ServiceHistoryPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [statusFilter, setStatusFilter] = useState('completed');
+  const [error, setError] = useState<string | null>(null);
+  const requestSequence = useRef(0);
+  const hasJobsRef = useRef(false);
+  hasJobsRef.current = jobs.length > 0;
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.push('/customer/login');
   }, [authLoading, isAuthenticated, router]);
 
   const fetchHistory = useCallback(async (refresh = false) => {
-    if (refresh) setIsRefreshing(true);
+    const requestId = ++requestSequence.current;
+    if (refresh || hasJobsRef.current) setIsRefreshing(true);
     else setIsLoading(true);
+    setError(null);
     try {
       const res = await customerApi.get<{ success: boolean; data: JobListResponse }>(
         '/api/customer/jobs?limit=100'
       );
+      if (!res.data?.success) throw new Error((res.data as any)?.error || 'The server returned an invalid jobs response.');
       const data = res.data.data ?? (res.data as any);
-      const allJobs: Job[] = data.jobs ?? [];
+      if (!Array.isArray(data?.jobs)) throw new Error('The server returned an incomplete jobs response.');
+      if (requestId !== requestSequence.current) return;
+      const allJobs: Job[] = data.jobs;
 
       const completed = allJobs.filter(j => j.status === 'completed').length;
       const cancelled = allJobs.filter(j => j.status === 'cancelled').length;
@@ -59,11 +68,15 @@ export default function ServiceHistoryPage() {
       if (dateTo)   filtered = filtered.filter(j => new Date(j.created_at) <= new Date(dateTo + 'T23:59:59'));
 
       setJobs(filtered);
-    } catch {
-      setJobs([]);
+    } catch (err: any) {
+      if (requestId === requestSequence.current) {
+        setError(err?.message || 'Could not refresh service history. Existing results are still shown.');
+      }
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (requestId === requestSequence.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
   }, [statusFilter, dateFrom, dateTo]);
 
@@ -183,6 +196,7 @@ export default function ServiceHistoryPage() {
         </div>
 
         {/* Job list */}
+        {error && <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">Showing the last loaded history. Refresh failed: {error}</p>}
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => <LoadingSkeleton key={i} className="h-20" />)}

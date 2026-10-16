@@ -34,6 +34,7 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
   const [submitting, setSubmitting] = useState(false)
   const submissionLockRef = useRef(false)
   const proofSubmittedRef = useRef(false)
+  const submissionIdRef = useRef<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -48,6 +49,7 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
       setSignatureUrl("")
       setShowSignaturePad(false)
       proofSubmittedRef.current = false
+      submissionIdRef.current = null
       return
     }
 
@@ -103,6 +105,17 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0]
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+      if (!allowedTypes.includes(selectedFile.type)) {
+        toast({ title: "Unsupported photo", description: "Choose a JPEG, PNG, WebP, or GIF image.", variant: "destructive" })
+        e.target.value = ""
+        return
+      }
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        toast({ title: "Photo is too large", description: "Choose an image smaller than 10 MB.", variant: "destructive" })
+        e.target.value = ""
+        return
+      }
       const reader = new FileReader()
       reader.onload = async (event) => {
         if (event.target?.result) {
@@ -182,10 +195,11 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
     submissionLockRef.current = true
     try {
       setSubmitting(true)
+      if (!submissionIdRef.current) submissionIdRef.current = crypto.randomUUID()
       // Keep a successful proof upload when a later signature request fails,
       // so retrying the signature does not create duplicate proof records.
       if (!proofSubmittedRef.current) {
-        await apiClient(`/api/jobs/${jobId}/proof-of-work`, {
+        const response = await apiClient<any>(`/api/jobs/${jobId}/proof-of-work`, {
           method: "POST",
           body: JSON.stringify({
             photo_url: photoUrl,
@@ -193,8 +207,12 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
             gps_latitude: gpsLocation?.lat,
             gps_longitude: gpsLocation?.lng,
             stage,
+            client_submission_id: submissionIdRef.current,
           }),
         })
+        if (!response?.success || !response?.proof?.id) {
+          throw new Error(response?.message || "The server did not confirm that the site proof was saved.")
+        }
         proofSubmittedRef.current = true
       }
 
@@ -215,6 +233,7 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
       })
 
       proofSubmittedRef.current = false
+      submissionIdRef.current = null
       if (onSuccess) onSuccess()
       onClose()
     } catch (err: any) {
@@ -259,7 +278,7 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
             <input
               type="file"
               ref={fileInputRef}
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               capture="environment"
               className="hidden"
               onChange={handleImageSelect}

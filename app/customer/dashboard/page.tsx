@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, type Variants } from 'framer-motion';
 import {
@@ -54,16 +54,24 @@ export default function CustomerDashboardPage() {
   });
   const [error, setError] = useState<{ title: string; message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const requestSequence = useRef(0);
+  const hasJobsRef = useRef(false);
+  hasJobsRef.current = jobs.length > 0;
 
   const fetchDashboardData = useCallback(async () => {
     if (!isAuthenticated) return;
-    setIsLoading(true);
+    const requestId = ++requestSequence.current;
+    if (!hasJobsRef.current) setIsLoading(true);
     setError(null);
     try {
       const res = await customerApi.get<{ success: boolean; data: JobListResponse; error: string | null }>(
         '/api/customer/jobs?limit=50'
       );
-      const allJobs: Job[] = Array.isArray(res.data.data?.jobs) ? res.data.data.jobs : [];
+      if (!res.data?.success || !Array.isArray(res.data.data?.jobs)) {
+        throw new Error(res.data?.error || 'The server returned an incomplete jobs response.');
+      }
+      if (requestId !== requestSequence.current) return;
+      const allJobs: Job[] = res.data.data.jobs;
       setJobs(allJobs);
 
       const c: StatusCounts = {
@@ -79,13 +87,15 @@ export default function CustomerDashboardPage() {
       });
       setCounts(c);
     } catch (err: any) {
-      setError({
-        title: "Could not load dashboard",
-        message: err.message || "There was a problem connecting to the service. Please try again."
-      });
-      console.error('Failed to load jobs:', err);
+      if (requestId === requestSequence.current) {
+        setError({
+          title: hasJobsRef.current ? "Showing saved requests" : "Could not load dashboard",
+          message: err.message || "There was a problem connecting to the service. Please try again."
+        });
+        console.error('Failed to load jobs:', err);
+      }
     } finally {
-      setIsLoading(false);
+      if (requestId === requestSequence.current) setIsLoading(false);
     }
   }, [isAuthenticated]);
 
@@ -259,7 +269,7 @@ export default function CustomerDashboardPage() {
           <div className="py-12">
             <ErrorView title={error.title} message={error.message} onRetry={fetchDashboardData} />
           </div>
-        ) : isLoading ? (
+        ) : isLoading && jobs.length === 0 ? (
           <div className="space-y-10">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {[1,2,3,4,5].map(i => <div key={i} className="h-32 bg-white rounded-xl animate-pulse border border-border/50" />)}
@@ -268,6 +278,7 @@ export default function CustomerDashboardPage() {
           </div>
         ) : (
           <>
+            {error && <p role="status" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{error.message}</p>}
             {/* ── Stats row ───────────────────────────────────────────────── */}
             <motion.div
               variants={fadeUp} initial="hidden" animate="visible" custom={1}

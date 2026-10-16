@@ -6,10 +6,9 @@
  * Polls GET /api/customer/jobs/:id/tracking every 15 seconds
  * when the job has been accepted by an employee.
  *
- * Stops polling when:
- * - active prop becomes false
- * - job is completed (status === 'completed')
- * - SSE is connected and receiving updates (sseConnected = true)
+ * Stops polling when active becomes false (for example, after completion).
+ * Job lifecycle SSE does not include GPS coordinates, so location polling must
+ * continue even while the lifecycle stream is connected.
  * - component unmounts
  *
  * Resumes polling only if SSE disconnects (sseConnected becomes false).
@@ -31,7 +30,7 @@ interface UseJobTrackingOptions {
 export function useJobTracking({
   jobId,
   active,
-  sseConnected = false,
+  sseConnected: _sseConnected = false,
   intervalMs = 15_000,
 }: UseJobTrackingOptions) {
   const [tracking, setTracking] = useState<TrackingData | null>(null);
@@ -46,8 +45,8 @@ export function useJobTracking({
     setError(null);
 
     try {
-      const res = await customerApi.get<TrackingData>(`/api/customer/jobs/${jobId}/tracking`);
-      setTracking(res.data);
+      const res = await customerApi.get<{ success?: boolean; data?: TrackingData } & TrackingData>(`/api/customer/jobs/${jobId}/tracking`);
+      setTracking(res.data.data ?? res.data);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to fetch location');
     } finally {
@@ -56,10 +55,10 @@ export function useJobTracking({
   }, [jobId, active]);
 
   useEffect(() => {
-    // Stop polling if not active, or if SSE is connected (SSE handles real-time updates)
-    const shouldPoll = active && !sseConnected;
+    const shouldPoll = active;
 
     if (!shouldPoll) {
+      setTracking(null);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -67,7 +66,7 @@ export function useJobTracking({
       return;
     }
 
-    // Fetch immediately when polling starts (or SSE disconnects)
+    // Fetch immediately when tracking starts, then continue regardless of SSE state.
     fetchTracking();
 
     // Then poll every intervalMs
@@ -79,7 +78,7 @@ export function useJobTracking({
         intervalRef.current = null;
       }
     };
-  }, [active, sseConnected, fetchTracking, intervalMs]);
+  }, [active, fetchTracking, intervalMs]);
 
   return { tracking, isLoading, error, setTracking };
 }

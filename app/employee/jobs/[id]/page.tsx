@@ -36,6 +36,7 @@ export default function EmployeeJobDetailPage() {
   const [mounted, setMounted] = React.useState(false)
   const [job, setJob] = React.useState<any | null>(null)
   const [proofs, setProofs] = React.useState<any[]>([])
+  const [proofError, setProofError] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [isProofModalOpen, setIsProofModalOpen] = React.useState(false)
@@ -61,8 +62,14 @@ export default function EmployeeJobDetailPage() {
         else throw new Error("Job assignment not found.")
       }
 
-      const proofRes = await apiClient<any>(`/api/jobs/${jobId}/proof-of-work`).catch(() => ({ proofs: [] }))
-      setProofs(proofRes?.proofs || (Array.isArray(proofRes) ? proofRes : []))
+      try {
+        const proofRes = await apiClient<any>(`/api/jobs/${jobId}/proof-of-work`, { skipCache: true } as RequestInit)
+        if (!Array.isArray(proofRes?.proofs)) throw new Error("The proof response was incomplete.")
+        setProofs(proofRes.proofs)
+        setProofError(null)
+      } catch (proofFetchError: any) {
+        setProofError(proofFetchError?.message || "Could not load site proof submissions.")
+      }
     } catch (err: any) {
       setError(err.message || "Failed to load job details.")
     } finally {
@@ -198,7 +205,12 @@ export default function EmployeeJobDetailPage() {
           </CardHeader>
 
           <CardContent className="p-6">
-            {proofs.length === 0 ? (
+            {proofError ? (
+              <div role="alert" className="p-6 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+                Site proof could not be loaded, so this is not being shown as an empty record. {proofError}
+                <Button variant="outline" size="sm" className="ml-3" onClick={fetchJobData}>Retry</Button>
+              </div>
+            ) : proofs.length === 0 ? (
               <div className="p-8 rounded-2xl border border-dashed border-border/70 bg-muted/20 text-center space-y-2">
                 <Camera className="h-8 w-8 mx-auto text-muted-foreground/40" />
                 <p className="text-xs font-bold text-foreground">No Proof Uploaded for this Job</p>

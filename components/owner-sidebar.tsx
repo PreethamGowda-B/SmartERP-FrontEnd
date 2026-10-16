@@ -32,15 +32,15 @@ import {
   Flame,
   ShieldCheck,
   Radio,
-  Award,
-  ShoppingBag,
-  Navigation,
   Zap,
   Bot,
   Cpu,
   ChevronDown,
   ChevronRight,
   Layers,
+  Navigation,
+  Award,
+  ShoppingBag,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationCenterDrawer } from "@/components/notification-center-drawer"

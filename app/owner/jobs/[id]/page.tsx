@@ -46,6 +46,7 @@ export default function OwnerJobDetailPage() {
   const [mounted, setMounted] = React.useState(false)
   const [job, setJob] = React.useState<any | null>(null)
   const [proofs, setProofs] = React.useState<any[]>([])
+  const [proofError, setProofError] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [selectedPhoto, setSelectedPhoto] = React.useState<string | null>(null)
@@ -75,8 +76,14 @@ export default function OwnerJobDetailPage() {
       setJob(jobRes?.job || jobRes)
 
       // Fetch proof-of-work gallery
-      const proofRes = await apiClient<any>(`/api/jobs/${jobId}/proof-of-work`).catch(() => ({ proofs: [] }))
-      setProofs(proofRes?.proofs || (Array.isArray(proofRes) ? proofRes : []))
+      try {
+        const proofRes = await apiClient<any>(`/api/jobs/${jobId}/proof-of-work`, { skipCache: true } as RequestInit)
+        if (!Array.isArray(proofRes?.proofs)) throw new Error("The proof response was incomplete.")
+        setProofs(proofRes.proofs)
+        setProofError(null)
+      } catch (proofFetchError: any) {
+        setProofError(proofFetchError?.message || "Could not load site proof submissions.")
+      }
     } catch (err: any) {
       setError(err.message || "Failed to load job details.")
     } finally {
@@ -313,7 +320,12 @@ export default function OwnerJobDetailPage() {
               </CardHeader>
 
               <CardContent className="p-6">
-                {proofs.length === 0 ? (
+                {proofError ? (
+                  <div role="alert" className="p-6 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+                    Site proof could not be loaded, so this is not being shown as an empty record. {proofError}
+                    <Button variant="outline" size="sm" className="ml-3" onClick={fetchJobData}>Retry</Button>
+                  </div>
+                ) : proofs.length === 0 ? (
                   <div className="p-10 rounded-2xl border border-dashed border-border/70 bg-muted/20 text-center space-y-2">
                     <Camera className="h-10 w-10 mx-auto text-muted-foreground/40" />
                     <h4 className="text-xs font-bold text-foreground">No Field Proofs Submitted Yet</h4>
