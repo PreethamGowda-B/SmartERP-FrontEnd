@@ -50,6 +50,7 @@ export interface NavLeafItem {
   name: string
   href: string
   icon: any
+  aliases?: string[]
   isGroup?: false
 }
 
@@ -67,11 +68,16 @@ export interface NavCategory {
   items: NavItem[]
 }
 
+export const dashboardItem: NavLeafItem = {
+  name: "Dashboard",
+  href: "/owner",
+  icon: LayoutDashboard,
+}
+
 const navCategories: NavCategory[] = [
   {
     title: "Operations",
     items: [
-      { name: "Dashboard", href: "/owner", icon: LayoutDashboard },
       { name: "Tasks", href: "/owner/jobs", icon: Briefcase },
       { name: "Customer Jobs", href: "/owner/customer-jobs", icon: UserCheck },
       { name: "Sales Pipeline", href: "/owner/crm/pipeline", icon: Flame },
@@ -118,53 +124,102 @@ const navCategories: NavCategory[] = [
     items: [
       { name: "Employees", href: "/owner/employees", icon: Users },
       { name: "Attendance", href: "/owner/attendance", icon: Clock },
-      { name: "Payroll", href: "/owner/payroll", icon: DollarSign },
+      {
+        name: "Payroll",
+        href: "/owner/payroll",
+        icon: DollarSign,
+        aliases: ["/owner/payroll/pre-run-validation"],
+      },
       { name: "HR Hub", href: "/owner/hr-hub", icon: Megaphone },
     ],
   },
   {
-    title: "Supplies & Docs",
+    title: "Inventory & Materials",
     items: [
-      { name: "Materials", href: "/owner/materials", icon: Package },
-      { name: "Inventory", href: "/owner/inventory", icon: Box },
-      { name: "Demand Forecasts", href: "/owner/inventory/forecasts", icon: Box },
-      { name: "Documents", href: "/owner/documents", icon: Files },
+      {
+        name: "Inventory",
+        href: "/owner/inventory",
+        icon: Box,
+        aliases: ["/owner/materials", "/owner/inventory/forecasts"],
+      },
     ],
   },
   {
-    title: "Finance & Accounting",
+    title: "Finance",
     items: [
       { name: "Finance Hub", href: "/owner/finance", icon: DollarSign },
-      { name: "Invoices & Billing", href: "/owner/finance/invoices", icon: Files },
-      { name: "Payments & AR", href: "/owner/finance/payments", icon: CreditCard },
-      { name: "GST & Tax", href: "/owner/finance/gst", icon: ShieldCheck },
+      {
+        name: "Invoices & Billing",
+        href: "/owner/finance/invoices",
+        icon: Files,
+        aliases: ["/owner/finance/payments"],
+      },
+      {
+        name: "GST & Tax",
+        href: "/owner/finance/gst",
+        icon: ShieldCheck,
+        aliases: ["/owner/gst-reconciliation"],
+      },
     ],
   },
   {
-    title: "Communication & Insights",
+    title: "Documents & Reports",
     items: [
-      { name: "Messages & Alerts", href: "/owner/messages", icon: MessageSquare },
+      { name: "Documents", href: "/owner/documents", icon: Files },
       { name: "Reports", href: "/owner/reports", icon: BarChart3 },
     ],
   },
   {
-    title: "Account",
+    title: "Communication",
     items: [
-      { name: "Settings", href: "/owner/settings", icon: Settings },
-      { name: "Billing", href: "/owner/billing", icon: CreditCard },
-      { name: "Contact Support", href: "/owner/support", icon: Headset },
+      {
+        name: "Messages & Alerts",
+        href: "/owner/messages",
+        icon: MessageSquare,
+        aliases: ["/owner/notifications"],
+      },
+    ],
+  },
+  {
+    title: "Settings",
+    items: [
+      {
+        name: "Settings",
+        href: "/owner/settings",
+        icon: Settings,
+        aliases: ["/owner/billing", "/owner/support"],
+      },
     ],
   },
 ]
 
-const allNavHrefs: string[] = navCategories.flatMap((cat) =>
-  cat.items.flatMap((i) => {
-    if (i.isGroup) {
-      return i.children.map((c) => c.href)
-    }
-    return [i.href]
-  })
-)
+export function isNavLeafActive(
+  item: NavLeafItem,
+  pathname: string | null,
+  allHrefs: string[] = []
+): boolean {
+  if (isRouteActive(pathname, item.href, allHrefs)) return true
+  if (item.aliases && pathname) {
+    const currentPath = pathname.replace(/\/$/, "") || "/"
+    return item.aliases.some((alias) => {
+      const targetAlias = alias.replace(/\/$/, "") || "/"
+      return currentPath === targetAlias || currentPath.startsWith(targetAlias + "/")
+    })
+  }
+  return false
+}
+
+const allNavHrefs: string[] = [
+  dashboardItem.href,
+  ...navCategories.flatMap((cat) =>
+    cat.items.flatMap((i) => {
+      if (i.isGroup) {
+        return i.children.flatMap((c) => [c.href, ...(c.aliases || [])])
+      }
+      return [i.href, ...(i.aliases || [])]
+    })
+  ),
+]
 
 const STORAGE_KEY_GROUPS = "smarterp_owner_sidebar_groups"
 
@@ -208,7 +263,7 @@ export function OwnerSidebar() {
     for (const cat of navCategories) {
       for (const item of cat.items) {
         if ("isGroup" in item && item.isGroup) {
-          const hasActiveChild = item.children.some((c) => isRouteActive(pathname, c.href, allNavHrefs))
+          const hasActiveChild = item.children.some((c) => isNavLeafActive(c, pathname, allNavHrefs))
           if (hasActiveChild && !openGroups[item.name]) {
             setOpenGroups((prev) => {
               const updated = { ...prev, [item.name]: true }
@@ -319,6 +374,31 @@ export function OwnerSidebar() {
           onScroll={handleNavScroll}
           className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4"
         >
+          {/* Standalone Dashboard */}
+          <div className="space-y-1">
+            <NavLink
+              key={dashboardItem.name}
+              href={dashboardItem.href}
+              id={dashboardItem.name}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 relative group",
+                isNavLeafActive(dashboardItem, pathname, allNavHrefs)
+                  ? "bg-primary/15 text-primary font-bold border-l-2 border-primary shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/75 hover:translate-x-0.5"
+              )}
+            >
+              <dashboardItem.icon
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110",
+                  isNavLeafActive(dashboardItem, pathname, allNavHrefs) && "text-primary"
+                )}
+              />
+              <span className="truncate">{dashboardItem.name}</span>
+            </NavLink>
+          </div>
+
+          {/* Grouped Nav Categories */}
           {navCategories.map((category) => {
             return (
               <div key={category.title} className="space-y-1.5">
@@ -331,7 +411,7 @@ export function OwnerSidebar() {
                     if ("isGroup" in item && item.isGroup) {
                       const isOpen = !!openGroups[item.name]
                       const hasActiveChild = item.children.some((c) =>
-                        isRouteActive(pathname, c.href, allNavHrefs)
+                        isNavLeafActive(c, pathname, allNavHrefs)
                       )
 
                       return (
@@ -385,7 +465,7 @@ export function OwnerSidebar() {
                           {isOpen && (
                             <div className="ml-3 pl-2.25 border-l-2 border-border/60 space-y-1 pt-0.5">
                               {item.children.map((child) => {
-                                const isChildActive = isRouteActive(pathname, child.href, allNavHrefs)
+                                const isChildActive = isNavLeafActive(child, pathname, allNavHrefs)
                                 return (
                                   <NavLink
                                     key={child.name}
@@ -416,7 +496,7 @@ export function OwnerSidebar() {
                     }
 
                     // 2. Standard Flat Nav Link
-                    const isActive = isRouteActive(pathname, item.href, allNavHrefs)
+                    const isActive = isNavLeafActive(item, pathname, allNavHrefs)
                     return (
                       <NavLink
                         key={item.name}
