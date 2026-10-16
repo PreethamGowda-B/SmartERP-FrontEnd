@@ -36,12 +36,18 @@ interface UseLocationTrackingOptions {
 export function useLocationTracking({ onPermissionChange }: UseLocationTrackingOptions = {}) {
     const watchIdRef = useRef<number | null>(null)
     const lastSentRef = useRef<{ lat: number; lng: number } | null>(null)
-    const lastSendTime = useRef<number>(0)
+    const lastAttemptTime = useRef<number>(0)
+    const sendingRef = useRef<boolean>(false)
     const permRef = useRef<"granted" | "denied" | "prompt" | "unsupported">("prompt")
     const isDisabledByTier = useRef<boolean>(false)
 
     const sendLocation = useCallback(async (lat: number, lng: number) => {
-        if (isDisabledByTier.current || !getAccessToken()) return
+        if (isDisabledByTier.current || sendingRef.current || !getAccessToken()) return
+
+        // Record attempts as well as successes so a failing API cannot be
+        // hammered by every geolocation callback.
+        lastAttemptTime.current = Date.now()
+        sendingRef.current = true
 
         try {
             const res = await apiClient<any>("/api/location/update", {
@@ -61,7 +67,6 @@ export function useLocationTracking({ onPermissionChange }: UseLocationTrackingO
             }
 
             lastSentRef.current = { lat, lng }
-            lastSendTime.current = Date.now()
         } catch (err: any) {
             // If Forbidden (403), it means the plan doesn't support this.
             // Disable tracking for this session and immediately clear watch to stop all requests.
@@ -75,6 +80,8 @@ export function useLocationTracking({ onPermissionChange }: UseLocationTrackingO
             } else {
                 logger.warn("[useLocationTracking] Failed to send location:", err)
             }
+        } finally {
+            sendingRef.current = false
         }
     }, [])
 
@@ -99,16 +106,16 @@ export function useLocationTracking({ onPermissionChange }: UseLocationTrackingO
 
             const { latitude: lat, longitude: lng } = pos.coords
             const now = Date.now()
-            const timeSinceLast = now - lastSendTime.current
+            const timeSinceLastAttempt = now - lastAttemptTime.current
 
             // Send immediately on first fix
             if (!lastSentRef.current) {
-                sendLocation(lat, lng)
+                if (timeSinceLastAttempt >= SEND_INTERVAL_MS) sendLocation(lat, lng)
                 return
             }
 
             // Skip if not enough time has passed
-            if (timeSinceLast < SEND_INTERVAL_MS) return
+            if (timeSinceLastAttempt < SEND_INTERVAL_MS) return
 
             // Skip if barely moved
             const dist = haversineMetres(lastSentRef.current.lat, lastSentRef.current.lng, lat, lng)
