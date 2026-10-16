@@ -219,7 +219,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 ? {
                     label: "View",
                     onClick: () => {
-                      router.push(`/owner/jobs/${jobId}`)
+                      const role = String(user?.role || "").toLowerCase()
+                      const destination = notification.type === "chat_message"
+                        ? role === "employee"
+                          ? `/employee/messages?tab=jobs&jobId=${encodeURIComponent(jobId)}`
+                          : role === "customer"
+                            ? `/customer/job/${encodeURIComponent(jobId)}`
+                            : `/owner/jobs/${encodeURIComponent(jobId)}`
+                        : role === "employee"
+                          ? actionData.url || "/employee/jobs"
+                          : role === "customer"
+                            ? actionData.url || `/customer/job/${encodeURIComponent(jobId)}`
+                            : actionData.url || `/owner/jobs/${encodeURIComponent(jobId)}`
+                      router.push(destination)
                     },
                   }
                 : undefined,

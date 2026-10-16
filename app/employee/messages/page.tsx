@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -62,7 +62,7 @@ function formatDate(iso?: string | null) {
 
 // ─── Job Conversations Tab ───────────────────────────────────────────────────
 
-function JobMessagesTab() {
+function JobMessagesTab({ initialJobId }: { initialJobId?: string | null }) {
   const [conversations, setConversations] = useState<JobConversation[]>([])
   const [selectedJob, setSelectedJob] = useState<JobConversation | null>(null)
   const [messages, setMessages] = useState<JobMessage[]>([])
@@ -74,6 +74,9 @@ function JobMessagesTab() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sseRef = useRef<EventSource | null>(null)
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const autoOpenedJobId = useRef<string | null>(null)
+  const activeJobIdRef = useRef<string | null>(null)
+  const messageRequestsInFlight = useRef(new Set<string>())
   const { notifications } = useNotifications()
 
   const fetchConversations = useCallback(async () => {
@@ -94,36 +97,27 @@ function JobMessagesTab() {
   const latestNotifCreatedAt = latestNotif?.created_at
   const selectedJobId = selectedJob?.job_id
 
-  useEffect(() => {
-    if (latestNotifType === "chat_message" && latestNotifJobId) {
-      const jobId = latestNotifJobId
-      setConversations(prev => {
-        const exists = prev.some(c => c.job_id === jobId)
-        if (!exists) { fetchConversations(); return prev }
-        return prev.map(c =>
-          c.job_id === jobId
-            ? { ...c, last_message: latestNotifMessage, last_message_time: latestNotifCreatedAt,
-                unread_count: selectedJobId === jobId ? 0 : (c.unread_count || 0) + 1 }
-            : c
-        ).sort((a, b) => (a.job_id === jobId ? -1 : b.job_id === jobId ? 1 : 0))
-      })
-      if (selectedJobId !== jobId) fetchConversations()
-      if (selectedJobId === jobId) apiClient(`/api/messages/job/${jobId}`).catch(() => {})
-    }
-  }, [latestNotifType, latestNotifJobId, latestNotifMessage, latestNotifCreatedAt, selectedJobId, fetchConversations])
-
-  const fetchMessages = useCallback(async (jobId: string) => {
-    setLoadingMsgs(true)
+  const fetchMessages = useCallback(async (jobId: string, showLoading = true) => {
+    if (messageRequestsInFlight.current.has(jobId)) return
+    messageRequestsInFlight.current.add(jobId)
+    if (showLoading) setLoadingMsgs(true)
     try {
       const data = await apiClient(`/api/messages/job/${jobId}`)
-      setMessages(Array.isArray(data) ? data : [])
+      if (activeJobIdRef.current === jobId) setMessages(Array.isArray(data) ? data : [])
     } catch (err: any) {
       logger.error("Error fetching job messages:", err)
-      setMessages([])
     } finally {
-      setLoadingMsgs(false)
+      messageRequestsInFlight.current.delete(jobId)
+      if (showLoading) setLoadingMsgs(false)
     }
   }, [])
+
+  useEffect(() => {
+    if (latestNotifType !== "chat_message" || !latestNotifJobId) return
+    const jobId = String(latestNotifJobId)
+    void fetchConversations()
+    if (selectedJobId === jobId) void fetchMessages(jobId, false)
+  }, [latestNotifType, latestNotifJobId, latestNotifMessage, latestNotifCreatedAt, selectedJobId, fetchConversations, fetchMessages])
 
   const connectSSE = useCallback((jobId: string) => {
     if (sseRef.current) { sseRef.current.close(); sseRef.current = null }
@@ -132,13 +126,13 @@ function JobMessagesTab() {
     if (!token) return
 
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
-    const url = `${BACKEND_URL}/api/customer/jobs/${jobId}/events${token ? `?token=${token}` : ""}`
+    const url = `${BACKEND_URL}/api/customer/jobs/${jobId}/events${token ? `?token=${encodeURIComponent(token)}` : ""}`
     const source = new EventSource(url, { withCredentials: true })
     sseRef.current = source
     source.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data)
-        if (event.type === "chat_message") {
+        if (event.type === "chat_message" && activeJobIdRef.current === jobId) {
           const newMsg: JobMessage = event.message
           setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg])
           setConversations(prev => prev.map(c =>
@@ -153,7 +147,21 @@ function JobMessagesTab() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!initialJobId || loadingConvs || autoOpenedJobId.current === initialJobId) return
+    const conversation = conversations.find((item) => item.job_id === initialJobId)
+    if (!conversation) return
+    autoOpenedJobId.current = initialJobId
+    activeJobIdRef.current = initialJobId
+    setSelectedJob(conversation)
+    setMobileShowChat(true)
+    void fetchMessages(conversation.job_id)
+    connectSSE(conversation.job_id)
+    setConversations((prev) => prev.map((item) => item.job_id === conversation.job_id ? { ...item, unread_count: 0 } : item))
+  }, [initialJobId, loadingConvs, conversations, fetchMessages, connectSSE])
+
   const selectJob = useCallback((conv: JobConversation) => {
+    activeJobIdRef.current = conv.job_id
     setSelectedJob(conv)
     setMobileShowChat(true)
     fetchMessages(conv.job_id)
@@ -165,7 +173,15 @@ function JobMessagesTab() {
   const messagesCount = messages.length
   useEffect(() => () => { sseRef.current?.close(); if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current) }, [])
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messagesCount, lastMessageId])
-  useEffect(() => { fetchConversations(); const id = setInterval(fetchConversations, 30_000); return () => clearInterval(id) }, [fetchConversations])
+  useEffect(() => { fetchConversations(); const id = setInterval(fetchConversations, 10_000); return () => clearInterval(id) }, [fetchConversations])
+  useEffect(() => {
+    if (!selectedJobId) return
+    const sync = () => {
+      if (document.visibilityState === "visible") void fetchMessages(selectedJobId, false)
+    }
+    const id = setInterval(sync, 3000)
+    return () => clearInterval(id)
+  }, [selectedJobId, fetchMessages])
 
   const sendMessage = async () => {
     if (!selectedJob || !messageText.trim() || sending) return
@@ -336,6 +352,7 @@ function InternalMessagesTab() {
 
 function NotificationsTab() {
   const { notifications, markAsRead, markAllAsRead } = useNotifications()
+  const router = useRouter()
   const unreadCount = notifications.filter((n) => !n.read).length
 
   return (
@@ -360,8 +377,14 @@ function NotificationsTab() {
             key={n.id}
             className={cn(
               "p-4 rounded-xl border transition-all flex items-start gap-3",
-              !n.read ? "bg-primary/5 border-primary/40" : "bg-card border-border/60"
+              !n.read ? "bg-primary/5 border-primary/40" : "bg-card border-border/60",
+              n.type === "chat_message" && n.data?.job_id && "cursor-pointer hover:bg-muted/40"
             )}
+            onClick={() => {
+              if (n.type !== "chat_message" || !n.data?.job_id) return
+              if (!n.read) void markAsRead(n.id)
+              router.push(`/employee/messages?tab=jobs&jobId=${encodeURIComponent(String(n.data.job_id))}`)
+            }}
           >
             <div className="p-2 rounded-lg bg-muted text-foreground shrink-0 mt-0.5">
               <Clock className="h-4 w-4" />
@@ -374,7 +397,7 @@ function NotificationsTab() {
               </span>
             </div>
             {!n.read && (
-              <Button variant="ghost" size="sm" onClick={() => markAsRead(n.id)} className="h-7 text-xs">
+              <Button variant="ghost" size="sm" onClick={(event) => { event.stopPropagation(); markAsRead(n.id) }} className="h-7 text-xs">
                 Mark read
               </Button>
             )}
@@ -395,8 +418,14 @@ function NotificationsTab() {
 
 function EmployeeMessagesPageContent() {
   const searchParams = useSearchParams()
-  const initialTab = searchParams?.get("tab") === "notifications" ? "notifications" : "internal"
+  const tabParam = searchParams?.get("tab")
+  const initialTab = tabParam === "notifications" ? "notifications" : tabParam === "jobs" ? "jobs" : "internal"
+  const initialJobId = searchParams?.get("jobId")
   const [activeTab, setActiveTab] = useState<"internal" | "jobs" | "notifications">(initialTab as any)
+
+  useEffect(() => {
+    if (tabParam === "jobs" || tabParam === "notifications" || tabParam === "internal") setActiveTab(tabParam)
+  }, [tabParam])
 
   return (
     <EmployeeLayout>
@@ -447,7 +476,7 @@ function EmployeeMessagesPageContent() {
             {activeTab === "internal" ? (
               <InternalMessagesTab />
             ) : activeTab === "jobs" ? (
-              <JobMessagesTab />
+              <JobMessagesTab initialJobId={initialJobId} />
             ) : (
               <NotificationsTab />
             )}

@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useNotifications, Notification } from "@/contexts/notification-context"
+import { useAuth } from "@/contexts/auth-context"
 
 function formatRelativeTime(dateString: string): string {
   if (!dateString) return "Just now"
@@ -43,6 +44,7 @@ function formatRelativeTime(dateString: string): string {
 
 export function NotificationCenterDrawer() {
   const router = useRouter()
+  const { user } = useAuth()
   const [isOpen, setIsOpen] = React.useState(false)
   const {
     notifications,
@@ -193,7 +195,15 @@ export function NotificationCenterDrawer() {
 
                 // Deep-link routing
                 let deepLinkUrl = ""
-                if (notif.data?.url) {
+                if (notif.type === "chat_message" && notif.data?.job_id) {
+                  const role = String(user?.role || "").toLowerCase()
+                  const jobId = encodeURIComponent(String(notif.data.job_id))
+                  deepLinkUrl = role === "employee"
+                    ? `/employee/messages?tab=jobs&jobId=${jobId}`
+                    : role === "customer"
+                      ? `/customer/job/${jobId}`
+                      : `/owner/jobs/${jobId}`
+                } else if (notif.data?.url) {
                   deepLinkUrl = notif.data.url
                 } else if (notif.type?.includes('work_request') || notif.type?.includes('job_action') || notif.type?.includes('approval')) {
                   deepLinkUrl = `/owner/jobs?view=approvals&category=${notif.data?.category || "all"}`

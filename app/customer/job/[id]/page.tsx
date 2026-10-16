@@ -142,10 +142,16 @@ export default function JobDetailPage() {
       const res = await customerApi.get<{ success: boolean; data: ChatMessage[] }>(
         `/api/customer/jobs/${jobId}/messages`
       );
-      setMessages(res.data.data ?? []);
-      setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+      const latestMessages = res.data.data ?? [];
+      setMessages((previous) => {
+        if (latestMessages.at(-1)?.id !== previous.at(-1)?.id) {
+          setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        }
+        return latestMessages;
+      });
     } catch {
-      setMessages([]);
+      // Keep the last successfully loaded messages visible during a temporary
+      // network failure; the next SSE event or sync poll will refresh them.
     }
   }, [jobId]);
 
@@ -323,6 +329,17 @@ export default function JobDetailPage() {
   }, [isCompleted, fetchInvoice]);
 
   const { isConnected: sseConnected } = useSSE({ jobId, onEvent: handleSSEEvent, enabled: isAuthenticated && !!job });
+
+  // Keep the open job chat current if an SSE connection drops or a proxy stops
+  // forwarding its events. SSE remains the immediate path; this is a fallback.
+  useEffect(() => {
+    if (!isAuthenticated || job?.employee_status !== 'accepted') return;
+    const syncMessages = () => {
+      if (document.visibilityState === 'visible') void fetchMessages();
+    };
+    const interval = window.setInterval(syncMessages, sseConnected ? 5000 : 2500);
+    return () => window.clearInterval(interval);
+  }, [isAuthenticated, job?.employee_status, sseConnected, fetchMessages]);
 
   if (authLoading || isLoading) {
     return (
