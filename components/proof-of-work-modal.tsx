@@ -32,6 +32,8 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
   const [signatureUrl, setSignatureUrl] = useState("")
   const [showSignaturePad, setShowSignaturePad] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const submissionLockRef = useRef(false)
+  const proofSubmittedRef = useRef(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -45,6 +47,7 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
       setIsCapturingGps(false)
       setSignatureUrl("")
       setShowSignaturePad(false)
+      proofSubmittedRef.current = false
       return
     }
 
@@ -170,24 +173,30 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
   }
 
   const doSubmit = async () => {
+    if (submissionLockRef.current) return
     if (!photoUrl && !notes) {
       toast({ title: "Missing details", description: "Please take/upload a photo or enter site notes.", variant: "destructive" })
       return
     }
 
+    submissionLockRef.current = true
     try {
       setSubmitting(true)
-      // Upload proof of work
-      await apiClient(`/api/jobs/${jobId}/proof-of-work`, {
-        method: "POST",
-        body: JSON.stringify({
-          photo_url: photoUrl,
-          notes,
-          gps_latitude: gpsLocation?.lat,
-          gps_longitude: gpsLocation?.lng,
-          stage,
-        }),
-      })
+      // Keep a successful proof upload when a later signature request fails,
+      // so retrying the signature does not create duplicate proof records.
+      if (!proofSubmittedRef.current) {
+        await apiClient(`/api/jobs/${jobId}/proof-of-work`, {
+          method: "POST",
+          body: JSON.stringify({
+            photo_url: photoUrl,
+            notes,
+            gps_latitude: gpsLocation?.lat,
+            gps_longitude: gpsLocation?.lng,
+            stage,
+          }),
+        })
+        proofSubmittedRef.current = true
+      }
 
       // If customer signature was collected directly
       if (signatureUrl) {
@@ -205,15 +214,19 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
         description: "Field proof-of-work has been logged & synced across Customer, HR, and Owner portals.",
       })
 
+      proofSubmittedRef.current = false
       if (onSuccess) onSuccess()
       onClose()
     } catch (err: any) {
       toast({
         title: "Submission Error",
-        description: err.message || "Failed to submit field proof.",
+        description: proofSubmittedRef.current && signatureUrl
+          ? "The site proof was saved, but customer sign-off failed. Submit again to retry sign-off without duplicating the proof."
+          : err.message || "Failed to submit field proof.",
         variant: "destructive",
       })
     } finally {
+      submissionLockRef.current = false
       setSubmitting(false)
     }
   }
