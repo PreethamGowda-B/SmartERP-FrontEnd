@@ -104,7 +104,7 @@ customerApi.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes('/api/customer/auth/refresh') &&
+      !originalRequest.url?.includes('/api/customer/auth/') &&
       !suppressRefreshRedirect
     ) {
       if (isRefreshing) {
