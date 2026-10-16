@@ -24,6 +24,8 @@ type InventoryItem = {
   supplier_name?: string
   supplier_contact?: string
   supplier_email?: string
+  source_type?: string
+  source_reference?: string
   image_url?: string
   employee_name?: string
   office_name?: string
@@ -163,6 +165,12 @@ export default function InventoryTable({
             </div>
             {item.description && (
               <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{item.description}</p>
+            )}
+            {item.source_type === "material_request_receipt" && (
+              <p className="mt-0.5 text-[10px] text-emerald-700">Source: Material Request Receipt{item.source_reference ? ` — ${item.source_reference}` : ""}</p>
+            )}
+            {item.source_type === "manual_inventory_entry" && (
+              <p className="mt-0.5 text-[10px] text-muted-foreground">Source: Manual Inventory Entry</p>
             )}
           </div>
         ),

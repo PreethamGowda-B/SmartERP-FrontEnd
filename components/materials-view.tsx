@@ -11,17 +11,21 @@ import { apiClient } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"
 import { cn } from "@/lib/utils"
 import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
+import { MaterialPurchaseReviewDialog } from "@/components/material-purchase-review-dialog"
 
 interface MaterialRequest {
   id: number
   item_name: string
   quantity: number
+  unit?: string | null
   urgency: string
   description: string
   status: string
+  purchase_status?: string | null
   requested_by_name: string
+  reviewed_by_name?: string | null
+  reviewed_at?: string | null
   created_at: string
-  reviewed_at?: string
 }
 
 export function MaterialsView() {
@@ -257,7 +261,7 @@ export function MaterialsView() {
                 header: "Quantity",
                 accessorKey: "quantity",
                 enableSorting: true,
-                cell: (req) => <span className="font-bold text-xs">{req.quantity}</span>,
+                cell: (req) => <span className="font-bold text-xs">{req.quantity} {req.unit || ""}</span>,
               },
               {
                 id: "urgency",
@@ -333,7 +337,11 @@ export function MaterialsView() {
                         </Button>
                       </>
                     ) : (
-                      <span className="text-xs text-muted-foreground font-medium">—</span>
+                      <div className="flex items-center gap-2">
+                        {req.purchase_status && <span className="max-w-32 text-right text-[10px] capitalize text-muted-foreground">{req.purchase_status.replaceAll("_", " ")}</span>}
+                        {(req.status === "accepted" || Boolean(req.purchase_status)) && <MaterialPurchaseReviewDialog request={req} onUpdated={fetchRequests} />}
+                        {!req.purchase_status && req.status !== "accepted" && <span className="text-xs text-muted-foreground font-medium">—</span>}
+                      </div>
                     )}
                   </div>
                 ),

@@ -22,14 +22,17 @@ import { EmployeeLayout } from "@/components/employee-layout"
 import { apiClient } from "@/lib/apiClient"
 import InventoryTable from "@/components/inventory-table"
 import { cn } from "@/lib/utils"
+import { MaterialPurchaseBillPanel } from "@/components/material-purchase-bill-panel"
 
 interface MaterialRequest {
   id: number
   item_name: string
   quantity: number
+  unit?: string | null
   urgency: "Low" | "Medium" | "High"
   description: string | null
   status: "pending" | "accepted" | "declined"
+  purchase_status?: string | null
   requested_by_name: string
   created_at: string
 }
@@ -71,6 +74,7 @@ function EmployeeMaterialsPageContent() {
   // Form state
   const [itemName, setItemName] = useState("")
   const [quantity, setQuantity] = useState("1")
+  const [unit, setUnit] = useState("")
   const [urgency, setUrgency] = useState<"Low" | "Medium" | "High">("Medium")
   const [description, setDescription] = useState("")
 
@@ -102,6 +106,7 @@ function EmployeeMaterialsPageContent() {
         body: JSON.stringify({
           item_name: itemName.trim(),
           quantity: parseInt(quantity, 10) || 1,
+          unit: unit.trim() || null,
           urgency,
           description: description.trim() || null,
         }),
@@ -110,6 +115,7 @@ function EmployeeMaterialsPageContent() {
       // Reset form & reload
       setItemName("")
       setQuantity("1")
+      setUnit("")
       setUrgency("Medium")
       setDescription("")
       setIsFormOpen(false)
@@ -192,7 +198,7 @@ function EmployeeMaterialsPageContent() {
               </Card>
 
               <Card className="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20 p-4">
-                <div className="text-[10px] font-extrabold uppercase text-emerald-800 dark:text-emerald-300">Fulfilled & Accepted</div>
+                <div className="text-[10px] font-extrabold uppercase text-emerald-800 dark:text-emerald-300">Approved Requests</div>
                 <div className="text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-1">{acceptedCount}</div>
               </Card>
             </div>
@@ -215,7 +221,7 @@ function EmployeeMaterialsPageContent() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <h3 className="font-extrabold text-sm text-foreground">{req.item_name}</h3>
-                          <Badge variant="outline" className="text-[10px] font-bold">Qty: {req.quantity}</Badge>
+                          <Badge variant="outline" className="text-[10px] font-bold">Qty: {req.quantity}{req.unit ? ` ${req.unit}` : ""}</Badge>
                         </div>
                         <Badge className={cn("text-[10px] font-bold uppercase px-2 py-0.5 flex items-center gap-1", statusCfg.className)}>
                           {statusCfg.icon}
@@ -231,6 +237,8 @@ function EmployeeMaterialsPageContent() {
                         <span>Urgency: <span className={cn("px-1.5 py-0.2 rounded font-extrabold", URGENCY_COLORS[req.urgency])}>{req.urgency}</span></span>
                         <span>Requested {new Date(req.created_at).toLocaleDateString()}</span>
                       </div>
+                      {req.status === "accepted" && <MaterialPurchaseBillPanel requestId={req.id} requestStatus={req.status} />}
+                      {req.purchase_status && <p className="text-[10px] text-muted-foreground">Purchase workflow: {req.purchase_status.replaceAll("_", " ")}</p>}
                     </Card>
                   )
                 })}
@@ -270,6 +278,10 @@ function EmployeeMaterialsPageContent() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold">Quantity</Label>
                   <Input type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} required className="h-9 text-xs rounded-xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">Unit (optional)</Label>
+                  <Input placeholder="pieces, kg, m" value={unit} onChange={(e) => setUnit(e.target.value)} className="h-9 text-xs rounded-xl" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold">Urgency</Label>
