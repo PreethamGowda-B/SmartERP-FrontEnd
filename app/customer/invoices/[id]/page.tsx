@@ -105,19 +105,9 @@ export default function CustomerInvoiceDetailPage() {
 
     try {
       setSubmittingDispute(true);
-      // 1. Post to Canonical Approval Engine (/api/work-requests)
-      await customerApi.post('/api/work-requests', {
-        request_type: 'invoice_discount',
-        category: 'finance',
-        urgency: 'high',
-        invoice_id: invoiceId,
-        job_id: invoice?.job_id,
-        title: `Customer Discount Request: ${invoice?.invoice_number || invoiceId}`,
-        reason: `${issueCategory}: ${issueDescription}`,
-        payload: { category: issueCategory, invoice_number: invoice?.invoice_number }
-      }).catch(() => {});
-
-      // 2. Log to dispute endpoint
+      // Store the issue in the invoice dispute workflow, which is shown to
+      // owners in the invoice issues page. The generic work-request endpoint
+      // is restricted to staff and cannot accept customer sessions.
       const res = await customerApi.post<{ success: boolean }>(`/api/invoices/${invoiceId}/dispute`, {
         companyId: invoice.company_id,
         customerId: invoice.customer_id,
