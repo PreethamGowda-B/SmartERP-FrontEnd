@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation" // ✅ Import useRouter
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, UserCheck, UserX, Clock, CalendarCheck } from "lucide-react"
+import { Users, UserCheck, UserX, Clock, CalendarCheck, Settings2, RefreshCw, Activity, ChevronDown } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -77,6 +77,8 @@ export default function OwnerAttendancePage() {
   const [policy, setPolicy] = useState<AttendancePolicy | null>(null)
   const [policySaving, setPolicySaving] = useState(false)
   const [policyMessage, setPolicyMessage] = useState("")
+  const [policyExpanded, setPolicyExpanded] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   const fetchAttendanceOverview = async (showLoading = true) => {
     if (showLoading) setLoading(true)
@@ -113,6 +115,12 @@ export default function OwnerAttendancePage() {
     } finally {
       setPolicySaving(false)
     }
+  }
+
+  const refreshAttendance = async () => {
+    setRefreshing(true)
+    await fetchAttendanceOverview(false)
+    setRefreshing(false)
   }
 
   useEffect(() => {
@@ -172,12 +180,18 @@ export default function OwnerAttendancePage() {
 
   return (
     <OwnerLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="p-4 sm:p-6 space-y-6 max-w-[1600px] mx-auto">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Attendance Management</h1>
-            <p className="text-muted-foreground">Monitor employee attendance</p>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary mb-2">
+              <Activity className="h-3.5 w-3.5" /> Workforce operations
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Attendance</h1>
+            <p className="text-muted-foreground mt-1">A live view of today’s shift, exceptions, and team coverage.</p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="h-9 px-3 rounded-full gap-2 border-emerald-500/25 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"><span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Live · 30 sec sync</Badge>
+            <Button variant="outline" className="h-9 gap-2 rounded-xl" onClick={refreshAttendance} disabled={refreshing}><RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh</Button>
           <ExportButton
             filename={`Attendance_Report_${new Date().toISOString().split('T')[0]}`}
             title="Employee Attendance Report"
@@ -230,15 +244,23 @@ export default function OwnerAttendancePage() {
               { header: "Hours", dataKey: "working_hours", type: "number" }
             ]}
           />
+          </div>
         </div>
 
         {policy && user?.role === "owner" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Attendance Policy</CardTitle>
-              <p className="text-sm text-muted-foreground">One company policy controls Employee Dashboard, Shift Control and automatic processing.</p>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <Card className="overflow-hidden border-border/70 shadow-sm">
+              <CardHeader role="button" tabIndex={0} onClick={() => setPolicyExpanded((open) => !open)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPolicyExpanded((open) => !open) } }} aria-expanded={policyExpanded} className="flex cursor-pointer flex-row items-center justify-between gap-4 py-4 hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Settings2 className="h-5 w-5" /></span>
+                  <div>
+                    <CardTitle className="text-base">Attendance policy</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">{policy.shiftStart}–{policy.shiftEnd} · cutoff {policy.clockInCutoff} · automatic clock-out {policy.automaticClockOutEnabled ? policy.automaticClockOutTime : "off"} · {policy.timezone}</p>
+                  </div>
+                </div>
+                <span className="flex shrink-0 items-center gap-2 text-sm font-medium text-primary">{policyExpanded ? "Hide settings" : "Manage policy"}<ChevronDown className={`h-4 w-4 transition-transform ${policyExpanded ? "rotate-180" : ""}`} /></span>
+              </CardHeader>
+            {policyExpanded && <CardContent className="space-y-4 border-t bg-muted/10 pt-5">
+              <p className="text-sm text-muted-foreground">Company-wide rules used by employee punches, attendance reports, and scheduled processing.</p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {([
                   ["Shift starts", "shiftStart"], ["Shift ends", "shiftEnd"], ["Earliest clock-in", "earliestClockIn"],
@@ -271,13 +293,13 @@ export default function OwnerAttendancePage() {
                 <Button onClick={savePolicy} disabled={policySaving}>{policySaving ? "Saving…" : "Save attendance policy"}</Button>
                 {policyMessage && <span className="text-sm text-muted-foreground">{policyMessage}</span>}
               </div>
-            </CardContent>
+            </CardContent>}
           </Card>
         )}
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
-          <Card className="premium-card hover-lift-subtle border border-blue-500/20">
+        <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
+          <Card className="premium-card hover-lift-subtle border border-blue-500/20 bg-gradient-to-br from-blue-500/[0.08] to-transparent">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Total Staff</CardTitle>
               <Users className="h-4 w-4 text-blue-500" />
@@ -287,7 +309,7 @@ export default function OwnerAttendancePage() {
             </CardContent>
           </Card>
 
-          <Card className="premium-card hover-lift-subtle border border-green-500/20">
+          <Card className="premium-card hover-lift-subtle border border-green-500/20 bg-gradient-to-br from-green-500/[0.08] to-transparent">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Present</CardTitle>
               <UserCheck className="h-4 w-4 text-green-500" />
@@ -297,7 +319,7 @@ export default function OwnerAttendancePage() {
             </CardContent>
           </Card>
 
-          <Card className="premium-card hover-lift-subtle border border-red-500/20">
+          <Card className="premium-card hover-lift-subtle border border-red-500/20 bg-gradient-to-br from-red-500/[0.06] to-transparent">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Absent</CardTitle>
               <UserX className="h-4 w-4 text-red-500" />
@@ -307,7 +329,7 @@ export default function OwnerAttendancePage() {
             </CardContent>
           </Card>
 
-          <Card className="premium-card hover-lift-subtle border border-orange-500/20">
+          <Card className="premium-card hover-lift-subtle border border-orange-500/20 bg-gradient-to-br from-orange-500/[0.08] to-transparent">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Late Arrivals</CardTitle>
               <Clock className="h-4 w-4 text-orange-500" />
@@ -317,7 +339,7 @@ export default function OwnerAttendancePage() {
             </CardContent>
           </Card>
 
-          <Card className="premium-card hover-lift-subtle border border-cyan-500/20">
+          <Card className="premium-card hover-lift-subtle border border-cyan-500/20 bg-gradient-to-br from-cyan-500/[0.08] to-transparent">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">On Approved Leave</CardTitle>
               <CalendarCheck className="h-4 w-4 text-cyan-500" />

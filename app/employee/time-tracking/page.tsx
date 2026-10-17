@@ -256,9 +256,11 @@ export default function TimeTrackingPage() {
   const canClockIn = !todayAttendance?.check_in_time && pendingOfflineCount === 0
 
   // Monthly summary stats
-  const totalDaysPresent = history.filter((r) => r.status === "present" || r.status === "late").length
+  const totalDaysPresent = history.filter((r) => ["present", "late", "half_day"].includes(r.status || "")).length
   const totalHoursWorked = history.reduce((acc, r) => acc + (parseFloat(String(r.working_hours)) || 0), 0)
-  const onTimeStreak = history.filter((r) => r.status === "present" && !r.is_late).length
+  const recordedCheckIns = history.filter((r) => Boolean(r.check_in_time))
+  const onTimeCount = recordedCheckIns.filter((r) => !r.is_late && r.status !== "late").length
+  const onTimeRate = recordedCheckIns.length ? Math.round((onTimeCount / recordedCheckIns.length) * 100) : 0
 
   return (
     <EmployeeLayout>
@@ -303,7 +305,7 @@ export default function TimeTrackingPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                    <span>Leaving before <strong>{attendancePolicy?.shiftEnd || "—"}</strong> marks half day</span>
+                    <span>Company timezone <strong>{attendancePolicy?.timezone || "—"}</strong></span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck className="h-3.5 w-3.5 text-blue-500" />
@@ -491,22 +493,22 @@ export default function TimeTrackingPage() {
                   <div className="flex items-center gap-2.5">
                     <Flame className="h-5 w-5 text-orange-500 shrink-0" />
                     <div>
-                      <div className="font-bold text-foreground">Punctuality Score: {onTimeStreak > 0 ? "95%" : "100%"}</div>
-                      <div className="text-[10px] text-muted-foreground">Based on company attendance policy</div>
+                      <div className="font-bold text-foreground">On-time check-ins: {onTimeRate}%</div>
+                      <div className="text-[10px] text-muted-foreground">{onTimeCount} of {recordedCheckIns.length} recorded this month</div>
                     </div>
                   </div>
-                  <Badge className="bg-amber-500 text-white text-[10px] font-bold">
-                    ACTIVE
+                  <Badge variant="outline" className="border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                    {recordedCheckIns.length ? "THIS MONTH" : "NO DATA"}
                   </Badge>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-secondary/30 border border-border/40 text-xs space-y-1">
                   <div className="flex items-center gap-1.5 font-bold text-foreground">
                     <MapPin className="h-3.5 w-3.5 text-amber-500" />
-                    GPS Telemetry Validation
+                    Punch source
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Shift punches are cryptographically stamped with geolocation coordinates for on-site verification.
+                    Attendance is recorded by the company service. Location is shown only when a supported punch source provides it.
                   </p>
                 </div>
               </CardContent>
@@ -552,7 +554,9 @@ export default function TimeTrackingPage() {
                 {Array.isArray(history) &&
                   history.map((record) => {
                     const isLateRecord = record.is_late || record.status === "late"
-                    const isPresent = record.status === "present" || record.status === "late"
+                    const isPresent = ["present", "late", "half_day"].includes(record.status || "")
+                    const dayNumber = Number(record.date.slice(8, 10))
+                    const statusLabel = record.status === "half_day" ? "Half day" : ["leave", "on_leave"].includes(record.status || "") ? "On leave" : isPresent ? "Present" : "Absent"
 
                     return (
                       <div
@@ -562,7 +566,7 @@ export default function TimeTrackingPage() {
                         <div className="flex items-center gap-3.5">
                           <div className="w-11 h-11 rounded-xl bg-secondary/60 text-center flex flex-col items-center justify-center font-bold shrink-0 border border-border/50">
                             <span className="text-sm font-black text-foreground leading-none">
-                              {new Date(record.date).getDate()}
+                              {dayNumber}
                             </span>
                             <span className="text-[9px] uppercase font-bold text-muted-foreground mt-0.5">
                               {new Date(record.date).toLocaleDateString("en-US", { month: "short" })}
@@ -603,12 +607,16 @@ export default function TimeTrackingPage() {
                           <Badge
                             className={cn(
                               "text-[10px] font-bold uppercase tracking-wider",
-                              isPresent
-                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                                : "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
+                              ["leave", "on_leave"].includes(record.status || "")
+                                ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30"
+                                : record.status === "half_day"
+                                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                                  : isPresent
+                                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                    : "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
                             )}
                           >
-                            {isPresent ? "Present" : "Absent"}
+                            {statusLabel}
                           </Badge>
                         </div>
                       </div>

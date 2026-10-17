@@ -169,7 +169,7 @@ export default function EmployeeTimePage() {
             </CardHeader>
             <CardContent>
               {(() => {
-                const today = new Date().toISOString().split("T")[0]
+                const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())
                 const todayRec = records.find((r) => r.date === today)
                 if (!todayRec) {
                   return <p className="text-muted-foreground text-sm">No record for today yet.</p>
@@ -178,7 +178,7 @@ export default function EmployeeTimePage() {
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground text-sm">Status</span>
-                      <Badge variant={todayRec.status === "present" ? "default" : todayRec.status === "late" ? "secondary" : "destructive"}>
+                      <Badge variant={todayRec.status === "present" ? "default" : todayRec.status === "late" ? "secondary" : "outline"} className={todayRec.status === "half_day" ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300" : ["leave", "on_leave"].includes(todayRec.status) ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300" : ""}>
                         {todayRec.status}
                       </Badge>
                     </div>
@@ -252,10 +252,10 @@ export default function EmployeeTimePage() {
                         variant={
                           record.status === "present" ? "default"
                             : record.status === "late" ? "secondary"
-                              : record.status === "clocked-in" ? "outline"
+                              : ["clocked-in", "half_day", "leave", "on_leave"].includes(record.status) ? "outline"
                                 : "destructive"
                         }
-                        className="text-xs w-20 justify-center"
+                        className={`text-xs min-w-20 justify-center ${record.status === "half_day" ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300" : ["leave", "on_leave"].includes(record.status) ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300" : ""}`}
                       >
                         {record.status}
                       </Badge>
