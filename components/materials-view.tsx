@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,7 @@ import { ExportButton } from "@/components/export-button"
 import { cn } from "@/lib/utils"
 import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
 import { MaterialPurchaseReviewDialog } from "@/components/material-purchase-review-dialog"
+import { useMaterialRequestRealtime } from "@/hooks/useMaterialRequestRealtime"
 
 interface MaterialRequest {
   id: number
@@ -37,8 +38,7 @@ export function MaterialsView() {
   const [statusFilter, setStatusFilter] = useState("all")
 
   // Fetch all material requests
-  const fetchRequests = async () => {
-    setLoading(true)
+  const fetchRequests = useCallback(async () => {
     try {
       const data = await apiClient("/api/material-requests")
       setRequests(Array.isArray(data) ? data : [])
@@ -47,11 +47,13 @@ export function MaterialsView() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchRequests()
-  }, [])
+  }, [fetchRequests])
+
+  useMaterialRequestRealtime(fetchRequests)
 
   // Accept request
   const handleAccept = async (requestId: number) => {

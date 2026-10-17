@@ -23,6 +23,7 @@ import { apiClient } from "@/lib/apiClient"
 import InventoryTable from "@/components/inventory-table"
 import { cn } from "@/lib/utils"
 import { MaterialPurchaseBillPanel } from "@/components/material-purchase-bill-panel"
+import { useMaterialRequestRealtime } from "@/hooks/useMaterialRequestRealtime"
 
 interface MaterialRequest {
   id: number
@@ -78,22 +79,24 @@ function EmployeeMaterialsPageContent() {
   const [urgency, setUrgency] = useState<"Low" | "Medium" | "High">("Medium")
   const [description, setDescription] = useState("")
 
-  const fetchRequests = useCallback(async () => {
+  const fetchRequests = useCallback(async (showSpinner = false) => {
     try {
-      setRefreshing(true)
+      if (showSpinner) setRefreshing(true)
       const data = await apiClient<MaterialRequest[]>("/api/material-requests")
       setRequests(Array.isArray(data) ? data : [])
     } catch (err: any) {
       console.error("Error fetching material requests:", err)
     } finally {
       setLoading(false)
-      setRefreshing(false)
+      if (showSpinner) setRefreshing(false)
     }
   }, [])
 
   useEffect(() => {
     fetchRequests()
   }, [fetchRequests])
+
+  useMaterialRequestRealtime(fetchRequests)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -143,7 +146,7 @@ function EmployeeMaterialsPageContent() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={fetchRequests} disabled={refreshing} className="h-9 text-xs font-bold rounded-xl">
+            <Button variant="outline" size="sm" onClick={() => fetchRequests(true)} disabled={refreshing} className="h-9 text-xs font-bold rounded-xl">
               <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", refreshing && "animate-spin")} />
               Sync Supplies
             </Button>

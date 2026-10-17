@@ -43,6 +43,7 @@ export function MaterialPurchaseBillPanel({ requestId, requestStatus }: { reques
 
   const refresh = useCallback(async () => {
     setLoading(true)
+    setError("")
     try {
       const result = await apiClient<{ bills: Bill[] }>(`/api/material-requests/${requestId}/purchase-bills`, { signal: AbortSignal.timeout(20000) })
       setBills(Array.isArray(result.bills) ? result.bills : [])
@@ -70,8 +71,8 @@ export function MaterialPurchaseBillPanel({ requestId, requestStatus }: { reques
       form.reset()
       await refresh()
     } catch (err: any) {
-      setError(err?.message || "Invoice upload failed. Check your connection and try again.")
       await refresh()
+      setError(err?.message || "Invoice upload failed. Check your connection and try again.")
     } finally { setUploading(false) }
   }
 
