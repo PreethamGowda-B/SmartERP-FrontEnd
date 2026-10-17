@@ -11,16 +11,22 @@ interface VoiceInputModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess?: (response: any) => void
+  onError?: () => void
+  onListeningChange?: (isListening: boolean) => void
   portal?: string
 }
 
-export function VoiceInputModal({ isOpen, onClose, onSuccess, portal = "owner" }: VoiceInputModalProps) {
+export function VoiceInputModal({ isOpen, onClose, onSuccess, onError, onListeningChange, portal = "owner" }: VoiceInputModalProps) {
   const { toast } = useToast()
   const [isListening, setIsListening] = useState(false)
   const [transcript, setTranscript] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [aiResult, setAiResult] = useState<string | null>(null)
   const recognitionRef = useRef<any>(null)
+
+  useEffect(() => {
+    onListeningChange?.(isListening)
+  }, [isListening, onListeningChange])
 
   useEffect(() => {
     if (typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
@@ -98,6 +104,7 @@ export function VoiceInputModal({ isOpen, onClose, onSuccess, portal = "owner" }
       setAiResult(reply)
       if (onSuccess) onSuccess(res)
     } catch (err: any) {
+      onError?.()
       toast({
         title: "AI Processing Failed",
         description: err.message || "Failed to process voice command.",

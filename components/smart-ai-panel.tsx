@@ -22,6 +22,7 @@ import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { VoiceInputModal } from "@/components/voice-input-modal"
+import { SmartAIRobot, type SmartAIRobotMood } from "@/components/smart-ai-robot"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,8 @@ interface WidgetPayload {
   items?: Array<any>
   message?: string
   features?: string[]
+  toolName?: string
+  params?: Record<string, unknown>
 }
 
 interface AIMessage {
@@ -51,6 +54,8 @@ interface AIMessage {
   multiAgent?: boolean
   scopesUsed?: string[]
   isTyping?: boolean
+  isError?: boolean
+  retryAction?: { type: "prompt" } | { type: "confirm"; toolName: string; params: Record<string, unknown> }
 }
 
 interface Conversation {
@@ -174,9 +179,23 @@ function detectFeedback(text: string): FeedbackDetection {
   return { detected: false, type: "general", severity: "medium", aiSummary: "" }
 }
 
+function filterSuggestedFollowUps(suggestions: string[], role: string) {
+  if (["owner", "admin", "hr", "super_admin"].includes(role.toLowerCase())) return suggestions.slice(0, 4)
+  const restricted = /\b(payroll|salary|financial|revenue|invoice|gst|tax|company-wide|all employees|manage employee|admin)\b/i
+  return suggestions.filter((suggestion) => !restricted.test(suggestion)).slice(0, 4)
+}
+
 // ─── Widget Renderer ──────────────────────────────────────────────────────────
 
-function WidgetRenderer({ widget }: { widget: WidgetPayload }) {
+function WidgetRenderer({
+  widget,
+  onConfirm,
+  confirming,
+}: {
+  widget: WidgetPayload
+  onConfirm?: (toolName: string, params: Record<string, unknown>) => void
+  confirming?: boolean
+}) {
   if (!widget) return null
 
   if (widget.type === "KPI_SUMMARY" && widget.metrics) {
@@ -246,14 +265,14 @@ function WidgetRenderer({ widget }: { widget: WidgetPayload }) {
         )}
         <Button
           size="sm"
-          className="w-full text-xs h-8 bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5"
-          onClick={() => {
-            toast.success("Service escalation ticket created and dispatched to Service Lead!")
-          }}
+          disabled={!widget.toolName || confirming}
+          className="w-full text-xs h-8 bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5 disabled:opacity-60"
+          onClick={() => widget.toolName && onConfirm?.(widget.toolName, widget.params || {})}
         >
-          <Check className="h-3.5 w-3.5" />
-          Confirm &amp; Create Escalation
+          {confirming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+          {confirming ? "Processing confirmation…" : widget.toolName ? "Confirm this action" : "Action confirmation unavailable"}
         </Button>
+        {!widget.toolName && <p className="text-[10px] text-muted-foreground">This proposal has no executable action reference, so nothing was submitted.</p>}
       </div>
     )
   }
@@ -293,6 +312,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   // ── Panel state
   const [isOpen, setIsOpen] = React.useState(false)
   const [isMinimized, setIsMinimized] = React.useState(false)
+  const [isExpanded, setIsExpanded] = React.useState(false)
   const [showHistory, setShowHistory] = React.useState(false)
   const [showModelSelector, setShowModelSelector] = React.useState(false)
   const [isMultiAgent, setIsMultiAgent] = React.useState(false)
@@ -331,6 +351,10 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   // ── Input state
   const [input, setInput] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(false)
+  const [confirmingTool, setConfirmingTool] = React.useState<string | null>(null)
+  const [robotMood, setRobotMood] = React.useState<SmartAIRobotMood>("idle")
+  const moodTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const confirmLockRef = React.useRef(false)
   const [showVoiceModal, setShowVoiceModal] = React.useState(false)
 
   // ── Feedback state
@@ -348,6 +372,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   // ── Refs
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
+  const sendLockRef = React.useRef(false)
 
   // ── Load conversations from localStorage
   React.useEffect(() => {
@@ -402,6 +427,32 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
     }
   }, [messages, isLoading, isOpen, isMinimized])
 
+  React.useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    textarea.style.height = "auto"
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`
+  }, [input])
+
+  // The mobile panel fills the viewport, so keep the page behind it from scrolling.
+  React.useEffect(() => {
+    if (!isOpen || isMinimized || typeof window === "undefined") return
+
+    const body = document.body
+    const previousOverflow = body.style.overflow
+    const mobileViewport = window.matchMedia("(max-width: 639px)")
+    const syncScrollLock = () => {
+      body.style.overflow = mobileViewport.matches ? "hidden" : previousOverflow
+    }
+
+    syncScrollLock()
+    mobileViewport.addEventListener("change", syncScrollLock)
+    return () => {
+      mobileViewport.removeEventListener("change", syncScrollLock)
+      body.style.overflow = previousOverflow
+    }
+  }, [isOpen, isMinimized])
+
   // ── Get current portal
   const currentPortal = React.useMemo(() => {
     if (pathname.startsWith("/employee")) return "employee"
@@ -432,13 +483,35 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
     setShowHistory(false)
   }
 
+  function welcomeSuggestions() {
+    const role = String(user?.role || "employee").toLowerCase()
+    if (["owner", "admin"].includes(role)) {
+      return ["Today's attendance summary", "Show active jobs", "Check low-stock inventory", "Summarize invoices"]
+    }
+    if (role === "hr") {
+      return ["Today's attendance summary", "Show pending leave requests", "Summarize employee attendance", "Open HR tools"]
+    }
+    if (role === "super_admin") {
+      return ["Show platform health", "Review AI activity", "Summarize company operations", "Open admin tools"]
+    }
+    return ["Show my assigned jobs", "Show my attendance", "Check my leave status", "Help me find a feature"]
+  }
+
   function welcomeMessage(): AIMessage {
+    const role = String(user?.role || "employee").toLowerCase()
+    const roleCapabilities = role === "employee"
+      ? "your assigned work, personal attendance, leave, and SmartERP guidance"
+      : role === "hr"
+        ? "attendance, leave requests, employee operations, and SmartERP guidance"
+        : role === "super_admin"
+          ? "platform operations, company health, and SmartERP guidance"
+          : "jobs, attendance, inventory, finance, and company operations"
     return {
       id: "welcome",
       sender: "ai",
-      text: `Hello ${user?.name?.split(" ")[0] || ""}! I'm **SmartERP Intelligence**, your enterprise AI assistant. I can help you with attendance, payroll, inventory, GST, financials, HR, and more — all from your company's live data.\n\nWhat would you like to know today?`,
+      text: `Hello ${user?.name?.split(" ")[0] || ""}! I'm **SmartERP AI**, your ERP assistant. I can help with ${roleCapabilities}, using the access available to your account.\n\nWhat would you like to know today?`,
       timestamp: new Date(),
-      suggestedFollowUps: ["Today's attendance summary", "Inventory status", "Payroll overview", "GST report"],
+      suggestedFollowUps: welcomeSuggestions(),
     }
   }
 
@@ -446,6 +519,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   function handleOpen() {
     setIsOpen(true)
     setIsMinimized(false)
+    setIsExpanded(false)
     if (!activeConvId) {
       startNewConversation()
     }
@@ -558,9 +632,10 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   }
 
   // ── Send message to AI
-  async function sendMessage(promptText?: string) {
+  async function sendMessage(promptText?: string, previousMessages: AIMessage[] = messages) {
     const text = (promptText || input).trim()
-    if (!text || isLoading) return
+    if (!text || isLoading || sendLockRef.current) return
+    sendLockRef.current = true
 
     const userMsg: AIMessage = {
       id: `u_${Date.now()}`,
@@ -577,10 +652,12 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
       isTyping: true,
     }
 
-    const newMessages = [...messages, userMsg, typingMsg]
+    const newMessages = [...previousMessages, userMsg, typingMsg]
     setMessages(newMessages)
     setInput("")
     setIsLoading(true)
+    if (moodTimeoutRef.current) clearTimeout(moodTimeoutRef.current)
+    setRobotMood("thinking")
     setShowFeedbackForm(false)
 
     // Record for personalized quick actions
@@ -622,7 +699,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
         currentModule: pageModule,
         currentPagePath: pathname,
         clientContext: clientCtx,
-        history: messages
+        history: previousMessages
           .filter(m => !m.isTyping)
           .slice(-10)
           .map(m => ({ sender: m.sender === "user" ? "user" : "assistant", content: m.text })),
@@ -653,17 +730,20 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
         confidenceScore: data.confidenceScore,
         autoSelectedModel: data.autoSelectedModel,
         activeModelScope: data.activeModelScope,
-        suggestedFollowUps: data.suggestedFollowUps || [],
+        suggestedFollowUps: filterSuggestedFollowUps(data.suggestedFollowUps || [], String(user?.role || "employee")),
         latencyMs: data.telemetry?.latencyMs,
         intercepted: data.intercepted || false,
         multiAgent: data.multiAgent || false,
         scopesUsed: data.scopesUsed || [],
       }
 
-      const finalMessages = [...messages, userMsg, aiMsg]
+      const finalMessages = [...previousMessages, userMsg, aiMsg]
       setMessages(finalMessages)
       persistMessages(finalMessages)
       setTopActions(getTopActions(String(user.id)))
+      // An answer is not proof that a business action was completed. Reserve the
+      // success animation for explicit successful confirmations below.
+      setRobotMood("idle")
     } catch (err: any) {
       let friendlyText = "I'm temporarily connecting to live services. Please ask again or select a suggested topic below."
       if (err?.message === "PLAN_LOCKED") {
@@ -677,15 +757,81 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
         sender: "ai",
         text: friendlyText,
         timestamp: new Date(),
-        suggestedFollowUps: ["Today's attendance", "Payroll summary", "Inventory status", "Contact support"],
+        isError: true,
+        retryAction: { type: "prompt" },
+        suggestedFollowUps: welcomeSuggestions(),
       }
-      const errMessages = [...messages, userMsg, errorMsg]
+      const errMessages = [...previousMessages, userMsg, errorMsg]
       setMessages(errMessages)
       persistMessages(errMessages)
+      setRobotMood("error")
+      moodTimeoutRef.current = setTimeout(() => setRobotMood("idle"), 1800)
     } finally {
       setIsLoading(false)
+      sendLockRef.current = false
     }
   }
+
+  async function confirmAIAction(toolName: string, params: Record<string, unknown>) {
+    if (confirmLockRef.current) return
+    confirmLockRef.current = true
+    setConfirmingTool(toolName)
+    try {
+      const result = await apiClient<any>("/api/ai/confirm-action", {
+        method: "POST",
+        body: JSON.stringify({ toolName, params }),
+      })
+      const stillNeedsConfirmation = result?.requiresUserConfirmation === true ||
+        result?.type === "ACTION_CONFIRMATION_REQUIRED" ||
+        result?.action === "ACTION_CONFIRMATION_REQUIRED"
+      const actionFailed = Boolean(result?.error) || result?.success === false
+      const responseText = result?.text || result?.message || (
+        stillNeedsConfirmation
+          ? "The server returned another confirmation request. The action has not been completed."
+          : result?.success === true
+            ? "The server confirmed that the action completed."
+            : "The server returned a result. Review the related module to confirm its final status."
+      )
+      const responseMessage: AIMessage = {
+        id: `confirm_${Date.now()}`,
+        sender: "ai",
+        text: responseText,
+        timestamp: new Date(),
+        isError: stillNeedsConfirmation || actionFailed,
+      }
+      const updatedMessages = [...messages, responseMessage]
+      setMessages(updatedMessages)
+      persistMessages(updatedMessages)
+      if (stillNeedsConfirmation || actionFailed) setRobotMood("error")
+      else if (result?.success === true) setRobotMood("success")
+      else setRobotMood("idle")
+      if (moodTimeoutRef.current) clearTimeout(moodTimeoutRef.current)
+      moodTimeoutRef.current = setTimeout(() => setRobotMood("idle"), 1800)
+    } catch {
+      const responseMessage: AIMessage = {
+        id: `confirm_error_${Date.now()}`,
+        sender: "ai",
+        text: "The confirmation request did not return a final result. Check the related module before retrying to avoid repeating an action.",
+        timestamp: new Date(),
+        isError: true,
+      }
+      const updatedMessages = [...messages, responseMessage]
+      setMessages(updatedMessages)
+      persistMessages(updatedMessages)
+      setRobotMood("error")
+    } finally {
+      confirmLockRef.current = false
+      setConfirmingTool(null)
+    }
+  }
+
+  const handleVoiceListeningChange = React.useCallback((listening: boolean) => {
+    setRobotMood((current) => listening ? "listening" : current === "listening" ? "idle" : current)
+  }, [])
+
+  React.useEffect(() => () => {
+    if (moodTimeoutRef.current) clearTimeout(moodTimeoutRef.current)
+  }, [])
 
   // ── Copy response
   function copyMessage(text: string) {
@@ -695,12 +841,14 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
 
   // ── Regenerate last AI response
   async function regenerateLastResponse() {
-    const lastUserMsg = [...messages].reverse().find(m => m.sender === "user")
+    const lastAIIndex = messages.findLastIndex(m => m.sender === "ai")
+    const lastUserIndex = messages.findLastIndex((m, index) => index < lastAIIndex && m.sender === "user")
+    const lastUserMsg = lastUserIndex >= 0 ? messages[lastUserIndex] : undefined
     if (!lastUserMsg) return
-    // Remove last AI response then resend
-    const withoutLast = messages.filter((m, i) => !(m.sender === "ai" && i === messages.length - 1))
-    setMessages(withoutLast)
-    await sendMessage(lastUserMsg.text)
+    // Keep the transcript up to the failed request, then retry without duplicating its user bubble.
+    const beforeRetry = messages.slice(0, lastUserIndex)
+    setMessages(beforeRetry)
+    await sendMessage(lastUserMsg.text, beforeRetry)
   }
 
   // ── Toggle multi-agent scope
@@ -729,14 +877,14 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
       <AnimatePresence>
         {!isOpen && (
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
+            initial={{ scale: 0.82, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
+            exit={{ scale: 0.82, opacity: 0 }}
             className={cn(
               "fixed z-40 flex items-center gap-1.5 transition-all duration-300",
               pathname?.includes("/messages")
-                ? "bottom-24 right-4 sm:bottom-28 sm:right-6"
-                : "bottom-4 right-4 sm:bottom-6 sm:right-6"
+                ? "bottom-24 right-3 sm:bottom-28 sm:right-6"
+                : "bottom-[max(env(safe-area-inset-bottom),0.75rem)] right-3 sm:bottom-6 sm:right-6"
             )}
           >
             <motion.button
@@ -745,17 +893,12 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
               onClick={handleOpen}
               id="smart-ai-panel-trigger"
               title="Open SmartERP AI Operations Assistant"
-              className={cn(
-                "relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl",
-                "bg-linear-to-br from-violet-600 via-purple-600 to-indigo-700",
-                "shadow-lg shadow-violet-600/25",
-                "flex items-center justify-center",
-                "transition-all duration-300",
-                "hover:shadow-xl hover:shadow-violet-600/40",
-                "ring-2 ring-violet-500/20 hover:ring-violet-400/50"
-              )}
+              aria-label="Open SmartERP AI assistant"
+              aria-haspopup="dialog"
+              className="group relative flex h-[68px] w-[68px] items-center justify-center rounded-full border border-white/90 bg-gradient-to-br from-white via-[#f7f5ff] to-[#eceaff] shadow-[0_10px_32px_rgba(79,70,229,.2)] ring-1 ring-violet-200/80 transition-shadow hover:shadow-[0_12px_36px_rgba(79,70,229,.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-400/40 motion-reduce:transition-none"
             >
-              <Sparkles className="h-5 w-5 text-white drop-shadow-xs" />
+              <span className="pointer-events-none absolute inset-1 rounded-full bg-gradient-to-br from-violet-100/80 to-sky-100/70" />
+              <SmartAIRobot mood={robotMood} size="lg" />
             </motion.button>
           </motion.div>
         )}
@@ -772,31 +915,31 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
             style={{ overscrollBehavior: "contain" }}
             className={cn(
-              "fixed right-0 top-0 z-9998 h-screen overscroll-contain",
-              "w-full sm:w-110",
-              "flex flex-col",
-              "bg-background/95 backdrop-blur-2xl",
-              "border-l border-border/80",
-              "shadow-[-20px_0_80px_rgba(0,0,0,0.2)]",
-              isMinimized && "h-16 top-auto bottom-6 right-6 w-80 rounded-2xl border shadow-2xl"
+              "fixed z-40 flex flex-col overflow-hidden overscroll-contain border border-violet-200/70 bg-background shadow-[0_24px_90px_rgba(19,24,48,.25)] dark:border-violet-300/15",
+              "right-3 bottom-[max(env(safe-area-inset-bottom),0.75rem)] h-[min(720px,calc(100dvh-1.5rem))] w-[min(430px,calc(100vw-1.5rem))] rounded-[26px]",
+              "max-sm:inset-x-0 max-sm:bottom-[env(safe-area-inset-bottom)] max-sm:top-[env(safe-area-inset-top)] max-sm:h-auto max-sm:w-full max-sm:rounded-none",
+              isExpanded && "inset-3 h-auto w-auto rounded-[28px] max-sm:inset-x-0 max-sm:top-[env(safe-area-inset-top)] max-sm:bottom-[env(safe-area-inset-bottom)] max-sm:rounded-none",
+              isMinimized && "inset-auto bottom-[max(env(safe-area-inset-bottom),1rem)] right-4 h-[76px] w-[min(360px,calc(100vw-2rem))] rounded-2xl shadow-xl max-sm:bottom-[max(env(safe-area-inset-bottom),0.75rem)] max-sm:right-3 max-sm:w-[calc(100vw-1.5rem)]"
             )}
+            role="dialog"
+            aria-modal="false"
+            aria-label="SmartERP AI assistant"
           >
             {/* ── Panel Header ───────────────────────────────────────────────── */}
             <div className={cn(
-              "flex items-center justify-between px-4 py-3 border-b border-border/80",
-              "bg-linear-to-r from-violet-600/10 via-purple-600/5 to-indigo-600/10",
+              "relative flex items-center justify-between border-b border-border/70 px-4 py-3.5",
+              "before:absolute before:left-0 before:right-0 before:top-0 before:h-[3px] before:bg-gradient-to-r before:from-violet-500 before:via-indigo-500 before:to-sky-400",
+              "bg-gradient-to-r from-violet-50/90 via-background to-indigo-50/80 dark:from-violet-950/35 dark:via-background dark:to-indigo-950/25",
               "backdrop-blur-md shrink-0",
               isMinimized && "rounded-2xl"
             )}>
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-linear-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                  <Sparkles className="h-4 w-4 text-white" />
-                </div>
+                <SmartAIRobot mood={isLoading ? "thinking" : robotMood} size="md" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-extrabold text-foreground tracking-tight">SmartERP Intelligence</h2>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <h2 className="text-sm font-extrabold text-foreground tracking-tight">SmartERP AI</h2>
                   </div>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">{isLoading || robotMood === "thinking" ? "Thinking through your request…" : robotMood === "listening" ? "Listening to your voice…" : robotMood === "error" ? "Request failed · retry available" : "Your ERP assistant"}</p>
                   {!isMinimized && (
                     <div className="flex items-center gap-1.5 mt-0.5">
                       {autoModelBadge ? (
@@ -816,21 +959,25 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
               </div>
 
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-muted/60"
+                  <Button variant="ghost" size="icon" aria-label="Conversation history" title="Conversation history" className="h-8 w-8 rounded-lg hover:bg-muted/60"
                   onClick={() => setShowHistory(s => !s)}>
-                  <History className="h-3.5 w-3.5 text-muted-foreground" />
+                  <History className="h-4 w-4 text-muted-foreground" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-muted/60"
+                <Button variant="ghost" size="icon" aria-label="Start a new conversation" title="New conversation" className="h-8 w-8 rounded-lg hover:bg-muted/60"
                   onClick={startNewConversation}>
-                  <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Plus className="h-4 w-4 text-muted-foreground" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-muted/60"
+                {!isMinimized && <Button variant="ghost" size="icon" aria-label={isExpanded ? "Restore chat window size" : "Expand chat window"} title={isExpanded ? "Restore size" : "Expand"} className="h-8 w-8 rounded-lg hover:bg-muted/60"
+                  onClick={() => setIsExpanded(s => !s)}>
+                  {isExpanded ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+                </Button>}
+                <Button variant="ghost" size="icon" aria-label={isMinimized ? "Restore chat window" : "Minimize chat window"} title={isMinimized ? "Restore" : "Minimize"} className="h-8 w-8 rounded-lg hover:bg-muted/60"
                   onClick={() => setIsMinimized(s => !s)}>
-                  {isMinimized ? <Maximize2 className="h-3.5 w-3.5 text-muted-foreground" /> : <Minimize2 className="h-3.5 w-3.5 text-muted-foreground" />}
+                  {isMinimized ? <Maximize2 className="h-4 w-4 text-muted-foreground" /> : <Minimize2 className="h-4 w-4 text-muted-foreground" />}
                 </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                <Button variant="ghost" size="icon" aria-label="Close SmartERP AI" className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => { setIsOpen(false); setIsMinimized(false) }}>
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -1094,6 +1241,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                         msg={msg}
                         onCopy={copyMessage}
                         onRegenerate={regenerateLastResponse}
+                        onConfirm={confirmAIAction}
+                        confirmingTool={confirmingTool}
                         onFollowUp={text => { setInput(""); sendMessage(text); recordPrompt(String(user.id), autoModelBadge || selectedModel, text) }}
                         onNavigate={path => { router.push(path); setIsOpen(false) }}
                         isLastAI={msg.sender === "ai" && msg === [...messages].reverse().find(m => m.sender === "ai")}
@@ -1199,6 +1348,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                         <Textarea
                           ref={textareaRef}
                           value={input}
+                          disabled={isLoading}
+                          aria-label="Message SmartERP AI"
                           onChange={e => setInput(e.target.value)}
                           onKeyDown={e => {
                             if (e.key === "Enter" && !e.shiftKey) {
@@ -1209,8 +1360,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                           placeholder={isMultiAgent
                             ? "Ask across multiple AI specialists..."
                             : selectedModel === "auto"
-                              ? "Ask SmartERP Intelligence anything..."
-                              : `Ask ${MODEL_DISPLAY_NAMES[selectedModel] || "AI"}...`
+                              ? "Ask anything about SmartERP…"
+                              : `Ask ${MODEL_DISPLAY_NAMES[selectedModel] || "AI"}…`
                           }
                           rows={1}
                           className="resize-none text-sm pr-2 rounded-xl border-border/60 bg-muted/30 focus:bg-background transition-all min-h-11 max-h-30 overflow-y-auto"
@@ -1255,9 +1406,16 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
         isOpen={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
         portal={currentPortal}
+        onListeningChange={handleVoiceListeningChange}
+        onError={() => {
+          if (moodTimeoutRef.current) clearTimeout(moodTimeoutRef.current)
+          setRobotMood("error")
+          moodTimeoutRef.current = setTimeout(() => setRobotMood("idle"), 1800)
+        }}
         onSuccess={(res) => {
           if (res?.text) {
-            toast.success("Voice command executed successfully!")
+            toast.success("SmartERP AI response received.")
+            setRobotMood("idle")
             setShowVoiceModal(false)
           }
         }}
@@ -1269,11 +1427,13 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 
 function MessageBubble({
-  msg, onCopy, onRegenerate, onFollowUp, onNavigate, isLastAI
+  msg, onCopy, onRegenerate, onConfirm, confirmingTool, onFollowUp, onNavigate, isLastAI
 }: {
   msg: AIMessage
   onCopy: (text: string) => void
   onRegenerate: () => void
+  onConfirm: (toolName: string, params: Record<string, unknown>) => void
+  confirmingTool: string | null
   onFollowUp: (text: string) => void
   onNavigate: (path: string) => void
   isLastAI: boolean
@@ -1284,9 +1444,7 @@ function MessageBubble({
   if (msg.isTyping) {
     return (
       <div className="flex gap-2.5 items-start">
-        <div className="w-7 h-7 rounded-xl bg-linear-to-br from-violet-500 to-indigo-600 flex items-center justify-center shrink-0">
-          <Sparkles className="h-3.5 w-3.5 text-white" />
-        </div>
+        <SmartAIRobot mood="thinking" size="sm" />
         <div className="bg-muted/60 border border-border/40 rounded-2xl rounded-tl-sm px-4 py-3">
           <div className="flex gap-1.5 items-center">
             <span className="w-2 h-2 rounded-full bg-violet-500 animate-bounce [animation-delay:0ms]" />
@@ -1308,12 +1466,12 @@ function MessageBubble({
     >
       {/* Avatar */}
       <div className={cn(
-        "w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
+        "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
         isUser
           ? "bg-linear-to-br from-blue-500 to-blue-700"
-          : "bg-linear-to-br from-violet-500 to-indigo-600"
+          : "bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-950/60 dark:to-indigo-950/60"
       )}>
-        {isUser ? <User className="h-3.5 w-3.5 text-white" /> : <Sparkles className="h-3.5 w-3.5 text-white" />}
+        {isUser ? <User className="h-3.5 w-3.5 text-white" /> : <SmartAIRobot mood={msg.isError ? "error" : "idle"} size="sm" />}
       </div>
 
       <div className={cn("flex-1 max-w-[85%]", isUser && "flex flex-col items-end")}>
@@ -1325,7 +1483,9 @@ function MessageBubble({
             "relative rounded-2xl px-4 py-3 text-sm leading-relaxed",
             isUser
               ? "bg-linear-to-br from-violet-600 to-indigo-700 text-white rounded-tr-sm"
-              : "bg-muted/60 border border-border/40 text-foreground rounded-tl-sm"
+              : msg.isError
+                ? "bg-rose-500/5 border border-rose-500/20 text-foreground rounded-tl-sm"
+                : "bg-muted/60 border border-border/40 text-foreground rounded-tl-sm"
           )}
         >
           {/* Auto-selected model badge */}
@@ -1358,8 +1518,26 @@ function MessageBubble({
             )}
           </div>
 
+          {msg.isError && msg.retryAction && (
+            <button
+              type="button"
+              onClick={() => msg.retryAction?.type === "confirm"
+                ? onConfirm(msg.retryAction.toolName, msg.retryAction.params)
+                : onRegenerate()}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/25 bg-background/70 px-2.5 py-1.5 text-[11px] font-semibold text-foreground transition-colors hover:bg-rose-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            >
+              <RotateCcw className="h-3 w-3" /> Try again
+            </button>
+          )}
+
           {/* Widget */}
-          {msg.widget && <WidgetRenderer widget={msg.widget} />}
+          {msg.widget && (
+            <WidgetRenderer
+              widget={msg.widget}
+              onConfirm={onConfirm}
+              confirming={!!msg.widget.toolName && confirmingTool === msg.widget.toolName}
+            />
+          )}
 
           {/* Confidence + Sources strip */}
           {!isUser && (msg.confidenceScore !== undefined || (msg.sources && msg.sources.length > 0)) && (
