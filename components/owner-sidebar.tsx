@@ -32,15 +32,11 @@ import {
   Flame,
   ShieldCheck,
   Radio,
-  Zap,
   Bot,
   Cpu,
   ChevronDown,
   ChevronRight,
   Layers,
-  Navigation,
-  Award,
-  ShoppingBag,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationCenterDrawer } from "@/components/notification-center-drawer"
@@ -104,17 +100,6 @@ const navCategories: NavCategory[] = [
         children: [
           { name: "Machine Registry", href: "/owner/machines", icon: Cpu },
           { name: "SLA Management", href: "/owner/cnc/sla", icon: Clock },
-          { name: "Dispatch Routes", href: "/owner/cnc/route-optimization", icon: Navigation },
-          { name: "Automations", href: "/owner/cnc/automations", icon: Zap },
-        ],
-      },
-      {
-        name: "Supply & Warranty",
-        icon: Award,
-        isGroup: true,
-        children: [
-          { name: "Supplier Warranty", href: "/owner/cnc/warranty", icon: Award },
-          { name: "Vendors & POs", href: "/owner/cnc/vendors", icon: ShoppingBag },
         ],
       },
     ],
@@ -228,7 +213,6 @@ export function OwnerSidebar() {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     "Command Center": true,
     "Service Operations": true,
-    "Supply & Warranty": true,
   })
 
   useEffect(() => {
