@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import {
   Users,
   UserCheck,
@@ -412,22 +413,20 @@ export default function OwnerAttendancePage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-6 pt-1 text-xs">
-                  <label className="flex items-center gap-2 cursor-pointer font-medium text-foreground">
-                    <input
-                      type="checkbox"
-                      className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
+                  <label className="flex items-center gap-3 cursor-pointer font-medium text-foreground">
+                    <Switch
                       checked={policy.automaticClockOutEnabled}
-                      onChange={(e) => setPolicy({ ...policy, automaticClockOutEnabled: e.target.checked })}
+                      onCheckedChange={(checked) => setPolicy({ ...policy, automaticClockOutEnabled: checked })}
+                      aria-label="Automatic clock-out at end of shift"
                     />
                     <span>Automatic clock-out at end of shift</span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer font-medium text-foreground">
-                    <input
-                      type="checkbox"
-                      className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
+                  <label className="flex items-center gap-3 cursor-pointer font-medium text-foreground">
+                    <Switch
                       checked={policy.earlyDepartureIsHalfDay}
-                      onChange={(e) => setPolicy({ ...policy, earlyDepartureIsHalfDay: e.target.checked })}
+                      onCheckedChange={(checked) => setPolicy({ ...policy, earlyDepartureIsHalfDay: checked })}
+                      aria-label="Flag early departure as half-day"
                     />
                     <span>Flag departure before half-day threshold as half-day</span>
                   </label>

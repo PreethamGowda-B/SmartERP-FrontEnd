@@ -80,7 +80,6 @@ export function ThemeToggle({ compact = false }: ThemeToggleProps) {
       <ThemeSwitch
         checked={isDark}
         onCheckedChange={handleThemeChange}
-        className={`${isDark ? "bg-slate-800" : "bg-amber-400"}`}
         aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
       />
     </div>
