@@ -8,6 +8,7 @@ import { Zap, Clock, ArrowRight, ShieldCheck, Users, Box, AlertCircle, Sparkles,
 import Link from "next/link"
 import { apiClient, getAccessToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
+import { cn } from "@/lib/utils"
 
 type SubscriptionStatusData = {
   plan: {
@@ -109,43 +110,49 @@ export function SubscriptionStatus() {
     <div className="space-y-3">
       {/* Expiry Warning Alert Box */}
       {showWarning && (
-        <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+        <div className="bg-amber-500/10 border border-amber-500/30 p-3 sm:p-3.5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
           <div className="flex items-start gap-2.5">
-            <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-500 mt-0.5 shrink-0" />
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
             <div>
-              <span className="font-bold text-orange-800 dark:text-orange-400">Action Required: </span>
-              <span className="text-orange-700 dark:text-orange-300">Your subscription expires soon. Renew to prevent disruption.</span>
+              <span className="font-bold text-amber-900 dark:text-amber-200">Subscription Notice: </span>
+              <span className="text-amber-800 dark:text-amber-300">Your subscription plan requires renewal soon to avoid service interruption.</span>
             </div>
           </div>
-          <Button asChild size="sm" className="h-7 text-xs bg-orange-600 hover:bg-orange-700 text-white rounded-lg shrink-0">
+          <Button asChild size="sm" className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white rounded-xl shrink-0 font-semibold shadow-xs">
             <Link href="/owner/settings?tab=billing">
-              Renew Now <ArrowRight className="w-3 h-3 ml-1" />
+              Renew Plan <ArrowRight className="w-3 h-3 ml-1" />
             </Link>
           </Button>
         </div>
       )}
 
-      {/* Main Status Card - Compact Layout */}
-      <Card className={`border overflow-hidden relative shadow-xs ${isTrial ? 'border-indigo-200 dark:border-indigo-900/60' : 'border-border'}`}>
-        {(isTrial || isPro) && (
-          <div className="absolute top-0 left-0 w-1 h-full bg-linear-to-b from-indigo-500 to-purple-500" />
-        )}
-        
+      {/* Main Status Card - Executive Ribbon */}
+      <Card className={cn(
+        "rounded-2xl border overflow-hidden relative shadow-xs bg-card transition-all",
+        isTrial ? "border-primary/40 bg-gradient-to-r from-card via-primary/5 to-card" : "border-border/70"
+      )}>
         <CardContent className="p-3.5 sm:p-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             
             {/* Section 1: Plan Status & Expiry */}
             <div className="flex items-center gap-3 min-w-0">
-              <div className={`p-2 rounded-xl shrink-0 ${isTrial ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400' : 'bg-muted text-foreground'}`}>
-                {isTrial ? <Zap className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
+              <div className={cn(
+                "p-2.5 rounded-xl shrink-0",
+                isTrial
+                  ? "bg-primary/10 text-primary"
+                  : isPro
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : "bg-secondary text-foreground"
+              )}>
+                {isTrial ? <Zap className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
               </div>
 
               <div className="min-w-0 space-y-0.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-foreground">Subscription Status:</span>
+                  <span className="text-xs font-bold text-foreground">Organization Tier:</span>
                   <span className="text-xs font-semibold text-primary">{planMessage}</span>
                   {statusBadge && (
-                    <Badge variant="outline" className={`font-bold px-2 py-0 text-[10px] ${statusBadge.color}`}>
+                    <Badge variant="outline" className={cn("font-bold px-2 py-0 text-[10px] rounded-full", statusBadge.color)}>
                       {statusBadge.label}
                     </Badge>
                   )}
@@ -154,34 +161,34 @@ export function SubscriptionStatus() {
                 {!isFree && data.subscription_expires_at && (
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
                     <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
-                    <span>Expires: <strong className="text-foreground">{new Date(data.subscription_expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</strong></span>
+                    <span>Expires: <strong className="text-foreground">{new Date(data.subscription_expires_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</strong></span>
                     <span className="text-muted-foreground/50">•</span>
-                    <span className="font-semibold text-foreground/80">{daysRemaining} days remaining</span>
+                    <span className="font-semibold text-foreground tabular-nums font-mono">{daysRemaining} days remaining</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Section 2: Quota Badges */}
-            <div className="flex items-center gap-4 sm:gap-6 border-t lg:border-t-0 lg:border-l border-border/60 pt-2.5 lg:pt-0 lg:pl-6 text-xs shrink-0">
+            {/* Section 2: Quota Indicators & CTA */}
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6 border-t lg:border-t-0 lg:border-l border-border/60 pt-3 lg:pt-0 lg:pl-6 text-xs shrink-0">
               <div className="flex items-center gap-2">
-                <Users className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                <span className="text-muted-foreground">Employees:</span>
-                <span className="font-bold text-foreground">
+                <Users className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span className="text-muted-foreground font-medium">Crew:</span>
+                <span className="font-bold text-foreground font-mono tabular-nums">
                   {plan.employee_limit === null ? "Unlimited" : `${usage.employees} / ${plan.employee_limit}`}
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
-                <Box className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                <span className="text-muted-foreground">Inventory:</span>
-                <span className="font-bold text-foreground">
+                <Box className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span className="text-muted-foreground font-medium">SKUs:</span>
+                <span className="font-bold text-foreground font-mono tabular-nums">
                   {plan.max_inventory_items === null ? "Unlimited" : `${usage.inventory_items} / ${plan.max_inventory_items}`}
                 </span>
               </div>
 
               {/* Action Button: routes directly to Settings Plan & Billing tab */}
-              <Button asChild size="sm" variant="outline" className="h-7 text-xs font-semibold rounded-lg shrink-0 ml-auto lg:ml-2">
+              <Button asChild size="sm" variant="outline" className="h-8 text-xs font-bold rounded-xl shrink-0 ml-auto lg:ml-2 border-border/80 hover:bg-secondary">
                 <Link href="/owner/settings?tab=billing">
                   Manage Subscription
                 </Link>
