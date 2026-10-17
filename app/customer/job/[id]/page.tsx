@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Activity, AlertCircle, Loader2,
@@ -413,7 +414,7 @@ export default function JobDetailPage() {
               <JobStatusBadge status={job.status} approvalStatus={job.approval_status} employeeStatus={job.employee_status} />
               {sseConnected && (
                 <span className="flex items-center gap-1.5 text-xs text-green-600 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Live
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />Updates connected
                 </span>
               )}
             </div>
@@ -581,12 +582,14 @@ export default function JobDetailPage() {
                     <MapPin className="h-4 w-4 text-blue-600" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-gray-900">Live Technician Location</h2>
-                    <p className="text-xs text-gray-500">Updates every 15 seconds</p>
+                    <h2 className="text-sm font-semibold text-gray-900">Technician location</h2>
+                    <p className="text-xs text-gray-500">Latest location shared for this request</p>
                   </div>
-                  <span className="ml-auto flex items-center gap-1.5 text-xs text-green-600 font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Live
-                  </span>
+                  {tracking?.location_updated_at && (
+                    <span className="ml-auto text-right text-[11px] text-gray-500">
+                      Updated {formatDate(tracking.location_updated_at)}
+                    </span>
+                  )}
                 </div>
                 {tracking ? (
                   <TrackingMap tracking={tracking} />
@@ -594,7 +597,7 @@ export default function JobDetailPage() {
                   <div className="h-48 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center">
                     <div className="text-center">
                       <MapPin className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">Waiting for location data...</p>
+                      <p className="text-sm text-gray-500">No location update has been shared yet.</p>
                     </div>
                   </div>
                 )}
@@ -618,9 +621,7 @@ export default function JobDetailPage() {
                       {job.assigned_employee_name ? `Chatting with ${job.assigned_employee_name}` : 'Direct message'}
                     </p>
                   </div>
-                  <span className="ml-auto flex items-center gap-1.5 text-xs text-green-600 font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />Active
-                  </span>
+                  <span className="ml-auto text-xs text-gray-500">Messaging available</span>
                 </div>
 
                 {/* Message list */}
@@ -647,7 +648,7 @@ export default function JobDetailPage() {
                           <p className="text-sm leading-relaxed">{msg.message}</p>
                           {msg.media_url && msg.media_type === 'image' && (
                             <a href={msg.media_url} target="_blank" rel="noreferrer" className="block mt-2">
-                              <img src={msg.media_url} alt={msg.file_name || 'Chat attachment'} className="max-h-48 max-w-full rounded-lg object-contain" />
+                            <Image src={msg.media_url} alt={msg.file_name || 'Chat attachment'} width={320} height={192} unoptimized className="max-h-48 max-w-full rounded-lg object-contain" />
                             </a>
                           )}
                           {msg.media_url && msg.media_type !== 'image' && (
@@ -706,6 +707,7 @@ export default function JobDetailPage() {
                     <button
                       onClick={sendMessage}
                       disabled={chatLoading || (!chatInput.trim() && !chatFile)}
+                      aria-label={chatLoading ? 'Sending message' : 'Send message'}
                       className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                     >
                       {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

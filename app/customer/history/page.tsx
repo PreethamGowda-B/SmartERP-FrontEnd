@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, History, CheckCircle, TrendingUp, RefreshCw, BarChart2 } from 'lucide-react';
+import { ArrowLeft, History, CheckCircle, RefreshCw, BarChart2, XCircle } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { JobCard } from '@/components/customer/jobs/JobCard';
 import { LoadingSkeleton } from '@/components/customer/ui/LoadingSkeleton';
@@ -11,7 +11,7 @@ import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import customerApi from '@/lib/customerApi';
 import type { Job, JobListResponse } from '@/lib/customerTypes';
 
-interface Stats { total: number; completed: number; cancelled: number; avgProgress: number }
+interface Stats { total: number; completed: number; cancelled: number }
 
 export default function ServiceHistoryPage() {
   const router = useRouter();
@@ -19,7 +19,8 @@ export default function ServiceHistoryPage() {
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [total, setTotal] = useState(0);
-  const [stats, setStats] = useState<Stats>({ total: 0, completed: 0, cancelled: 0, avgProgress: 0 });
+  const [stats, setStats] = useState<Stats>({ total: 0, completed: 0, cancelled: 0 });
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
@@ -34,14 +35,16 @@ export default function ServiceHistoryPage() {
     if (!authLoading && !isAuthenticated) router.push('/customer/login');
   }, [authLoading, isAuthenticated, router]);
 
-  const fetchHistory = useCallback(async (refresh = false) => {
+  const LIMIT = 20;
+
+  const fetchHistory = useCallback(async (p = 1, refresh = false) => {
     const requestId = ++requestSequence.current;
     if (refresh || hasJobsRef.current) setIsRefreshing(true);
     else setIsLoading(true);
     setError(null);
     try {
       const res = await customerApi.get<{ success: boolean; data: JobListResponse }>(
-        '/api/customer/jobs?limit=100'
+        `/api/customer/jobs?page=${p}&limit=${LIMIT}`
       );
       if (!res.data?.success) throw new Error((res.data as any)?.error || 'The server returned an invalid jobs response.');
       const data = res.data.data ?? (res.data as any);
@@ -51,11 +54,9 @@ export default function ServiceHistoryPage() {
 
       const completed = allJobs.filter(j => j.status === 'completed').length;
       const cancelled = allJobs.filter(j => j.status === 'cancelled').length;
-      const avgProgress = allJobs.length > 0
-        ? Math.round(allJobs.reduce((sum, j) => sum + (j.progress || 0), 0) / allJobs.length)
-        : 0;
-      setStats({ total: allJobs.length, completed, cancelled, avgProgress });
-      setTotal(allJobs.length);
+      setStats({ total: allJobs.length, completed, cancelled });
+      setTotal(Number(data.total) || 0);
+      setPage(p);
 
       let filtered = allJobs.filter(j =>
         statusFilter === 'all' ? true :
@@ -81,14 +82,14 @@ export default function ServiceHistoryPage() {
   }, [statusFilter, dateFrom, dateTo]);
 
   useEffect(() => {
-    if (isAuthenticated) fetchHistory();
-  }, [isAuthenticated, fetchHistory]);
+    if (isAuthenticated) fetchHistory(page);
+  }, [isAuthenticated, fetchHistory, page]);
 
   if (authLoading || (!isAuthenticated && !authLoading)) return null;
 
   const summaryStats = [
     {
-      label: 'Total Jobs',
+      label: 'Requests on page',
       value: stats.total,
       icon: BarChart2,
       color: 'text-gray-600',
@@ -102,11 +103,11 @@ export default function ServiceHistoryPage() {
       bg: 'bg-green-50',
     },
     {
-      label: 'Avg Progress',
-      value: `${stats.avgProgress}%`,
-      icon: TrendingUp,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
+      label: 'Cancelled',
+      value: stats.cancelled,
+      icon: XCircle,
+      color: 'text-gray-600',
+      bg: 'bg-gray-100',
     },
   ];
 
@@ -133,7 +134,7 @@ export default function ServiceHistoryPage() {
             </div>
           </div>
           <button
-            onClick={() => fetchHistory(true)}
+            onClick={() => fetchHistory(page, true)}
             disabled={isRefreshing}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all"
           >
@@ -142,7 +143,8 @@ export default function ServiceHistoryPage() {
           </button>
         </div>
 
-        {/* Summary bar — 3 stats */}
+        {/* Summary for the loaded page */}
+        <p className="mb-2 text-[10px] text-gray-500">Counts below show the current page only.</p>
         <div className="grid grid-cols-3 gap-3 mb-6">
           {summaryStats.map(({ label, value, icon: Icon, color, bg }) => (
             <div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
@@ -161,7 +163,7 @@ export default function ServiceHistoryPage() {
         <div className="flex flex-col sm:flex-row gap-3 mb-5">
           <select
             value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
+              onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
           >
             <option value="all">All Statuses</option>
@@ -174,20 +176,20 @@ export default function ServiceHistoryPage() {
             <input
               type="date"
               value={dateFrom}
-              onChange={e => setDateFrom(e.target.value)}
+              onChange={e => { setDateFrom(e.target.value); setPage(1); }}
               className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
             <span className="text-gray-400 text-sm">to</span>
             <input
               type="date"
               value={dateTo}
-              onChange={e => setDateTo(e.target.value)}
+              onChange={e => { setDateTo(e.target.value); setPage(1); }}
               className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
             />
           </div>
           {(dateFrom || dateTo || statusFilter !== 'completed') && (
             <button
-              onClick={() => { setDateFrom(''); setDateTo(''); setStatusFilter('completed'); }}
+              onClick={() => { setDateFrom(''); setDateTo(''); setStatusFilter('completed'); setPage(1); }}
               className="px-3 py-2 text-sm text-gray-500 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all whitespace-nowrap"
             >
               Clear filters
@@ -227,6 +229,8 @@ export default function ServiceHistoryPage() {
             ))}
           </div>
         )}
+
+        {Math.ceil(total / LIMIT) > 1 && <div className="mt-6 flex items-center justify-center gap-3"><button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1 || isLoading} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 disabled:opacity-40">Previous</button><span className="text-xs text-gray-500">Page {page} of {Math.ceil(total / LIMIT)}</span><button type="button" onClick={() => setPage((current) => Math.min(Math.ceil(total / LIMIT), current + 1))} disabled={page >= Math.ceil(total / LIMIT) || isLoading} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 disabled:opacity-40">Next</button></div>}
       </main>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Loader2, CheckCircle, ArrowLeft, AlertCircle, Calendar } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
@@ -123,7 +124,8 @@ export default function CreateJobPage() {
     );
   }
 
-  const minDateTime = new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16);
+  const minScheduledTime = new Date(Date.now() + 30 * 60 * 1000);
+  const minDateTime = new Date(minScheduledTime.getTime() - minScheduledTime.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -140,10 +142,10 @@ export default function CreateJobPage() {
 
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Submit a service request</h1>
-            <p className="text-gray-500 text-sm mt-1">Describe what you need and we will assign a technician.</p>
+            <p className="text-gray-500 text-sm mt-1">Describe the work you need. Your service company will review the request and share updates here.</p>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
             {/* General vs Machine-Based Request Tabs */}
             <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-xl mb-6 border border-gray-200">
               <button
@@ -198,12 +200,23 @@ export default function CreateJobPage() {
                           disabled={isLoading}
                           className="w-full px-4 py-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
                         >
-                          <option value="">-- Select CNC Machine --</option>
+                          <option value="">{machines.length ? 'Select a registered CNC machine' : 'No registered machines'}</option>
                           {machines.map((m) => (
                             <option key={m.id} value={m.id}>
                               {m.machine_name} ({m.make} {m.model} - S/N: {m.serial_number})
                             </option>
                           ))}
+                        </select>
+                        {machines.length === 0 && <Link href="/customer/machines" className="mt-2 inline-flex text-xs font-semibold text-blue-700 hover:text-blue-900">Register a machine first →</Link>}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="service-type">Request type</label>
+                        <select id="service-type" value={serviceType} onChange={(e) => setServiceType(e.target.value)} disabled={isLoading} className="w-full px-4 py-2.5 text-sm text-gray-900 bg-white border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50">
+                          <option value="breakdown">Breakdown / repair</option>
+                          <option value="maintenance">Maintenance</option>
+                          <option value="installation">Installation</option>
+                          <option value="other">Other request</option>
                         </select>
                       </div>
 

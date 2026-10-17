@@ -39,6 +39,11 @@ const PRIORITY_CONFIG: Record<string, { label: string; className: string }> = {
   urgent: { label: 'Urgent', className: 'bg-red-50 text-red-700' },
 };
 
+function toLocalDateTimeInput(date: Date) {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+}
+
 export default function RecurringJobsPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useCustomerAuth();
@@ -96,6 +101,11 @@ export default function RecurringJobsPage() {
     setFormError('');
     if (!title.trim()) { setFormError('Title is required'); return; }
     if (!startDate) { setFormError('Start date is required'); return; }
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : null;
+    if (!Number.isFinite(start.getTime())) { setFormError('Enter a valid start date.'); return; }
+    if (end && !Number.isFinite(end.getTime())) { setFormError('Enter a valid end date.'); return; }
+    if (end && end < start) { setFormError('End date must be on or after the start date.'); return; }
 
     setFormLoading(true);
     try {
@@ -104,17 +114,18 @@ export default function RecurringJobsPage() {
         description: description.trim() || undefined,
         priority,
         pattern,
-        start_date: new Date(startDate).toISOString(),
-        end_date: endDate ? new Date(endDate).toISOString() : undefined,
+        start_date: start.toISOString(),
+        end_date: end?.toISOString(),
       });
-      if (res.data.success) {
-        setJobs(prev => [res.data.data, ...prev]);
-        setShowForm(false);
-        setTitle(''); setDescription(''); setStartDate(''); setEndDate('');
-        showToast('success', 'Recurring job created successfully');
+      if (!res.data?.success || !res.data.data) {
+        throw new Error((res.data as any)?.error || 'The server did not confirm the recurring job.');
       }
+      setJobs(prev => [res.data.data, ...prev]);
+      setShowForm(false);
+      setTitle(''); setDescription(''); setStartDate(''); setEndDate('');
+      showToast('success', 'Recurring job created successfully');
     } catch (err: any) {
-      setFormError(err?.response?.data?.error || 'Failed to create recurring job');
+      setFormError(err?.response?.data?.error || err?.message || 'Failed to create recurring job');
     } finally {
       setFormLoading(false);
     }
@@ -126,8 +137,8 @@ export default function RecurringJobsPage() {
       await customerApi.delete(`/api/customer/recurring/${id}`);
       setJobs(prev => prev.map(j => j.id === id ? { ...j, is_active: false } : j));
       showToast('success', 'Recurring job cancelled');
-    } catch {
-      showToast('error', 'Failed to cancel');
+    } catch (err: any) {
+      showToast('error', err?.response?.data?.error || 'Failed to cancel this recurring job.');
     } finally {
       setActionLoading(null);
     }
@@ -139,8 +150,8 @@ export default function RecurringJobsPage() {
       await customerApi.post(`/api/customer/recurring/${id}/run`, {});
       showToast('success', 'Job instance created and submitted');
       fetchJobs();
-    } catch {
-      showToast('error', 'Failed to trigger job');
+    } catch (err: any) {
+      showToast('error', err?.response?.data?.error || 'Failed to create a job from this schedule.');
     } finally {
       setActionLoading(null);
     }
@@ -148,7 +159,7 @@ export default function RecurringJobsPage() {
 
   if (authLoading || (!isAuthenticated && !authLoading)) return null;
 
-  const minDate = new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
+  const minDate = toLocalDateTimeInput(new Date(Date.now() + 60 * 60 * 1000));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -179,6 +190,7 @@ export default function RecurringJobsPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/customer/dashboard')}
+              aria-label="Back to customer dashboard"
               className="text-gray-500 hover:text-gray-900 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -219,18 +231,21 @@ export default function RecurringJobsPage() {
                 {/* Title + Description */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+                    <label htmlFor="recurring-title" className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
                     <input
+                      id="recurring-title"
                       type="text"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
+                      required
                       placeholder="e.g. Monthly AC maintenance"
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white text-gray-900 placeholder:text-gray-400"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                    <label htmlFor="recurring-description" className="block text-xs font-medium text-gray-700 mb-1">Description</label>
                     <textarea
+                      id="recurring-description"
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                       rows={2}
@@ -242,8 +257,9 @@ export default function RecurringJobsPage() {
                 {/* Pattern + Priority */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Repeat</label>
+                    <label htmlFor="recurring-pattern" className="block text-xs font-medium text-gray-700 mb-1">Repeat</label>
                     <select
+                      id="recurring-pattern"
                       value={pattern}
                       onChange={e => setPattern(e.target.value as 'daily' | 'weekly' | 'monthly')}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white text-gray-900"
@@ -254,8 +270,9 @@ export default function RecurringJobsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Priority</label>
+                    <label htmlFor="recurring-priority" className="block text-xs font-medium text-gray-700 mb-1">Priority</label>
                     <select
+                      id="recurring-priority"
                       value={priority}
                       onChange={e => setPriority(e.target.value as JobPriority)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white text-gray-900"
@@ -271,18 +288,21 @@ export default function RecurringJobsPage() {
                 {/* Start + End dates */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Start Date *</label>
+                    <label htmlFor="recurring-start-date" className="block text-xs font-medium text-gray-700 mb-1">Start Date *</label>
                     <input
+                      id="recurring-start-date"
                       type="datetime-local"
                       value={startDate}
                       onChange={e => setStartDate(e.target.value)}
                       min={minDate}
+                      required
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white text-gray-900"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">End Date (optional)</label>
+                    <label htmlFor="recurring-end-date" className="block text-xs font-medium text-gray-700 mb-1">End Date (optional)</label>
                     <input
+                      id="recurring-end-date"
                       type="datetime-local"
                       value={endDate}
                       onChange={e => setEndDate(e.target.value)}

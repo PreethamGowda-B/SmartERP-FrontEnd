@@ -2,38 +2,31 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { 
-  FileText, 
-  Download, 
-  AlertTriangle, 
-  CreditCard, 
-  CheckCircle2, 
-  ArrowLeft, 
-  Eye, 
-  Clock, 
-  Loader2 
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Download, AlertTriangle, CheckCircle2, ArrowLeft, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import customerApi from '@/lib/customerApi';
 import { useToast } from '@/hooks/use-toast';
+import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
+import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 
 export default function CustomerInvoiceDetailPage() {
   const router = useRouter();
   const params = useParams();
   const invoiceId = params?.id as string;
   const { toast } = useToast();
+  const { isAuthenticated, isLoading: authLoading } = useCustomerAuth();
 
   const [loading, setLoading] = useState(true);
   const [invoice, setInvoice] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
   const [lineItems, setLineItems] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState('');
 
   // Dispute modal state
   const [disputeOpen, setDisputeOpen] = useState(false);
@@ -42,8 +35,10 @@ export default function CustomerInvoiceDetailPage() {
   const [submittingDispute, setSubmittingDispute] = useState(false);
 
   const fetchInvoiceDetails = React.useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       setLoading(true);
+      setLoadError('');
       const res = await customerApi.get<{ success: boolean; invoice: any; company?: any; lineItems: any[] }>(`/api/customer/jobs/${invoiceId}/invoice`);
       const data = res.data;
       if (data && data.success) {
@@ -52,7 +47,7 @@ export default function CustomerInvoiceDetailPage() {
         setLineItems(data.lineItems || []);
 
         // Log View Activity Tracking Beacon
-        customerApi.post(`/api/invoices/${invoiceId}/track`, {
+        customerApi.post(`/api/invoices/${data.invoice.id}/track`, {
           companyId: data.invoice.company_id,
           actionType: 'viewed',
           performedByType: 'customer',
@@ -60,6 +55,7 @@ export default function CustomerInvoiceDetailPage() {
         }).catch(() => {});
       }
     } catch (err: any) {
+      setLoadError(err.response?.data?.error || err.message || 'Could not fetch invoice details');
       toast({
         title: 'Error loading invoice',
         description: err.response?.data?.error || err.message || 'Could not fetch invoice details',
@@ -68,18 +64,18 @@ export default function CustomerInvoiceDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [invoiceId, toast]);
+  }, [invoiceId, isAuthenticated, toast]);
 
   useEffect(() => {
-    if (invoiceId) {
+    if (invoiceId && isAuthenticated) {
       fetchInvoiceDetails();
     }
-  }, [invoiceId, fetchInvoiceDetails]);
+  }, [invoiceId, isAuthenticated, fetchInvoiceDetails]);
 
   const handleDownloadPDF = async () => {
     try {
       // Log Download Activity Tracking Beacon
-      customerApi.post(`/api/invoices/${invoiceId}/track`, {
+      customerApi.post(`/api/invoices/${invoice.id}/track`, {
         companyId: invoice.company_id,
         actionType: 'downloaded',
         performedByType: 'customer',
@@ -87,7 +83,7 @@ export default function CustomerInvoiceDetailPage() {
       }).catch(() => {});
 
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
-      window.open(`${baseUrl}/api/invoices/${invoiceId}/pdf`, '_blank');
+      window.open(`${baseUrl}/api/invoices/${invoice.id}/pdf`, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
       toast({
         title: 'Download failed',
@@ -108,7 +104,7 @@ export default function CustomerInvoiceDetailPage() {
       // Store the issue in the invoice dispute workflow, which is shown to
       // owners in the invoice issues page. The generic work-request endpoint
       // is restricted to staff and cannot accept customer sessions.
-      const res = await customerApi.post<{ success: boolean }>(`/api/invoices/${invoiceId}/dispute`, {
+      const res = await customerApi.post<{ success: boolean }>(`/api/invoices/${invoice.id}/dispute`, {
         companyId: invoice.company_id,
         customerId: invoice.customer_id,
         issueCategory,
@@ -134,30 +130,31 @@ export default function CustomerInvoiceDetailPage() {
     }
   };
 
+  if (authLoading || !isAuthenticated) return null;
+
   if (loading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-        <span className="ml-3 text-slate-600 font-medium">Loading Invoice...</span>
-      </div>
+      <div className="min-h-screen bg-gray-50"><CustomerNavbar /><div className="grid min-h-[65vh] place-items-center"><div className="flex items-center gap-3 text-sm font-medium text-slate-600"><Loader2 className="h-6 w-6 animate-spin text-blue-600" />Loading invoice…</div></div></div>
     );
   }
 
   if (!invoice) {
     return (
-      <div className="p-6 max-w-xl mx-auto text-center space-y-4">
+      <div className="min-h-screen bg-gray-50"><CustomerNavbar /><div className="mx-auto max-w-xl space-y-4 px-4 py-16 text-center">
         <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
-        <h2 className="text-xl font-bold">Invoice Not Found</h2>
-        <Button onClick={() => router.back()}>Go Back</Button>
-      </div>
+        <h2 className="text-xl font-bold">Invoice unavailable</h2>
+        <p className="text-sm text-slate-500">{loadError || 'An issued invoice for this service request was not found.'}</p>
+        {loadError && <Button variant="outline" onClick={() => void fetchInvoiceDetails()}>Try again</Button>}
+        <Button onClick={() => router.push('/customer/jobs')}>Go to requests</Button>
+      </div></div>
     );
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50"><CustomerNavbar /><main className="mx-auto max-w-5xl space-y-6 px-4 py-7 sm:px-6 lg:px-8 lg:py-9">
       {/* Action Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+        <Button variant="ghost" size="sm" onClick={() => router.push('/customer/jobs')}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
         <div className="flex items-center gap-2">
@@ -168,9 +165,6 @@ export default function CustomerInvoiceDetailPage() {
             <>
               <Button variant="outline" size="sm" className="text-amber-700 border-amber-300 bg-amber-50" onClick={() => setDisputeOpen(true)}>
                 <AlertTriangle className="h-4 w-4 mr-1.5" /> Raise Invoice Issue
-              </Button>
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
-                <CreditCard className="h-4 w-4 mr-1.5" /> Pay Invoice (₹{Number(invoice.total_amount).toLocaleString('en-IN')})
               </Button>
             </>
           )}
@@ -185,9 +179,9 @@ export default function CustomerInvoiceDetailPage() {
               <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 font-mono">
                 {invoice.invoice_number} (v{invoice.version_number || 1}.0)
               </Badge>
-              <h1 className="text-2xl font-bold text-slate-900 mt-2">{invoice.job_title || 'Completed Service Job'}</h1>
+              <h1 className="text-2xl font-bold text-slate-900 mt-2">{invoice.job_title || 'Service invoice'}</h1>
               <div className="text-xs text-slate-600 mt-1 font-semibold flex items-center gap-2">
-                {company?.name || 'Business Enterprise'}
+                {company?.name || 'Company details unavailable'}
                 {company?.gstin && <span className="font-mono text-slate-500">| GSTIN: {company.gstin}</span>}
               </div>
             </div>
@@ -196,7 +190,7 @@ export default function CustomerInvoiceDetailPage() {
                 {(invoice.status || 'ISSUED').toUpperCase()}
               </Badge>
               <div className="text-xs text-slate-500 mt-2">
-                Due: {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'On Receipt'}
+                Due: {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'Date not provided'}
               </div>
             </div>
           </div>
@@ -208,7 +202,7 @@ export default function CustomerInvoiceDetailPage() {
             <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg text-sm text-amber-900 flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <strong className="font-semibold">Invoice Issue Submitted:</strong> You have raised a dispute regarding this invoice. The business owner will review your notes and publish an updated Version {(invoice.version_number || 1) + 1}.0 shortly.
+                <strong className="font-semibold">Invoice issue submitted:</strong> Your service company can review this issue. Updates will appear here when available.
               </div>
             </div>
           )}
@@ -223,8 +217,8 @@ export default function CustomerInvoiceDetailPage() {
           )}
 
           {/* Line Items Table */}
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full text-sm text-left">
+          <div className="overflow-x-auto rounded-xl border">
+            <table className="w-full min-w-[680px] text-left text-sm">
               <thead className="bg-slate-50 text-slate-700 border-b text-xs uppercase font-semibold">
                 <tr>
                   <th className="p-3">#</th>
@@ -240,7 +234,7 @@ export default function CustomerInvoiceDetailPage() {
                     <td className="p-3 text-slate-500">{idx + 1}</td>
                     <td className="p-3 font-medium text-slate-900">
                       {item.description}
-                      <div className="text-[11px] text-slate-400 font-mono">HSN: {item.hsn_code || '998311'}</div>
+                      {item.hsn_code && <div className="text-[11px] text-slate-400 font-mono">HSN: {item.hsn_code}</div>}
                     </td>
                     <td className="p-3 text-center text-slate-700">{item.quantity}</td>
                     <td className="p-3 text-right text-slate-700">₹{Number(item.unit_price).toLocaleString('en-IN')}</td>
@@ -294,7 +288,7 @@ export default function CustomerInvoiceDetailPage() {
               <AlertTriangle className="h-5 w-5" /> Raise Invoice Issue
             </DialogTitle>
             <DialogDescription>
-              Report a discrepancy or question regarding this invoice. The business owner will review and issue an updated version.
+              Report a discrepancy or question so your service company can review it.
             </DialogDescription>
           </DialogHeader>
 
@@ -337,6 +331,6 @@ export default function CustomerInvoiceDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </main></div>
   );
 }

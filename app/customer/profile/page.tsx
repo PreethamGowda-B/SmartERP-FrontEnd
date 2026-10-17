@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { User, Mail, Phone, Calendar, Loader2, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
@@ -27,21 +27,23 @@ export default function CustomerProfilePage() {
     if (!authLoading && !isAuthenticated) router.push('/customer/login');
   }, [authLoading, isAuthenticated, router]);
 
-  useEffect(() => {
+  const loadProfile = useCallback(async () => {
     if (!isAuthenticated) return;
-    (async () => {
-      try {
-        const res = await customerApi.get<CustomerProfile>('/api/customer/profile');
-        setProfile(res.data);
-        setName(res.data.name || '');
-        setPhone(res.data.phone || '');
-      } catch {
-        setError('Failed to load profile');
-      } finally {
-        setIsLoading(false);
-      }
-    })();
+    setIsLoading(true);
+    try {
+      const res = await customerApi.get<CustomerProfile>('/api/customer/profile');
+      setProfile(res.data);
+      setName(res.data.name || '');
+      setPhone(res.data.phone || '');
+      setError('');
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Could not load your profile.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [isAuthenticated]);
+
+  useEffect(() => { void loadProfile(); }, [loadProfile]);
 
   if (authLoading) {
     return (
@@ -64,6 +66,10 @@ export default function CustomerProfilePage() {
     );
   }
 
+  if (!profile) {
+    return <div className="min-h-screen bg-gray-50"><CustomerNavbar /><main className="mx-auto max-w-xl px-4 py-12 sm:px-6"><div role="alert" className="rounded-2xl border border-amber-200 bg-white p-7 text-center dark:border-amber-900/50 dark:bg-slate-900"><AlertCircle className="mx-auto h-8 w-8 text-amber-600" /><h1 className="mt-3 text-base font-bold text-gray-900">Profile unavailable</h1><p className="mt-1 text-sm text-gray-500">{error || 'Your account details could not be loaded.'}</p><button type="button" onClick={() => void loadProfile()} className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700">Try again</button></div></main></div>;
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -75,8 +81,6 @@ export default function CustomerProfilePage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err: any) {
-      setName(profile?.name || '');
-      setPhone(profile?.phone || '');
       setError(err?.response?.data?.message || 'Failed to save changes');
     } finally {
       setIsSaving(false);
@@ -120,9 +124,9 @@ export default function CustomerProfilePage() {
                 <h2 className="text-lg font-semibold text-gray-900">{profile?.name || 'No name set'}</h2>
                 <p className="text-sm text-gray-500">{profile?.email}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    Verified
+                  <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${profile?.is_verified ? 'text-green-700 bg-green-50' : 'text-amber-700 bg-amber-50'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${profile?.is_verified ? 'bg-green-500' : 'bg-amber-500'}`} />
+                    {profile?.is_verified ? 'Verified' : 'Verification pending'}
                   </span>
                   <span className="text-xs text-gray-400 capitalize">{profile?.auth_provider} account</span>
                 </div>

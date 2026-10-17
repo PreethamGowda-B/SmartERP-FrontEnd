@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,9 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import customerApi from "@/lib/customerApi"
 import { toast } from "sonner"
-import {
-  Cpu, Wrench, ShieldCheck, Activity, Calendar, Clock, Plus, Search, CheckCircle2, AlertTriangle, Layers, FileText
-} from "lucide-react"
+import { Cpu, Plus, Search, Layers } from "lucide-react"
 import { CustomerNavbar } from "@/components/customer/layout/CustomerNavbar"
 
 export default function CustomerMachinesPage() {
@@ -25,11 +24,11 @@ export default function CustomerMachinesPage() {
   const [submitting, setSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     machine_name: "",
-    make: "Haas",
+    make: "",
     model: "",
     serial_number: "",
-    controller_type: "Fanuc 0i-MF",
-    spindle_hours: "0",
+    controller_type: "Not specified",
+    spindle_hours: "",
   })
 
   const fetchMachines = useCallback(async () => {
@@ -55,7 +54,7 @@ export default function CustomerMachinesPage() {
     try {
       await customerApi.post("/api/customer/machines", {
         ...formData,
-        spindle_hours: parseInt(formData.spindle_hours) || 0,
+        spindle_hours: parseInt(formData.spindle_hours, 10) || 0,
       })
       toast.success("CNC Machine registered successfully!")
       setIsAddOpen(false)
@@ -86,7 +85,7 @@ export default function CustomerMachinesPage() {
             <Cpu className="h-8 w-8 text-amber-500" /> Customer Machine Registry
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage registered CNC machinery, controller specs, AMC status, and service history
+            Manage your registered CNC machinery, controller details, and customer-visible service history
           </p>
         </div>
         <Button onClick={() => setIsAddOpen(true)} className="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-2">
@@ -95,7 +94,7 @@ export default function CustomerMachinesPage() {
       </div>
 
       {/* Analytics Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card className="p-4 bg-linear-to-br from-amber-500/10 to-amber-600/5 border-amber-200 dark:border-amber-900/50">
           <div className="flex items-center justify-between">
             <div>
@@ -106,44 +105,18 @@ export default function CustomerMachinesPage() {
           </div>
         </Card>
 
-        <Card className="p-4 bg-linear-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-200 dark:border-emerald-900/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">Operational Health</p>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-                {machines.length > 0
-                  ? Math.round(machines.reduce((sum, m) => sum + (m.health_score || 100), 0) / machines.length)
-                  : 100}
-                %
-              </h3>
-            </div>
-            <Activity className="h-8 w-8 text-emerald-500/80" />
-          </div>
-        </Card>
-
         <Card className="p-4 bg-linear-to-br from-blue-500/10 to-blue-600/5 border-blue-200 dark:border-blue-900/50">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-blue-800 dark:text-blue-400">Active Controllers</p>
+              <p className="text-xs font-semibold text-blue-800 dark:text-blue-400">Controller types</p>
               <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-                {new Set(machines.map((m) => m.controller_type)).size}
+                {new Set(machines.map((m) => m.controller_type).filter(Boolean)).size}
               </h3>
             </div>
             <Layers className="h-8 w-8 text-blue-500/80" />
           </div>
         </Card>
 
-        <Card className="p-4 bg-linear-to-br from-rose-500/10 to-rose-600/5 border-rose-200 dark:border-rose-900/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-rose-800 dark:text-rose-400">Under Breakdown</p>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-                {machines.filter((m) => m.status === "breakdown").length}
-              </h3>
-            </div>
-            <AlertTriangle className="h-8 w-8 text-rose-500/80" />
-          </div>
-        </Card>
       </div>
 
       {/* Search Bar */}
@@ -178,14 +151,8 @@ export default function CustomerMachinesPage() {
                     <h3 className="font-bold text-lg text-slate-900 dark:text-white">{m.machine_name}</h3>
                     <p className="text-xs text-slate-500 font-mono">S/N: {m.serial_number}</p>
                   </div>
-                  <Badge
-                    className={
-                      m.status === "breakdown"
-                        ? "bg-rose-100 text-rose-800 border-rose-300 font-bold"
-                        : "bg-emerald-100 text-emerald-800 border-emerald-300 font-bold"
-                    }
-                  >
-                    {m.status === "breakdown" ? "🚨 Breakdown" : "🟢 Operational"}
+                  <Badge className={m.status === "breakdown" ? "bg-rose-100 text-rose-800 border-rose-300 font-bold" : "bg-slate-100 text-slate-700 border-slate-200 font-semibold"}>
+                    {m.status === "operational" ? "Registered" : m.status ? String(m.status).replaceAll('_', ' ') : "Status unavailable"}
                   </Badge>
                 </div>
 
@@ -199,21 +166,14 @@ export default function CustomerMachinesPage() {
                     <p className="font-semibold text-slate-800">{m.controller_type}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400">Health Score:</span>
-                    <p className="font-semibold text-emerald-600">{m.health_score || 100}%</p>
-                  </div>
-                  <div>
                     <span className="text-slate-400">Spindle Hours:</span>
-                    <p className="font-semibold text-slate-800">{m.spindle_hours || 0} hrs</p>
+                    <p className="font-semibold text-slate-800">{!Number(m.spindle_hours) ? 'Not provided' : `${m.spindle_hours} hrs`}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t text-xs text-slate-500">
-                  <div className="flex items-center gap-1">
-                    <ShieldCheck className="h-3.5 w-3.5 text-amber-500" /> AMC Active
-                  </div>
-                  <Button variant="ghost" size="sm" className="text-amber-600 font-bold text-xs hover:text-amber-700">
-                    View Machine Dashboard →
+                  <Button variant="ghost" size="sm" asChild className="text-amber-700 font-bold text-xs hover:text-amber-800">
+                    <Link href={`/customer/machines/${m.id}`}>View service history →</Link>
                   </Button>
                 </div>
               </div>
@@ -287,7 +247,8 @@ export default function CustomerMachinesPage() {
                     <SelectItem value="Siemens 828D">Siemens 828D / 840D</SelectItem>
                     <SelectItem value="Mitsubishi M80">Mitsubishi M80 / M800</SelectItem>
                     <SelectItem value="Heidenhain TNC 640">Heidenhain TNC 640</SelectItem>
-                    <SelectItem value="Other">Other / Custom</SelectItem>
+                  <SelectItem value="Other">Other / Custom</SelectItem>
+                  <SelectItem value="Not specified">Not specified</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

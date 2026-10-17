@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Search, Filter, RefreshCw, Briefcase } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
@@ -95,7 +95,8 @@ export default function AllJobsPage() {
   if (authLoading) return null;
   if (!isAuthenticated) return null;
 
-  // Client-side filter (backend returns all, we filter locally for instant UX)
+  // The customer endpoint is paginated and does not accept these filters, so
+  // search and status filters are intentionally scoped to the loaded page.
   const filtered = (Array.isArray(jobs) ? jobs : []).filter(j => {
     const q = search.toLowerCase();
     const matchSearch = !q || (j.title || '').toLowerCase().includes(q) || (j.description || '').toLowerCase().includes(q);
@@ -138,20 +139,21 @@ export default function AllJobsPage() {
             <input
               type="text"
               value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search requests..."
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Search this page…"
               className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-400"
             />
           </div>
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900">
             {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
+          <select value={priorityFilter} onChange={e => { setPriorityFilter(e.target.value); setPage(1); }}
             className="px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900">
             {PRIORITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
+        <p className="-mt-2 mb-5 text-[10px] text-gray-500">Search and filters apply to the current page. Use the page controls below to review older requests.</p>
 
         {/* List */}
         {error && jobs.length === 0 ? (

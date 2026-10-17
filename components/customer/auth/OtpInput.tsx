@@ -14,7 +14,7 @@ import { RefreshCw } from 'lucide-react';
 interface OtpInputProps {
   value: string;
   onChange: (value: string) => void;
-  onResend: () => Promise<void>;
+  onResend: () => Promise<void | boolean>;
   error?: string;
   disabled?: boolean;
 }
@@ -97,7 +97,8 @@ export function OtpInput({ value, onChange, onResend, error, disabled }: OtpInpu
     if (cooldown > 0 || isResending) return;
     setIsResending(true);
     try {
-      await onResend();
+      const resent = await onResend();
+      if (resent === false) return;
       setCooldown(RESEND_COOLDOWN);
       onChange(''); // Clear OTP input
     } finally {
@@ -108,13 +109,15 @@ export function OtpInput({ value, onChange, onResend, error, disabled }: OtpInpu
   return (
     <div className="space-y-4">
       {/* OTP boxes */}
-      <div className="flex gap-2 justify-center">
+      <div className="customer-auth-otp-digits flex gap-2 justify-center" role="group" aria-label="6-digit verification code">
         {Array.from({ length: 6 }).map((_, i) => (
           <motion.input
             key={i}
             ref={(el) => { inputRefs.current[i] = el; }}
             type="text"
             inputMode="numeric"
+            autoComplete={i === 0 ? 'one-time-code' : 'off'}
+            aria-label={`Verification code digit ${i + 1} of 6`}
             maxLength={1}
             value={digits[i] || ''}
             onChange={(e) => handleChange(i, e.target.value)}

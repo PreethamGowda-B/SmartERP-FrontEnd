@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Bell, CheckCircle, XCircle, Clock, Briefcase, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bell, CheckCircle, XCircle, Clock, Briefcase, RefreshCw } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import customerApi from '@/lib/customerApi';
@@ -34,6 +35,8 @@ export default function CustomerNotificationsPage() {
   const [notifications, setNotifications] = useState<CustomerNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [isMarkingRead, setIsMarkingRead] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.push('/customer/login');
@@ -41,41 +44,46 @@ export default function CustomerNotificationsPage() {
 
   const fetchNotifications = useCallback(async (refresh = false) => {
     if (refresh) setIsRefreshing(true);
+    setError('');
     try {
       const res = await customerApi.get<{ success: boolean; data: CustomerNotification[] }>(
         '/api/customer/notifications?limit=50'
       );
-      const primary = res.data.data ?? [];
-
-      if (primary.length > 0) {
-        setNotifications(primary);
-      } else {
-        try {
-          const fallback = await customerApi.get<{ success: boolean; data: any[] }>(
-            '/api/customer/notifications?limit=50'
-          );
-          const items = (fallback.data.data ?? []).map((n: any) => ({
-            id: n.id,
-            type: n.type || n.action || 'update',
-            details: {
-              title: n.title || n.message,
-              message: n.message || n.body,
-              job_id: n.data?.job_id || n.job_id,
-            },
-            created_at: n.created_at,
-          }));
-          setNotifications(items);
-        } catch {
-          setNotifications([]);
-        }
-      }
-    } catch {
-      setNotifications([]);
+      if (!res.data?.success || !Array.isArray(res.data.data)) throw new Error('The notification service returned an incomplete response.');
+      setNotifications(res.data.data);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || 'Could not load notifications.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   }, []);
+
+  const openNotification = async (notification: CustomerNotification) => {
+    if (!notification.read) {
+      try {
+        await customerApi.patch(`/api/customer/notifications/${encodeURIComponent(notification.id)}/read`);
+        setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item));
+      } catch {
+        setError('This notification could not be marked as read. You can still open its request.');
+      }
+    }
+    if (notification.details?.job_id) router.push(`/customer/job/${notification.details.job_id}`);
+  };
+
+  const markAllRead = async () => {
+    if (isMarkingRead || !notifications.some((notification) => !notification.read)) return;
+    setIsMarkingRead(true);
+    try {
+      await customerApi.patch('/api/customer/notifications/mark-all-read');
+      setNotifications((current) => current.map((notification) => ({ ...notification, read: true })));
+      setError('');
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'Notifications could not be marked as read.');
+    } finally {
+      setIsMarkingRead(false);
+    }
+  };
 
   useEffect(() => {
     if (isAuthenticated) fetchNotifications();
@@ -129,21 +137,21 @@ export default function CustomerNotificationsPage() {
             <div>
               <h1 className="text-xl font-bold text-gray-900">Notifications</h1>
               <p className="text-xs text-gray-500 mt-0.5">
-                Updates about your service requests · auto-refreshes every 30s
+                Updates about your service requests · checks for updates every 30 seconds
               </p>
             </div>
           </div>
-          <button
-            onClick={() => fetchNotifications(true)}
-            disabled={isRefreshing}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            {notifications.some((notification) => !notification.read) && <button onClick={() => void markAllRead()} disabled={isMarkingRead} className="rounded-lg px-2 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50 dark:text-blue-300 dark:hover:bg-slate-800">{isMarkingRead ? 'Saving…' : 'Mark all read'}</button>}
+            <button onClick={() => fetchNotifications(true)} disabled={isRefreshing} aria-label="Refresh notifications" className="flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900">
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />Refresh
+            </button>
+          </div>
         </div>
 
-        {notifications.length === 0 ? (
+        {error && <div role="alert" className="mb-4 flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"><span>{error}</span><button type="button" onClick={() => fetchNotifications(true)} className="shrink-0 font-semibold underline underline-offset-2">Retry</button></div>}
+
+        {notifications.length === 0 && error ? null : notifications.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -176,31 +184,16 @@ export default function CustomerNotificationsPage() {
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: i * 0.04 }}
-                          onClick={() => jobId && router.push(`/customer/job/${jobId}`)}
-                          className={`bg-white rounded-xl border border-gray-200 p-4 flex items-start gap-3 transition-all ${
-                            jobId ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm' : ''
-                          }`}
                         >
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${config.bgClass}`}>
-                            <Icon className={`h-5 w-5 ${config.iconClass}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900">
-                              {n.details?.title || config.label}
-                            </p>
-                            {n.details?.message && (
-                              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.details.message}</p>
-                            )}
-                            <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                            </p>
-                          </div>
-                          {jobId && (
-                            <div className="shrink-0 self-center">
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                            </div>
-                          )}
+                          {(() => {
+                            const content = <>
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${config.bgClass}`}><Icon className={`h-5 w-5 ${config.iconClass}`} /></div>
+                              <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-gray-900">{n.details?.title || config.label}</p>{n.details?.message && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.details.message}</p>}<p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1"><Clock className="h-3 w-3" /><time dateTime={n.created_at}>{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</time></p></div>
+                              {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-label="Unread" />}
+                              {jobId && <ArrowRight className="h-4 w-4 shrink-0 self-center text-slate-400" aria-hidden="true" />}
+                            </>;
+                            return jobId ? <Link href={`/customer/job/${jobId}`} onClick={(event) => { event.preventDefault(); void openNotification(n); }} aria-label={`${n.read ? '' : 'Unread: '}${n.details?.title || config.label}. Open service request`} className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 transition-all hover:border-blue-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">{content}</Link> : <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4">{content}</div>;
+                          })()}
                         </motion.div>
                       );
                     })}
