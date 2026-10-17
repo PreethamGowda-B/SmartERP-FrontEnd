@@ -412,14 +412,16 @@ function InvoicesContent() {
                                   <Mail className="h-3.5 w-3.5 text-indigo-600" />
                                 </Button>
 
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-[11px] font-bold rounded-lg ml-1"
-                                  onClick={() => router.push(`/owner/jobs/${inv.job_id || inv.id}/invoice-editor`)}
-                                >
-                                  Edit
-                                </Button>
+                                {String(inv.status || '').toLowerCase() === 'draft' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-[11px] font-bold rounded-lg ml-1"
+                                    onClick={() => router.push(`/owner/jobs/${inv.job_id || inv.id}/invoice-editor`)}
+                                  >
+                                    Review & Issue
+                                  </Button>
+                                )}
                               </td>
                             </tr>
                           )

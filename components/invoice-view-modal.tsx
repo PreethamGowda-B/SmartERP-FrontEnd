@@ -314,7 +314,7 @@ export function InvoiceViewModal({
                 Tax invoice view and payment record
               </DialogDescription>
             </div>
-            {invoice && (
+            {invoice && ['draft', 'disputed'].includes(String(invoice.status || '').toLowerCase()) && (
               <div className="flex items-center gap-2">
                 <Badge
                   className={
@@ -558,7 +558,7 @@ export function InvoiceViewModal({
                 }}
                 className="gap-1.5 text-indigo-700"
               >
-                <Edit className="h-3.5 w-3.5" /> Edit Invoice
+                <Edit className="h-3.5 w-3.5" /> {String(invoice.status).toLowerCase() === 'disputed' ? 'Revise Invoice' : 'Review & Issue'}
               </Button>
             )}
           </div>

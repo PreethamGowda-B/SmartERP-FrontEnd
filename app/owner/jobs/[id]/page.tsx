@@ -227,9 +227,11 @@ export default function OwnerJobDetailPage() {
             <Button
               size="sm"
               onClick={() => router.push(`/owner/jobs/${jobId}/invoice-editor`)}
+              disabled={!['completed', 'billed_and_closed'].includes(String(job?.status || '').toLowerCase())}
+              title={!['completed', 'billed_and_closed'].includes(String(job?.status || '').toLowerCase()) ? 'Complete the job before issuing an invoice' : 'Review, edit, and issue this job invoice'}
               className="h-9 px-3 text-xs font-bold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5"
             >
-              <FileText className="h-3.5 w-3.5" /> Invoice Editor
+              <FileText className="h-3.5 w-3.5" /> Issue Invoice
             </Button>
 
             <Button

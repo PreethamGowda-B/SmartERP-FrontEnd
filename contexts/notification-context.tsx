@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react"
 import { useAuth } from "./auth-context"
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { apiClient, getAuthToken, getValidAccessToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { playEnterpriseChime } from "@/lib/sound-chime"
@@ -49,6 +49,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, [])
 
   const { user, isLoading } = useAuth()
+  const pathname = usePathname()
+  const isCustomerRoute = pathname?.startsWith("/customer") ?? false
   const router = useRouter()
   const sseConnectionRef = useRef<EventSource | null>(null)
   const [reconnectTrigger, setReconnectTrigger] = useState(0)
@@ -75,6 +77,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   // Fetch notifications from backend
   const fetchNotifications = useCallback(async () => {
+    if (isCustomerRoute) {
+      setNotifications([])
+      return
+    }
     if (!user || !getAuthToken()) return
     try {
       const data = await apiClient("/api/notifications")
@@ -93,7 +99,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         logger.error("❌ Error fetching notifications:", error)
       }
     }
-  }, [user])
+  }, [user, isCustomerRoute])
 
   // Initialize FCM and request permission
   const setupFCM = useCallback(async () => {
@@ -153,6 +159,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     let activeEventSource: EventSource | null = null
 
     async function initSSE() {
+      if (isCustomerRoute) {
+        sseConnectionRef.current?.close()
+        sseConnectionRef.current = null
+        setNotifications([])
+        setIsConnected(false)
+        return
+      }
       if (!user) {
         if (sseConnectionRef.current) {
           sseConnectionRef.current.close()
@@ -284,7 +297,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setIsConnected(false)
       logger.log("📡 SSE connection closed")
     }
-  }, [user, isLoading, fetchNotifications, setupFCM, reconnectTrigger, isMuted, router])
+  }, [user, isLoading, isCustomerRoute, fetchNotifications, setupFCM, reconnectTrigger, isMuted, router])
 
   const addNotification = (notificationData: Omit<Notification, "id" | "created_at" | "read">) => {
     const newNotification: Notification = {

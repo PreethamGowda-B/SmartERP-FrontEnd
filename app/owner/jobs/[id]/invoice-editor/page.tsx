@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { OwnerLayout } from '@/components/owner-layout';
 import { 
@@ -135,6 +135,8 @@ export default function DedicatedInvoiceEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [jobData, setJobData] = useState<any>(null);
+  const [existingInvoice, setExistingInvoice] = useState<any>(null);
+  const idempotencyKeyRef = useRef<{ operationId: string; key: string } | null>(null);
 
   // Customer contact state (editable if not preset)
   const [customerName, setCustomerName] = useState<string>('');
@@ -164,6 +166,7 @@ export default function DedicatedInvoiceEditorPage() {
       const res = await apiClient<{ success: boolean; job: any; prefilled: any; existingInvoice?: any }>(`/api/invoices/editor-data/${jobId}`);
       if (res && res.success) {
         setJobData(res.job);
+        setExistingInvoice(res.existingInvoice || null);
         setCustomerName(res.job?.customer_name || '');
         setCustomerEmail(res.job?.customer_email || '');
         setCustomerPhone(res.job?.customer_phone || '');
@@ -318,9 +321,14 @@ export default function DedicatedInvoiceEditorPage() {
   const handleFinalizeInvoice = async () => {
     try {
       setSaving(true);
+      const operationId = String(existingInvoice?.id || jobData?.id || jobId);
+      if (!idempotencyKeyRef.current || idempotencyKeyRef.current.operationId !== operationId) {
+        idempotencyKeyRef.current = { operationId, key: crypto.randomUUID() };
+      }
 
       const payload = {
         jobId: jobData?.id || jobId,
+        idempotency_key: idempotencyKeyRef.current.key,
         customer_name: customerName || jobData?.customer_name || 'Customer',
         customer_email: customerEmail || jobData?.customer_email || '',
         customer_phone: customerPhone || jobData?.customer_phone || '',
@@ -345,14 +353,19 @@ export default function DedicatedInvoiceEditorPage() {
         adjustment_reason: adjustmentReason || 'Owner Manual Pricing Adjustment',
       };
 
-      const res = await apiClient<{ success: boolean; invoice?: any; reason?: string; error?: string; edited_count?: number }>('/api/invoices/finalize', {
+      const isReissue = String(existingInvoice?.status || '').toLowerCase() === 'disputed';
+      const endpoint = isReissue ? `/api/invoices/${existingInvoice.id}/reissue` : '/api/invoices/finalize';
+      const requestBody = isReissue
+        ? { disputeId: existingInvoice.dispute_id, updateData: payload }
+        : payload;
+      const res = await apiClient<{ success: boolean; invoice?: any; reason?: string; error?: string; edited_count?: number }>(endpoint, {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify(requestBody),
       });
 
       if (res && (res.success || res.invoice)) {
         const invNum = res.invoice?.invoice_number || 'INV-2026-0001';
-        const isEdit = res.reason === 'invoice_updated';
+        const isEdit = res.reason === 'invoice_updated' || isReissue;
         toast({
           title: isEdit ? `Invoice Updated (Edited ${res.edited_count || 1}x) 📄` : 'Invoice Finalized & Issued! 💰',
           description: `Invoice ${invNum} saved successfully. Returning to invoices...`,

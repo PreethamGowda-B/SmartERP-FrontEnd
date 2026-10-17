@@ -132,8 +132,11 @@ export interface CustomerNotification {
     title?: string;
     message?: string;
     job_id?: string;
+    invoice_id?: string;
+    url?: string;
   };
   created_at: string;
+  read?: boolean;
 }
 
 // ── Tracking ──────────────────────────────────────────────────────────────────

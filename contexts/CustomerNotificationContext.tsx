@@ -29,6 +29,8 @@ const CustomerNotificationContext = createContext<CustomerNotificationContextTyp
 
 export function CustomerNotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notificationsOwnerId, setNotificationsOwnerId] = useState<string | null>(null)
+  const [serverUnreadCount, setServerUnreadCount] = useState(0)
   const { customer, isLoading } = useCustomerAuth()
 
   const fetchNotifications = useCallback(async () => {
@@ -37,16 +39,20 @@ export function CustomerNotificationProvider({ children }: { children: React.Rea
       const res = await customerApi.get<{ success: boolean; data: Notification[] }>("/api/customer/notifications")
       const data = res.data?.data ?? (res.data as any)
       setNotifications(Array.isArray(data) ? data : [])
+      setNotificationsOwnerId(customer?.id ? String(customer.id) : null)
+      const countRes = await customerApi.get<{ success: boolean; count: number }>('/api/customer/notifications/unread-count')
+      setServerUnreadCount(Number(countRes.data?.count) || 0)
     } catch (error: any) {
       if (error?.response?.status !== 401 && error?.code !== "ERR_NETWORK") {
         logger.error("Error fetching customer notifications:", error?.message || error)
       }
     }
-  }, [])
+  }, [customer?.id])
 
   useEffect(() => {
-    if (isLoading) return
-    if (!customer) return
+    setNotifications([])
+    setServerUnreadCount(0)
+    if (isLoading || !customer) return
 
     // Fetch notifications on mount and poll every 30s
     // (Customer portal uses per-job SSE via /api/customer/jobs/:id/events,
@@ -62,7 +68,9 @@ export function CustomerNotificationProvider({ children }: { children: React.Rea
   const markAsRead = async (id: string) => {
     try {
       await customerApi.patch(`/api/customer/notifications/${id}/read`)
+      const wasUnread = visibleNotifications.some(n => n.id === id && !n.read)
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+      if (wasUnread) setServerUnreadCount(count => Math.max(0, count - 1))
     } catch {}
   }
 
@@ -70,15 +78,17 @@ export function CustomerNotificationProvider({ children }: { children: React.Rea
     try {
       await customerApi.patch("/api/customer/notifications/mark-all-read")
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+      setServerUnreadCount(0)
     } catch {}
   }
 
-  const getUnreadCount = () => notifications.filter(n => !n.read).length
+  const visibleNotifications = notificationsOwnerId === (customer?.id ? String(customer.id) : null) ? notifications : []
+  const getUnreadCount = () => notificationsOwnerId === (customer?.id ? String(customer.id) : null) ? serverUnreadCount : 0
 
   return (
     <CustomerNotificationContext.Provider
       value={{
-        notifications,
+        notifications: visibleNotifications,
         markAsRead,
         markAllAsRead,
         getUnreadCount,

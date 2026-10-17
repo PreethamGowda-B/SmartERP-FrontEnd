@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, PlusCircle, User, LogOut, Menu, X, Bell, List, History, Repeat, Cpu, FileText, Sparkles, ChevronDown } from 'lucide-react';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { useCustomerNotifications } from '@/contexts/CustomerNotificationContext';
-import { NotificationCenterDrawer } from '@/components/notification-center-drawer';
+import { CustomerNotificationDrawer } from '@/components/customer/layout/CustomerNotificationDrawer';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 const MAIN_NAV_ITEMS = [
@@ -147,8 +147,7 @@ export function CustomerNavbar() {
           {/* Right Utilities (Notifications Bell, Theme, Profile Pill, Sign Out) */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             
-            {/* Enterprise Notification Center Popover */}
-            <NotificationCenterDrawer />
+            <CustomerNotificationDrawer />
 
             <ThemeToggle compact />
 

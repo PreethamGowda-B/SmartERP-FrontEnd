@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { Bell, ShieldCheck, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,11 +14,16 @@ import {
 } from "@/components/ui/dialog"
 
 export function NotificationPermissionPrompt() {
+  const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const [showPrompt, setShowPrompt] = useState(false)
 
   useEffect(() => {
     setMounted(true)
+    if (pathname?.startsWith("/customer")) {
+      setShowPrompt(false)
+      return
+    }
     // Check if browser supports notifications
     if (typeof window === "undefined" || !("Notification" in window)) return
 
@@ -29,7 +35,7 @@ export function NotificationPermissionPrompt() {
       }, 5000)
       return () => clearTimeout(timer)
     }
-  }, [])
+  }, [pathname])
 
   const handleEnable = async () => {
     const permission = await Notification.requestPermission()

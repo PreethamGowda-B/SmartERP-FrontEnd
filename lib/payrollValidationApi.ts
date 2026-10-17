@@ -13,6 +13,20 @@ export interface PayrollValidationRun {
   approved_by?: string
   approved_at?: string
   created_at: string
+  audit_status: "passed" | "needs_review" | "failed" | "unable_to_validate" | "no_records" | "processing"
+  record_count: number
+  checks_executed: number
+  check_results: PayrollAuditCheck[]
+  is_stale?: boolean
+}
+
+export interface PayrollAuditCheck {
+  id: string
+  label: string
+  status: "passed" | "warning" | "failed" | "not_applicable" | "unable_to_validate"
+  records_examined: number
+  findings_count: number
+  explanation: string
 }
 
 export interface PayrollValidationFlag {
@@ -24,6 +38,9 @@ export interface PayrollValidationFlag {
   flag_type: "duplicate_bank" | "salary_spike" | "inactive_user" | "attendance_mismatch" | "statutory_error" | "negative_payout" | "zero_salary"
   severity: "info" | "warning" | "critical"
   description: string
+  source_record_id?: string
+  source_table?: string
+  finding_details?: Record<string, unknown>
   ai_analysis_reasoning?: string
   is_resolved: boolean
   resolution_notes?: string
@@ -31,11 +48,11 @@ export interface PayrollValidationFlag {
 }
 
 export const payrollValidationApi = {
-  validatePreRun: async (month: number, year: number, proposedPayroll: any[] = []) => {
+  validatePreRun: async (month: number, year: number) => {
     return await apiClient("/api/v1/payroll-validation/validate-pre-run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ month, year, proposedPayroll }),
+      body: JSON.stringify({ month, year }),
     })
   },
 

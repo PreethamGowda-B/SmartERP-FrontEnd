@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo, useRef } from "react"
 import {
   Dialog,
   DialogContent,
@@ -50,6 +50,7 @@ export function DirectInvoiceModal({
   // Steps: 'form' | 'preview' | 'success'
   const [step, setStep] = useState<"form" | "preview" | "success">("form")
   const [submitting, setSubmitting] = useState(false)
+  const idempotencyKeyRef = useRef<string | null>(null)
 
   // Customer State
   const [customerMode, setCustomerMode] = useState<"quick_add" | "existing">("quick_add")
@@ -147,7 +148,8 @@ export function DirectInvoiceModal({
       else servicesTotal += line
     })
 
-    const subtotal = Math.max(0, itemsTotal + Number(transportCharges || 0) - Number(discountAmount || 0))
+    itemsTotal = Number(itemsTotal.toFixed(2))
+    const subtotal = Math.max(0, Number((itemsTotal + Number(transportCharges || 0) - Number(discountAmount || 0)).toFixed(2)))
     const taxRate = Number(gstRate || 0) / 100
     const totalTax = Number((subtotal * taxRate).toFixed(2))
     const cgst = isInterState ? 0 : Number((totalTax / 2).toFixed(2))
@@ -235,6 +237,7 @@ export function DirectInvoiceModal({
     try {
       setSubmitting(true)
       const payload = {
+        idempotency_key: idempotencyKeyRef.current || (idempotencyKeyRef.current = crypto.randomUUID()),
         invoice_type: "walk_in",
         customer_id: customerMode === "existing" ? selectedCustomerId : null,
         customer_name: customerName.trim(),
@@ -272,6 +275,7 @@ export function DirectInvoiceModal({
       )
 
       if (res && res.success) {
+        idempotencyKeyRef.current = null
         setCreatedInvoiceResult(res)
         setStep("success")
         toast({
