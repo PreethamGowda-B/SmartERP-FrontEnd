@@ -100,9 +100,9 @@ export default function EmployeeDashboard() {
 
   const unreadNotifs = notifications.filter((n) => !n.read).length
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (showLoading = true) => {
     if (!user) return
-    setLoadingStats(true)
+    if (showLoading) setLoadingStats(true)
     try {
       const [todayRes, historyRes, materialsRes] = await Promise.allSettled([
         apiClient("/api/attendance/today"),
@@ -138,12 +138,21 @@ export default function EmployeeDashboard() {
     } catch (err: any) {
       logger.error("Error fetching dashboard stats:", err)
     } finally {
-      setLoadingStats(false)
+      if (showLoading) setLoadingStats(false)
     }
   }, [user])
 
   useEffect(() => {
     fetchStats()
+    const refresh = () => fetchStats(false)
+    const timer = setInterval(refresh, 30000)
+    window.addEventListener("focus", refresh)
+    window.addEventListener("attendance-status-changed", refresh)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener("focus", refresh)
+      window.removeEventListener("attendance-status-changed", refresh)
+    }
   }, [fetchStats])
 
   const hoursToday = todayAttendance?.working_hours

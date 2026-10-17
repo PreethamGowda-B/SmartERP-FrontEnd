@@ -21,28 +21,7 @@ interface ClockInOutProps {
   onClockChange?: () => void
 }
 
-// Returns a descriptive message based on current time and clock-in rules
-function getClockStatusMessage(): { type: "ok" | "late" | "cutoff" | "early"; message: string } {
-  const now = new Date()
-  const h = now.getHours()
-  const m = now.getMinutes()
-
-  if (h < 9) {
-    const minsLeft = (9 - h) * 60 - m
-    return {
-      type: "early",
-      message: `⏳ Clock-in opens at 9:00 AM. ${minsLeft} min remaining.`,
-    }
-  }
-  if (h === 9 && m === 0) {
-    return { type: "ok", message: "🟢 Right on time! Shift starts now." }
-  }
-  if (h < 11 || (h === 11 && m === 0)) {
-    return { type: "late", message: "🟡 You're late — clock in before 11:00 AM to avoid being marked absent." }
-  }
-  // after 11:00 AM
-  return { type: "cutoff", message: "🔴 Clock-in window closed (11:00 AM). Come tomorrow and clock in early." }
-}
+type ClockEligibility = { allowed: boolean; code?: string | null; reason?: string | null; is_late?: boolean }
 
 export function ClockInOut({
   currentStatus,
@@ -57,7 +36,9 @@ export function ClockInOut({
   const [currentTime, setCurrentTime] = useState(new Date())
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
-  const [clockMsg, setClockMsg] = useState(getClockStatusMessage())
+  const [clockMsg, setClockMsg] = useState<{ type: "ok" | "late" | "cutoff" | "early"; message: string }>({ type: "ok", message: "Checking attendance policy…" })
+  const [eligibility, setEligibility] = useState<ClockEligibility | null>(null)
+  const [policySummary, setPolicySummary] = useState<{ shiftStart: string; shiftEnd: string; clockInCutoff: string; automaticClockOutTime: string } | null>(null)
 
   // Sync prop status (parent re-fetched real attendance)
   useEffect(() => {
@@ -66,11 +47,33 @@ export function ClockInOut({
 
   // Update live clock every second
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date())
-      setClockMsg(getClockStatusMessage())
-    }, 1000)
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        const data = await apiClient<any>("/api/attendance/policy")
+        setEligibility(data.eligibility)
+        const policy = data.policy
+        setPolicySummary(policy)
+        if (data.eligibility?.allowed) {
+          setClockMsg({ type: data.eligibility.is_late ? "late" : "ok", message: data.eligibility.is_late ? `Late clock-in window. Please clock in before ${policy.clockInCutoff}.` : `Clock-in is open until ${policy.clockInCutoff}.` })
+        } else {
+          const code = data.eligibility?.code
+          setClockMsg({ type: code === "too_early" ? "early" : "cutoff", message: data.eligibility?.reason || "Clock-in is unavailable." })
+        }
+      } catch {
+        setEligibility(null)
+        setClockMsg({ type: "cutoff", message: "Could not verify attendance policy. Refresh or try again." })
+      }
+    }
+    refresh()
+    const timer = setInterval(refresh, 30000)
+    const onFocus = () => refresh()
+    window.addEventListener("focus", onFocus)
+    return () => { clearInterval(timer); window.removeEventListener("focus", onFocus) }
   }, [])
 
   const getCurrentLocation = (): Promise<string> =>
@@ -100,14 +103,15 @@ export function ClockInOut({
           method: "POST",
           body: JSON.stringify({ method: "manual" }),
         })
-        const isLate = getClockStatusMessage().type === "late"
+        const saved = await apiClient<any>("/api/attendance/today")
+        const isLate = Boolean(saved.is_late)
         setStatus("clocked-in")
         if (typeof window !== "undefined") {
           localStorage.setItem("_clocked_in_date", new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }))
         }
         setSuccessMsg(isLate ? "✅ Clocked in — marked as late." : "✅ Clocked in on time!")
       } else {
-        await apiClient("/api/attendance/clock-out", {
+        const saved = await apiClient<any>("/api/attendance/clock-out", {
           method: "POST",
           body: JSON.stringify({ method: "manual" }),
         })
@@ -115,7 +119,7 @@ export function ClockInOut({
         if (typeof window !== "undefined") {
           localStorage.removeItem("_clocked_in_date")
         }
-        setSuccessMsg("✅ Clocked out successfully. See you tomorrow!")
+        setSuccessMsg(saved.is_auto_clocked_out ? "✅ Shift closed automatically at the company cutoff." : "✅ Clocked out successfully. See you tomorrow!")
       }
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("attendance-status-changed"))
@@ -135,10 +139,8 @@ export function ClockInOut({
       minute: "2-digit",
       second: "2-digit",
       hour12: true,
+      timeZone: "Asia/Kolkata",
     })
-
-  const isCutoffPassed = clockMsg.type === "cutoff"
-  const isEarly = clockMsg.type === "early"
 
   return (
     <Card>
@@ -202,7 +204,7 @@ export function ClockInOut({
               )}
               {attendanceRecord?.is_auto_clocked_out && (
                 <Badge variant="outline" className="border-blue-400 text-blue-700 dark:text-blue-400">
-                  🤖 Auto Clock-Out (7 PM)
+                  🤖 Auto Clock-Out ({policySummary?.automaticClockOutTime || "scheduled"})
                 </Badge>
               )}
               <span className="text-sm text-muted-foreground font-mono">{getCurrentTime()}</span>
@@ -210,7 +212,7 @@ export function ClockInOut({
           </div>
           <Button
             onClick={handleClockAction}
-            disabled={isLoading || isCutoffPassed || isEarly || (status === "clocked-out" && !!attendanceRecord?.check_out_time)}
+            disabled={isLoading || (status === "clocked-out" && (!eligibility?.allowed || !!attendanceRecord?.check_out_time))}
             size="lg"
             variant={status === "clocked-in" ? "destructive" : "default"}
           >
@@ -237,10 +239,10 @@ export function ClockInOut({
         {attendanceRecord?.check_in_time && attendanceRecord?.check_out_time && (
           <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 space-y-1">
             <p className="font-medium text-foreground">Today's shift complete</p>
-            <p>🕘 In: {new Date(attendanceRecord.check_in_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</p>
-            <p>🕖 Out: {new Date(attendanceRecord.check_out_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}</p>
+            <p>🕘 In: {new Date(attendanceRecord.check_in_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}</p>
+            <p>🕖 Out: {new Date(attendanceRecord.check_out_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}</p>
             {attendanceRecord.is_auto_clocked_out && (
-              <p className="text-blue-600 dark:text-blue-400 text-xs">You were automatically clocked out at 7:00 PM.</p>
+              <p className="text-blue-600 dark:text-blue-400 text-xs">You were automatically clocked out at the company cutoff.</p>
             )}
           </div>
         )}
@@ -264,7 +266,7 @@ export function ClockInOut({
 
         {/* Attendance rules reminder */}
         <div className="text-xs text-muted-foreground/70 pt-1 leading-relaxed">
-          Shift: <strong>9:00 AM – 7:00 PM</strong> · Late window: 9:01–11:00 AM · After 11:00 AM = absent for today · Auto clock-out at 7:00 PM
+          {policySummary ? <>Shift: <strong>{policySummary.shiftStart}–{policySummary.shiftEnd}</strong> · Clock-in cutoff: {policySummary.clockInCutoff} · Auto clock-out: {policySummary.automaticClockOutTime}</> : "Loading company attendance policy…"}
         </div>
       </CardContent>
     </Card>

@@ -24,6 +24,7 @@ interface EmployeeAttendance {
   working_hours: number | null
   status: string | null
   is_late: boolean
+  on_leave?: boolean
 }
 
 interface AttendanceSummary {
@@ -31,6 +32,7 @@ interface AttendanceSummary {
   present: number
   absent: number
   late: number
+  on_leave?: number
 }
 
 export default function HRAttendancePage() {
@@ -42,19 +44,20 @@ export default function HRAttendancePage() {
     present: 0,
     absent: 0,
     late: 0,
+    on_leave: 0,
   })
   const [loading, setLoading] = useState(true)
 
-  const fetchAttendanceOverview = async () => {
-    setLoading(true)
+  const fetchAttendanceOverview = async (showLoading = true) => {
+    if (showLoading) setLoading(true)
     try {
       const data = await apiClient("/api/attendance/overview")
-      setEmployees(data.employees || [])
-      setSummary(data.summary || { total: 0, present: 0, absent: 0, late: 0 })
+      setEmployees(Array.isArray(data.employees) ? data.employees : [])
+      setSummary(data.summary || { total: 0, present: 0, absent: 0, late: 0, on_leave: 0 })
     } catch (err) {
       logger.error("Error fetching attendance overview:", err)
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }
 
@@ -64,17 +67,33 @@ export default function HRAttendancePage() {
     }
   }, [user?.id])
 
+  useEffect(() => {
+    const refresh = () => fetchAttendanceOverview(false)
+    const timer = setInterval(refresh, 30000)
+    window.addEventListener("focus", refresh)
+    window.addEventListener("attendance-status-changed", refresh)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener("focus", refresh)
+      window.removeEventListener("attendance-status-changed", refresh)
+    }
+  }, [user?.id])
+
   const formatTime = (timestamp: string | null) => {
     if (!timestamp) return "—"
     return new Date(timestamp).toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "Asia/Kolkata",
     })
   }
 
   const getStatusBadge = (employee: EmployeeAttendance) => {
+    if (employee.on_leave && !employee.check_in_time) return <Badge className="bg-cyan-600">On Leave</Badge>
     if (!employee.check_in_time) return <Badge variant="destructive">Absent</Badge>
     if (!employee.check_out_time) return <Badge className="bg-blue-500">In</Badge>
+    if (employee.status === "half_day") return <Badge className="bg-yellow-500">Half Day</Badge>
+    if (employee.status === "late") return <Badge className="bg-orange-500">Late</Badge>
     return <Badge className="bg-green-500">Present</Badge>
   }
 
@@ -103,11 +122,17 @@ export default function HRAttendancePage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card className="border-none shadow-sm">
              <CardContent className="pt-4">
                <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Total</p>
                <h3 className="text-2xl font-bold">{summary.total}</h3>
+             </CardContent>
+          </Card>
+          <Card className="border-none shadow-sm">
+             <CardContent className="pt-4">
+               <p className="text-xs text-cyan-600 uppercase font-bold tracking-wider">On Approved Leave</p>
+               <h3 className="text-2xl font-bold text-cyan-600">{summary.on_leave || 0}</h3>
              </CardContent>
           </Card>
           <Card className="border-none shadow-sm">

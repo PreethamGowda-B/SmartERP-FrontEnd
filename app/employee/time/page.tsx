@@ -39,8 +39,8 @@ export default function EmployeeTimePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchMyAttendance = useCallback(async () => {
-    setLoading(true)
+  const fetchMyAttendance = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true)
     setError(null)
     try {
       const token = getAccessToken()
@@ -55,12 +55,21 @@ export default function EmployeeTimePage() {
     } catch (err: any) {
       setError(err.message || "Could not load attendance data")
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     fetchMyAttendance()
+    const refresh = () => fetchMyAttendance(false)
+    const timer = setInterval(refresh, 30000)
+    window.addEventListener("focus", refresh)
+    window.addEventListener("attendance-status-changed", refresh)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener("focus", refresh)
+      window.removeEventListener("attendance-status-changed", refresh)
+    }
   }, [fetchMyAttendance])
 
   // Weekly hours: sum of hoursWorked for records in the current week (Mon-Sun)
@@ -227,7 +236,7 @@ export default function EmployeeTimePage() {
                     <div>
                       <p className="font-medium">
                         {new Date(record.date + "T12:00:00").toLocaleDateString("en-US", {
-                          weekday: "short", month: "short", day: "numeric"
+                          weekday: "short", month: "short", day: "numeric", timeZone: "Asia/Kolkata"
                         })}
                       </p>
                       {record.location && (

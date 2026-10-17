@@ -46,6 +46,14 @@ interface AttendanceRecord {
   is_auto_clocked_out?: boolean
 }
 
+interface AttendancePolicyView {
+  shiftStart: string
+  shiftEnd: string
+  clockInCutoff: string
+  automaticClockOutTime: string
+  timezone: string
+}
+
 export default function TimeTrackingPage() {
   const { user } = useAuth()
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null)
@@ -55,6 +63,8 @@ export default function TimeTrackingPage() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
   const [isOnline, setIsOnline] = useState(typeof window !== "undefined" ? navigator.onLine : true)
+  const [pendingOfflineCount, setPendingOfflineCount] = useState(0)
+  const [attendancePolicy, setAttendancePolicy] = useState<AttendancePolicyView | null>(null)
 
   // Live chronometer tick
   useEffect(() => {
@@ -85,8 +95,12 @@ export default function TimeTrackingPage() {
   // Fetch today's attendance
   const fetchTodayAttendance = useCallback(async () => {
     try {
-      const data = await apiClient<any>("/api/attendance/today")
-      setTodayAttendance(data)
+      const [attendanceResult, policyResult] = await Promise.allSettled([
+        apiClient<any>("/api/attendance/today"),
+        apiClient<any>("/api/attendance/policy"),
+      ])
+      if (attendanceResult.status === "fulfilled") setTodayAttendance(attendanceResult.value)
+      if (policyResult.status === "fulfilled") setAttendancePolicy(policyResult.value.policy)
     } catch (err: any) {
       logger.error("Error fetching today's attendance:", err)
     }
@@ -112,43 +126,39 @@ export default function TimeTrackingPage() {
     }
   }, [user?.id, fetchTodayAttendance, fetchHistory])
 
-  // Offline sync handler
-  const syncOfflineData = useCallback(async () => {
+  const refreshPendingCount = useCallback(async () => {
     try {
-      const { getPendingAttendance, deletePendingAttendance } = await import("@/lib/db")
+      const { getPendingAttendance } = await import("@/lib/db")
       const pending = await getPendingAttendance()
-      if (pending.length === 0) return
-
-      for (const action of pending) {
-        try {
-          const endpoint = action.type === "clock-in" ? "/api/attendance/clock-in" : "/api/attendance/clock-out"
-          await apiClient(endpoint, { method: "POST" })
-          await deletePendingAttendance(action.id!)
-        } catch (err) {
-          console.error("Failed to sync offline action:", action, err)
-        }
-      }
-      fetchTodayAttendance()
-      fetchHistory()
+      setPendingOfflineCount(pending.length)
     } catch {}
-  }, [fetchTodayAttendance, fetchHistory])
+  }, [])
 
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true)
-      syncOfflineData()
+      fetchTodayAttendance()
+      fetchHistory()
+      refreshPendingCount()
     }
     const handleOffline = () => setIsOnline(false)
 
     window.addEventListener("online", handleOnline)
     window.addEventListener("offline", handleOffline)
-    syncOfflineData()
+    refreshPendingCount()
+    const refresh = () => { fetchTodayAttendance(); fetchHistory(); refreshPendingCount() }
+    const timer = setInterval(refresh, 30000)
+    window.addEventListener("focus", refresh)
+    window.addEventListener("attendance-status-changed", refresh)
 
     return () => {
+      clearInterval(timer)
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("offline", handleOffline)
+      window.removeEventListener("focus", refresh)
+      window.removeEventListener("attendance-status-changed", refresh)
     }
-  }, [syncOfflineData])
+  }, [fetchTodayAttendance, fetchHistory, refreshPendingCount])
 
   const handleClockIn = async () => {
     setLoading(true)
@@ -161,19 +171,9 @@ export default function TimeTrackingPage() {
         timestamp: new Date().toISOString(),
         status: "pending",
       })
-      setTodayAttendance({
-        id: Date.now(),
-        date: new Date().toISOString().split("T")[0],
-        check_in_time: new Date().toISOString(),
-        check_out_time: null,
-        working_hours: null,
-        status: "pending",
-        is_late: false,
-      })
+      await refreshPendingCount()
+      setError("Clock-in is pending on this device and was not recorded. Reconnect, verify your status, then submit a new punch. Offline timestamps require Owner review.")
       setLoading(false)
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("attendance-status-changed"))
-      }
       return
     }
 
@@ -203,20 +203,9 @@ export default function TimeTrackingPage() {
         timestamp: new Date().toISOString(),
         status: "pending",
       })
-      setTodayAttendance((prev) =>
-        prev
-          ? {
-              ...prev,
-              check_out_time: new Date().toISOString(),
-              status: "pending",
-            }
-          : null
-      )
+      await refreshPendingCount()
+      setError("Clock-out is pending on this device and was not recorded. Reconnect, verify your status, then submit a new punch. Offline timestamps require Owner review.")
       setLoading(false)
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("_clocked_in_date")
-        window.dispatchEvent(new CustomEvent("attendance-status-changed"))
-      }
       return
     }
 
@@ -241,6 +230,7 @@ export default function TimeTrackingPage() {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
+      timeZone: "Asia/Kolkata",
     })
   }
 
@@ -250,6 +240,7 @@ export default function TimeTrackingPage() {
       month: "short",
       day: "numeric",
       year: "numeric",
+      timeZone: "Asia/Kolkata",
     })
   }
 
@@ -262,7 +253,7 @@ export default function TimeTrackingPage() {
 
   const isClockedIn = Boolean(todayAttendance?.check_in_time && !todayAttendance?.check_out_time)
   const isClockedOut = Boolean(todayAttendance?.check_in_time && todayAttendance?.check_out_time)
-  const canClockIn = !todayAttendance?.check_in_time
+  const canClockIn = !todayAttendance?.check_in_time && pendingOfflineCount === 0
 
   // Monthly summary stats
   const totalDaysPresent = history.filter((r) => r.status === "present" || r.status === "late").length
@@ -289,7 +280,7 @@ export default function TimeTrackingPage() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/60 border border-border/80 text-xs font-semibold">
               <span className={cn("w-2 h-2 rounded-full", isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
-              <span>{isOnline ? "Cloud Sync Active" : "Offline Cache"}</span>
+              <span>{isOnline ? "Connected to attendance service" : "Offline — punches are not submitted"}</span>
             </div>
           </div>
         </div>
@@ -303,20 +294,20 @@ export default function TimeTrackingPage() {
                   <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] font-black uppercase tracking-wider">
                     STANDARD SHIFT
                   </Badge>
-                  <span className="text-xs font-bold text-foreground">09:00 AM – 07:00 PM IST (10 Hours)</span>
+                  <span className="text-xs font-bold text-foreground">{attendancePolicy ? `${attendancePolicy.shiftStart} – ${attendancePolicy.shiftEnd} ${attendancePolicy.timezone}` : "Loading company shift policy…"}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-muted-foreground">
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                    <span>Clock in by <strong>9:00 AM</strong> for on-time mark</span>
+                    <span>Clock-in cutoff <strong>{attendancePolicy?.clockInCutoff || "—"}</strong></span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                    <span>Leaving before <strong>7:00 PM</strong> marks half day</span>
+                    <span>Leaving before <strong>{attendancePolicy?.shiftEnd || "—"}</strong> marks half day</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck className="h-3.5 w-3.5 text-blue-500" />
-                    <span>Auto checkout safeguards at <strong>7:00 PM</strong></span>
+                    <span>Auto checkout at <strong>{attendancePolicy?.automaticClockOutTime || "—"}</strong></span>
                   </div>
                 </div>
               </div>
@@ -325,12 +316,18 @@ export default function TimeTrackingPage() {
               <div className="p-3 rounded-2xl bg-secondary/50 border border-border/80 text-center shrink-0 min-w-[170px] shadow-xs">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Current Time</p>
                 <p className="text-xl font-black font-mono tracking-tight text-foreground mt-0.5">
-                  {currentTime.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
+                  {currentTime.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {pendingOfflineCount > 0 && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+            {pendingOfflineCount} offline punch{pendingOfflineCount === 1 ? " is" : "es are"} saved as pending on this device. They have not changed attendance and will not be replayed automatically. Contact your Owner if the original offline time needs review.
+          </div>
+        )}
 
         {/* Error Alert if any */}
         {error && (
@@ -403,7 +400,7 @@ export default function TimeTrackingPage() {
 
                 <Button
                   onClick={handleClockOut}
-                  disabled={!isClockedIn || loading}
+                  disabled={!isClockedIn || loading || pendingOfflineCount > 0}
                   variant="outline"
                   className={cn(
                     "h-12 text-sm font-bold gap-2 transition-all",
@@ -495,7 +492,7 @@ export default function TimeTrackingPage() {
                     <Flame className="h-5 w-5 text-orange-500 shrink-0" />
                     <div>
                       <div className="font-bold text-foreground">Punctuality Score: {onTimeStreak > 0 ? "95%" : "100%"}</div>
-                      <div className="text-[10px] text-muted-foreground">Based on morning 9:00 AM check-ins</div>
+                      <div className="text-[10px] text-muted-foreground">Based on company attendance policy</div>
                     </div>
                   </div>
                   <Badge className="bg-amber-500 text-white text-[10px] font-bold">

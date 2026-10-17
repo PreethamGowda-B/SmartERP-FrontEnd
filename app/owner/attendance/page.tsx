@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation" // ✅ Import useRouter
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, UserCheck, UserX, Clock } from "lucide-react"
+import { Users, UserCheck, UserX, Clock, CalendarCheck } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -15,6 +15,8 @@ import { ExportButton } from "@/components/export-button"
 import { logger } from "@/lib/logger"
 import { SkeletonList } from "@/components/ui/skeleton-card"
 import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 function authHeaders(): Record<string, string> {
   const token = getAuthToken()
@@ -34,6 +36,7 @@ interface EmployeeAttendance {
   working_hours: number | null
   status: string | null
   is_late: boolean
+  on_leave?: boolean
 }
 
 interface AttendanceSummary {
@@ -41,6 +44,22 @@ interface AttendanceSummary {
   present: number
   absent: number
   late: number
+  on_leave?: number
+}
+
+interface AttendancePolicy {
+  timezone: string
+  shiftStart: string
+  shiftEnd: string
+  earliestClockIn: string
+  lateThreshold: string
+  gracePeriodMinutes: number
+  halfDayThreshold: string
+  clockInCutoff: string
+  automaticClockOutEnabled: boolean
+  automaticClockOutTime: string
+  earlyDepartureIsHalfDay: boolean
+  workingHoursRounding: number
 }
 
 export default function OwnerAttendancePage() {
@@ -52,25 +71,67 @@ export default function OwnerAttendancePage() {
     present: 0,
     absent: 0,
     late: 0,
+    on_leave: 0,
   })
   const [loading, setLoading] = useState(true)
+  const [policy, setPolicy] = useState<AttendancePolicy | null>(null)
+  const [policySaving, setPolicySaving] = useState(false)
+  const [policyMessage, setPolicyMessage] = useState("")
 
-  const fetchAttendanceOverview = async () => {
-    setLoading(true)
+  const fetchAttendanceOverview = async (showLoading = true) => {
+    if (showLoading) setLoading(true)
     try {
       const data = await apiClient("/api/attendance/overview")
       setEmployees(Array.isArray(data.employees) ? data.employees : [])
-      setSummary(data.summary || { total: 0, present: 0, absent: 0, late: 0 })
+      setSummary(data.summary || { total: 0, present: 0, absent: 0, late: 0, on_leave: 0 })
     } catch (err: any) {
       logger.error("Error fetching attendance overview:", err)
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
+    }
+  }
+
+  const fetchPolicy = async () => {
+    try {
+      const data = await apiClient("/api/attendance/policy")
+      setPolicy(data.policy)
+    } catch (err) {
+      logger.error("Error fetching attendance policy:", err)
+    }
+  }
+
+  const savePolicy = async () => {
+    if (!policy) return
+    setPolicySaving(true)
+    setPolicyMessage("")
+    try {
+      const data = await apiClient("/api/attendance/policy", { method: "PUT", body: JSON.stringify({ policy }) })
+      setPolicy(data.policy)
+      setPolicyMessage("Attendance policy saved. Existing attendance rows are not changed.")
+    } catch (err: any) {
+      setPolicyMessage(err.message || "Could not save attendance policy")
+    } finally {
+      setPolicySaving(false)
     }
   }
 
   useEffect(() => {
     if (user) {
       fetchAttendanceOverview()
+      fetchPolicy()
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    const timer = setInterval(() => fetchAttendanceOverview(false), 30000)
+    const onFocus = () => { fetchAttendanceOverview(false); fetchPolicy() }
+    window.addEventListener("focus", onFocus)
+    const onAttendanceChange = () => { fetchAttendanceOverview(false) }
+    window.addEventListener("attendance-status-changed", onAttendanceChange)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener("focus", onFocus)
+      window.removeEventListener("attendance-status-changed", onAttendanceChange)
     }
   }, [user?.id])
 
@@ -79,10 +140,14 @@ export default function OwnerAttendancePage() {
     return new Date(timestamp).toLocaleTimeString("en-IN", {
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "Asia/Kolkata",
     })
   }
 
   const getStatusBadge = (employee: EmployeeAttendance) => {
+    if (employee.on_leave && !employee.check_in_time) {
+      return <Badge className="bg-cyan-600">On Leave</Badge>
+    }
     if (!employee.check_in_time) {
       return <Badge variant="destructive">Absent</Badge>
     }
@@ -94,6 +159,8 @@ export default function OwnerAttendancePage() {
     switch (employee.status) {
       case "present":
         return <Badge className="bg-green-500">Present</Badge>
+      case "late":
+        return <Badge className="bg-orange-500">Late</Badge>
       case "half_day":
         return <Badge className="bg-yellow-500">Half Day</Badge>
       case "absent":
@@ -165,8 +232,51 @@ export default function OwnerAttendancePage() {
           />
         </div>
 
+        {policy && user?.role === "owner" && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Attendance Policy</CardTitle>
+              <p className="text-sm text-muted-foreground">One company policy controls Employee Dashboard, Shift Control and automatic processing.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {([
+                  ["Shift starts", "shiftStart"], ["Shift ends", "shiftEnd"], ["Earliest clock-in", "earliestClockIn"],
+                  ["Late threshold", "lateThreshold"], ["Half-day threshold", "halfDayThreshold"], ["Clock-in cutoff", "clockInCutoff"],
+                  ["Automatic clock-out", "automaticClockOutTime"],
+                ] as const).map(([label, field]) => (
+                  <label key={field} className="space-y-1 text-sm">
+                    <span className="font-medium">{label}</span>
+                    <Input type="time" value={policy[field]} onChange={(e) => setPolicy({ ...policy, [field]: e.target.value })} />
+                  </label>
+                ))}
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">Grace period (minutes)</span>
+                  <Input type="number" min={0} max={180} value={policy.gracePeriodMinutes} onChange={(e) => setPolicy({ ...policy, gracePeriodMinutes: Number(e.target.value) })} />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">Timezone</span>
+                  <Input value={policy.timezone} readOnly aria-readonly="true" />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">Hours rounding digits</span>
+                  <Input type="number" min={0} max={2} value={policy.workingHoursRounding} onChange={(e) => setPolicy({ ...policy, workingHoursRounding: Number(e.target.value) })} />
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-5 text-sm">
+                <label className="flex items-center gap-2"><input type="checkbox" checked={policy.automaticClockOutEnabled} onChange={(e) => setPolicy({ ...policy, automaticClockOutEnabled: e.target.checked })} /> Automatic clock-out</label>
+                <label className="flex items-center gap-2"><input type="checkbox" checked={policy.earlyDepartureIsHalfDay} onChange={(e) => setPolicy({ ...policy, earlyDepartureIsHalfDay: e.target.checked })} /> Early departure is half-day</label>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button onClick={savePolicy} disabled={policySaving}>{policySaving ? "Saving…" : "Save attendance policy"}</Button>
+                {policyMessage && <span className="text-sm text-muted-foreground">{policyMessage}</span>}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
           <Card className="premium-card hover-lift-subtle border border-blue-500/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Total Staff</CardTitle>
@@ -204,6 +314,16 @@ export default function OwnerAttendancePage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-black tracking-tight text-orange-600">{Number(summary.late || 0)}</div>
+            </CardContent>
+          </Card>
+
+          <Card className="premium-card hover-lift-subtle border border-cyan-500/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">On Approved Leave</CardTitle>
+              <CalendarCheck className="h-4 w-4 text-cyan-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-black tracking-tight text-cyan-600">{Number(summary.on_leave || 0)}</div>
             </CardContent>
           </Card>
         </div>

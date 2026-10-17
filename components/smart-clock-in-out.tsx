@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +14,16 @@ interface ActiveRecord {
   location: string | null
   status: string
   status_label?: string
+  clock_in?: string | null
+  check_in_time?: string | null
+}
+
+interface AttendancePolicyView {
+  shiftStart: string
+  shiftEnd: string
+  clockInCutoff: string
+  automaticClockOutTime: string
+  timezone: string
 }
 
 export function SmartClockInOut() {
@@ -25,6 +35,7 @@ export function SmartClockInOut() {
   const [error, setError] = useState<string | null>(null)
   const [notification, setNotification] = useState<string | null>(null)
   const [attendanceStatus, setAttendanceStatus] = useState<string | null>(null) // 'Present' | 'Late' | 'Half Day'
+  const [policy, setPolicy] = useState<AttendancePolicyView | null>(null)
 
   // ─── Tick every second ──────────────────────────────────────────────────
   useEffect(() => {
@@ -35,9 +46,8 @@ export function SmartClockInOut() {
   // ─── Recalculate elapsed when activeRecord or currentTime changes ──────
   useEffect(() => {
     if (activeRecord) {
-      // Parse the HH:MM clock-in time and combine with the record's date
-      const [h, m] = activeRecord.clockIn.split(":").map(Number)
-      const clockInDate = new Date(activeRecord.date + "T" + activeRecord.clockIn + ":00")
+      // Prefer the persisted instant, which is timezone-independent.
+      const clockInDate = new Date(activeRecord.clock_in || `${activeRecord.date}T${activeRecord.clockIn}:00+05:30`)
       setElapsedMs(currentTime.getTime() - clockInDate.getTime())
     } else {
       setElapsedMs(0)
@@ -45,27 +55,37 @@ export function SmartClockInOut() {
   }, [activeRecord, currentTime])
 
   // ─── On mount: ask the backend if we have an open record today ─────────
-  const fetchOpenRecord = useCallback(async () => {
-    setLoading(true)
+  const fetchOpenRecord = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true)
     setError(null)
     try {
       const res = await fetch(`${API}/api/attendance/me`, { credentials: "include" })
       if (!res.ok) throw new Error("Failed to check attendance")
       const data = await res.json()
+      try {
+        const policyRes = await fetch(`${API}/api/attendance/policy`, { credentials: "include" })
+        if (policyRes.ok) setPolicy((await policyRes.json()).policy)
+      } catch {}
       if (data.openRecord) {
         setActiveRecord(data.openRecord)
       } else {
         setActiveRecord(null)
       }
+      const status = data.today?.status
+      setAttendanceStatus(status === "half_day" ? "Half Day" : status === "late" ? "Late" : status === "present" ? "Present" : null)
     } catch (err: any) {
       setError(err.message || "Could not load attendance status")
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     fetchOpenRecord()
+    const timer = setInterval(() => fetchOpenRecord(false), 30000)
+    const onFocus = () => fetchOpenRecord(false)
+    window.addEventListener("focus", onFocus)
+    return () => { clearInterval(timer); window.removeEventListener("focus", onFocus) }
   }, [fetchOpenRecord])
 
   // ─── Clock Out ──────────────────────────────────────────────────────────
@@ -93,21 +113,6 @@ export function SmartClockInOut() {
       setSubmitting(false)
     }
   }, [notification])
-
-  const handleClockOutRef = useRef(handleClockOut)
-  useEffect(() => {
-    handleClockOutRef.current = handleClockOut
-  }, [handleClockOut])
-
-  // ─── Auto clock-out at 7 PM ─────────────────────────────────────────────
-  useEffect(() => {
-    if (!activeRecord) return
-    if (currentTime.getHours() >= 19) {
-      // Trigger clock-out automatically
-      setNotification("You have been automatically clocked out at 7:00 PM")
-      handleClockOutRef.current()
-    }
-  }, [activeRecord, currentTime])
 
   // ─── Get GPS location ───────────────────────────────────────────────────
   const getLocation = (): Promise<string> =>
@@ -141,24 +146,21 @@ export function SmartClockInOut() {
         throw new Error(body.message || `Clock-in failed (${res.status})`)
       }
       const record = await res.json()
-      setActiveRecord(record)
-
-      // Determine status label from backend or compute locally
-      const now = new Date()
-      const hour = now.getHours()
-      const minute = now.getMinutes()
-      let label = record.status_label || 'Present'
-      if (!record.status_label) {
-        if (hour >= 13) label = 'Half Day'
-        else if (hour > 9 || (hour === 9 && minute > 0)) label = 'Late'
-        else label = 'Present'
-      }
+      const checkIn = record.check_in_time || record.clock_in
+      const clockDate = new Date(checkIn)
+      setActiveRecord({
+        ...record,
+        date: record.date || new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(clockDate),
+        clockIn: new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(clockDate),
+        clock_in: checkIn,
+      })
+      const label = record.status_label || (record.status === "half_day" ? "Half Day" : record.status === "late" ? "Late" : "Present")
       setAttendanceStatus(label)
 
       if (label === 'Half Day') {
-        setNotification(`You clocked in after 1:00 PM — recorded as Half Day. Shift starts at 9:00 AM.`)
+        setNotification("Your attendance is marked Half Day by the company policy.")
       } else if (label === 'Late') {
-        setNotification(`You clocked in after 9:00 AM — recorded as Late.`)
+        setNotification("Your attendance is marked Late by the company policy.")
       } else {
         setNotification("Clocked in successfully — you're on time! Have a great day! 🎉")
       }
@@ -181,7 +183,7 @@ export function SmartClockInOut() {
   }
 
   const timeStr = currentTime.toLocaleTimeString("en-US", {
-    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true, timeZone: "Asia/Kolkata"
   })
 
   // ─── Render ─────────────────────────────────────────────────────────────
@@ -218,7 +220,7 @@ export function SmartClockInOut() {
             Smart Clock In/Out
           </CardTitle>
           <CardDescription>
-            Attendance Rules: Before 9:00 AM = ✅ Present &bull; 9:01 AM–12:59 PM = 🟡 Late &bull; 1:00 PM–6:59 PM = 🟠 Half Day. Auto clock-out at 7:00 PM.
+            {policy ? `Shift ${policy.shiftStart}–${policy.shiftEnd} ${policy.timezone} · Clock-in cutoff ${policy.clockInCutoff} · Automatic clock-out ${policy.automaticClockOutTime}` : "Attendance is calculated and closed by your company’s attendance policy on the server."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -275,7 +277,7 @@ export function SmartClockInOut() {
 
               <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
                 <p className="text-sm text-orange-800">
-                  You will be automatically clocked out at <strong>7:00 PM</strong>
+                  You will be automatically clocked out at <strong>{policy?.automaticClockOutTime || "the company cutoff"}</strong>
                 </p>
               </div>
 
