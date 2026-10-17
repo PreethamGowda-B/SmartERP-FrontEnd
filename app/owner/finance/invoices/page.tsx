@@ -62,7 +62,7 @@ function InvoicesContent() {
     try {
       setLoading(true)
       const url = statusFilter === "all" ? "/api/invoices" : `/api/invoices?status=${statusFilter}`
-      const res = await apiClient<{ success: boolean; invoices: any[] }>(url)
+      const res = await apiClient<{ success: boolean; invoices: any[] }>(url, { skipCache: true } as any)
       if (res && res.success) {
         setInvoices(res.invoices || [])
       }
@@ -95,6 +95,15 @@ function InvoicesContent() {
       })
       toast({ title: "WhatsApp Dispatched", description: `Invoice link sent via WhatsApp to ${phone}.` })
     } catch (err: any) {
+      if (err?.status === 404) {
+        await fetchInvoices()
+        toast({
+          title: "Invoice no longer available",
+          description: "The invoice list was refreshed. Please select the current invoice and try again.",
+          variant: "destructive",
+        })
+        return
+      }
       // Direct Web WhatsApp fallback
       const cleanPhone = phone.replace(/[^0-9]/g, "")
       const invoiceNumber = inv.invoice_number || "Invoice"
@@ -121,6 +130,15 @@ function InvoicesContent() {
       })
       toast({ title: "Email Dispatched", description: `Invoice PDF emailed to ${email}.` })
     } catch (err: any) {
+      if (err?.status === 404) {
+        await fetchInvoices()
+        toast({
+          title: "Invoice no longer available",
+          description: "The invoice list was refreshed. Please select the current invoice and try again.",
+          variant: "destructive",
+        })
+        return
+      }
       toast({ title: "Email Failed", description: err.message || "Email dispatch failed. Verify email settings.", variant: "destructive" })
     }
   }
@@ -128,6 +146,10 @@ function InvoicesContent() {
   const handleDirectPrint = (invId: string) => {
     setViewingInvoiceId(invId)
   }
+
+  const handleInvoiceMissing = React.useCallback(() => {
+    void fetchInvoices()
+  }, [fetchInvoices])
 
   const filteredInvoices = invoices.filter((inv) => {
     const query = searchQuery.toLowerCase()
@@ -461,6 +483,7 @@ function InvoicesContent() {
         isOpen={Boolean(viewingInvoiceId)}
         invoiceId={viewingInvoiceId}
         onClose={() => setViewingInvoiceId(null)}
+        onInvoiceMissing={handleInvoiceMissing}
         onPaymentRecorded={() => fetchInvoices()}
         onOpenPayment={(inv) => setPaymentInvoice(inv)}
       />

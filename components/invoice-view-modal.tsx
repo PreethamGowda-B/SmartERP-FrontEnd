@@ -33,6 +33,7 @@ interface InvoiceViewModalProps {
   invoiceId: string | null
   isOpen: boolean
   onClose: () => void
+  onInvoiceMissing?: () => void
   onPaymentRecorded?: () => void
   onOpenPayment?: (invoice: any) => void
 }
@@ -41,6 +42,7 @@ export function InvoiceViewModal({
   invoiceId,
   isOpen,
   onClose,
+  onInvoiceMissing,
   onPaymentRecorded,
   onOpenPayment,
 }: InvoiceViewModalProps) {
@@ -55,17 +57,21 @@ export function InvoiceViewModal({
   } | null>(null)
 
   const printIframeRef = useRef<HTMLIFrameElement | null>(null)
+  const requestVersionRef = useRef(0)
 
   const fetchInvoiceDetails = React.useCallback(async (id: string) => {
+    const requestVersion = ++requestVersionRef.current
     try {
       setLoading(true)
+      setData(null)
       const res = await apiClient<{
         success: boolean
         invoice: any
         company: any
         lineItems: any[]
         payments: any[]
-      }>(`/api/invoices/${id}`)
+      }>(`/api/invoices/${id}`, { skipCache: true } as any)
+      if (requestVersion !== requestVersionRef.current) return
       if (res && res.success) {
         setData({
           invoice: res.invoice,
@@ -75,20 +81,27 @@ export function InvoiceViewModal({
         })
       }
     } catch (err: any) {
+      if (requestVersion !== requestVersionRef.current) return
+      setData(null)
+      if (err?.status === 404) onInvoiceMissing?.()
       toast({
-        title: "Error Loading Invoice",
-        description: err.message || "Failed to retrieve invoice details",
+        title: err?.status === 404 ? "Invoice no longer available" : "Error Loading Invoice",
+        description: err?.status === 404
+          ? "The invoice list is being refreshed. Close this window and select the current invoice."
+          : err.message || "Failed to retrieve invoice details",
         variant: "destructive",
       })
     } finally {
-      setLoading(false)
+      if (requestVersion === requestVersionRef.current) setLoading(false)
     }
-  }, [toast])
+  }, [onInvoiceMissing, toast])
 
   useEffect(() => {
     if (isOpen && invoiceId) {
       fetchInvoiceDetails(invoiceId)
     } else {
+      requestVersionRef.current += 1
+      setLoading(false)
       setData(null)
     }
   }, [isOpen, invoiceId, fetchInvoiceDetails])
