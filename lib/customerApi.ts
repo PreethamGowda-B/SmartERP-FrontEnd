@@ -67,6 +67,12 @@ const customerApi: AxiosInstance = axios.create({
 // ── Request interceptor: attach X-CSRF-Token and Bearer token ─────────────
 customerApi.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const method = (config.method || 'get').toLowerCase();
+  if (method === 'get') {
+    // Portal reads must come from the API after mutations; never reuse an HTTP
+    // cached pre-update list from the browser or an intermediary.
+    config.headers['Cache-Control'] = 'no-cache';
+    config.headers['Pragma'] = 'no-cache';
+  }
   if (['post', 'put', 'patch', 'delete'].includes(method) && csrfToken) {
     config.headers['X-CSRF-Token'] = csrfToken;
   }
@@ -82,6 +88,7 @@ customerApi.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 // ── Response interceptor: silent token refresh on 401 ────────────────────────
 let isRefreshing = false;
 let refreshSubscribers: Array<(token: string) => void> = [];
+let lastCustomerMutationAt = 0;
 
 function subscribeTokenRefresh(cb: (token: string) => void) {
   refreshSubscribers.push(cb);
@@ -93,7 +100,23 @@ function onRefreshed() {
 }
 
 customerApi.interceptors.response.use(
-  (response) => response,
+  async (response) => {
+    const method = (response.config.method || 'get').toLowerCase();
+    if (['post', 'put', 'patch', 'delete'].includes(method)) {
+      lastCustomerMutationAt = Date.now();
+    }
+    const payload = response.data;
+    const emptyList = Array.isArray(payload)
+      ? payload.length === 0
+      : !!payload && typeof payload === 'object' && ['jobs', 'requests', 'items', 'results', 'data']
+        .some((key) => Array.isArray((payload as any)[key]) && (payload as any)[key].length === 0);
+    const requestConfig = response.config as typeof response.config & { _emptyListRetry?: boolean };
+    if (method === 'get' && emptyList && Date.now() - lastCustomerMutationAt < 15000 && !requestConfig._emptyListRetry) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return customerApi({ ...requestConfig, _emptyListRetry: true } as any);
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 

@@ -109,8 +109,18 @@ export function setTokens(accessToken: string, refreshToken: string, isAdmin = f
 const inFlightGets = new Map<string, Promise<any>>()
 const getCache = new Map<string, { data: any; expiresAt: number }>()
 const GET_CACHE_TTL_MS = 3000 // 3 seconds
+let successfulMutationVersion = 0
+let lastSuccessfulMutationAt = 0
+
+function hasEmptyListPayload(payload: any): boolean {
+  if (Array.isArray(payload)) return payload.length === 0
+  if (!payload || typeof payload !== "object") return false
+  return ["jobs", "requests", "items", "results", "employees", "invoices", "bills", "data"]
+    .some((key) => Array.isArray(payload[key]) && payload[key].length === 0)
+}
 
 export function clearApiCache() {
+  successfulMutationVersion += 1
   inFlightGets.clear()
   getCache.clear()
 }
@@ -374,6 +384,9 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
   const method = (options.method || "GET").toUpperCase()
   const isGet = method === "GET"
   const skipCache = Boolean((options as any)?.skipCache) || Boolean(options.signal)
+  const staleReadRetries = Number((options as any)?.__staleReadRetries || 0)
+  const emptyListRetries = Number((options as any)?.__emptyListRetries || 0)
+  const mutationVersionAtStart = successfulMutationVersion
 
   if (!isGet) {
     getCache.clear()
@@ -408,6 +421,7 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
           ...options,
           headers,
           credentials: "include",
+          ...(isGet ? { cache: "no-store" as RequestCache } : {}),
           signal: controller.signal
         })
         clearTimeout(timeoutId)
@@ -452,7 +466,7 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
           const freshToken = await refreshAccessToken(path)
           if (freshToken) {
             headers["Authorization"] = `Bearer ${freshToken}`
-            res = await fetch(`${baseUrl}${path}`, { ...options, headers, credentials: "include" })
+            res = await fetch(`${baseUrl}${path}`, { ...options, headers, credentials: "include", ...(isGet ? { cache: "no-store" as RequestCache } : {}) })
             if (res.status === 401) {
               handleLogout()
               throw new Error("Authentication required. Please log in again.")
@@ -487,7 +501,29 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
       }
 
       const result = await res.json()
-      if (cacheKey) {
+      // A transient empty list immediately after a write should not erase a
+      // portal's populated view. Confirm it from the origin before returning it.
+      if (isGet && hasEmptyListPayload(result) && Date.now() - lastSuccessfulMutationAt < 15000 && emptyListRetries < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 250))
+        return apiClient<T>(path, {
+          ...options,
+          cache: "no-store",
+          skipCache: true,
+          __emptyListRetries: emptyListRetries + 1,
+        } as any, retries)
+      }
+      // A read that started before a successful write must not publish its
+      // stale snapshot over the updated portal state. Re-read it once from the
+      // origin without using the in-memory GET cache.
+      if (isGet && mutationVersionAtStart !== successfulMutationVersion && staleReadRetries < 2) {
+        return apiClient<T>(path, { ...options, cache: "no-store", skipCache: true, __staleReadRetries: staleReadRetries + 1 } as any, retries)
+      }
+      if (!isGet) {
+        successfulMutationVersion += 1
+        lastSuccessfulMutationAt = Date.now()
+        getCache.clear()
+      }
+      if (cacheKey && mutationVersionAtStart === successfulMutationVersion) {
         getCache.set(cacheKey, { data: result, expiresAt: Date.now() + GET_CACHE_TTL_MS })
       }
       return result
@@ -516,8 +552,9 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
   }
 
   if (cacheKey) {
-    const promise = executeRequest().finally(() => {
-      inFlightGets.delete(cacheKey)
+    let promise: Promise<T>
+    promise = executeRequest().finally(() => {
+      if (inFlightGets.get(cacheKey) === promise) inFlightGets.delete(cacheKey)
     })
     inFlightGets.set(cacheKey, promise)
     return promise
