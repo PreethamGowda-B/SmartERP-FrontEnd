@@ -106,6 +106,10 @@ export function SmartClockInOut() {
       setActiveRecord(null)
       setElapsedMs(0)
       setAttendanceStatus(null)
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("_clocked_in_date")
+        window.dispatchEvent(new CustomEvent("attendance-status-changed"))
+      }
       if (!notification) setNotification("Clocked out successfully.")
     } catch (err: any) {
       setError(err.message || "Failed to clock out")
@@ -156,6 +160,13 @@ export function SmartClockInOut() {
       })
       const label = record.status_label || (record.status === "half_day" ? "Half Day" : record.status === "late" ? "Late" : "Present")
       setAttendanceStatus(label)
+      // Keep the employee-wide operation gate in sync with this clock surface.
+      // The global gate uses this work-date marker for its fast verified path.
+      if (typeof window !== "undefined") {
+        const workDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(clockDate)
+        localStorage.setItem("_clocked_in_date", workDate)
+        window.dispatchEvent(new CustomEvent("attendance-status-changed"))
+      }
 
       if (label === 'Half Day') {
         setNotification("Your attendance is marked Half Day by the company policy.")

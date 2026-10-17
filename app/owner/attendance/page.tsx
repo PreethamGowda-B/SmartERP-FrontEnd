@@ -17,6 +17,7 @@ import { SkeletonList } from "@/components/ui/skeleton-card"
 import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { AttendanceMetric, AttendanceStatus } from "@/components/attendance/attendance-ui"
 
 function authHeaders(): Record<string, string> {
   const token = getAuthToken()
@@ -79,15 +80,21 @@ export default function OwnerAttendancePage() {
   const [policyMessage, setPolicyMessage] = useState("")
   const [policyExpanded, setPolicyExpanded] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [loadError, setLoadError] = useState("")
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null)
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
 
   const fetchAttendanceOverview = async (showLoading = true) => {
     if (showLoading) setLoading(true)
+    setLoadError("")
     try {
       const data = await apiClient("/api/attendance/overview")
       setEmployees(Array.isArray(data.employees) ? data.employees : [])
       setSummary(data.summary || { total: 0, present: 0, absent: 0, late: 0, on_leave: 0 })
+      setUpdatedAt(new Date())
     } catch (err: any) {
       logger.error("Error fetching attendance overview:", err)
+      setLoadError(err?.message || "Could not load attendance overview.")
     } finally {
       if (showLoading) setLoading(false)
     }
@@ -159,6 +166,9 @@ export default function OwnerAttendancePage() {
     if (!employee.check_in_time) {
       return <Badge variant="destructive">Absent</Badge>
     }
+    if (employee.status === "absent") {
+      return <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-300">Clocked in · review status</Badge>
+    }
 
     if (!employee.check_out_time) {
       return <Badge className="bg-blue-500">Checked In</Badge>
@@ -178,6 +188,10 @@ export default function OwnerAttendancePage() {
     }
   }
 
+  const statusForFilter = (employee: EmployeeAttendance) => employee.on_leave && !employee.check_in_time ? "leave" : employee.check_in_time && !employee.check_out_time ? "working" : employee.is_late ? "late" : employee.status === "half_day" ? "half_day" : employee.check_in_time ? "present" : "absent"
+  const filteredEmployees = statusFilter ? employees.filter((employee) => statusForFilter(employee) === statusFilter) : employees
+  const halfDays = employees.filter((employee) => employee.status === "half_day").length
+
   return (
     <OwnerLayout>
       <div className="p-4 sm:p-6 space-y-6 max-w-[1600px] mx-auto">
@@ -190,7 +204,8 @@ export default function OwnerAttendancePage() {
             <p className="text-muted-foreground mt-1">A live view of today’s shift, exceptions, and team coverage.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="h-9 px-3 rounded-full gap-2 border-emerald-500/25 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"><span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Live · 30 sec sync</Badge>
+            <div className="hidden text-right text-xs text-muted-foreground sm:block"><div>Asia/Kolkata · work date</div><div>{updatedAt ? `Updated ${updatedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}` : "Syncing attendance"}</div></div>
+            <Badge variant="outline" className="h-9 px-3 rounded-full gap-2 border-emerald-500/25 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"><span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Live · 30 sec</Badge>
             <Button variant="outline" className="h-9 gap-2 rounded-xl" onClick={refreshAttendance} disabled={refreshing}><RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh</Button>
           <ExportButton
             filename={`Attendance_Report_${new Date().toISOString().split('T')[0]}`}
@@ -297,64 +312,27 @@ export default function OwnerAttendancePage() {
           </Card>
         )}
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
-          <Card className="premium-card hover-lift-subtle border border-blue-500/20 bg-gradient-to-br from-blue-500/[0.08] to-transparent">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Total Staff</CardTitle>
-              <Users className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-black tracking-tight">{Number(summary.total || 0)}</div>
-            </CardContent>
-          </Card>
+        {loadError && <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-destructive/25 bg-destructive/5 p-4 text-sm sm:flex-row sm:items-center sm:justify-between"><span>{loadError}</span><Button size="sm" variant="outline" onClick={() => fetchAttendanceOverview()}>Retry</Button></div>}
 
-          <Card className="premium-card hover-lift-subtle border border-green-500/20 bg-gradient-to-br from-green-500/[0.08] to-transparent">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Present</CardTitle>
-              <UserCheck className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-black tracking-tight text-green-600">{Number(summary.present || 0)}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="premium-card hover-lift-subtle border border-red-500/20 bg-gradient-to-br from-red-500/[0.06] to-transparent">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Absent</CardTitle>
-              <UserX className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-black tracking-tight text-red-600">{Number(summary.absent || 0)}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="premium-card hover-lift-subtle border border-orange-500/20 bg-gradient-to-br from-orange-500/[0.08] to-transparent">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Late Arrivals</CardTitle>
-              <Clock className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-black tracking-tight text-orange-600">{Number(summary.late || 0)}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="premium-card hover-lift-subtle border border-cyan-500/20 bg-gradient-to-br from-cyan-500/[0.08] to-transparent">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">On Approved Leave</CardTitle>
-              <CalendarCheck className="h-4 w-4 text-cyan-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-black tracking-tight text-cyan-600">{Number(summary.on_leave || 0)}</div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+          <AttendanceMetric label="Workforce" value={Number(summary.total || 0)} detail="Employees in scope" icon={<Users className="h-4 w-4" />} tone="blue" />
+          <AttendanceMetric label="Present" value={Number(summary.present || 0)} detail="Punched in today" icon={<UserCheck className="h-4 w-4" />} tone="green" active={statusFilter === "present"} onClick={() => setStatusFilter(statusFilter === "present" ? null : "present")} />
+          <AttendanceMetric label="Absent" value={Number(summary.absent || 0)} detail="No punch recorded" icon={<UserX className="h-4 w-4" />} tone="rose" active={statusFilter === "absent"} onClick={() => setStatusFilter(statusFilter === "absent" ? null : "absent")} />
+          <AttendanceMetric label="Late arrivals" value={Number(summary.late || 0)} detail="Policy marked late" icon={<Clock className="h-4 w-4" />} tone="amber" active={statusFilter === "late"} onClick={() => setStatusFilter(statusFilter === "late" ? null : "late")} />
+          <AttendanceMetric label="Half-day" value={halfDays} detail="Current roster status" icon={<Activity className="h-4 w-4" />} tone="orange" active={statusFilter === "half_day"} onClick={() => setStatusFilter(statusFilter === "half_day" ? null : "half_day")} />
+          <AttendanceMetric label="On leave" value={Number(summary.on_leave || 0)} detail="Approved leave" icon={<CalendarCheck className="h-4 w-4" />} tone="sky" active={statusFilter === "leave"} onClick={() => setStatusFilter(statusFilter === "leave" ? null : "leave")} />
         </div>
 
         {/* Employee Attendance Table */}
-        <Card className="border border-border/70 shadow-xs">
+        <Card className="overflow-hidden rounded-2xl border border-border/70 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/60 py-4">
+            <div><CardTitle className="text-base">Today’s employee attendance</CardTitle><p className="mt-1 text-xs text-muted-foreground">Search, sort, open details, or filter from the summary cards.</p></div>
+            {statusFilter && <Button variant="ghost" size="sm" onClick={() => setStatusFilter(null)}>Clear filter · {statusFilter.replace("_", " ")}</Button>}
+          </CardHeader>
           <CardContent className="p-0">
+            <div className="hidden p-3 sm:block">
             <EnterpriseDataTable<EmployeeAttendance>
-              data={employees}
+              data={filteredEmployees}
               columns={[
                 {
                   id: "employee",
@@ -424,13 +402,22 @@ export default function OwnerAttendancePage() {
               ]}
               getRowId={(emp) => String(emp.user_id)}
               searchPlaceholder="Search attendance by employee name or email..."
-              isLoading={loading}
               storageKey="owner_attendance_table"
-              emptyTitle="No attendance records found"
-              emptyDescription="There are no attendance records logged for today yet."
               emptyIcon={Users}
               onRowClick={(emp) => router.push(`/owner/attendance/${emp.user_id}`)}
+              isLoading={loading}
+              isError={Boolean(loadError) && employees.length === 0}
+              errorMessage={loadError}
+              onRetry={() => fetchAttendanceOverview()}
+              emptyTitle="No employees match this view"
+              emptyDescription={statusFilter ? "Clear the active status filter to see everyone." : "Employee attendance records will appear here."}
             />
+            </div>
+            <div className="divide-y sm:hidden">
+              {loading && employees.length === 0 ? <div className="p-5 text-sm text-muted-foreground">Loading attendance…</div> : filteredEmployees.length ? filteredEmployees.map((emp) => <button type="button" key={emp.user_id} onClick={() => router.push(`/owner/attendance/${emp.user_id}`)} className="flex w-full items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
+                <div className="flex min-w-0 items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-semibold text-primary">{(emp.employee_name || "E").slice(0, 1).toUpperCase()}</span><span className="min-w-0"><span className="block truncate text-sm font-semibold">{emp.employee_name}</span><span className="block truncate text-xs text-muted-foreground">{emp.employee_email}</span><span className="mt-1 block text-xs text-muted-foreground">In {formatTime(emp.check_in_time)} · Out {formatTime(emp.check_out_time)} · {emp.working_hours != null ? `${Number(emp.working_hours).toFixed(1)}h` : "—"}</span></span></div><AttendanceStatus status={statusForFilter(emp) === "working" ? "clocked-in" : statusForFilter(emp)} />
+              </button>) : <div className="p-8 text-center text-sm text-muted-foreground">No employees match this view.</div>}
+            </div>
           </CardContent>
         </Card>
       </div>

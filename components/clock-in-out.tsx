@@ -143,13 +143,13 @@ export function ClockInOut({
     })
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="overflow-hidden rounded-2xl border-border/70 shadow-sm">
+      <CardHeader className="border-b border-border/60 bg-gradient-to-r from-primary/[0.06] via-transparent to-emerald-500/[0.04] pb-4">
         <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Time Tracking
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Clock className="h-5 w-5" /></span>
+          Today’s attendance
         </CardTitle>
-        <CardDescription>Clock in/out and track your work hours with GPS location</CardDescription>
+        <CardDescription>One live view of your saved shift and the company clock-in window.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
 
@@ -190,12 +190,12 @@ export function ClockInOut({
         )}
 
         {/* Status + Clock In/Out button */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Current Status</p>
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={status === "clocked-in" ? "default" : "secondary"}>
-                {status === "clocked-in" ? "Clocked In" : "Clocked Out"}
+              <Badge className={status === "clocked-in" ? "border-emerald-300 bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300" : ""} variant={status === "clocked-in" ? "outline" : "secondary"}>
+                {status === "clocked-in" ? "Working now" : attendanceRecord?.check_out_time ? "Shift completed" : "Not clocked in"}
               </Badge>
               {attendanceRecord?.is_late && (
                 <Badge variant="outline" className="border-yellow-500 text-yellow-700 dark:text-yellow-400">
@@ -207,13 +207,15 @@ export function ClockInOut({
                   🤖 Auto Clock-Out ({policySummary?.automaticClockOutTime || "scheduled"})
                 </Badge>
               )}
-              <span className="text-sm text-muted-foreground font-mono">{getCurrentTime()}</span>
+              <span className="text-sm text-muted-foreground font-mono tabular-nums">IST · {getCurrentTime()}</span>
             </div>
+            {attendanceRecord?.check_in_time && <p className="pt-1 text-xs text-muted-foreground">Started {new Date(attendanceRecord.check_in_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })}{status === "clocked-in" ? ` · ${formatDuration(Math.max(0, currentTime.getTime() - new Date(attendanceRecord.check_in_time).getTime()))} elapsed` : ""}</p>}
           </div>
           <Button
             onClick={handleClockAction}
             disabled={isLoading || (status === "clocked-out" && (!eligibility?.allowed || !!attendanceRecord?.check_out_time))}
             size="lg"
+            className="min-h-12 w-full rounded-xl px-6 text-base font-semibold sm:w-auto"
             variant={status === "clocked-in" ? "destructive" : "default"}
           >
             {isLoading ? (
@@ -271,4 +273,10 @@ export function ClockInOut({
       </CardContent>
     </Card>
   )
+}
+
+function formatDuration(milliseconds: number) {
+  const minutes = Math.floor(milliseconds / 60000)
+  const hours = Math.floor(minutes / 60)
+  return `${hours}h ${String(minutes % 60).padStart(2, "0")}m`
 }

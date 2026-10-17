@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Calendar, Clock, CheckCircle2, XCircle, AlertCircle, List, CalendarDays } from "lucide-react"
+import { ArrowLeft, Calendar, Clock, CheckCircle2, XCircle, AlertCircle, List, CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { useAuth } from "@/contexts/auth-context"
 import { AttendanceCalendar, DayDetail } from "@/components/attendance-calendar"
@@ -48,21 +48,25 @@ export default function EmployeeAttendanceDetailPage() {
     const [records, setRecords] = useState<AttendanceRecord[]>([])
     const [summary, setSummary] = useState<AttendanceSummary | null>(null)
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState("")
+    const [refreshing, setRefreshing] = useState(false)
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
     const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
     const [selectedDay, setSelectedDay] = useState<AttendanceRecord | null>(null)
 
-    const fetchEmployeeAttendance = useCallback(async () => {
-        setLoading(true)
+    const fetchEmployeeAttendance = useCallback(async (showLoading = true) => {
+        if (showLoading) setLoading(true)
+        setError("")
         try {
             const data = await apiClient(`/api/attendance/employee/${userId}?month=${selectedMonth}&year=${selectedYear}`)
             setRecords(Array.isArray(data.records) ? data.records : [])
             setSummary(data.summary || null)
         } catch (err: any) {
             logger.error("Error fetching employee attendance:", err)
+            setError(err?.message || "Could not load this employee's attendance.")
         } finally {
-            setLoading(false)
+            if (showLoading) setLoading(false)
         }
     }, [userId, selectedMonth, selectedYear])
 
@@ -82,7 +86,7 @@ export default function EmployeeAttendanceDetailPage() {
     }
 
     const formatDate = (date: string) => {
-        return new Date(date).toLocaleDateString("en-IN", {
+        return new Date(`${date.slice(0, 10)}T12:00:00+05:30`).toLocaleDateString("en-IN", {
             weekday: "short",
             month: "short",
             day: "numeric",
@@ -125,24 +129,32 @@ export default function EmployeeAttendanceDetailPage() {
         "July", "August", "September", "October", "November", "December"
     ]
 
+    const changeMonth = (delta: number) => {
+        const next = new Date(selectedYear, selectedMonth - 1 + delta, 1)
+        setSelectedMonth(next.getMonth() + 1)
+        setSelectedYear(next.getFullYear())
+    }
+
     return (
         <OwnerLayout>
-            <div className="p-6 space-y-6">
+            <div className="mx-auto max-w-[1440px] space-y-5 p-4 sm:p-6">
                 {/* Header */}
                 <div className="flex items-center gap-4">
                     <Button variant="outline" size="icon" onClick={() => router.back()}>
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
-                    <div>
-                        <h1 className="text-3xl font-bold">Employee Attendance</h1>
-                        <p className="text-muted-foreground">Detailed attendance records and calendar view</p>
+                    <div className="min-w-0 flex-1">
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary">Workforce · Attendance detail</p>
+                        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Employee attendance</h1>
+                        <p className="mt-1 break-all text-sm text-muted-foreground">Employee ID · {userId} · Records use Asia/Kolkata work dates</p>
                     </div>
+                    <Button variant="outline" size="icon" aria-label="Refresh attendance" disabled={refreshing} onClick={async () => { setRefreshing(true); await fetchEmployeeAttendance(false); setRefreshing(false) }}><RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /></Button>
                 </div>
 
                 {/* Month/Year Selector */}
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex gap-4">
+                <Card className="rounded-2xl border-border/70 shadow-sm">
+                    <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end sm:justify-between sm:p-5">
+                        <div className="grid flex-1 grid-cols-2 gap-3 sm:max-w-md">
                             <div className="flex-1">
                                 <label className="text-sm font-medium mb-2 block">Month</label>
                                 <select
@@ -172,12 +184,19 @@ export default function EmployeeAttendanceDetailPage() {
                                 </select>
                             </div>
                         </div>
+                        <div className="flex items-center justify-between gap-2 sm:justify-end">
+                            <Button variant="outline" size="sm" onClick={() => changeMonth(-1)} aria-label="Previous month"><ChevronLeft className="h-4 w-4" /><span className="sm:hidden">Previous</span></Button>
+                            <span className="min-w-32 text-center text-sm font-semibold">{months[selectedMonth - 1]} {selectedYear}</span>
+                            <Button variant="outline" size="sm" onClick={() => changeMonth(1)} aria-label="Next month"><span className="sm:hidden">Next</span><ChevronRight className="h-4 w-4" /></Button>
+                        </div>
                     </CardContent>
                 </Card>
 
+                {error && <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-destructive/25 bg-destructive/5 p-4 text-sm sm:flex-row sm:items-center sm:justify-between"><span>{error}</span><Button size="sm" variant="outline" onClick={() => fetchEmployeeAttendance()}>Retry</Button></div>}
+
                 {/* Summary Cards */}
                 {summary && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Days</CardTitle>
@@ -285,8 +304,8 @@ export default function EmployeeAttendanceDetailPage() {
                                         className="flex items-center justify-between p-4 border border-border/50 rounded-xl hover:bg-accent/50 transition-all duration-300"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className="text-center min-w-[60px]">
-                                                <p className="text-2xl font-black tracking-tighter">{new Date(record.date).getDate()}</p>
+                                            <div className="text-center min-w-[48px] sm:min-w-[60px]">
+                                                <p className="text-2xl font-black tracking-tighter">{record.date.slice(8, 10)}</p>
                                                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                                                     {new Date(record.date).toLocaleDateString("en-IN", { weekday: "short" })}
                                                 </p>
@@ -312,7 +331,7 @@ export default function EmployeeAttendanceDetailPage() {
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-6">
+                                        <div className="flex w-full items-center justify-between gap-3 border-t pt-3 sm:w-auto sm:justify-start sm:border-0 sm:pt-0 sm:gap-6">
                                             <div className="text-right">
                                                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Hours</p>
                                                 <p className="font-black tracking-tighter text-lg">
@@ -320,7 +339,7 @@ export default function EmployeeAttendanceDetailPage() {
                                                 </p>
                                             </div>
                                             <div className="flex flex-col gap-1 items-end">
-                                                {getStatusBadge(record.status)}
+                                                {record.check_in_time && record.status === "absent" ? <Badge variant="outline" className="border-amber-400 text-amber-800 dark:text-amber-300">Clocked in · review status</Badge> : getStatusBadge(record.status)}
                                                 <div className="flex gap-1 flex-wrap justify-end">
                                                     {record.is_late && (
                                                         <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-tighter text-orange-500 border-orange-500/30">

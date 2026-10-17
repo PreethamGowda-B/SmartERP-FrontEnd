@@ -26,6 +26,7 @@ import {
   Timer,
   ChevronRight,
   TrendingUp,
+  RefreshCw,
 } from "lucide-react"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { useAuth } from "@/contexts/auth-context"
@@ -99,7 +100,12 @@ export default function TimeTrackingPage() {
         apiClient<any>("/api/attendance/today"),
         apiClient<any>("/api/attendance/policy"),
       ])
-      if (attendanceResult.status === "fulfilled") setTodayAttendance(attendanceResult.value)
+      if (attendanceResult.status === "fulfilled") {
+        setTodayAttendance(attendanceResult.value)
+        setError("")
+      } else {
+        setError("Could not refresh today's attendance. Check your connection and try again.")
+      }
       if (policyResult.status === "fulfilled") setAttendancePolicy(policyResult.value.policy)
     } catch (err: any) {
       logger.error("Error fetching today's attendance:", err)
@@ -256,7 +262,7 @@ export default function TimeTrackingPage() {
   const canClockIn = !todayAttendance?.check_in_time && pendingOfflineCount === 0
 
   // Monthly summary stats
-  const totalDaysPresent = history.filter((r) => ["present", "late", "half_day"].includes(r.status || "")).length
+  const totalDaysPresent = history.filter((r) => Boolean(r.check_in_time) || ["present", "late", "half_day"].includes(r.status || "")).length
   const totalHoursWorked = history.reduce((acc, r) => acc + (parseFloat(String(r.working_hours)) || 0), 0)
   const recordedCheckIns = history.filter((r) => Boolean(r.check_in_time))
   const onTimeCount = recordedCheckIns.filter((r) => !r.is_late && r.status !== "late").length
@@ -275,11 +281,12 @@ export default function TimeTrackingPage() {
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Time &amp; Shift Console</h1>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              GPS verified shift logging, live work timers, and monthly attendance audit trail.
+              Company attendance status, your active shift timer, and recorded work history.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => { fetchTodayAttendance(); fetchHistory(); refreshPendingCount() }} aria-label="Refresh attendance"><RefreshCw className="h-4 w-4" /> <span className="hidden sm:inline">Refresh</span></Button>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/60 border border-border/80 text-xs font-semibold">
               <span className={cn("w-2 h-2 rounded-full", isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
               <span>{isOnline ? "Connected to attendance service" : "Offline — punches are not submitted"}</span>
@@ -288,7 +295,7 @@ export default function TimeTrackingPage() {
         </div>
 
         {/* Shift Schedule Timeline Banner */}
-        <Card className="border-border/80 shadow-xs bg-gradient-to-r from-card via-amber-500/5 to-card overflow-hidden">
+        <Card className="overflow-hidden rounded-2xl border-border/80 bg-gradient-to-r from-card via-amber-500/5 to-card shadow-sm">
           <CardContent className="p-5 sm:p-6">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
               <div className="space-y-2">
@@ -342,9 +349,9 @@ export default function TimeTrackingPage() {
         )}
 
         {/* Primary Station: Live Workstation Shift Hub */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
           {/* Main Clock-In/Out Console */}
-          <Card className="lg:col-span-7 border-border/80 shadow-xs flex flex-col justify-between">
+          <Card className="flex flex-col justify-between rounded-2xl border-border/80 shadow-sm lg:col-span-7">
             <CardHeader className="pb-4 border-b border-border/60">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -554,9 +561,11 @@ export default function TimeTrackingPage() {
                 {Array.isArray(history) &&
                   history.map((record) => {
                     const isLateRecord = record.is_late || record.status === "late"
-                    const isPresent = ["present", "late", "half_day"].includes(record.status || "")
+                    const hasClockIn = Boolean(record.check_in_time)
+                    const inconsistentAbsent = hasClockIn && record.status === "absent"
+                    const isPresent = hasClockIn || ["present", "late", "half_day"].includes(record.status || "")
                     const dayNumber = Number(record.date.slice(8, 10))
-                    const statusLabel = record.status === "half_day" ? "Half day" : ["leave", "on_leave"].includes(record.status || "") ? "On leave" : isPresent ? "Present" : "Absent"
+                    const statusLabel = inconsistentAbsent ? "Clocked in · review status" : record.status === "half_day" ? "Half day" : ["leave", "on_leave"].includes(record.status || "") ? "On leave" : isPresent ? "Present" : "Absent"
 
                     return (
                       <div
@@ -611,6 +620,8 @@ export default function TimeTrackingPage() {
                                 ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30"
                                 : record.status === "half_day"
                                   ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                                  : inconsistentAbsent
+                                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
                                   : isPresent
                                     ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                                     : "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
