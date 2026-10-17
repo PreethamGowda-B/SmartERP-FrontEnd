@@ -279,7 +279,7 @@ export default function UnifiedGSTPage() {
       </div>
 
       <Dialog open={!!selectedRun} onOpenChange={(open) => { if (!open) setSelectedRun(null) }}>
-        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
+        <DialogContent className="max-h-[92dvh] max-w-6xl w-[calc(100vw-1.5rem)] sm:w-full p-4 sm:p-6 overflow-y-auto rounded-2xl">
           {selectedRun && <>
             <DialogHeader>
               <DialogTitle>Reconciliation review · {selectedRun.run.financial_period}</DialogTitle>

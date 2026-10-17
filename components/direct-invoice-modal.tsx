@@ -326,7 +326,7 @@ export function DirectInvoiceModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl w-[96vw] max-h-[92vh] overflow-y-auto rounded-3xl p-5 sm:p-8">
+      <DialogContent className="max-w-4xl w-[calc(100vw-1.5rem)] sm:w-[94vw] max-h-[92dvh] overflow-y-auto rounded-2xl sm:rounded-3xl p-4 sm:p-7">
         <DialogHeader className="sr-only">
           <DialogTitle>Direct Invoice Generator</DialogTitle>
           <DialogDescription>Create and issue counter and walk-in tax invoices</DialogDescription>
@@ -540,19 +540,19 @@ export function DirectInvoiceModal({
               </div>
             </div>
 
-            <DialogFooter className="flex gap-2">
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
               <Button
                 variant="outline"
                 onClick={() => setStep("form")}
                 disabled={submitting}
-                className="rounded-xl text-xs"
+                className="w-full sm:w-auto rounded-xl text-xs"
               >
                 Back to Edit
               </Button>
               <Button
                 onClick={handleIssueInvoice}
                 disabled={submitting}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl gap-2"
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl gap-2"
               >
                 {submitting ? (
                   <>
@@ -942,39 +942,41 @@ export function DirectInvoiceModal({
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="text-right">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:text-right">
                   <div className="text-[10px] font-bold text-muted-foreground uppercase">Grand Total</div>
-                  <div className="text-2xl font-black text-foreground">
+                  <div className="text-xl sm:text-2xl font-black text-foreground">
                     ₹{calculations.grandTotal.toLocaleString("en-IN")}
                   </div>
                 </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setStep("preview")}
-                  className="rounded-xl text-xs font-bold gap-1.5"
-                >
-                  <Eye className="w-3.5 h-3.5" /> Preview
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setStep("preview")}
+                    className="flex-1 sm:flex-none rounded-xl text-xs font-bold gap-1.5"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Preview
+                  </Button>
 
-                <Button
-                  type="button"
-                  onClick={handleIssueInvoice}
-                  disabled={submitting}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl gap-2 shadow-md shadow-primary/20"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Issuing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Issue Invoice
-                    </>
-                  )}
-                </Button>
+                  <Button
+                    type="button"
+                    onClick={handleIssueInvoice}
+                    disabled={submitting}
+                    className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl gap-2 shadow-md shadow-primary/20"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Issuing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Issue Invoice
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
 

@@ -117,7 +117,7 @@ export function VoiceInputModal({ isOpen, onClose, onSuccess, onError, onListeni
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { stopListening(); onClose() } }}>
-      <DialogContent className="sm:max-w-md rounded-2xl p-6 border-indigo-200 dark:border-indigo-900 shadow-2xl">
+      <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md rounded-2xl p-4 sm:p-6 border-indigo-200 dark:border-indigo-900 shadow-2xl max-h-[92dvh] overflow-y-auto">
         <DialogHeader className="text-center">
           <div className="mx-auto w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 mb-2">
             <Volume2 className="h-6 w-6" />
@@ -179,15 +179,15 @@ export function VoiceInputModal({ isOpen, onClose, onSuccess, onError, onListeni
           )}
         </div>
 
-        <DialogFooter className="flex sm:justify-between gap-2">
-          <Button variant="outline" size="sm" onClick={() => { stopListening(); onClose() }} className="rounded-xl text-xs">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
+          <Button variant="outline" size="sm" onClick={() => { stopListening(); onClose() }} className="w-full sm:w-auto rounded-xl text-xs">
             Close
           </Button>
           <Button
             size="sm"
             onClick={handleProcessVoice}
             disabled={!transcript.trim() || isProcessing}
-            className="rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-1.5 shadow-sm"
+            className="w-full sm:w-auto rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-1.5 shadow-sm"
           >
             {isProcessing ? (
               <>

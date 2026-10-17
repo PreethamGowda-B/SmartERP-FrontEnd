@@ -4,7 +4,7 @@ import * as React from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  Sparkles, X, Send, Bot, User, Minimize2, Maximize2, ChevronDown, ChevronUp,
+  Sparkles, X, Send, Bot, User, Minimize2, Maximize2, ChevronDown, ChevronUp, ChevronLeft,
   Copy, RotateCcw, ExternalLink, Loader2,
   MessageSquarePlus, Bug, AlertTriangle, Lock, Zap,
   History, Plus, Trash2, Edit3, Search, Check, Brain, TrendingUp, Package,
@@ -895,10 +895,15 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
               title="Open SmartERP AI Operations Assistant"
               aria-label="Open SmartERP AI assistant"
               aria-haspopup="dialog"
-              className="group relative flex h-[68px] w-[68px] items-center justify-center rounded-full border border-white/90 bg-gradient-to-br from-white via-[#f7f5ff] to-[#eceaff] shadow-[0_10px_32px_rgba(79,70,229,.2)] ring-1 ring-violet-200/80 transition-shadow hover:shadow-[0_12px_36px_rgba(79,70,229,.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-400/40 motion-reduce:transition-none"
+              className="group relative flex h-14 w-14 sm:h-[68px] sm:w-[68px] items-center justify-center rounded-full border border-white/90 bg-gradient-to-br from-white via-[#f7f5ff] to-[#eceaff] shadow-[0_10px_32px_rgba(79,70,229,.2)] ring-1 ring-violet-200/80 transition-shadow hover:shadow-[0_12px_36px_rgba(79,70,229,.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-400/40 motion-reduce:transition-none"
             >
               <span className="pointer-events-none absolute inset-1 rounded-full bg-gradient-to-br from-violet-100/80 to-sky-100/70" />
-              <SmartAIRobot mood={robotMood} size="lg" />
+              <div className="hidden sm:block">
+                <SmartAIRobot mood={robotMood} size="lg" />
+              </div>
+              <div className="sm:hidden">
+                <SmartAIRobot mood={robotMood} size="sm" />
+              </div>
             </motion.button>
           </motion.div>
         )}
@@ -915,10 +920,10 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
             style={{ overscrollBehavior: "contain" }}
             className={cn(
-              "fixed z-40 flex flex-col overflow-hidden overscroll-contain border border-violet-200/70 bg-background shadow-[0_24px_90px_rgba(19,24,48,.25)] dark:border-violet-300/15",
+              "fixed z-50 flex flex-col overflow-hidden overscroll-contain border border-violet-200/70 bg-background shadow-[0_24px_90px_rgba(19,24,48,.25)] dark:border-violet-300/15",
               "right-3 bottom-[max(env(safe-area-inset-bottom),0.75rem)] h-[min(720px,calc(100dvh-1.5rem))] w-[min(430px,calc(100vw-1.5rem))] rounded-[26px]",
-              "max-sm:inset-x-0 max-sm:bottom-[env(safe-area-inset-bottom)] max-sm:top-[env(safe-area-inset-top)] max-sm:h-auto max-sm:w-full max-sm:rounded-none",
-              isExpanded && "inset-3 h-auto w-auto rounded-[28px] max-sm:inset-x-0 max-sm:top-[env(safe-area-inset-top)] max-sm:bottom-[env(safe-area-inset-bottom)] max-sm:rounded-none",
+              "max-sm:inset-0 max-sm:h-dvh max-sm:w-screen max-sm:rounded-none max-sm:border-none",
+              isExpanded && "inset-3 h-auto w-auto rounded-[28px] max-sm:inset-0 max-sm:rounded-none",
               isMinimized && "inset-auto bottom-[max(env(safe-area-inset-bottom),1rem)] right-4 h-[76px] w-[min(360px,calc(100vw-2rem))] rounded-2xl shadow-xl max-sm:bottom-[max(env(safe-area-inset-bottom),0.75rem)] max-sm:right-3 max-sm:w-[calc(100vw-1.5rem)]"
             )}
             role="dialog"
@@ -967,7 +972,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                   onClick={startNewConversation}>
                   <Plus className="h-4 w-4 text-muted-foreground" />
                 </Button>
-                {!isMinimized && <Button variant="ghost" size="icon" aria-label={isExpanded ? "Restore chat window size" : "Expand chat window"} title={isExpanded ? "Restore size" : "Expand"} className="h-8 w-8 rounded-lg hover:bg-muted/60"
+                {!isMinimized && <Button variant="ghost" size="icon" aria-label={isExpanded ? "Restore chat window size" : "Expand chat window"} title={isExpanded ? "Restore size" : "Expand"} className="hidden sm:inline-flex h-8 w-8 rounded-lg hover:bg-muted/60"
                   onClick={() => setIsExpanded(s => !s)}>
                   {isExpanded ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
                 </Button>}
@@ -983,19 +988,28 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
             </div>
 
             {!isMinimized && (
-              <div className="flex flex-1 overflow-hidden">
+              <div className="flex flex-1 overflow-hidden relative">
                 {/* ── History Sidebar ───────────────────────────────────────── */}
                 <AnimatePresence>
                   {showHistory && (
                     <motion.div
                       initial={{ width: 0, opacity: 0 }}
-                      animate={{ width: 200, opacity: 1 }}
+                      animate={{ width: "auto", opacity: 1 }}
                       exit={{ width: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }}
-                      className="flex flex-col border-r border-border/60 bg-muted/20 shrink-0 overflow-hidden"
+                      className="flex flex-col border-r border-border/60 bg-muted/20 shrink-0 overflow-hidden w-full sm:w-[220px] max-sm:absolute max-sm:inset-0 max-sm:z-30 max-sm:bg-background"
                     >
-                      <div className="p-2 border-b border-border/40">
-                        <div className="relative">
+                      <div className="p-2 border-b border-border/40 flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 sm:hidden shrink-0"
+                          onClick={() => setShowHistory(false)}
+                          aria-label="Back to chat"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <div className="relative flex-1">
                           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                           <Input
                             value={historySearch}
@@ -1016,7 +1030,12 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                                   ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
                                   : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
                               )}
-                              onClick={() => renamingConvId !== conv.id && loadConversation(conv)}
+                              onClick={() => {
+                                if (renamingConvId !== conv.id) {
+                                  loadConversation(conv)
+                                  setShowHistory(false)
+                                }
+                              }}
                             >
                               <MessageSquarePlus className="h-3 w-3 shrink-0" />
                               {renamingConvId === conv.id ? (
@@ -1342,7 +1361,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                   </AnimatePresence>
 
                   {/* Input Area */}
-                  <div className="p-4 border-t border-border/60 bg-background/50 backdrop-blur shrink-0">
+                  <div className="p-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:p-4 border-t border-border/60 bg-background/50 backdrop-blur shrink-0">
                     <div className="flex items-end gap-2">
                       <div className="flex-1 relative">
                         <Textarea

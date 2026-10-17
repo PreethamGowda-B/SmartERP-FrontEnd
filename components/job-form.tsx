@@ -247,14 +247,14 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
   }, [])
 
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader>
+    <Card className="w-full max-w-2xl border-0 shadow-none p-0">
+      <CardHeader className="px-0 sm:px-6 pt-0">
         <CardTitle>{job ? "Edit Job" : "Create New Job"}</CardTitle>
         <CardDescription>
           {job ? "Update job details and assignments" : "Add a new project to your job list"}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0 sm:px-6 pb-0">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* View Switcher: General Job vs Machine-Based Job */}
           <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
@@ -488,8 +488,11 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
             onChange={handleVisibilityChange}
           />
 
-          <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={isLoading}>
+          <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -500,9 +503,6 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
               ) : (
                 "Create Job"
               )}
-            </Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
             </Button>
           </div>
         </form>

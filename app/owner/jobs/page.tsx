@@ -391,7 +391,7 @@ function OwnerJobsPageContent() {
 
         {/* Job Form Dialog */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogContent className="max-w-4xl w-[calc(100vw-1.5rem)] sm:w-full p-4 sm:p-6 max-h-[92dvh] overflow-y-auto rounded-2xl">
             <DialogHeader>
               <DialogTitle className="font-extrabold text-xl">{editingJob ? "Edit Job Parameters" : "Create New Enterprise Job"}</DialogTitle>
               <DialogDescription className="text-xs">

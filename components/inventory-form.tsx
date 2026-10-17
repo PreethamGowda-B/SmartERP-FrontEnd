@@ -142,14 +142,14 @@ export default function InventoryForm({
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-0 shadow-none p-0">
+      <CardHeader className="sr-only">
         <CardTitle>{item ? "Edit Stock" : "Add New Stock"}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={submit} className="space-y-6">
+      <CardContent className="p-0 sm:p-2">
+        <form onSubmit={submit} className="space-y-5">
           {/* Name and Description Row */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-2">
               <Label htmlFor="item-name" className="text-sm font-medium">
                 Name
@@ -177,7 +177,7 @@ export default function InventoryForm({
           </div>
 
           {/* Quantity and Upload Row */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-2">
               <Label htmlFor="quantity" className="text-sm font-medium">
                 Quantity
@@ -227,7 +227,7 @@ export default function InventoryForm({
           </div>
 
           {/* Category and Unit Row */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-2">
               <Label htmlFor="category" className="text-sm font-medium">
                 Category
@@ -287,7 +287,7 @@ export default function InventoryForm({
           <div className="space-y-4 border-t pt-4">
             <h3 className="text-sm font-medium">Supplier Information (Optional)</h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <Label htmlFor="supplier-name" className="text-sm font-medium">
                   Supplier Name
@@ -327,15 +327,15 @@ export default function InventoryForm({
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? (item ? "Updating..." : "Adding...") : (item ? "Update Item" : "Add Item")}
-            </Button>
-            {item && onCancel && (
-              <Button type="button" variant="outline" onClick={onCancel}>
+          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
+            {onCancel && (
+              <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
                 Cancel
               </Button>
             )}
+            <Button type="submit" disabled={loading} className="w-full sm:flex-1">
+              {loading ? (item ? "Updating..." : "Adding...") : (item ? "Update Item" : "Add Item")}
+            </Button>
           </div>
         </form>
       </CardContent>

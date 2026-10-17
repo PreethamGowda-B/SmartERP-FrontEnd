@@ -182,7 +182,7 @@ function InventoryContent() {
 
       {/* Inventory Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-[calc(100vw-1.5rem)] sm:w-full p-4 sm:p-6 max-h-[92dvh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Stock" : "Add New Stock"}</DialogTitle>
             <DialogDescription>

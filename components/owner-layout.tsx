@@ -91,7 +91,7 @@ function MainContent({ children, noPadding = false }: { children: React.ReactNod
         isActivelyLoading ? "opacity-40" : "opacity-100",
         noPadding
           ? "p-0 pb-0 sm:pb-0 h-[calc(100dvh-3.5rem)] lg:h-dvh overflow-hidden flex flex-col flex-1 min-h-0"
-          : "p-4 lg:p-6 pb-24 sm:pb-28"
+          : "p-3 sm:p-4 lg:p-6 pb-24 sm:pb-28"
       )}
     >
       {children}

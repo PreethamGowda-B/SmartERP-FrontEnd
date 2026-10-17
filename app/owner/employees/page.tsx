@@ -1139,7 +1139,7 @@ export default function EmployeesPage() {
 
         {/* ─── MODAL: EDIT EMPLOYEE DETAILS ─────────────────────────────────── */}
         <Dialog open={editingId !== null} onOpenChange={(open) => !open && cancelEditing()}>
-          <DialogContent className="max-w-lg rounded-2xl border border-border/80 shadow-2xl">
+          <DialogContent className="max-w-lg w-[calc(100vw-1.5rem)] sm:w-full max-h-[92dvh] overflow-y-auto rounded-2xl border border-border/80 shadow-2xl p-4 sm:p-6">
             <DialogHeader className="pb-3 border-b border-border/60">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-primary/10 text-primary">
@@ -1248,13 +1248,13 @@ export default function EmployeesPage() {
               </div>
             </div>
 
-            <DialogFooter className="pt-4 border-t border-border/60 flex items-center justify-end gap-2">
+            <DialogFooter className="pt-4 border-t border-border/60 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={cancelEditing}
                 disabled={submitting}
-                className="rounded-xl text-xs"
+                className="w-full sm:w-auto rounded-xl text-xs"
               >
                 Cancel
               </Button>
@@ -1262,7 +1262,7 @@ export default function EmployeesPage() {
                 size="sm"
                 onClick={() => editingId !== null && saveEmployee(editingId)}
                 disabled={submitting}
-                className="rounded-xl text-xs gap-1.5 font-bold"
+                className="w-full sm:w-auto rounded-xl text-xs gap-1.5 font-bold"
               >
                 {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 {submitting ? "Saving..." : "Save Changes"}
