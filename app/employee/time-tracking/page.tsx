@@ -34,6 +34,7 @@ import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { ErrorView } from "@/components/ui/error-view"
 import { SkeletonList } from "@/components/ui/skeleton-card"
+import { AttendanceStatus } from "@/components/attendance/attendance-ui"
 import { cn } from "@/lib/utils"
 
 interface AttendanceRecord {
@@ -66,6 +67,8 @@ export default function TimeTrackingPage() {
   const [isOnline, setIsOnline] = useState(typeof window !== "undefined" ? navigator.onLine : true)
   const [pendingOfflineCount, setPendingOfflineCount] = useState(0)
   const [attendancePolicy, setAttendancePolicy] = useState<AttendancePolicyView | null>(null)
+  const [historyFilter, setHistoryFilter] = useState<"all" | "present" | "late" | "absent">("all")
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Live chronometer tick
   useEffect(() => {
@@ -266,7 +269,26 @@ export default function TimeTrackingPage() {
   const totalHoursWorked = history.reduce((acc, r) => acc + (parseFloat(String(r.working_hours)) || 0), 0)
   const recordedCheckIns = history.filter((r) => Boolean(r.check_in_time))
   const onTimeCount = recordedCheckIns.filter((r) => !r.is_late && r.status !== "late").length
+  const lateCount = history.filter((r) => r.is_late || r.status === "late").length
+  const absentCount = history.filter((r) => !r.check_in_time && r.status === "absent").length
   const onTimeRate = recordedCheckIns.length ? Math.round((onTimeCount / recordedCheckIns.length) * 100) : 0
+
+  const filteredHistory = history.filter((record) => {
+    if (historyFilter === "all") return true
+    const isLateRecord = record.is_late || record.status === "late"
+    const hasClockIn = Boolean(record.check_in_time)
+    const isPresent = hasClockIn || ["present", "late", "half_day"].includes(record.status || "")
+    if (historyFilter === "late") return isLateRecord
+    if (historyFilter === "present") return isPresent && !isLateRecord
+    if (historyFilter === "absent") return !isPresent
+    return true
+  })
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await Promise.all([fetchTodayAttendance(), fetchHistory(), refreshPendingCount()])
+    setIsRefreshing(false)
+  }
 
   return (
     <EmployeeLayout>
@@ -274,57 +296,69 @@ export default function TimeTrackingPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <Clock className="h-6 w-6" />
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                <Clock className="h-5 w-5" />
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Time &amp; Shift Console</h1>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Company attendance status, your active shift timer, and recorded work history.
+              Company attendance status, active shift chronometer, and monthly compliance audit trail · Asia/Kolkata
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => { fetchTodayAttendance(); fetchHistory(); refreshPendingCount() }} aria-label="Refresh attendance"><RefreshCw className="h-4 w-4" /> <span className="hidden sm:inline">Refresh</span></Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-xl h-9"
+              disabled={isRefreshing}
+              onClick={handleRefresh}
+              aria-label="Refresh attendance"
+            >
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/60 border border-border/80 text-xs font-semibold">
               <span className={cn("w-2 h-2 rounded-full", isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
-              <span>{isOnline ? "Connected to attendance service" : "Offline — punches are not submitted"}</span>
+              <span>{isOnline ? "Connected" : "Offline"}</span>
             </div>
           </div>
         </div>
 
         {/* Shift Schedule Timeline Banner */}
-        <Card className="overflow-hidden rounded-2xl border-border/80 bg-gradient-to-r from-card via-amber-500/5 to-card shadow-sm">
+        <Card className="overflow-hidden rounded-2xl border-border/80 bg-card shadow-sm">
           <CardContent className="p-5 sm:p-6">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] font-black uppercase tracking-wider">
+                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] font-bold uppercase tracking-wider">
                     STANDARD SHIFT
                   </Badge>
-                  <span className="text-xs font-bold text-foreground">{attendancePolicy ? `${attendancePolicy.shiftStart} – ${attendancePolicy.shiftEnd} ${attendancePolicy.timezone}` : "Loading company shift policy…"}</span>
+                  <span className="text-xs font-bold text-foreground">
+                    {attendancePolicy ? `${attendancePolicy.shiftStart} – ${attendancePolicy.shiftEnd} (${attendancePolicy.timezone})` : "Enforcing company shift policy…"}
+                  </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-muted-foreground">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                    <span>Clock-in cutoff <strong>{attendancePolicy?.clockInCutoff || "—"}</strong></span>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span>Cutoff: <strong className="text-foreground">{attendancePolicy?.clockInCutoff || "—"}</strong></span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                    <span>Company timezone <strong>{attendancePolicy?.timezone || "—"}</strong></span>
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <span>Timezone: <strong className="text-foreground">{attendancePolicy?.timezone || "Asia/Kolkata"}</strong></span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-blue-500" />
-                    <span>Auto checkout at <strong>{attendancePolicy?.automaticClockOutTime || "—"}</strong></span>
+                    <ShieldCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                    <span>Auto checkout: <strong className="text-foreground">{attendancePolicy?.automaticClockOutTime || "—"}</strong></span>
                   </div>
                 </div>
               </div>
 
               {/* Real-time Digital Chronometer */}
-              <div className="p-3 rounded-2xl bg-secondary/50 border border-border/80 text-center shrink-0 min-w-[170px] shadow-xs">
+              <div className="p-3.5 rounded-xl bg-secondary/50 border border-border/80 text-center shrink-0 min-w-[170px] shadow-xs">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Current Time</p>
-                <p className="text-xl font-black font-mono tracking-tight text-foreground mt-0.5">
+                <p className="text-xl font-bold font-mono tracking-tight text-foreground mt-0.5 tabular-nums">
                   {currentTime.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}
                 </p>
               </div>
@@ -333,7 +367,7 @@ export default function TimeTrackingPage() {
         </Card>
 
         {pendingOfflineCount > 0 && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-4 text-xs font-medium text-amber-900 dark:text-amber-200">
             {pendingOfflineCount} offline punch{pendingOfflineCount === 1 ? " is" : "es are"} saved as pending on this device. They have not changed attendance and will not be replayed automatically. Contact your Owner if the original offline time needs review.
           </div>
         )}
@@ -355,16 +389,16 @@ export default function TimeTrackingPage() {
             <CardHeader className="pb-4 border-b border-border/60">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Timer className="h-5 w-5 text-amber-500" />
+                  <Timer className="h-4 w-4 text-primary" />
                   <CardTitle className="text-base font-bold">Shift Attendance Hub</CardTitle>
                 </div>
                 <Badge
                   className={cn(
-                    "text-[10px] font-black uppercase tracking-wider",
+                    "text-[10px] font-bold uppercase tracking-wider",
                     isClockedIn
-                      ? "bg-emerald-500 text-white shadow-xs animate-pulse"
+                      ? "bg-emerald-600 hover:bg-emerald-600 text-white shadow-xs"
                       : isClockedOut
-                      ? "bg-blue-500 text-white"
+                      ? "bg-blue-600 hover:bg-blue-600 text-white"
                       : "bg-muted text-muted-foreground"
                   )}
                 >
@@ -373,16 +407,16 @@ export default function TimeTrackingPage() {
               </div>
             </CardHeader>
 
-            <CardContent className="p-6 space-y-6 flex-1">
+            <CardContent className="p-5 sm:p-6 space-y-6 flex-1">
               {/* Running Time Display */}
-              <div className="text-center py-4 bg-secondary/30 rounded-2xl border border-border/50 space-y-1">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              <div className="text-center py-5 bg-secondary/30 rounded-2xl border border-border/50 space-y-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                   {isClockedIn ? "Active Shift Duration" : isClockedOut ? "Total Shift Time" : "Shift Timer"}
                 </p>
-                <div className="text-4xl sm:text-5xl font-black font-mono tracking-tight text-foreground">
+                <div className="text-4xl sm:text-5xl font-black font-mono tracking-tight text-foreground tabular-nums">
                   {formatDuration(elapsedSeconds)}
                 </div>
-                <p className="text-[11px] text-muted-foreground font-medium pt-1">
+                <p className="text-xs text-muted-foreground font-medium pt-1">
                   {isClockedIn
                     ? `Clocked in at ${formatTime(todayAttendance?.check_in_time || null)}`
                     : isClockedOut
@@ -392,14 +426,14 @@ export default function TimeTrackingPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <Button
                   onClick={handleClockIn}
                   disabled={!canClockIn || loading}
                   className={cn(
-                    "h-12 text-sm font-bold shadow-md gap-2 transition-all",
+                    "h-12 text-sm font-bold shadow-sm gap-2 rounded-xl transition-all",
                     canClockIn
-                      ? "bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white hover:scale-[1.01]"
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                       : "opacity-40"
                   )}
                 >
@@ -412,9 +446,9 @@ export default function TimeTrackingPage() {
                   disabled={!isClockedIn || loading || pendingOfflineCount > 0}
                   variant="outline"
                   className={cn(
-                    "h-12 text-sm font-bold gap-2 transition-all",
+                    "h-12 text-sm font-bold gap-2 rounded-xl transition-all",
                     isClockedIn
-                      ? "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 hover:scale-[1.01]"
+                      ? "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
                       : "opacity-40"
                   )}
                 >
@@ -426,43 +460,41 @@ export default function TimeTrackingPage() {
               {/* Shift Stats Matrix */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                 <div className="p-3 rounded-xl bg-secondary/40 border border-border/60">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Check-In</span>
-                  <p className="text-sm font-extrabold text-foreground mt-0.5">{formatTime(todayAttendance?.check_in_time || null)}</p>
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Check-In</span>
+                  <p className="text-sm font-bold text-foreground mt-0.5 tabular-nums">{formatTime(todayAttendance?.check_in_time || null)}</p>
                   {todayAttendance?.is_late && (
-                    <Badge variant="destructive" className="text-[9px] mt-1 px-1 py-0 uppercase font-black">
+                    <Badge variant="destructive" className="text-[9px] mt-1 px-1.5 py-0 uppercase font-bold">
                       Late Arrival
                     </Badge>
                   )}
                 </div>
 
                 <div className="p-3 rounded-xl bg-secondary/40 border border-border/60">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Check-Out</span>
-                  <p className="text-sm font-extrabold text-foreground mt-0.5">{formatTime(todayAttendance?.check_out_time || null)}</p>
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Check-Out</span>
+                  <p className="text-sm font-bold text-foreground mt-0.5 tabular-nums">{formatTime(todayAttendance?.check_out_time || null)}</p>
                   {todayAttendance?.is_auto_clocked_out && (
-                    <Badge variant="outline" className="text-[9px] mt-1 px-1 py-0 uppercase font-bold text-orange-500 border-orange-500/30">
-                      Auto 7 PM
+                    <Badge variant="outline" className="text-[9px] mt-1 px-1.5 py-0 uppercase font-bold text-orange-500 border-orange-500/30">
+                      Auto Checkout
                     </Badge>
                   )}
                 </div>
 
                 <div className="p-3 rounded-xl bg-secondary/40 border border-border/60">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Logged Hours</span>
-                  <p className="text-sm font-extrabold text-foreground mt-0.5">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Logged Hours</span>
+                  <p className="text-sm font-bold text-foreground mt-0.5 tabular-nums">
                     {todayAttendance?.working_hours ? `${Number(todayAttendance.working_hours).toFixed(1)} hrs` : "—"}
                   </p>
                 </div>
 
                 <div className="p-3 rounded-xl bg-secondary/40 border border-border/60">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Punctuality</span>
-                  <p className="text-sm font-extrabold mt-0.5">
-                    {todayAttendance?.is_late ? (
-                      <span className="text-amber-500">Late Mark</span>
-                    ) : todayAttendance?.check_in_time ? (
-                      <span className="text-emerald-500">On Time</span>
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Punctuality</span>
+                  <div className="mt-1">
+                    {todayAttendance?.check_in_time ? (
+                      <AttendanceStatus status={todayAttendance.is_late ? "late" : "present"} />
                     ) : (
-                      <span className="text-muted-foreground">Pending</span>
+                      <span className="text-xs text-muted-foreground">Pending</span>
                     )}
-                  </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -470,52 +502,52 @@ export default function TimeTrackingPage() {
 
           {/* Monthly KPI Overview */}
           <div className="lg:col-span-5 space-y-4">
-            <Card className="border-border/80 shadow-xs">
-              <CardHeader className="pb-3">
+            <Card className="border-border/80 shadow-sm rounded-2xl">
+              <CardHeader className="pb-3 border-b border-border/60">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  <TrendingUp className="h-4 w-4 text-primary" />
                   Monthly Performance Analytics
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" })} attendance metrics
+                  {new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "Asia/Kolkata" })} attendance metrics
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="space-y-4">
+              <CardContent className="p-5 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3.5 rounded-xl bg-secondary/40 border border-border/60 space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Days Present</span>
-                    <div className="text-2xl font-black text-foreground">{totalDaysPresent}</div>
-                    <p className="text-[10px] text-emerald-600 font-semibold">Active shifts logged</p>
+                    <span className="text-[10px] uppercase font-semibold text-muted-foreground">Days Present</span>
+                    <div className="text-2xl font-black text-foreground tabular-nums">{totalDaysPresent}</div>
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Active shifts logged</p>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-secondary/40 border border-border/60 space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Total Hours</span>
-                    <div className="text-2xl font-black text-foreground">{totalHoursWorked.toFixed(1)}h</div>
+                    <span className="text-[10px] uppercase font-semibold text-muted-foreground">Total Hours</span>
+                    <div className="text-2xl font-black text-foreground tabular-nums">{totalHoursWorked.toFixed(1)}h</div>
                     <p className="text-[10px] text-muted-foreground font-semibold">Monthly cumulative</p>
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs">
+                <div className="p-3.5 rounded-xl bg-secondary/30 border border-border/50 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2.5">
-                    <Flame className="h-5 w-5 text-orange-500 shrink-0" />
+                    <Flame className="h-4 w-4 text-orange-500 shrink-0" />
                     <div>
                       <div className="font-bold text-foreground">On-time check-ins: {onTimeRate}%</div>
                       <div className="text-[10px] text-muted-foreground">{onTimeCount} of {recordedCheckIns.length} recorded this month</div>
                     </div>
                   </div>
-                  <Badge variant="outline" className="border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                  <Badge variant="outline" className="text-[10px] font-bold">
                     {recordedCheckIns.length ? "THIS MONTH" : "NO DATA"}
                   </Badge>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-secondary/30 border border-border/40 text-xs space-y-1">
                   <div className="flex items-center gap-1.5 font-bold text-foreground">
-                    <MapPin className="h-3.5 w-3.5 text-amber-500" />
-                    Punch source
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                    Punch Verification
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Attendance is recorded by the company service. Location is shown only when a supported punch source provides it.
+                    Attendance is recorded and signed cryptographically by the company service. Location is logged only when GPS access is granted.
                   </p>
                 </div>
               </CardContent>
@@ -524,9 +556,9 @@ export default function TimeTrackingPage() {
         </div>
 
         {/* Monthly Attendance Audit Trail */}
-        <Card className="border-border/80 shadow-xs">
+        <Card className="border-border/80 shadow-sm rounded-2xl overflow-hidden">
           <CardHeader className="pb-4 border-b border-border/60">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-base font-bold flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-primary" />
@@ -537,102 +569,137 @@ export default function TimeTrackingPage() {
                 </CardDescription>
               </div>
 
-              <Badge variant="outline" className="text-xs font-mono self-start sm:self-auto">
-                {history.length} Record{history.length !== 1 ? "s" : ""}
-              </Badge>
+              {/* Filter Tabs */}
+              <div className="flex flex-wrap items-center gap-1.5 bg-secondary/50 p-1 rounded-xl border border-border/60">
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter("all")}
+                  className={cn(
+                    "px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors",
+                    historyFilter === "all" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  All ({history.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter("present")}
+                  className={cn(
+                    "px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors",
+                    historyFilter === "present" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  On Time ({onTimeCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter("late")}
+                  className={cn(
+                    "px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors",
+                    historyFilter === "late" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Late ({lateCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter("absent")}
+                  className={cn(
+                    "px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors",
+                    historyFilter === "absent" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Absent ({absentCount})
+                </button>
+              </div>
             </div>
           </CardHeader>
 
-          <CardContent className="p-6">
+          <CardContent className="p-5 sm:p-6">
             {loading && history.length === 0 ? (
               <SkeletonList count={4} />
             ) : error && history.length === 0 ? (
               <ErrorView title="Records Unavailable" message={error} onRetry={fetchHistory} />
-            ) : Array.isArray(history) && history.length === 0 ? (
+            ) : filteredHistory.length === 0 ? (
               <div className="text-center py-12 border border-dashed rounded-2xl">
-                <Clock className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
-                <h4 className="text-xs font-bold text-foreground">No Attendance Logs for this Month</h4>
+                <Clock className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                <h4 className="text-xs font-bold text-foreground">No Attendance Logs Found</h4>
                 <p className="text-[11px] text-muted-foreground mt-1 max-w-xs mx-auto">
-                  Your daily clock-ins will appear here with hours logged and shift verification stamps.
+                  {historyFilter !== "all" ? `No records matching the "${historyFilter}" filter.` : "Your daily clock-ins will appear here with hours logged and shift verification stamps."}
                 </p>
               </div>
             ) : (
               <div className="space-y-2.5">
-                {Array.isArray(history) &&
-                  history.map((record) => {
-                    const isLateRecord = record.is_late || record.status === "late"
-                    const hasClockIn = Boolean(record.check_in_time)
-                    const inconsistentAbsent = hasClockIn && record.status === "absent"
-                    const isPresent = hasClockIn || ["present", "late", "half_day"].includes(record.status || "")
-                    const dayNumber = Number(record.date.slice(8, 10))
-                    const statusLabel = inconsistentAbsent ? "Clocked in · review status" : record.status === "half_day" ? "Half day" : ["leave", "on_leave"].includes(record.status || "") ? "On leave" : isPresent ? "Present" : "Absent"
+                {filteredHistory.map((record) => {
+                  const isLateRecord = record.is_late || record.status === "late"
+                  const hasClockIn = Boolean(record.check_in_time)
+                  const inconsistentAbsent = hasClockIn && record.status === "absent"
+                  const isPresent = hasClockIn || ["present", "late", "half_day"].includes(record.status || "")
+                  const dayNumber = Number(record.date.slice(8, 10))
 
-                    return (
-                      <div
-                        key={record.id}
-                        className="p-3.5 rounded-xl border border-border/70 bg-card hover:bg-secondary/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                      >
-                        <div className="flex items-center gap-3.5">
-                          <div className="w-11 h-11 rounded-xl bg-secondary/60 text-center flex flex-col items-center justify-center font-bold shrink-0 border border-border/50">
-                            <span className="text-sm font-black text-foreground leading-none">
-                              {dayNumber}
-                            </span>
-                            <span className="text-[9px] uppercase font-bold text-muted-foreground mt-0.5">
-                              {new Date(record.date).toLocaleDateString("en-US", { month: "short" })}
-                            </span>
-                          </div>
-
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-foreground">{formatDate(record.date)}</span>
-                              {isLateRecord && (
-                                <Badge variant="destructive" className="text-[9px] px-1.5 py-0 uppercase font-bold">
-                                  Late
-                                </Badge>
-                              )}
-                              {record.is_auto_clocked_out && (
-                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 uppercase font-bold text-orange-500 border-orange-500/30">
-                                  Auto 7 PM
-                                </Badge>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-mono">
-                              <span>In: <strong>{formatTime(record.check_in_time)}</strong></span>
-                              <span>•</span>
-                              <span>Out: <strong>{formatTime(record.check_out_time)}</strong></span>
-                            </div>
-                          </div>
+                  return (
+                    <div
+                      key={record.id}
+                      className="p-3.5 rounded-xl border border-border/70 bg-card hover:bg-secondary/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-xl bg-secondary/60 text-center flex flex-col items-center justify-center font-bold shrink-0 border border-border/50">
+                          <span className="text-sm font-black text-foreground leading-none">
+                            {dayNumber}
+                          </span>
+                          <span className="text-[9px] uppercase font-bold text-muted-foreground mt-0.5">
+                            {new Date(record.date).toLocaleDateString("en-US", { month: "short" })}
+                          </span>
                         </div>
 
-                        <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
-                          <div className="text-left sm:text-right">
-                            <span className="text-[10px] uppercase font-bold text-muted-foreground block">Hours Logged</span>
-                            <span className="text-sm font-extrabold font-mono text-foreground">
-                              {record.working_hours ? `${Number(record.working_hours).toFixed(1)} hrs` : "—"}
-                            </span>
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-foreground">{formatDate(record.date)}</span>
+                            {isLateRecord && (
+                              <Badge variant="destructive" className="text-[9px] px-1.5 py-0 uppercase font-bold">
+                                Late
+                              </Badge>
+                            )}
+                            {record.is_auto_clocked_out && (
+                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 uppercase font-bold text-orange-500 border-orange-500/30">
+                                Auto Checkout
+                              </Badge>
+                            )}
                           </div>
 
-                          <Badge
-                            className={cn(
-                              "text-[10px] font-bold uppercase tracking-wider",
-                              ["leave", "on_leave"].includes(record.status || "")
-                                ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30"
-                                : record.status === "half_day"
-                                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
-                                  : inconsistentAbsent
-                                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
-                                  : isPresent
-                                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                                    : "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
-                            )}
-                          >
-                            {statusLabel}
-                          </Badge>
+                          <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-mono">
+                            <span>In: <strong>{formatTime(record.check_in_time)}</strong></span>
+                            <span>•</span>
+                            <span>Out: <strong>{formatTime(record.check_out_time)}</strong></span>
+                          </div>
                         </div>
                       </div>
-                    )
-                  })}
+
+                      <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
+                        <div className="text-left sm:text-right">
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground block">Hours Logged</span>
+                          <span className="text-sm font-bold font-mono text-foreground tabular-nums">
+                            {record.working_hours ? `${Number(record.working_hours).toFixed(1)} hrs` : "—"}
+                          </span>
+                        </div>
+
+                        <AttendanceStatus
+                          status={
+                            inconsistentAbsent
+                              ? "incomplete"
+                              : record.status === "half_day"
+                              ? "half_day"
+                              : ["leave", "on_leave"].includes(record.status || "")
+                              ? "leave"
+                              : isPresent
+                              ? (isLateRecord ? "late" : "present")
+                              : "absent"
+                          }
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </CardContent>

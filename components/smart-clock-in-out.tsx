@@ -193,16 +193,16 @@ export function SmartClockInOut() {
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
   }
 
-  const timeStr = currentTime.toLocaleTimeString("en-US", {
+  const timeStr = currentTime.toLocaleTimeString("en-IN", {
     hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true, timeZone: "Asia/Kolkata"
   })
 
   // ─── Render ─────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <Card>
+      <Card className="rounded-2xl border-border/70 shadow-sm">
         <CardContent className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     )
@@ -212,102 +212,131 @@ export function SmartClockInOut() {
     <div className="space-y-4">
       {/* Notifications / Errors */}
       {error && (
-        <Alert className="border-red-200 bg-red-50">
-          <AlertCircle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">{error}</AlertDescription>
+        <Alert className="rounded-xl border-destructive/25 bg-destructive/5 text-destructive">
+          <AlertCircle className="h-4 w-4 text-destructive" />
+          <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
         </Alert>
       )}
       {notification && (
-        <Alert className="border-orange-200 bg-orange-50">
-          <AlertCircle className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800">{notification}</AlertDescription>
+        <Alert className="rounded-xl border-amber-500/25 bg-amber-500/5 text-amber-900 dark:text-amber-200">
+          <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <AlertDescription className="text-xs font-medium">{notification}</AlertDescription>
         </Alert>
       )}
 
-      <Card className="hover-lift">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-accent" />
-            Smart Clock In/Out
-          </CardTitle>
-          <CardDescription>
-            {policy ? `Shift ${policy.shiftStart}–${policy.shiftEnd} ${policy.timezone} · Clock-in cutoff ${policy.clockInCutoff} · Automatic clock-out ${policy.automaticClockOutTime}` : "Attendance is calculated and closed by your company’s attendance policy on the server."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Status bar */}
-          <div className="flex items-center justify-between p-4 bg-linear-to-r from-accent/10 to-primary/10 rounded-lg border border-accent/20">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Status</p>
-              <Badge variant={activeRecord ? "default" : "secondary"} className="text-base py-1">
-                {activeRecord ? "Clocked In" : "Clocked Out"}
-              </Badge>
+      <Card className="rounded-2xl border-border/70 shadow-sm overflow-hidden">
+        <CardHeader className="pb-4 border-b border-border/60">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-base font-bold">
+                <Clock className="h-4 w-4 text-primary" />
+                Shift Attendance Hub
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {policy ? `Shift: ${policy.shiftStart}–${policy.shiftEnd} ${policy.timezone} · Cutoff: ${policy.clockInCutoff}` : "Attendance calculations are enforced by your company shift policy."}
+              </CardDescription>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground mb-1">Current Time</p>
-              <p className="text-2xl font-bold font-mono">{timeStr}</p>
+            <Badge
+              variant={activeRecord ? "default" : "outline"}
+              className={activeRecord ? "bg-emerald-600 hover:bg-emerald-600 text-white font-semibold text-[11px]" : "font-semibold text-[11px]"}
+            >
+              {activeRecord ? "Shift in Progress" : "Shift Inactive"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-5 sm:p-6 space-y-5">
+          {/* Status bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-secondary/40 border border-border/60">
+            <div className="space-y-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Current State</span>
+              <div className="flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${activeRecord ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/40"}`} />
+                <span className="text-sm font-bold text-foreground">
+                  {activeRecord ? "Clocked In & Active" : "Clocked Out"}
+                </span>
+              </div>
+            </div>
+            <div className="sm:text-right space-y-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Local Time (Asia/Kolkata)</span>
+              <p className="text-xl font-bold font-mono tabular-nums text-foreground">{timeStr}</p>
             </div>
           </div>
 
           {/* Clocked-in state */}
           {activeRecord ? (
             <div className="space-y-4">
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/15 space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Clock In Time</p>
-                    <p className="text-lg font-semibold">{activeRecord.clockIn}</p>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Clock In Time</span>
+                    <p className="text-base font-bold text-foreground tabular-nums mt-0.5">{activeRecord.clockIn}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Time Elapsed</p>
-                    <p className="text-lg font-semibold font-mono text-blue-600">{formatElapsed(elapsedMs)}</p>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Time Elapsed</span>
+                    <p className="text-base font-bold font-mono tabular-nums text-primary mt-0.5">{formatElapsed(elapsedMs)}</p>
                   </div>
-                  {attendanceStatus && (
-                    <div className="col-span-2">
-                      <p className="text-sm text-muted-foreground">Today's Status</p>
-                      <span className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${attendanceStatus === 'Present' ? 'bg-green-100 text-green-700' :
-                        attendanceStatus === 'Late' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-orange-100 text-orange-700'
-                        }`}>
-                        {attendanceStatus === 'Present' ? '✅' : attendanceStatus === 'Late' ? '🟡' : '🟠'} {attendanceStatus}
-                      </span>
-                    </div>
-                  )}
                 </div>
+                {attendanceStatus && (
+                  <div className="pt-2 border-t border-primary/10 flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground font-medium">Punctuality Grade</span>
+                    <Badge
+                      className={
+                        attendanceStatus === "Present"
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-semibold text-[11px]"
+                          : attendanceStatus === "Late"
+                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 font-semibold text-[11px]"
+                          : "bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30 font-semibold text-[11px]"
+                      }
+                      variant="outline"
+                    >
+                      {attendanceStatus}
+                    </Badge>
+                  </div>
+                )}
               </div>
 
               {activeRecord.location && (
-                <div className="p-3 flex items-start gap-2 bg-muted rounded-lg">
-                  <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                  <div className="text-sm">
-                    <p className="text-muted-foreground">Location</p>
-                    <p className="font-medium">{activeRecord.location}</p>
+                <div className="p-3 flex items-start gap-2.5 bg-secondary/30 rounded-xl border border-border/50 text-xs">
+                  <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground font-medium">Recorded Location</span>
+                    <p className="font-semibold text-foreground truncate mt-0.5">{activeRecord.location}</p>
                   </div>
                 </div>
               )}
 
-              <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                <p className="text-sm text-orange-800">
-                  You will be automatically clocked out at <strong>{policy?.automaticClockOutTime || "the company cutoff"}</strong>
+              {policy?.automaticClockOutTime && (
+                <p className="text-[11px] text-muted-foreground bg-muted/40 px-3 py-2 rounded-lg border border-border/40">
+                  Automatic system checkout is scheduled at <strong className="text-foreground">{policy.automaticClockOutTime}</strong> if not closed manually.
                 </p>
-              </div>
+              )}
 
-              <Button onClick={handleClockOut} disabled={submitting} size="lg" className="w-full" variant="destructive">
+              <Button
+                onClick={handleClockOut}
+                disabled={submitting}
+                size="lg"
+                className="w-full h-11 rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold shadow-sm"
+              >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Square className="h-4 w-4 mr-2" />}
-                {submitting ? "Clocking out..." : "Clock Out"}
+                {submitting ? "Signing off..." : "Clock Out & End Shift"}
               </Button>
             </div>
           ) : (
             /* Clocked-out state */
-            <Button
-              onClick={handleClockIn}
-              disabled={submitting}
-              size="lg"
-              className="w-full bg-linear-to-r from-accent to-primary"
-            >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-              {submitting ? "Clocking in..." : "Clock In"}
-            </Button>
+            <div className="space-y-3">
+              <Button
+                onClick={handleClockIn}
+                disabled={submitting}
+                size="lg"
+                className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-sm"
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+                {submitting ? "Recording punch..." : "Clock In to Work"}
+              </Button>
+              <p className="text-[11px] text-center text-muted-foreground">
+                Clicking Clock In records your timestamp and GPS coordinates (if permitted).
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>

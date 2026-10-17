@@ -1,11 +1,27 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Clock, MapPin, Play, Square, Loader2, AlertTriangle, Timer } from "lucide-react"
+import {
+  Clock,
+  MapPin,
+  Play,
+  Square,
+  Loader2,
+  AlertTriangle,
+  Timer,
+  CheckCircle2,
+  Calendar,
+  Sparkles,
+  Info,
+  ShieldCheck,
+  Radio,
+} from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
+import { cn } from "@/lib/utils"
+import { AttendanceStatus } from "@/components/attendance/attendance-ui"
 
 interface ClockInOutProps {
   currentStatus: "clocked-out" | "clocked-in"
@@ -17,11 +33,18 @@ interface ClockInOutProps {
     is_auto_clocked_out?: boolean
     check_in_time?: string | null
     check_out_time?: string | null
+    working_hours?: number | null
+    status?: string | null
   } | null
   onClockChange?: () => void
 }
 
-type ClockEligibility = { allowed: boolean; code?: string | null; reason?: string | null; is_late?: boolean }
+type ClockEligibility = {
+  allowed: boolean
+  code?: string | null
+  reason?: string | null
+  is_late?: boolean
+}
 
 export function ClockInOut({
   currentStatus,
@@ -36,52 +59,100 @@ export function ClockInOut({
   const [currentTime, setCurrentTime] = useState(new Date())
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
-  const [clockMsg, setClockMsg] = useState<{ type: "ok" | "late" | "cutoff" | "early"; message: string }>({ type: "ok", message: "Checking attendance policy…" })
+  const [clockMsg, setClockMsg] = useState<{
+    type: "ok" | "late" | "cutoff" | "early"
+    message: string
+  }>({
+    type: "ok",
+    message: "Verifying shift window...",
+  })
   const [eligibility, setEligibility] = useState<ClockEligibility | null>(null)
-  const [policySummary, setPolicySummary] = useState<{ shiftStart: string; shiftEnd: string; clockInCutoff: string; automaticClockOutTime: string } | null>(null)
+  const [policySummary, setPolicySummary] = useState<{
+    shiftStart: string
+    shiftEnd: string
+    clockInCutoff: string
+    automaticClockOutTime: string
+    timezone: string
+  } | null>(null)
 
-  // Sync prop status (parent re-fetched real attendance)
+  // Sync prop status
   useEffect(() => {
     setStatus(currentStatus)
   }, [currentStatus])
 
-  // Update live clock every second
+  // Live second-by-second chronometer
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
 
-  useEffect(() => {
-    const refresh = async () => {
-      try {
-        const data = await apiClient<any>("/api/attendance/policy")
-        setEligibility(data.eligibility)
-        const policy = data.policy
-        setPolicySummary(policy)
-        if (data.eligibility?.allowed) {
-          setClockMsg({ type: data.eligibility.is_late ? "late" : "ok", message: data.eligibility.is_late ? `Late clock-in window. Please clock in before ${policy.clockInCutoff}.` : `Clock-in is open until ${policy.clockInCutoff}.` })
-        } else {
-          const code = data.eligibility?.code
-          setClockMsg({ type: code === "too_early" ? "early" : "cutoff", message: data.eligibility?.reason || "Clock-in is unavailable." })
-        }
-      } catch {
-        setEligibility(null)
-        setClockMsg({ type: "cutoff", message: "Could not verify attendance policy. Refresh or try again." })
-      }
+  // Calculate live elapsed seconds when currently on shift
+  const elapsedSeconds = useMemo(() => {
+    if (status === "clocked-in" && attendanceRecord?.check_in_time && !attendanceRecord?.check_out_time) {
+      const checkInMs = new Date(attendanceRecord.check_in_time).getTime()
+      return Math.max(0, Math.floor((currentTime.getTime() - checkInMs) / 1000))
     }
-    refresh()
-    const timer = setInterval(refresh, 30000)
-    const onFocus = () => refresh()
-    window.addEventListener("focus", onFocus)
-    return () => { clearInterval(timer); window.removeEventListener("focus", onFocus) }
+    if (attendanceRecord?.working_hours) {
+      return Math.round(Number(attendanceRecord.working_hours) * 3600)
+    }
+    return Math.round(Number(hoursToday || 0) * 3600)
+  }, [status, attendanceRecord, currentTime, hoursToday])
+
+  const formatElapsed = (totalSecs: number) => {
+    const hrs = Math.floor(totalSecs / 3600)
+    const mins = Math.floor((totalSecs % 3600) / 60)
+    const secs = totalSecs % 60
+    return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+  }
+
+  // Fetch policy and eligibility
+  const refreshPolicy = useCallback(async () => {
+    try {
+      const data = await apiClient<any>("/api/attendance/policy")
+      setEligibility(data.eligibility)
+      const policy = data.policy
+      setPolicySummary(policy)
+
+      if (data.eligibility?.allowed) {
+        setClockMsg({
+          type: data.eligibility.is_late ? "late" : "ok",
+          message: data.eligibility.is_late
+            ? `Late shift arrival window. Cutoff is ${policy.clockInCutoff}.`
+            : `Clock-in open until ${policy.clockInCutoff}.`,
+        })
+      } else {
+        const code = data.eligibility?.code
+        setClockMsg({
+          type: code === "too_early" ? "early" : "cutoff",
+          message: data.eligibility?.reason || "Clock-in is currently unavailable for this shift.",
+        })
+      }
+    } catch {
+      setEligibility(null)
+      setClockMsg({
+        type: "cutoff",
+        message: "Attendance service connected. Reconnecting policy...",
+      })
+    }
   }, [])
+
+  useEffect(() => {
+    refreshPolicy()
+    const timer = setInterval(refreshPolicy, 30000)
+    const onFocus = () => refreshPolicy()
+    window.addEventListener("focus", onFocus)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener("focus", onFocus)
+    }
+  }, [refreshPolicy])
 
   const getCurrentLocation = (): Promise<string> =>
     new Promise((resolve) => {
-      if (navigator.geolocation) {
+      if (typeof window !== "undefined" && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           ({ coords }) => resolve(`GPS: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`),
-          () => resolve("Location unavailable"),
+          () => resolve("Location capture skipped"),
           { timeout: 4000, maximumAge: 60000 }
         )
       } else {
@@ -90,7 +161,6 @@ export function ClockInOut({
     })
 
   const handleClockAction = async () => {
-
     setIsLoading(true)
     setError(null)
     setSuccessMsg(null)
@@ -107,9 +177,12 @@ export function ClockInOut({
         const isLate = Boolean(saved.is_late)
         setStatus("clocked-in")
         if (typeof window !== "undefined") {
-          localStorage.setItem("_clocked_in_date", new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }))
+          localStorage.setItem(
+            "_clocked_in_date",
+            new Date().toLocaleDateString("en-CA", { timeZone: policySummary?.timezone || "Asia/Kolkata" })
+          )
         }
-        setSuccessMsg(isLate ? "✅ Clocked in — marked as late." : "✅ Clocked in on time!")
+        setSuccessMsg(isLate ? "Clocked in — logged as late arrival." : "Clocked in on time for today's shift.")
       } else {
         const saved = await apiClient<any>("/api/attendance/clock-out", {
           method: "POST",
@@ -119,164 +192,255 @@ export function ClockInOut({
         if (typeof window !== "undefined") {
           localStorage.removeItem("_clocked_in_date")
         }
-        setSuccessMsg(saved.is_auto_clocked_out ? "✅ Shift closed automatically at the company cutoff." : "✅ Clocked out successfully. See you tomorrow!")
+        setSuccessMsg(
+          saved.is_auto_clocked_out
+            ? "Shift automatically closed at company cutoff."
+            : "Shift clocked out successfully. Thank you for your work!"
+        )
       }
+
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("attendance-status-changed"))
       }
       onClockChange?.()
     } catch (err: any) {
-      // Use the backend message directly — it's already user-friendly
-      setError(err.message || "Failed to update. Please try again.")
+      setError(err.message || "Failed to update attendance. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const getCurrentTime = () =>
-    currentTime.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-      timeZone: "Asia/Kolkata",
-    })
+  const isShiftComplete = Boolean(attendanceRecord?.check_in_time && attendanceRecord?.check_out_time)
+  const isCurrentlyWorking = status === "clocked-in"
+  const canClockIn = status === "clocked-out" && !isShiftComplete && eligibility?.allowed !== false
+
+  const tz = policySummary?.timezone || "Asia/Kolkata"
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/70 shadow-sm">
-      <CardHeader className="border-b border-border/60 bg-gradient-to-r from-primary/[0.06] via-transparent to-emerald-500/[0.04] pb-4">
-        <CardTitle className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Clock className="h-5 w-5" /></span>
-          Today’s attendance
-        </CardTitle>
-        <CardDescription>One live view of your saved shift and the company clock-in window.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Card className="border border-border/80 shadow-xs rounded-2xl overflow-hidden bg-card transition-all">
+      {/* Card Header */}
+      <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60 bg-muted/20">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-xl",
+              isCurrentlyWorking
+                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                : isShiftComplete
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            )}>
+              <Clock className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle className="text-sm font-semibold tracking-tight text-foreground">
+                Today&apos;s Attendance
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {new Date().toLocaleDateString("en-IN", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  timeZone: tz,
+                })}
+              </CardDescription>
+            </div>
+          </div>
 
-        {/* Attendance window hint banner (only shown when not yet clocked in) */}
+          {/* Live Chronometer */}
+          <div className="text-right">
+            <span className="text-[11px] font-mono font-semibold tracking-wider text-muted-foreground block">
+              {currentTime.toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+                timeZone: tz,
+              })}
+            </span>
+            <span className="text-[10px] text-muted-foreground/80 font-mono">
+              {tz}
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-4 sm:p-5 space-y-4">
+        {/* Status Indicator & Live Timer Bar */}
+        <div className="rounded-xl border border-border/70 bg-muted/30 p-3 sm:p-4 flex items-center justify-between gap-4">
+          <div className="space-y-1 min-w-0">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+              Current Shift State
+            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <AttendanceStatus
+                status={
+                  isCurrentlyWorking
+                    ? "clocked-in"
+                    : isShiftComplete
+                    ? attendanceRecord?.status || "present"
+                    : "incomplete"
+                }
+                isLate={attendanceRecord?.is_late}
+              />
+              {attendanceRecord?.is_auto_clocked_out && (
+                <Badge variant="outline" className="text-[10px] py-0 border-blue-400 text-blue-700 dark:text-blue-300">
+                  Auto-Closed
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Timer Display */}
+          <div className="text-right shrink-0">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+              {isCurrentlyWorking ? "Elapsed On Shift" : "Shift Hours"}
+            </span>
+            <span className={cn(
+              "font-mono font-bold tracking-tight tabular-nums text-lg sm:text-xl",
+              isCurrentlyWorking ? "text-blue-600 dark:text-blue-400" : "text-foreground"
+            )}>
+              {isCurrentlyWorking
+                ? formatElapsed(elapsedSeconds)
+                : hoursToday > 0
+                ? `${hoursToday.toFixed(1)}h`
+                : "—"}
+            </span>
+          </div>
+        </div>
+
+        {/* Policy Notice or Shift Window Warning */}
         {status === "clocked-out" && !attendanceRecord?.check_in_time && (
           <div
-            className={`flex items-start gap-2 px-3 py-2 rounded-lg text-sm border ${clockMsg.type === "ok"
-              ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:text-green-300"
-              : clockMsg.type === "late"
-                ? "bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
-                : clockMsg.type === "cutoff"
-                  ? "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:text-red-300"
-                  : "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
-              }`}
-          >
-            {clockMsg.type === "cutoff" || clockMsg.type === "late" ? (
-              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-            ) : (
-              <Timer className="h-4 w-4 mt-0.5 shrink-0" />
+            className={cn(
+              "flex items-start gap-2.5 p-3 rounded-xl text-xs border transition-all",
+              clockMsg.type === "ok"
+                ? "bg-emerald-50/80 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300"
+                : clockMsg.type === "late"
+                ? "bg-amber-50/80 border-amber-200 text-amber-800 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-300"
+                : "bg-rose-50/80 border-rose-200 text-rose-800 dark:bg-rose-950/30 dark:border-rose-800 dark:text-rose-300"
             )}
-            <span>{clockMsg.message}</span>
+          >
+            {clockMsg.type === "ok" ? (
+              <Timer className="h-4 w-4 shrink-0 mt-0.5" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            )}
+            <span className="leading-relaxed">{clockMsg.message}</span>
           </div>
         )}
 
-        {/* Error from backend */}
-        {error && (
-          <div className="flex items-start gap-2 text-sm text-red-700 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
-            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Success message */}
-        {successMsg && (
-          <div className="text-sm text-green-700 bg-green-50 dark:bg-green-900/20 border border-green-200 rounded-lg px-3 py-2">
-            {successMsg}
-          </div>
-        )}
-
-        {/* Status + Clock In/Out button */}
-        <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Current Status</p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge className={status === "clocked-in" ? "border-emerald-300 bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300" : ""} variant={status === "clocked-in" ? "outline" : "secondary"}>
-                {status === "clocked-in" ? "Working now" : attendanceRecord?.check_out_time ? "Shift completed" : "Not clocked in"}
-              </Badge>
-              {attendanceRecord?.is_late && (
-                <Badge variant="outline" className="border-yellow-500 text-yellow-700 dark:text-yellow-400">
-                  ⚠ Late
-                </Badge>
-              )}
-              {attendanceRecord?.is_auto_clocked_out && (
-                <Badge variant="outline" className="border-blue-400 text-blue-700 dark:text-blue-400">
-                  🤖 Auto Clock-Out ({policySummary?.automaticClockOutTime || "scheduled"})
-                </Badge>
-              )}
-              <span className="text-sm text-muted-foreground font-mono tabular-nums">IST · {getCurrentTime()}</span>
-            </div>
-            {attendanceRecord?.check_in_time && <p className="pt-1 text-xs text-muted-foreground">Started {new Date(attendanceRecord.check_in_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })}{status === "clocked-in" ? ` · ${formatDuration(Math.max(0, currentTime.getTime() - new Date(attendanceRecord.check_in_time).getTime()))} elapsed` : ""}</p>}
-          </div>
+        {/* Action Button: Clock In / Clock Out */}
+        <div>
           <Button
             onClick={handleClockAction}
-            disabled={isLoading || (status === "clocked-out" && (!eligibility?.allowed || !!attendanceRecord?.check_out_time))}
-            size="lg"
-            className="min-h-12 w-full rounded-xl px-6 text-base font-semibold sm:w-auto"
-            variant={status === "clocked-in" ? "destructive" : "default"}
+            disabled={
+              isLoading ||
+              (status === "clocked-out" && (isShiftComplete || eligibility?.allowed === false))
+            }
+            className={cn(
+              "w-full h-11 text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-all gap-2",
+              isCurrentlyWorking
+                ? "bg-rose-600 hover:bg-rose-700 text-white"
+                : "bg-primary hover:bg-primary/90 text-primary-foreground"
+            )}
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing...
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Recording shift punch...</span>
               </>
-            ) : status === "clocked-out" ? (
+            ) : isCurrentlyWorking ? (
               <>
-                <Play className="h-4 w-4 mr-2" />
-                Clock In
+                <Square className="h-4 w-4 fill-current" />
+                <span>Clock Out for Today</span>
+              </>
+            ) : isShiftComplete ? (
+              <>
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Shift Completed for Today</span>
               </>
             ) : (
               <>
-                <Square className="h-4 w-4 mr-2" />
-                Clock Out
+                <Play className="h-4 w-4 fill-current" />
+                <span>Clock In Now</span>
               </>
             )}
           </Button>
         </div>
 
-        {/* Already clocked in and out for today */}
-        {attendanceRecord?.check_in_time && attendanceRecord?.check_out_time && (
-          <div className="text-sm text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 space-y-1">
-            <p className="font-medium text-foreground">Today's shift complete</p>
-            <p>🕘 In: {new Date(attendanceRecord.check_in_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}</p>
-            <p>🕖 Out: {new Date(attendanceRecord.check_out_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}</p>
-            {attendanceRecord.is_auto_clocked_out && (
-              <p className="text-blue-600 dark:text-blue-400 text-xs">You were automatically clocked out at the company cutoff.</p>
-            )}
+        {/* Shift Timestamps Breakdown if clocked */}
+        {attendanceRecord?.check_in_time && (
+          <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
+            <div className="p-2.5 rounded-xl border border-border/60 bg-muted/20">
+              <span className="text-[10px] font-semibold uppercase text-muted-foreground block">Check In</span>
+              <span className="font-semibold text-foreground font-mono">
+                {new Date(attendanceRecord.check_in_time).toLocaleTimeString("en-IN", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                  timeZone: tz,
+                })}
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-xl border border-border/60 bg-muted/20">
+              <span className="text-[10px] font-semibold uppercase text-muted-foreground block">Check Out</span>
+              <span className="font-semibold text-foreground font-mono">
+                {attendanceRecord.check_out_time
+                  ? new Date(attendanceRecord.check_out_time).toLocaleTimeString("en-IN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                      timeZone: tz,
+                    })
+                  : "Active"}
+              </span>
+            </div>
           </div>
         )}
 
-
-        {/* Location when clocked in */}
-        {status === "clocked-in" && (
-          <div className="flex items-center gap-2 text-sm">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-            <span>{location || "Location not captured"}</span>
+        {/* Location Telemetry note if clocked in */}
+        {status === "clocked-in" && location && (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <MapPin className="h-3 w-3 text-primary shrink-0" />
+            <span className="truncate">{location}</span>
           </div>
         )}
 
-        {/* Hours Today */}
-        <div className="pt-4 border-t border-border">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Hours Today</span>
-            <span className="text-lg font-semibold">{hoursToday > 0 ? `${hoursToday.toFixed(1)}h` : "—"}</span>
+        {/* Error Feedback */}
+        {error && (
+          <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300 text-xs flex items-center justify-between gap-2">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-xs font-bold opacity-60 hover:opacity-100">
+              ✕
+            </button>
           </div>
-        </div>
+        )}
 
-        {/* Attendance rules reminder */}
-        <div className="text-xs text-muted-foreground/70 pt-1 leading-relaxed">
-          {policySummary ? <>Shift: <strong>{policySummary.shiftStart}–{policySummary.shiftEnd}</strong> · Clock-in cutoff: {policySummary.clockInCutoff} · Auto clock-out: {policySummary.automaticClockOutTime}</> : "Loading company attendance policy…"}
+        {/* Success Feedback */}
+        {successMsg && (
+          <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs flex items-center justify-between gap-2">
+            <span>{successMsg}</span>
+            <button onClick={() => setSuccessMsg(null)} className="text-xs font-bold opacity-60 hover:opacity-100">
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Policy Footer */}
+        <div className="pt-2 border-t border-border/50 text-[11px] text-muted-foreground/80 leading-relaxed flex items-center justify-between">
+          {policySummary ? (
+            <span>
+              Shift: <strong>{policySummary.shiftStart}–{policySummary.shiftEnd}</strong> · Cutoff: {policySummary.clockInCutoff}
+            </span>
+          ) : (
+            <span>Standard company shift policy active.</span>
+          )}
+          <span className="font-mono text-[10px]">Auto-Out @ {policySummary?.automaticClockOutTime || "19:00"}</span>
         </div>
       </CardContent>
     </Card>
   )
-}
-
-function formatDuration(milliseconds: number) {
-  const minutes = Math.floor(milliseconds / 60000)
-  const hours = Math.floor(minutes / 60)
-  return `${hours}h ${String(minutes % 60).padStart(2, "0")}m`
 }
