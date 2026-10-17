@@ -153,7 +153,7 @@ export function DirectInvoiceModal({
     const taxRate = Number(gstRate || 0) / 100
     const totalTax = Number((subtotal * taxRate).toFixed(2))
     const cgst = isInterState ? 0 : Number((totalTax / 2).toFixed(2))
-    const sgst = isInterState ? 0 : Number((totalTax / 2).toFixed(2))
+    const sgst = isInterState ? 0 : Number((totalTax - cgst).toFixed(2))
     const igst = isInterState ? totalTax : 0
     const grandTotal = Number((subtotal + totalTax).toFixed(2))
 

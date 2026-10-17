@@ -324,7 +324,7 @@ export default function JobDetailPage() {
   useEffect(() => {
     if (!isCompleted) return;
     fetchInvoice();
-    const interval = setInterval(fetchInvoice, 10_000);
+    const interval = setInterval(fetchInvoice, 30_000);
     return () => clearInterval(interval);
   }, [isCompleted, fetchInvoice]);
 
@@ -337,7 +337,7 @@ export default function JobDetailPage() {
     const syncMessages = () => {
       if (document.visibilityState === 'visible') void fetchMessages();
     };
-    const interval = window.setInterval(syncMessages, sseConnected ? 5000 : 2500);
+    const interval = window.setInterval(syncMessages, sseConnected ? 15_000 : 5_000);
     return () => window.clearInterval(interval);
   }, [isAuthenticated, job?.employee_status, sseConnected, fetchMessages]);
 

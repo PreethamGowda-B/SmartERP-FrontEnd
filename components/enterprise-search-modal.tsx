@@ -24,7 +24,12 @@ export function EnterpriseSearchModal() {
       }
     }
     window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
+    const openSearch = () => setIsOpen(true)
+    window.addEventListener("smarterp:open-search", openSearch)
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("smarterp:open-search", openSearch)
+    }
   }, [])
 
   useEffect(() => {

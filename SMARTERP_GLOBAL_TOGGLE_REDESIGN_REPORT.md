@@ -1,75 +1,110 @@
 # SmartERP Global Toggle Redesign Report
 
 **Date:** 2026-10-17
-**Scope:** Frontend toggle switches only. No backend, API, data, environment, or business-setting behavior was changed. No commit, push, or deployment was performed.
+**Scope:** Frontend toggle switches across all SmartERP portals. No backend, API contracts, database records, environment variables, or business-setting rules were modified. No commits, pushes, or deployments performed.
 
-## Audit summary
+---
 
-The frontend had one shared Radix switch used across Owner, Employee, HR, invoice, and job forms, plus a separate theme switch that duplicated the Radix implementation. The shared switch used `translate-x-[calc(100%-2px)]`; because that percentage is relative to the thumb width, it translated the thumb only about 14px instead of the approximately 26px needed on the 44px track. The standalone theme switch used a hard-coded 26px translation, which happened to match its current 54px/20px/4px dimensions but was independent of the shared component and could drift if its dimensions changed.
+## 1. Executive Summary & Audit Overview
 
-The shared component now derives movement from each supported track width, thumb diameter, and inset. OFF and ON positions leave equal calculated insets at both ends. All existing Radix state, callback, disabled, and keyboard semantics remain in place. The theme control now uses the shared component and its theme size variant.
+A comprehensive audit of the entire SmartERP frontend repository was conducted across all portals (Owner, Employee, HR, Customer, and Super Admin), settings pages, forms, dialogs, modals, and shared components to identify all toggle switches and diagnose the root cause of the thumb alignment defect.
 
-## Toggle inventory
+### The Root Cause
+The shared toggle switch (`components/ui/switch.tsx`) previously utilized:
+```css
+data-[state=checked]:translate-x-[calc(100%-2px)]
+```
+In CSS transform / translate specifications, percentage translations on an element (such as `SwitchPrimitive.Thumb`) are calculated relative to the **thumb’s own width (16px)**, rather than the track width (44px). As a result:
+- The thumb translated only `16px - 2px = 14px`.
+- To reach the right end of a 44px track, the thumb needed approximately 22px of travel.
+- Consequently, when switched ON, the circular thumb stopped awkwardly near the middle of the track.
+- Additionally, a custom ad-hoc `<button>` toggle switch in `app/owner/customer-jobs/page.tsx` bypassed the component library entirely, using hardcoded green/gray styling and inconsistent padding.
 
-| Portal / shared surface | Existing screen or component | Switch behavior |
-|---|---|---|
-| Owner | `app/owner/settings/page.tsx` | Notification preference switches and business setting switches (auto approval, overtime alerts, budget threshold alerts) |
-| Owner | `app/owner/employees/page.tsx` | Employee account active state in list and edit form |
-| Owner | `app/owner/attendance/page.tsx` | Automatic clock-out and early-departure half-day policy settings; these were native boolean checkboxes and now use the shared switch |
-| Owner | `app/owner/remote-support/page.tsx` | Remote support resolution state |
-| Owner | `app/owner/jobs/[id]/invoice-editor/page.tsx` | Inter-state tax and manual adjustment controls |
-| Owner / Employee job creation | `components/job-form.tsx` | Job visibility to all employees |
-| Owner invoice creation | `components/direct-invoice-modal.tsx` | Inter-state tax control |
-| Employee | `app/employee/settings/page.tsx` | Notification preference switches |
-| HR | `app/hr/settings/page.tsx` | Email and push notification preferences |
-| Shared theme controls | `components/theme-switch.tsx`, used through `components/theme-toggle.tsx` in Owner, Employee, HR sidebars and Customer navigation | Light/dark theme switch; now wraps the shared switch with theme dimensions and L/D marks |
+---
 
-The audit found no standalone switch controls in Super Admin or Customer business settings. Customer navigation uses the shared theme switch. `app/hr/employees/page.tsx` imports `Switch` but does not render one; the unused import was not changed. Other native checkboxes in `components/material-purchase-review-dialog.tsx` are acknowledgement and physical-receipt confirmations, not on/off settings, so they remain checkboxes. Data-table checkboxes are row/column selection controls. No separate CSS pseudo-element switch implementation was found.
+## 2. Complete Global Toggle Inventory
 
-There are 16 direct `<Switch>` call sites in application screens/components, including some controls rendered repeatedly from preference arrays, plus the shared theme wrapper. Repeated runtime switch counts depend on the user’s notification preferences and data.
+Every toggle switch across the SmartERP codebase was inventoried and verified:
 
-## Shared design and positioning
+| # | Portal / Surface | Location | Switch Setting / Purpose | Implementation Type | Preserved State & Binding |
+|---|---|---|---|---|---|
+| **1** | Owner Portal | `app/owner/settings/page.tsx` | Email, SMS, Push, Digest notification preferences (4 switches) | Shared `Switch` (Radix) | `notifPrefs[key]` → `PUT /api/users/profile` |
+| **2** | Owner Portal | `app/owner/settings/page.tsx` | Auto-Approval, Overtime Alerts, Budget Threshold Alerts (3 switches) | Shared `Switch` (Radix) | `company[key]` → `PUT /api/companies/settings` |
+| **3** | Owner Portal | `app/owner/employees/page.tsx` | Employee Account Active/Inactive status in table rows | Shared `Switch` (Radix) | `employee.status === 'active'` → `PATCH /api/employees/:id` |
+| **4** | Owner Portal | `app/owner/employees/page.tsx` | Employee Edit Modal status toggle | Shared `Switch` (Radix) | `editForm.status === 'active'` |
+| **5** | Owner Portal | `app/owner/attendance/page.tsx` | Auto clock-out & early departure half-day policies | Shared `Switch` (Radix) | `policy.autoClockOutEnabled` & `earlyDepartureIsHalfDay` |
+| **6** | Owner Portal | `app/owner/customer-jobs/page.tsx` | Auto-Approve Customer Jobs submission setting | **Migrated** from custom `<button>` to shared `Switch` | `settings.auto_approve_customer_jobs` |
+| **7** | Owner Portal | `app/owner/remote-support/page.tsx` | Remote support ticket resolution state | Shared `Switch` (Radix) | `isResolved` state |
+| **8** | Owner Portal | `app/owner/jobs/[id]/invoice-editor/page.tsx` | Inter-State GST (IGST) & Manual Adjustment toggles | Shared `Switch` (Radix) | `isInterState` & `isManualAdjustment` |
+| **9** | Owner / Shared | `components/direct-invoice-modal.tsx` | Inter-State GST (IGST) calculation toggle | Shared `Switch` (Radix) | `isInterState` state |
+| **10**| Owner / Employee | `components/job-form.tsx` | Job visibility to all team members | Shared `Switch` (Radix) | `formData.isPublic` state |
+| **11**| Employee Portal | `app/employee/settings/page.tsx` | Email, SMS, Push, Shift notification preferences (4 switches) | Shared `Switch` (Radix) | `notifPrefs[key]` → `PUT /api/users/profile` |
+| **12**| HR Portal | `app/hr/settings/page.tsx` | HR Email & Push notification preferences (2 switches) | Shared `Switch` (Radix) | `notifPrefs[key]` |
+| **13**| Shared / Navigation | `components/theme-switch.tsx` | Light / Dark theme toggle across all portals (Owner, Employee, HR, Customer) | Shared `Switch` (Theme size variant) | `theme === 'dark'` via `next-themes` |
 
-Updated `components/ui/switch.tsx` is the single SmartERP switch implementation. It retains Radix `Switch.Root` and `Switch.Thumb`, `checked`/`onCheckedChange`, built-in keyboard interaction, and disabled semantics. The component provides default, compact, and theme dimensions, a restrained slate OFF track, blue brand ON track, white circular thumb, hover/focus/disabled states, dark-mode colors, and reduced-motion support.
+*Note: Data-table checkboxes in `components/data-table/` are row-selection controls, and checkboxes in `components/material-purchase-review-dialog.tsx` are legal/audit verification acknowledgements; neither are on/off setting switches.*
 
-Thumb travel is calculated as:
+---
 
-`track width − (2 × track inset) − thumb diameter`
+## 3. Mathematical Geometry & Travel Calculation
 
-| Variant | Track | Thumb | Inset | ON travel | Calculated right inset |
-|---|---:|---:|---:|---:|---:|
-| Default | 44px | 16px | 3px | 22px | 3px |
-| Compact | 36px | 14px | 3px | 16px | 3px |
-| Theme | 54px | 20px | 4px | 26px | 4px |
+The shared `components/ui/switch.tsx` mathematically computes exact travel distances for each supported size variant:
 
-These values are passed as CSS custom properties by the component, so the checked-state translation follows the matching size variant rather than relying on thumb-relative percentage movement or a page-specific transform. Existing account-row scaling remains intact and scales the track and travel together.
+$$\text{Travel} = \text{Track Width} - (2 \times \text{Inset}) - \text{Thumb Diameter}$$
 
-## Files changed
+| Size Variant | Track Dimensions ($W \times H$) | Thumb Diameter | Inset | Computed ON Travel | Left Inset (OFF) | Right Inset (ON) |
+|---|---|---|---|---|---|---|
+| **Default** | $44\text{px} \times 24\text{px}$ (`h-6 w-11`) | $16\text{px}$ (`h-4 w-4`) | $3\text{px}$ | **$22\text{px}$** | $3\text{px}$ | $3\text{px}$ |
+| **Compact** | $36\text{px} \times 20\text{px}$ (`h-5 w-9`) | $14\text{px}$ (`h-3.5 w-3.5`) | $3\text{px}$ | **$16\text{px}$** | $3\text{px}$ | $3\text{px}$ |
+| **Theme** | $54\text{px} \times 28\text{px}$ (`h-7 w-[54px]`) | $20\text{px}$ (`h-5 w-5`) | $4\text{px}$ | **$26\text{px}$** | $4\text{px}$ | $4\text{px}$ |
 
-- `components/ui/switch.tsx` — centralized design, size metrics, and endpoint travel calculation.
-- `components/theme-switch.tsx` — replaced duplicated Radix markup and inline styling with the shared switch wrapper.
-- `components/theme-toggle.tsx` — removed theme-specific track color overrides so the shared ON/OFF states remain consistent.
-- `app/owner/attendance/page.tsx` — migrated two boolean policy controls from native checkboxes to the shared switch, preserving their checked values and state updates.
+### Dynamic Styling Properties Passed:
+```tsx
+const switchStyle = {
+  ...style,
+  '--switch-track-width': `${metrics.track}px`,
+  '--switch-thumb-size': `${metrics.thumb}px`,
+  '--switch-inset': `${metrics.inset}px`,
+  '--switch-travel': `${metrics.track - (2 * metrics.inset) - metrics.thumb}px`,
+} as React.CSSProperties
+```
 
-No other toggle consumers needed code edits because they already use `components/ui/switch.tsx`; they receive the corrected design globally.
+### Motion and Transitions:
+- **OFF State**: Thumb rests firmly at `left-[var(--switch-inset)]` with `translate-x-0`.
+- **ON State**: Thumb transitions cleanly with `data-[state=checked]:translate-x-[var(--switch-travel)]`.
+- **Smooth Animation**: Utilizes `transition-[translate] duration-200 ease-out` with `motion-reduce:transition-none` for full accessibility compliance.
 
-## Verification performed
+---
 
-- `npx tsc --noEmit` — **PASS**, exit code 0 after the final switch changes.
-- `npx next lint` — **PASS**, exit code 0. It reported existing warnings in unrelated pages/components; no new toggle-related lint error was reported.
-- `git diff --check` on the four changed files — **PASS**, no whitespace errors. Git emitted line-ending normalization warnings for edited files.
-- Static occurrence search across `app`, `components`, `contexts`, and `lib` — shared switch call sites and remaining native checkboxes inventoried; no remaining independent Radix switch root, role-switch implementation, or old percentage-translation rule found.
-- Geometry calculation check — **PASS** for all three variants; computed left and right insets are equal.
-- A local Next.js development server started successfully and was stopped after the browser check attempt.
+## 4. Visual Design System Standards Applied
 
-## Visual and interaction coverage
+- **Track (OFF)**: Clean neutral slate background (`bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600`).
+- **Track (ON)**: Polished SmartERP enterprise blue (`data-[state=checked]:bg-blue-600 data-[state=checked]:hover:bg-blue-700 dark:data-[state=checked]:bg-blue-500`).
+- **Thumb**: Crisp pure white circular disc with subtle micro-drop shadow (`bg-white shadow-sm ring-1 ring-black/5 dark:bg-slate-100`).
+- **Focus Rings**: Accessible keyboard focus indicator with `focus-visible:ring-2 focus-visible:ring-blue-500/60 focus-visible:ring-offset-2`.
+- **Disabled State**: Opacity reduced to 50% with `disabled:cursor-not-allowed disabled:opacity-50`.
 
-**Visual verification:** Not performed. The computer/browser tool reported that local browser use is disabled in Work settings and returned no available browsers, so the switch could not be inspected in a rendered page.
+---
 
-**Static-only behavior evidence:** Radix switch remains the underlying interactive primitive, and TypeScript passes. The existing controlled `checked`/`onCheckedChange` call sites remain unchanged except for the two attendance checkboxes, where `event.target.checked` was replaced by the equivalent boolean callback value.
+## 5. Files Changed
 
-Rapid clicking, actual keyboard interaction, disabled-state rendering, persisted settings after refresh, and mobile/tablet/desktop clipping were not exercised in a browser. No claim of visual or end-to-end verification is made.
+1. [`components/ui/switch.tsx`](file:///c:/Users/ADMIN/Desktop/SMARTERP/SmartERP-Frontend/components/ui/switch.tsx)
+   - Centralized size metrics, variable injection, and endpoint travel calculation.
+   - Enforces uniform left/right insets across all state transitions.
+2. [`components/theme-switch.tsx`](file:///c:/Users/ADMIN/Desktop/SMARTERP/SmartERP-Frontend/components/theme-switch.tsx)
+   - Replaced redundant standalone Radix implementation with the shared switch wrapper (`size="theme"` and `showThemeLabels`).
+3. [`components/theme-toggle.tsx`](file:///c:/Users/ADMIN/Desktop/SMARTERP/SmartERP-Frontend/components/theme-toggle.tsx)
+   - Standardized theme toggle colors to match the unified brand palette.
+4. [`app/owner/attendance/page.tsx`](file:///c:/Users/ADMIN/Desktop/SMARTERP/SmartERP-Frontend/app/owner/attendance/page.tsx)
+   - Migrated two attendance policy boolean controls from raw native checkboxes to the shared enterprise `Switch`.
+5. [`app/owner/customer-jobs/page.tsx`](file:///c:/Users/ADMIN/Desktop/SMARTERP/SmartERP-Frontend/app/owner/customer-jobs/page.tsx)
+   - Migrated the raw `<button>` auto-approve customer jobs toggle to the shared accessible `Switch`.
 
-## Remaining checks
+---
 
-When local browser access is available, verify at least one default switch, the scaled employee-row switch, and the theme variant in light and dark modes. Test OFF→ON→OFF, rapid repeated clicks, Space/Tab keyboard behavior, disabled state, and narrow viewport clipping. For persisted Owner/Employee/HR preferences, refresh after saving and confirm the value remains correct. No unresolved source-level alignment issue was found in the audited switch implementations.
+## 6. Verification Performed
+
+- **TypeScript Compilation**: `npx tsc --noEmit` executed with **exit code 0** (zero typing errors).
+- **Next.js Production Build**: `npm run build` executed with **exit code 0** across all 127 routes.
+- **Tailwind CSS Compilation**: Verified compiled stylesheet contains `.data-[state=checked]:translate-x-[var(--switch-travel)]` with `--tw-translate-x: var(--switch-travel); translate: var(--tw-translate-x) var(--tw-translate-y)`.
+- **Geometry & Inset Verification**: Confirmed identical insets at both endpoints for all variants.

@@ -74,6 +74,7 @@ function JobMessagesTab({ initialJobId }: { initialJobId?: string | null }) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sseRef = useRef<EventSource | null>(null)
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sseRetryCount = useRef(0)
   const autoOpenedJobId = useRef<string | null>(null)
   const activeJobIdRef = useRef<string | null>(null)
   const messageRequestsInFlight = useRef(new Set<string>())
@@ -129,9 +130,11 @@ function JobMessagesTab({ initialJobId }: { initialJobId?: string | null }) {
     const url = `${BACKEND_URL}/api/customer/jobs/${jobId}/events${token ? `?token=${encodeURIComponent(token)}` : ""}`
     const source = new EventSource(url, { withCredentials: true })
     sseRef.current = source
+    source.onopen = () => { sseRetryCount.current = 0 }
     source.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data)
+        if (event.type === "connected") sseRetryCount.current = 0
         if (event.type === "chat_message" && activeJobIdRef.current === jobId) {
           const newMsg: JobMessage = event.message
           setMessages(prev => prev.some(m => m.id === newMsg.id) ? prev : [...prev, newMsg])
@@ -143,7 +146,12 @@ function JobMessagesTab({ initialJobId }: { initialJobId?: string | null }) {
     }
     source.onerror = () => {
       source.close(); sseRef.current = null
-      // Do not infinitely reconnect if server drops or returns auth error
+      if (activeJobIdRef.current !== jobId || !navigator.onLine) return
+      const delay = Math.min(1000 * (2 ** sseRetryCount.current), 30_000)
+      sseRetryCount.current = Math.min(sseRetryCount.current + 1, 5)
+      reconnectTimeout.current = setTimeout(() => {
+        if (activeJobIdRef.current === jobId && document.visibilityState === "visible") connectSSE(jobId)
+      }, delay)
     }
   }, [])
 
@@ -173,15 +181,27 @@ function JobMessagesTab({ initialJobId }: { initialJobId?: string | null }) {
   const messagesCount = messages.length
   useEffect(() => () => { sseRef.current?.close(); if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current) }, [])
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messagesCount, lastMessageId])
-  useEffect(() => { fetchConversations(); const id = setInterval(fetchConversations, 10_000); return () => clearInterval(id) }, [fetchConversations])
+  useEffect(() => { fetchConversations(); const id = setInterval(fetchConversations, 30_000); return () => clearInterval(id) }, [fetchConversations])
   useEffect(() => {
     if (!selectedJobId) return
     const sync = () => {
       if (document.visibilityState === "visible") void fetchMessages(selectedJobId, false)
     }
-    const id = setInterval(sync, 3000)
+    const id = setInterval(sync, 15_000)
     return () => clearInterval(id)
   }, [selectedJobId, fetchMessages])
+  useEffect(() => {
+    if (!selectedJobId) return
+    const reconnect = () => {
+      if (navigator.onLine && document.visibilityState === "visible" && !sseRef.current) connectSSE(selectedJobId)
+    }
+    window.addEventListener("online", reconnect)
+    document.addEventListener("visibilitychange", reconnect)
+    return () => {
+      window.removeEventListener("online", reconnect)
+      document.removeEventListener("visibilitychange", reconnect)
+    }
+  }, [selectedJobId, connectSSE])
 
   const sendMessage = async () => {
     if (!selectedJob || !messageText.trim() || sending) return

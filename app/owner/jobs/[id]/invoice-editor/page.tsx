@@ -314,7 +314,7 @@ export default function DedicatedInvoiceEditorPage() {
     ? parseFloat((effectiveGrandTotal - effectiveSubtotal).toFixed(2))
     : calculatedTax;
   const effectiveCgst = isInterState ? 0 : parseFloat((effectiveTotalTax / 2).toFixed(2));
-  const effectiveSgst = isInterState ? 0 : parseFloat((effectiveTotalTax / 2).toFixed(2));
+  const effectiveSgst = isInterState ? 0 : parseFloat((effectiveTotalTax - effectiveCgst).toFixed(2));
   const effectiveIgst = isInterState ? effectiveTotalTax : 0;
   const adjustmentDifference = isAdjusted ? parseFloat((effectiveGrandTotal - calculatedGrandTotal).toFixed(2)) : 0;
 

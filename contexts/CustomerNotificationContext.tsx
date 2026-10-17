@@ -54,14 +54,19 @@ export function CustomerNotificationProvider({ children }: { children: React.Rea
     setServerUnreadCount(0)
     if (isLoading || !customer) return
 
-    // Fetch notifications on mount and poll every 30s
-    // (Customer portal uses per-job SSE via /api/customer/jobs/:id/events,
-    //  not a global SSE stream — so we poll here instead)
+    // Per-job SSE events provide prompt refreshes while this poll remains a
+    // recovery path for notifications generated outside an open job page.
     fetchNotifications()
     const pollInterval = setInterval(fetchNotifications, 30_000)
+    const onJobEvent = (event: Event) => {
+      const detail = (event as CustomEvent<{ type?: string }>).detail
+      if (detail?.type && detail.type !== 'location_update') void fetchNotifications()
+    }
+    window.addEventListener('smarterp:job-event', onJobEvent)
 
     return () => {
       clearInterval(pollInterval)
+      window.removeEventListener('smarterp:job-event', onJobEvent)
     }
   }, [customer?.id, isLoading, fetchNotifications])
 

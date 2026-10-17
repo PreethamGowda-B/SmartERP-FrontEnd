@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
 import { apiClient } from "@/lib/apiClient"
 import {
   Search, RefreshCw, CheckCircle2, XCircle, Clock, AlertCircle,
@@ -483,15 +484,11 @@ export default function OwnerCustomerJobsPage() {
                   <p className="font-medium text-sm">Auto-Approve Jobs</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Automatically approve all customer submissions</p>
                 </div>
-                <button
-                  onClick={() => setSettings(s => ({ ...s, auto_approve_customer_jobs: !s.auto_approve_customer_jobs }))}
-                  className={cn(
-                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                    settings.auto_approve_customer_jobs ? "bg-green-500" : "bg-gray-300"
-                  )}
-                >
-                  <span className={cn("inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow", settings.auto_approve_customer_jobs ? "translate-x-6" : "translate-x-1")} />
-                </button>
+                <Switch
+                  checked={Boolean(settings.auto_approve_customer_jobs)}
+                  onCheckedChange={(checked) => setSettings(s => ({ ...s, auto_approve_customer_jobs: checked }))}
+                  aria-label="Auto-Approve Jobs"
+                />
               </div>
 
               {/* SLA */}

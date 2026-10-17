@@ -9,6 +9,7 @@ import { apiClient } from "@/lib/apiClient"
 import { isPublicRoute } from "@/lib/route-utils"
 import { useNotifications } from "@/contexts/notification-context"
 import { logger } from "@/lib/logger"
+import { toast } from "sonner"
 
 interface JobContextType {
   jobs: Job[]
@@ -33,6 +34,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
   const activeScopeRef = useRef<string | null>(null)
   const jobsScopeRef = useRef<string | null>(null)
   const requestInFlightRef = useRef(false)
+  const requestWaitersRef = useRef<Array<() => void>>([])
   const scope = user
     ? `${String(user.company_id ?? (user as any).companyId ?? "no-company")}:${String(user.id)}:${String(user.role || "").toLowerCase()}`
     : null
@@ -174,6 +176,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         )
       } finally {
         requestInFlightRef.current = false
+        requestWaitersRef.current.splice(0).forEach((resolve) => resolve())
       }
     }
 
@@ -237,7 +240,9 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         try {
           await apiClient("/api/jobs", { method: "POST", body: JSON.stringify(job) })
         } catch (err) {
-          logger.warn("Failed to persist job to server, saved locally", err)
+          logger.warn("Failed to persist job to server", err)
+          toast.error("This job could not be saved. The list will be refreshed from the server.")
+          window.dispatchEvent(new Event("smarterp:jobs-refresh-requested"))
         }
       })()
 
@@ -287,7 +292,9 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         try {
           await apiClient(`/api/jobs/${id}`, { method: "PUT", body: JSON.stringify(updates) })
         } catch (err) {
-          logger.warn("Failed to update job on server, update applied locally", err)
+          logger.warn("Failed to update job on server", err)
+          toast.error("The job update could not be saved. The list will be refreshed from the server.")
+          window.dispatchEvent(new Event("smarterp:jobs-refresh-requested"))
         }
       })()
   }, [addNotification])
@@ -298,7 +305,9 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         try {
           await apiClient(`/api/jobs/${id}`, { method: "DELETE" })
         } catch (err) {
-          logger.warn("Failed to delete job on server, deletion applied locally", err)
+          logger.warn("Failed to delete job on server", err)
+          toast.error("The job could not be deleted. The list will be refreshed from the server.")
+          window.dispatchEvent(new Event("smarterp:jobs-refresh-requested"))
         }
       })()
   }, [])
@@ -324,7 +333,14 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
   }, [jobs])
 
   const refreshJobs = useCallback(async () => {
-    if (isPublic || !user || !storageKey || loadedScopeRef.current !== scope || requestInFlightRef.current) return
+    if (isPublic || !user || !storageKey || loadedScopeRef.current !== scope) return
+    // A refresh button/event must not silently report success just because an
+    // initial or periodic request is already running. Wait for it to finish,
+    // then perform this authoritative refresh.
+    while (requestInFlightRef.current) {
+      await new Promise<void>((resolve) => requestWaitersRef.current.push(resolve))
+      if (activeScopeRef.current !== scope) return
+    }
     requestInFlightRef.current = true
     try {
       logger.log("[v0] Manually refreshing jobs...")
@@ -362,8 +378,33 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       }
     } finally {
       requestInFlightRef.current = false
+      requestWaitersRef.current.splice(0).forEach((resolve) => resolve())
     }
   }, [user, isPublic, scope, storageKey])
+
+  useEffect(() => {
+    if (isPublic || !user) return
+    const refreshOnNotification = (event: Event) => {
+      const notification = (event as CustomEvent<any>).detail
+      const type = String(notification?.type || "").toLowerCase()
+      if (["job", "chat_message", "material_request", "invoice", "invoice_issued"].includes(type)) {
+        void refreshJobs()
+      }
+    }
+    const refreshOnJobEvent = (event: Event) => {
+      const detail = (event as CustomEvent<any>).detail
+      if (detail?.jobId || detail?.job_id) void refreshJobs()
+    }
+    window.addEventListener("smarterp:notification", refreshOnNotification)
+    window.addEventListener("smarterp:job-event", refreshOnJobEvent)
+    const refreshAfterFailedMutation = () => { void refreshJobs() }
+    window.addEventListener("smarterp:jobs-refresh-requested", refreshAfterFailedMutation)
+    return () => {
+      window.removeEventListener("smarterp:notification", refreshOnNotification)
+      window.removeEventListener("smarterp:job-event", refreshOnJobEvent)
+      window.removeEventListener("smarterp:jobs-refresh-requested", refreshAfterFailedMutation)
+    }
+  }, [isPublic, user, refreshJobs])
 
   return (
     <JobContext.Provider

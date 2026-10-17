@@ -53,6 +53,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const isCustomerRoute = pathname?.startsWith("/customer") ?? false
   const router = useRouter()
   const sseConnectionRef = useRef<EventSource | null>(null)
+  const sseRetryCountRef = useRef(0)
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [reconnectTrigger, setReconnectTrigger] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const messagingHandlerRef = useRef<MessagingSSEHandler | null>(null)
@@ -194,6 +196,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
       eventSource.onopen = () => {
         logger.log("📡 SSE connection established")
+        sseRetryCountRef.current = 0
         setIsConnected(true)
       }
 
@@ -214,8 +217,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             }
             logger.log("🔔 New notification received:", notification)
 
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("smarterp:notification", { detail: notification }))
+            }
+
             // 1. Update Notification Center state
-            setNotifications((prev) => [notification, ...prev])
+            setNotifications((prev) => {
+              if (notification?.id && prev.some((item) => item.id === notification.id)) return prev
+              return [notification, ...prev]
+            })
 
             // 2. Play Crisp Web Audio Chime Sound (if not muted)
             if (!isMuted) {
@@ -224,7 +234,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
             // 3. Clean White Sonner Toast with Direct Action Link
             const actionData = notification.data || {}
-            const jobId = actionData.job_id || (notification.type === "job" ? notification.id : null)
+            const jobId = actionData.job_id || actionData.jobId || notification.job_id || (notification.type === "job" ? notification.id : null)
             toast(notification.title || "New Notification", {
               description: notification.message || "",
               duration: 6000,
@@ -262,9 +272,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         if (user && !isCancelled) {
           // Re-validate token before scheduling reconnect
           await getValidAccessToken()
-          setTimeout(() => {
+          if (isCancelled) return
+          const delay = Math.min(1000 * (2 ** sseRetryCountRef.current), 30_000)
+          sseRetryCountRef.current = Math.min(sseRetryCountRef.current + 1, 5)
+          reconnectTimerRef.current = setTimeout(() => {
             if (!isCancelled) setReconnectTrigger(prev => prev + 1)
-          }, 3000)
+          }, delay)
         }
       }
 
@@ -275,9 +288,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     // Listen for cross-app token refresh so SSE automatically reconnects with fresh token
     const handleTokenRefreshed = () => {
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
       setReconnectTrigger(prev => prev + 1)
     }
     window.addEventListener("auth-token-refreshed", handleTokenRefreshed)
+    const reconnectWhenActive = () => {
+      if (!navigator.onLine || document.visibilityState !== "visible" || isCancelled || !user) return
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
+      if (activeEventSource?.readyState !== EventSource.OPEN) setReconnectTrigger(prev => prev + 1)
+    }
+    window.addEventListener("online", reconnectWhenActive)
+    document.addEventListener("visibilitychange", reconnectWhenActive)
 
     const pollInterval = setInterval(() => {
       if (user) fetchNotifications()
@@ -286,6 +307,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return () => {
       isCancelled = true
       window.removeEventListener("auth-token-refreshed", handleTokenRefreshed)
+      window.removeEventListener("online", reconnectWhenActive)
+      document.removeEventListener("visibilitychange", reconnectWhenActive)
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
       if (activeEventSource) {
         activeEventSource.close()
       }

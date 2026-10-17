@@ -14,7 +14,7 @@
  *
  * Other features:
  * - Cookie-based auth (primary); no token in URL needed when cookie is present
- * - Exponential backoff reconnect (1s → 2s → 4s → max 30s)
+ * - Exponential backoff reconnect (1s → 2s → 4s → max 30s), retrying until disabled
  * - Exposes isConnected so callers can suspend polling while SSE is active
  * - Automatic cleanup on unmount
  */
@@ -86,6 +86,11 @@ export function useSSE({ jobId, onEvent, enabled = true }: UseSSEOptions): UseSS
         if (!isNewEvent(data.event_id)) return;
 
         onEventRef.current(data);
+        if (typeof window !== 'undefined' && data.type !== 'connected' && data.type !== 'reconnect') {
+          window.dispatchEvent(new CustomEvent('smarterp:job-event', {
+            detail: { ...data, jobId },
+          }));
+        }
 
         if (data.type === 'connected') {
           setIsConnected(true);
@@ -108,19 +113,27 @@ export function useSSE({ jobId, onEvent, enabled = true }: UseSSEOptions): UseSS
       es.close();
       esRef.current = null;
 
-      if (retryCountRef.current < 5) {
-        const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30_000);
-        retryCountRef.current += 1;
-        reconnectTimeoutRef.current = setTimeout(connect, delay);
-      }
+      const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30_000);
+      retryCountRef.current = Math.min(retryCountRef.current + 1, 5);
+      reconnectTimeoutRef.current = setTimeout(connect, delay);
     };
   }, [jobId, enabled, isNewEvent]);
 
   useEffect(() => {
     if (!enabled) return;
     connect();
+    const reconnectWhenActive = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+      if (!esRef.current) connect();
+    };
+    window.addEventListener('online', reconnectWhenActive);
+    document.addEventListener('visibilitychange', reconnectWhenActive);
     return () => {
       setIsConnected(false);
+      window.removeEventListener('online', reconnectWhenActive);
+      document.removeEventListener('visibilitychange', reconnectWhenActive);
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       if (esRef.current) { esRef.current.close(); esRef.current = null; }
     };

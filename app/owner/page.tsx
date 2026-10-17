@@ -35,8 +35,8 @@ import {
   Layers,
   ShieldCheck,
   Filter,
+  Search,
 } from "lucide-react"
-import { DateTimeWeather } from "@/components/date-time-weather"
 import { SubscriptionStatus } from "@/components/subscription-status"
 import { ErrorView } from "@/components/ui/error-view"
 import { SkeletonCard } from "@/components/ui/skeleton-card"
@@ -118,8 +118,17 @@ export default function OwnerDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
   const [pendingApprovals, setPendingApprovals] = useState(0)
-  const [approvalCounts, setApprovalCounts] = useState({ employee: 0, customer: 0, invoice: 0, inventory: 0 })
+  const [attentionItems, setAttentionItems] = useState<any[]>([])
   const [projectFilter, setProjectFilter] = useState<"all" | "in_progress" | "high_priority">("all")
+  const [currentTime, setCurrentTime] = useState<Date | null>(null)
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null)
+
+  useEffect(() => {
+    const updateClock = () => setCurrentTime(new Date())
+    updateClock()
+    const interval = window.setInterval(updateClock, 30_000)
+    return () => window.clearInterval(interval)
+  }, [])
 
   const fetchDashboardData = useCallback(async (showLoading = true) => {
     try {
@@ -132,14 +141,10 @@ export default function OwnerDashboard() {
       ])
       setMetrics(metricsData)
       setRecentActivity(Array.isArray(activityData) ? activityData : [])
+      setLastSyncedAt(new Date())
       const workRequests = approvalData?.requests || []
       setPendingApprovals(workRequests.length)
-      setApprovalCounts({
-        employee: workRequests.filter((r: any) => r.category === "jobs").length,
-        customer: workRequests.filter((r: any) => r.category === "customers").length,
-        invoice: workRequests.filter((r: any) => r.category === "finance").length,
-        inventory: workRequests.filter((r: any) => r.category === "inventory").length,
-      })
+      setAttentionItems(workRequests.slice(0, 3))
     } catch (err: any) {
       logger.error("Error fetching dashboard data:", err)
       setError({
@@ -154,6 +159,24 @@ export default function OwnerDashboard() {
   useEffect(() => {
     if (!authLoading) fetchDashboardData()
   }, [fetchDashboardData, authLoading])
+
+  useEffect(() => {
+    if (authLoading) return
+    const refreshForOperationalChange = (event: Event) => {
+      const detail = (event as CustomEvent<any>).detail
+      if (!detail?.type || ["job", "chat_message", "material_request", "invoice", "invoice_issued", "attendance"].includes(String(detail.type).toLowerCase())) {
+        void fetchDashboardData(false)
+      }
+    }
+    window.addEventListener("smarterp:notification", refreshForOperationalChange)
+    const fallback = window.setInterval(() => {
+      if (document.visibilityState === "visible") void fetchDashboardData(false)
+    }, 60_000)
+    return () => {
+      window.removeEventListener("smarterp:notification", refreshForOperationalChange)
+      window.clearInterval(fallback)
+    }
+  }, [authLoading, fetchDashboardData])
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true)
@@ -287,59 +310,78 @@ export default function OwnerDashboard() {
 
   return (
     <OwnerLayout>
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
-        {/* ─── A. Executive Welcome Header ───────────────────────────────── */}
-        <div className="rounded-2xl border border-border/70 bg-card shadow-xs p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] font-bold uppercase tracking-wider">
-                EXECUTIVE SUITE
-              </Badge>
-              <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                All Systems Operational
-              </div>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              Welcome back, {user?.name ? user.name.split(" ")[0] : "Operations Executive"}
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Real-time enterprise command center. Monitor workforce readiness, active jobs, and budget allocations.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManualRefresh}
-              disabled={isRefreshing}
-              className="gap-2 rounded-xl h-9 text-xs font-semibold border-border/80"
-              title="Synchronize operations data"
-            >
-              <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
-              <span className="hidden sm:inline">Sync Data</span>
-            </Button>
-            <DateTimeWeather />
+      <div className="mx-auto max-w-[1700px] space-y-4 p-3 sm:p-5 xl:p-6">
+        {/* Dashboard-only search launcher. The portal sidebar is intentionally unchanged. */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("smarterp:open-search"))}
+            className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-xl border border-border/70 bg-card px-4 text-left text-sm text-muted-foreground shadow-xs transition hover:border-primary/40 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            aria-label="Search jobs, employees, and customers"
+          >
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="truncate">Search jobs, employees, customers...</span>
+            <kbd className="ml-auto hidden rounded-md border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] sm:inline">Ctrl K</kbd>
+          </button>
+          <div className="hidden shrink-0 items-center gap-2 text-muted-foreground sm:flex">
+            <button type="button" onClick={() => router.push("/owner/messages")} aria-label="Open messages and alerts" title="Messages and alerts" className="rounded-lg border border-border/70 bg-card p-2 transition hover:bg-muted"><Bell className="h-4 w-4" /></button>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-blue-200 bg-blue-100 text-xs font-bold text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">{(user?.name || "O").slice(0, 1).toUpperCase()}</span>
+            <span className="max-w-[150px] truncate text-xs font-medium text-foreground">{user?.name || "Owner"}</span>
           </div>
         </div>
 
-        {/* ─── B. Subscription and Plan Overview ─────────────────────────── */}
-        <SubscriptionStatus />
+        {/* Executive welcome banner */}
+        <section className="relative isolate overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-r from-emerald-50 via-cyan-50 to-blue-50 p-4 shadow-xs dark:border-sky-900/50 dark:from-emerald-950/30 dark:via-cyan-950/25 dark:to-blue-950/30 sm:p-5 xl:p-6">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-20 opacity-50">
+            <svg viewBox="0 0 1200 140" preserveAspectRatio="none" className="h-full w-full text-sky-200 dark:text-sky-900/60">
+              <path d="M0 105 130 74l95 26 113-61 120 52 115-72 139 69 98-37 125 54 117-63 148 49v49H0Z" fill="currentColor" opacity=".45" />
+              <path d="M0 124 141 91l109 27 131-49 116 36 105-45 120 38 121-33 129 39 109-45 119 31v50H0Z" fill="currentColor" opacity=".55" />
+            </svg>
+          </div>
+          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="border-blue-200 bg-white/70 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:border-blue-800 dark:bg-slate-950/40 dark:text-blue-300">Executive Suite</Badge>
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" /> Operations overview
+                </span>
+              </div>
+              <h1 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-3xl">
+                Welcome back, {user?.name ? user.name.split(" ")[0] : "Owner"} <span aria-hidden="true">👋</span>
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Here&apos;s what&apos;s happening with your operations today.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 xl:gap-5">
+              <div className="min-w-[130px]">
+                <div className="flex items-center gap-2 text-slate-900 dark:text-white"><Clock className="h-4 w-4 text-blue-700 dark:text-blue-300" /><span className="font-mono text-lg font-bold tabular-nums">{currentTime?.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }) || "--:--"}</span></div>
+                <div className="mt-0.5 pl-6 text-[11px] text-slate-600 dark:text-slate-300">{currentTime?.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }) || "Loading date"}</div>
+              </div>
+              <div className="hidden h-9 w-px bg-slate-300/70 dark:bg-slate-700 sm:block" />
+              <div className="text-xs text-slate-600 dark:text-slate-300"><span className="block font-semibold text-slate-900 dark:text-white">SmartERP</span><span>{lastSyncedAt ? `Updated ${lastSyncedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}` : "Operations overview"}</span></div>
+              <Button variant="outline" size="sm" onClick={handleManualRefresh} disabled={isRefreshing} className="h-10 gap-2 rounded-xl border-white/80 bg-white/80 text-xs font-semibold text-slate-900 shadow-xs hover:bg-white dark:border-slate-700 dark:bg-slate-900/70 dark:text-white dark:hover:bg-slate-900">
+                <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
+                <span>{isRefreshing ? "Syncing" : "Sync Data"}</span>
+              </Button>
+            </div>
+          </div>
+        </section>
 
-        {/* ─── Proactive Inventory Insights ──────────────────────────────── */}
-        <ProactiveAIInsights />
+        {/* Subscription and inventory callouts */}
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:items-stretch">
+          <div className="min-w-0 xl:col-span-8"><SubscriptionStatus /></div>
+          <div className="min-w-0 xl:col-span-4 [&>div]:h-full [&>div>div]:h-full"><ProactiveAIInsights /></div>
+        </div>
 
         {/* ─── C. Advanced Executive KPI Cards ───────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {/* 1. Active Jobs */}
           <Card
             onClick={() => router.push("/owner/jobs")}
-            className="rounded-2xl border border-border/70 bg-card shadow-xs hover:border-blue-500/40 hover:shadow-sm transition-all cursor-pointer group"
+            className="rounded-2xl border border-slate-200/80 bg-card shadow-[0_3px_12px_rgba(15,23,42,0.05)] transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md cursor-pointer group dark:border-slate-800"
           >
-            <CardContent className="p-4 sm:p-5 space-y-3">
+            <CardContent className="min-h-[112px] p-3.5 sm:p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Active Work Orders</span>
+                <span className="text-xs font-medium text-muted-foreground">Active Jobs</span>
                 <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
                   <Briefcase className="h-4 w-4" />
                 </div>
@@ -350,21 +392,8 @@ export default function OwnerDashboard() {
                   {activeJobs}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                  {activeJobs === 0 ? "No open work orders" : `${activeJobs} in-progress & accepted`}
+                  {activeJobs === 0 ? "No active work orders" : "In progress & accepted"}
                 </p>
-              </div>
-
-              <div className="space-y-1 pt-1">
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground font-medium">
-                  <span>Capacity</span>
-                  <span className="font-mono">{Math.min(activeJobs * 10, 100)}%</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-blue-600 transition-all duration-500"
-                    style={{ width: `${Math.min(activeJobs * 10, 100)}%` }}
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -372,11 +401,11 @@ export default function OwnerDashboard() {
           {/* 2. Total Workforce */}
           <Card
             onClick={() => router.push("/owner/employees")}
-            className="rounded-2xl border border-border/70 bg-card shadow-xs hover:border-emerald-500/40 hover:shadow-sm transition-all cursor-pointer group"
+            className="rounded-2xl border border-slate-200/80 bg-card shadow-[0_3px_12px_rgba(15,23,42,0.05)] transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md cursor-pointer group dark:border-slate-800"
           >
-            <CardContent className="p-4 sm:p-5 space-y-3">
+            <CardContent className="min-h-[112px] p-3.5 sm:p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Total Workforce</span>
+                <span className="text-xs font-medium text-muted-foreground">Total Employees</span>
                 <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform">
                   <Users className="h-4 w-4" />
                 </div>
@@ -387,21 +416,8 @@ export default function OwnerDashboard() {
                   {totalEmployees}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                  {totalEmployees === 0 ? "No crew members" : `${totalEmployees} registered staff`}
+                  {totalEmployees === 0 ? "No employees added" : "Registered employees"}
                 </p>
-              </div>
-
-              <div className="space-y-1 pt-1">
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground font-medium">
-                  <span>Roster State</span>
-                  <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">Active</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-emerald-600 transition-all duration-500"
-                    style={{ width: `${Math.min(totalEmployees * 5, 100)}%` }}
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -409,11 +425,11 @@ export default function OwnerDashboard() {
           {/* 3. Today's Attendance */}
           <Card
             onClick={() => router.push("/owner/attendance")}
-            className="rounded-2xl border border-border/70 bg-card shadow-xs hover:border-violet-500/40 hover:shadow-sm transition-all cursor-pointer group"
+            className="rounded-2xl border border-slate-200/80 bg-card shadow-[0_3px_12px_rgba(15,23,42,0.05)] transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md cursor-pointer group dark:border-slate-800"
           >
-            <CardContent className="p-4 sm:p-5 space-y-3">
+            <CardContent className="min-h-[112px] p-3.5 sm:p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground">On Shift Today</span>
+                <span className="text-xs font-medium text-muted-foreground">Today&apos;s Attendance</span>
                 <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 group-hover:scale-105 transition-transform relative">
                   <Clock className="h-4 w-4" />
                   {todayAttendance > 0 && (
@@ -456,9 +472,9 @@ export default function OwnerDashboard() {
           {/* 4. Budget Utilization (Handles zero budget cap accurately) */}
           <Card
             onClick={() => router.push("/owner/finance")}
-            className="rounded-2xl border border-border/70 bg-card shadow-xs hover:border-amber-500/40 hover:shadow-sm transition-all cursor-pointer group"
+            className="rounded-2xl border border-slate-200/80 bg-card shadow-[0_3px_12px_rgba(15,23,42,0.05)] transition-all hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md cursor-pointer group dark:border-slate-800"
           >
-            <CardContent className="p-4 sm:p-5 space-y-3">
+            <CardContent className="min-h-[112px] p-3.5 sm:p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Budget Utilization</span>
                 <div className={cn(
@@ -509,90 +525,24 @@ export default function OwnerDashboard() {
           </Card>
         </div>
 
-        {/* ─── Executive Approval Center (when pending) ──────────────────── */}
         {pendingApprovals > 0 && (
-          <div className="rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-r from-indigo-50/70 via-background to-purple-50/40 dark:from-indigo-950/20 dark:via-background dark:to-purple-950/10 p-4 sm:p-5 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
-                  <Zap className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                    Executive Approval Center
-                    <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black">
-                      {pendingApprovals} Pending
-                    </span>
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground">Operational requisitions requiring owner sign-off</p>
-                </div>
+          <section className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"><AlertTriangle className="h-4 w-4" /></span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-foreground">Needs your attention <span className="ml-1 rounded-full bg-amber-200 px-2 py-0.5 text-[10px] text-amber-900 dark:bg-amber-900 dark:text-amber-100">{pendingApprovals}</span></p>
+                <p className="truncate text-xs text-muted-foreground">{attentionItems.map((item) => item.title).filter(Boolean).join(' · ') || 'Requests are waiting for review'}</p>
               </div>
-
-              <Button
-                size="sm"
-                className="h-8 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-xs"
-                onClick={() => router.push("/owner/jobs?view=approvals")}
-              >
-                Review All Items <ArrowRight className="h-3 w-3 ml-1" />
-              </Button>
             </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {[
-                {
-                  label: "Employee Requests",
-                  count: approvalCounts.employee,
-                  icon: UserCheck,
-                  color: "text-purple-600 bg-purple-500/10",
-                  href: "/owner/jobs?view=approvals&category=jobs",
-                },
-                {
-                  label: "Customer Inquiries",
-                  count: approvalCounts.customer,
-                  icon: Users,
-                  color: "text-blue-600 bg-blue-500/10",
-                  href: "/owner/jobs?view=approvals&category=customers",
-                },
-                {
-                  label: "Invoice & Finance",
-                  count: approvalCounts.invoice,
-                  icon: FileText,
-                  color: "text-emerald-600 bg-emerald-500/10",
-                  href: "/owner/jobs?view=approvals&category=finance",
-                },
-                {
-                  label: "Material Requests",
-                  count: approvalCounts.inventory,
-                  icon: Package,
-                  color: "text-amber-600 bg-amber-500/10",
-                  href: "/owner/jobs?view=approvals&category=inventory",
-                },
-              ].map((kpi) => (
-                <button
-                  key={kpi.label}
-                  onClick={() => router.push(kpi.href)}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-background/90 border border-border/70 hover:border-indigo-400/60 hover:shadow-xs transition-all text-left"
-                >
-                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", kpi.color)}>
-                    <kpi.icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-base font-black text-foreground font-mono tabular-nums leading-none">
-                      {kpi.count}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground font-semibold mt-0.5 truncate">{kpi.label}</div>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 ml-auto shrink-0" />
-                </button>
-              ))}
-            </div>
-          </div>
+            <Button size="sm" variant="outline" className="h-9 shrink-0 gap-2 rounded-lg border-amber-300 bg-white/70 text-xs font-semibold text-amber-900 hover:bg-white dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100" onClick={() => router.push('/owner/jobs?view=approvals')}>
+              Review requests <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </section>
         )}
-
         {/* ─── D. Active Projects & E. Recent Activity ──────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-12">
           {/* D. Active Projects (7 cols) */}
-          <Card className="rounded-2xl border border-border/70 shadow-xs lg:col-span-7 flex flex-col justify-between overflow-hidden">
+          <Card className="rounded-2xl border border-border/70 shadow-xs lg:col-span-1 xl:col-span-5 flex flex-col justify-between overflow-hidden">
             <div>
               <CardHeader className="pb-3 border-b border-border/60">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -729,7 +679,7 @@ export default function OwnerDashboard() {
           </Card>
 
           {/* E. Recent Activity Timeline (5 cols) */}
-          <Card className="rounded-2xl border border-border/70 shadow-xs lg:col-span-5 flex flex-col justify-between overflow-hidden">
+          <Card className="rounded-2xl border border-border/70 shadow-xs lg:col-span-1 xl:col-span-4 flex flex-col justify-between overflow-hidden">
             <div>
               <CardHeader className="pb-3 border-b border-border/60">
                 <div className="flex items-center justify-between">
@@ -813,10 +763,8 @@ export default function OwnerDashboard() {
               </CardContent>
             </div>
           </Card>
-        </div>
-
         {/* ─── F. Quick Workflows — Action Launcher ──────────────────────── */}
-        <div className="space-y-3 pt-1">
+        <section className="space-y-3 rounded-2xl border border-border/70 bg-card p-4 shadow-xs lg:col-span-2 xl:col-span-3">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
@@ -829,34 +777,31 @@ export default function OwnerDashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
             {quickActions.map(({ label, desc, icon: Icon, href, gradient }) => (
               <button
                 key={label}
                 onClick={() => router.push(href)}
-                className="group p-3.5 rounded-2xl border border-border/70 bg-card hover:border-primary/40 hover:bg-secondary/20 active:scale-[0.99] transition-all shadow-xs flex items-center gap-3 text-left cursor-pointer"
+                className="group relative min-h-[108px] rounded-xl border border-border/70 bg-background p-3 text-left transition-all hover:border-primary/40 hover:bg-secondary/20 hover:shadow-sm active:scale-[0.99]"
               >
-                <div
-                  className={cn(
-                    "w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform",
-                    gradient
-                  )}
-                >
-                  <Icon className="h-4.5 w-4.5 text-white" />
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br shadow-xs transition-transform group-hover:scale-105", gradient)}>
+                    <Icon className="h-4 w-4 text-white" />
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-hover:text-primary" />
                 </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-bold text-foreground transition-colors group-hover:text-primary">
                     {label}
                   </p>
-                  <p className="text-[10px] text-muted-foreground truncate">{desc}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{desc}</p>
                 </div>
-
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
               </button>
             ))}
           </div>
+        </section>
         </div>
+
       </div>
     </OwnerLayout>
   )
