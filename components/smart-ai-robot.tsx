@@ -119,14 +119,6 @@ export function SmartAIRobot({
           )}
           <path d="M32 63c2.5 2 5.2 3 8 3s5.5-1 8-3" stroke="#a69afa" strokeWidth="1.7" strokeLinecap="round" opacity=".8" />
         </g>
-        {size === "hero" && (
-          <g stroke="#c9c1ff" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M23 47c-8 1-11 7-7 13l8 5" fill="none" />
-            <path d="M57 47c8 1 11 7 7 13l-8 5" fill="none" />
-            <circle cx="24" cy="65" r="5.5" fill="#fff" stroke="#b9afff" strokeWidth="1.5" />
-            <circle cx="56" cy="65" r="5.5" fill="#fff" stroke="#b9afff" strokeWidth="1.5" />
-          </g>
-        )}
       </svg>
       )}
       {mood === "thinking" && !usesFullBodyMascot && (

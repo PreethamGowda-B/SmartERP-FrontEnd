@@ -4,8 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Clock, MapPin, Play, Square, AlertCircle, Loader2 } from "lucide-react"
-
-const API = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+import { apiClient } from "@/lib/apiClient"
 
 interface ActiveRecord {
   id: number
@@ -26,6 +25,14 @@ interface AttendancePolicyView {
   timezone: string
 }
 
+interface ClockEligibility {
+  allowed: boolean
+  code?: string | null
+  reason?: string | null
+  is_late?: boolean
+  status?: string | null
+}
+
 export function SmartClockInOut() {
   const [activeRecord, setActiveRecord] = useState<ActiveRecord | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -36,6 +43,7 @@ export function SmartClockInOut() {
   const [notification, setNotification] = useState<string | null>(null)
   const [attendanceStatus, setAttendanceStatus] = useState<string | null>(null) // 'Present' | 'Late' | 'Half Day'
   const [policy, setPolicy] = useState<AttendancePolicyView | null>(null)
+  const [eligibility, setEligibility] = useState<ClockEligibility | null>(null)
 
   // ─── Tick every second ──────────────────────────────────────────────────
   useEffect(() => {
@@ -59,20 +67,26 @@ export function SmartClockInOut() {
     if (showLoading) setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API}/api/attendance/me`, { credentials: "include" })
-      if (!res.ok) throw new Error("Failed to check attendance")
-      const data = await res.json()
-      try {
-        const policyRes = await fetch(`${API}/api/attendance/policy`, { credentials: "include" })
-        if (policyRes.ok) setPolicy((await policyRes.json()).policy)
-      } catch {}
-      if (data.openRecord) {
-        setActiveRecord(data.openRecord)
+      const [meResult, policyResult] = await Promise.allSettled([
+        apiClient<any>("/api/attendance/me"),
+        apiClient<any>("/api/attendance/policy"),
+      ])
+      if (meResult.status === "fulfilled") {
+        const data = meResult.value
+        if (data?.openRecord) {
+          setActiveRecord(data.openRecord)
+        } else {
+          setActiveRecord(null)
+        }
+        const status = data?.today?.status
+        setAttendanceStatus(status === "half_day" ? "Half Day" : status === "late" ? "Late" : status === "present" ? "Present" : null)
       } else {
-        setActiveRecord(null)
+        throw new Error(meResult.reason?.message || "Could not load attendance status")
       }
-      const status = data.today?.status
-      setAttendanceStatus(status === "half_day" ? "Half Day" : status === "late" ? "Late" : status === "present" ? "Present" : null)
+      if (policyResult.status === "fulfilled") {
+        setPolicy(policyResult.value?.policy || null)
+        setEligibility(policyResult.value?.eligibility || null)
+      }
     } catch (err: any) {
       setError(err.message || "Could not load attendance status")
     } finally {
@@ -93,16 +107,10 @@ export function SmartClockInOut() {
     setSubmitting(true)
     setError(null)
     try {
-      const res = await fetch(`${API}/api/attendance/clock-out`, {
+      await apiClient<any>("/api/attendance/clock-out", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({}),
       })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.message || `Clock-out failed (${res.status})`)
-      }
       setActiveRecord(null)
       setElapsedMs(0)
       setAttendanceStatus(null)
@@ -137,19 +145,19 @@ export function SmartClockInOut() {
     setSubmitting(true)
     setError(null)
     setNotification(null)
+
+    if (eligibility && !eligibility.allowed) {
+      setError(eligibility.reason || "Clock-in is not permitted at this time under company shift policy.")
+      setSubmitting(false)
+      return
+    }
+
     try {
       const location = await getLocation()
-      const res = await fetch(`${API}/api/attendance/clock-in`, {
+      const record = await apiClient<any>("/api/attendance/clock-in", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ location }),
       })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.message || `Clock-in failed (${res.status})`)
-      }
-      const record = await res.json()
       const checkIn = record.check_in_time || record.clock_in
       const clockDate = new Date(checkIn)
       setActiveRecord({
@@ -324,17 +332,36 @@ export function SmartClockInOut() {
           ) : (
             /* Clocked-out state */
             <div className="space-y-3">
+              {eligibility && !eligibility.allowed && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2.5 text-xs text-amber-700 dark:text-amber-300">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Shift Policy Notice: </span>
+                    {eligibility.reason || "Clock-in is closed for this shift under company attendance policy."}
+                  </div>
+                </div>
+              )}
               <Button
                 onClick={handleClockIn}
-                disabled={submitting}
+                disabled={submitting || (eligibility ? !eligibility.allowed : false)}
                 size="lg"
                 className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-sm"
               >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-                {submitting ? "Recording punch..." : "Clock In to Work"}
+                {submitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Play className="h-4 w-4 mr-2" />
+                )}
+                {submitting
+                  ? "Recording punch..."
+                  : eligibility && !eligibility.allowed
+                  ? "Shift Window Closed"
+                  : "Clock In to Work"}
               </Button>
               <p className="text-[11px] text-center text-muted-foreground">
-                Clicking Clock In records your timestamp and GPS coordinates (if permitted).
+                {eligibility && !eligibility.allowed
+                  ? (eligibility.reason || "Clock-in is not permitted at this time under company shift policy.")
+                  : "Clicking Clock In records your timestamp and GPS coordinates (if permitted)."}
               </p>
             </div>
           )}

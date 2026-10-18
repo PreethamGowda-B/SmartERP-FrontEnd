@@ -56,6 +56,14 @@ interface AttendancePolicyView {
   timezone: string
 }
 
+interface ClockEligibility {
+  allowed: boolean
+  code?: string | null
+  reason?: string | null
+  is_late?: boolean
+  status?: string | null
+}
+
 export default function TimeTrackingPage() {
   const { user } = useAuth()
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null)
@@ -67,6 +75,7 @@ export default function TimeTrackingPage() {
   const [isOnline, setIsOnline] = useState(typeof window !== "undefined" ? navigator.onLine : true)
   const [pendingOfflineCount, setPendingOfflineCount] = useState(0)
   const [attendancePolicy, setAttendancePolicy] = useState<AttendancePolicyView | null>(null)
+  const [eligibility, setEligibility] = useState<ClockEligibility | null>(null)
   const [historyFilter, setHistoryFilter] = useState<"all" | "present" | "late" | "absent">("all")
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -109,7 +118,10 @@ export default function TimeTrackingPage() {
       } else {
         setError("Could not refresh today's attendance. Check your connection and try again.")
       }
-      if (policyResult.status === "fulfilled") setAttendancePolicy(policyResult.value.policy)
+      if (policyResult.status === "fulfilled") {
+        setAttendancePolicy(policyResult.value?.policy || null)
+        setEligibility(policyResult.value?.eligibility || null)
+      }
     } catch (err: any) {
       logger.error("Error fetching today's attendance:", err)
     }
@@ -172,6 +184,12 @@ export default function TimeTrackingPage() {
   const handleClockIn = async () => {
     setLoading(true)
     setError("")
+
+    if (eligibility && !eligibility.allowed) {
+      setError(eligibility.reason || "Clock-in is not permitted at this time under company shift policy.")
+      setLoading(false)
+      return
+    }
 
     if (!navigator.onLine) {
       const { savePendingAttendance } = await import("@/lib/db")
@@ -262,7 +280,7 @@ export default function TimeTrackingPage() {
 
   const isClockedIn = Boolean(todayAttendance?.check_in_time && !todayAttendance?.check_out_time)
   const isClockedOut = Boolean(todayAttendance?.check_in_time && todayAttendance?.check_out_time)
-  const canClockIn = !todayAttendance?.check_in_time && pendingOfflineCount === 0
+  const canClockIn = !todayAttendance?.check_in_time && pendingOfflineCount === 0 && (eligibility ? eligibility.allowed : true)
 
   // Monthly summary stats
   const totalDaysPresent = history.filter((r) => Boolean(r.check_in_time) || ["present", "late", "half_day"].includes(r.status || "")).length
@@ -425,6 +443,17 @@ export default function TimeTrackingPage() {
                 </p>
               </div>
 
+              {/* Shift Policy Notice */}
+              {eligibility && !eligibility.allowed && !isClockedIn && !isClockedOut && (
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2.5 text-xs text-amber-700 dark:text-amber-300">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Shift Policy Notice: </span>
+                    {eligibility.reason || "Clock-in is not permitted at this time under company shift policy."}
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <Button
@@ -438,7 +467,9 @@ export default function TimeTrackingPage() {
                   )}
                 >
                   <LogIn className="h-4 w-4" />
-                  Clock In to Shift
+                  {eligibility && !eligibility.allowed && !isClockedIn && !isClockedOut
+                    ? "Shift Clock-in Closed"
+                    : "Clock In to Shift"}
                 </Button>
 
                 <Button

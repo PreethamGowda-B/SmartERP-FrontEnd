@@ -2,10 +2,11 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
 import { usePathname } from "next/navigation"
-import { apiClient, isTokenExpired } from "@/lib/apiClient"
+import { apiClient } from "@/lib/apiClient"
 import { isPublicRoute } from "@/lib/route-utils"
 import { useAuth } from "@/contexts/auth-context"
 import { ClockInRequiredModal } from "@/components/clock-in-required-modal"
+import { toast } from "sonner"
 
 interface ClockInGatekeeperContextType {
   isClockedIn: boolean
@@ -26,69 +27,61 @@ const ClockInGatekeeperContext = createContext<ClockInGatekeeperContextType>({
 export function ClockInGatekeeperProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
   const pathname = usePathname()
-  const [isClockedIn, setIsClockedIn] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false
-    const stored = localStorage.getItem("_clocked_in_date")
-    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
-    return stored === today
-  })
+  // Browser storage is only a display hint. The backend attendance row is the
+  // authority for whether an employee can perform a company operation.
+  const [isClockedIn, setIsClockedIn] = useState(false)
   const [loading, setLoading] = useState<boolean>(true)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
 
-  const refreshAttendance = useCallback(async () => {
+  const readAttendanceStatus = useCallback(async (): Promise<boolean | null> => {
+    // The backend attendance row is authoritative. A saved browser marker must
+    // never grant access when the API is unavailable or the shift was closed.
+    if (isPublicRoute(pathname) || (user?.role && user.role !== "employee") || (pathname && !pathname.startsWith("/employee"))) {
+      setIsClockedIn(false)
+      return false
+    }
+
     try {
-      // Clock-in gatekeeper is only active for employees inside the employee portal
-      if (isPublicRoute(pathname) || (user?.role && user.role !== 'employee') || (pathname && !pathname.startsWith('/employee'))) {
-        setIsClockedIn(false)
-        setLoading(false)
-        return
-      }
-
-      const token = typeof window !== "undefined" ? localStorage.getItem("_at") || localStorage.getItem("accessToken") : null
-      if (!token || isTokenExpired(token)) {
-        setIsClockedIn(false)
-        setLoading(false)
-        return
-      }
       const res = await apiClient<any>("/api/attendance/today", { skipCache: true } as any)
-      const att = res?.attendance || res
+      const attendance = res?.attendance || res
       const hasClockIn = Boolean(
-        att?.check_in_time ||
-        att?.checkInTime ||
-        att?.clock_in_time ||
-        att?.clock_in ||
-        att?.clockIn
+        attendance?.check_in_time ||
+        attendance?.checkInTime ||
+        attendance?.clock_in_time ||
+        attendance?.clock_in ||
+        attendance?.clockIn
       )
-      // Auto-clock-out performed by system cron at 7 PM should NOT lock out active technicians
-      const isAutoClockOut = Boolean(att?.is_auto_clocked_out)
-      const hasManualClockOut = Boolean(
-        (att?.check_out_time || att?.checkOutTime || att?.clock_out_time || att?.clock_out || att?.clockOut) &&
-        !isAutoClockOut
+      const hasClockOut = Boolean(
+        attendance?.check_out_time ||
+        attendance?.checkOutTime ||
+        attendance?.clock_out_time ||
+        attendance?.clock_out ||
+        attendance?.clockOut
       )
+      // Match requireClockIn: automatic and manual clock-outs both close the shift.
+      const clockedIn = hasClockIn && !hasClockOut
+      setIsClockedIn(clockedIn)
 
-      const clockedInNow = hasClockIn && !hasManualClockOut
-      setIsClockedIn(clockedInNow)
       if (typeof window !== "undefined") {
         const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
-        if (clockedInNow) {
-          localStorage.setItem("_clocked_in_date", today)
-        } else if (hasManualClockOut) {
-          localStorage.removeItem("_clocked_in_date")
-        }
+        if (clockedIn) localStorage.setItem("_clocked_in_date", today)
+        else localStorage.removeItem("_clocked_in_date")
       }
+      return clockedIn
     } catch {
-      // If network fails, check if local storage recorded clock in for today
-      if (typeof window !== "undefined") {
-        const stored = localStorage.getItem("_clocked_in_date")
-        const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
-        if (stored === today) {
-          setIsClockedIn(true)
-        }
-      }
+      setIsClockedIn(false)
+      return null
+    }
+  }, [user?.role, pathname])
+
+  const refreshAttendance = useCallback(async () => {
+    setLoading(true)
+    try {
+      await readAttendanceStatus()
     } finally {
       setLoading(false)
     }
-  }, [user?.role, pathname])
+  }, [readAttendanceStatus])
 
   useEffect(() => {
     refreshAttendance()
@@ -105,43 +98,17 @@ export function ClockInGatekeeperProvider({ children }: { children: React.ReactN
   }, [refreshAttendance])
 
   const withClockInCheck = useCallback(async (callback: () => void) => {
-    if (isClockedIn) {
+    const attendanceStatus = await readAttendanceStatus()
+    if (attendanceStatus === true) {
       callback()
       return
     }
-
-    // Fast check local storage fallback before showing modal
-    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
-    const stored = typeof window !== "undefined" ? localStorage.getItem("_clocked_in_date") : null
-    if (stored === today) {
-      setIsClockedIn(true)
-      callback()
+    if (attendanceStatus === null) {
+      toast.error("Could not verify your clock-in status. Check your connection and try again.")
       return
     }
-
-    // Live re-check before blocking
-    try {
-      const res = await apiClient<any>("/api/attendance/today", { skipCache: true } as any)
-      const att = res?.attendance || res
-      const hasClockIn = Boolean(
-        att?.check_in_time || att?.checkInTime || att?.clock_in_time || att?.clock_in || att?.clockIn
-      )
-      const hasManualClockOut = Boolean(
-        (att?.check_out_time || att?.checkOutTime || att?.clock_out_time || att?.clock_out || att?.clockOut) &&
-        !att?.is_auto_clocked_out
-      )
-      if (hasClockIn && !hasManualClockOut) {
-        setIsClockedIn(true)
-        if (typeof window !== "undefined") localStorage.setItem("_clocked_in_date", today)
-        callback()
-        return
-      }
-    } catch (err) {
-      console.warn("Gatekeeper live check error:", err)
-    }
-
     setIsModalOpen(true)
-  }, [isClockedIn])
+  }, [readAttendanceStatus])
 
   const openClockInModal = useCallback(() => {
     setIsModalOpen(true)

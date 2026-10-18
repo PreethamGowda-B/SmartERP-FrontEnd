@@ -46,9 +46,13 @@ export function MaterialPurchaseBillPanel({ requestId, requestStatus }: { reques
     setError("")
     try {
       const result = await apiClient<{ bills: Bill[] }>(`/api/material-requests/${requestId}/purchase-bills`, { signal: AbortSignal.timeout(20000) })
-      setBills(Array.isArray(result.bills) ? result.bills : [])
+      setBills(Array.isArray(result?.bills) ? result.bills : [])
     } catch (err: any) {
-      setError(err?.message || "Unable to load purchase bill history.")
+      if (err?.status === 404 || /not found/i.test(err?.message || "")) {
+        setBills([])
+      } else {
+        setError(err?.message || "Unable to load purchase bill history.")
+      }
     } finally { setLoading(false) }
   }, [requestId])
 
