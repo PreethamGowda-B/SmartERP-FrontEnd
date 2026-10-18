@@ -11,12 +11,12 @@ export function SmartAIRobot({
   size = "md",
 }: {
   mood?: SmartAIRobotMood
-  size?: "sm" | "md" | "lg"
+  size?: "sm" | "md" | "lg" | "hero"
 }) {
   const reduceMotion = useReducedMotion()
   const id = useId().replace(/:/g, "")
   // Keep the launcher mascot comfortably inset inside its 68px button.
-  const dimensions = { sm: 38, md: 54, lg: 60 }[size]
+  const dimensions = { sm: 38, md: 54, lg: 60, hero: 116 }[size]
   const eyeColor = mood === "error" ? "#fb7185" : mood === "success" ? "#34d399" : "#69d7ff"
   const shouldAnimate = !reduceMotion && (size !== "sm" || mood === "thinking" || mood === "listening")
 
@@ -78,6 +78,14 @@ export function SmartAIRobot({
           )}
           <path d="M32 63c2.5 2 5.2 3 8 3s5.5-1 8-3" stroke="#a69afa" strokeWidth="1.7" strokeLinecap="round" opacity=".8" />
         </g>
+        {size === "hero" && (
+          <g stroke="#c9c1ff" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 47c-8 1-11 7-7 13l8 5" fill="none" />
+            <path d="M57 47c8 1 11 7 7 13l-8 5" fill="none" />
+            <circle cx="24" cy="65" r="5.5" fill="#fff" stroke="#b9afff" strokeWidth="1.5" />
+            <circle cx="56" cy="65" r="5.5" fill="#fff" stroke="#b9afff" strokeWidth="1.5" />
+          </g>
+        )}
       </svg>
       {mood === "thinking" && (
         <motion.span className="absolute -right-0.5 top-2 h-2 w-2 rounded-full bg-violet-500" aria-hidden="true"

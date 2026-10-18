@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 import {
   Sparkles, X, Send, Bot, User, Minimize2, Maximize2, ChevronDown, ChevronUp, ChevronLeft,
   Copy, RotateCcw, ExternalLink, Loader2,
@@ -308,6 +308,7 @@ export function SmartAIPanel() {
 
 function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) {
   const router = useRouter()
+  const reduceMotion = useReducedMotion()
 
   // ── Panel state
   const [isOpen, setIsOpen] = React.useState(false)
@@ -431,8 +432,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
     const textarea = textareaRef.current
     if (!textarea) return
     textarea.style.height = "auto"
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`
-  }, [input])
+    textarea.style.height = `${Math.min(textarea.scrollHeight, isMinimized ? 56 : 112)}px`
+  }, [input, isMinimized])
 
   // The mobile panel fills the viewport, so keep the page behind it from scrolling.
   React.useEffect(() => {
@@ -499,17 +500,18 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
 
   function welcomeMessage(): AIMessage {
     const role = String(user?.role || "employee").toLowerCase()
-    const roleCapabilities = role === "employee"
-      ? "your assigned work, personal attendance, leave, and SmartERP guidance"
+    const capabilities = role === "employee"
+      ? ["Assigned jobs and tasks", "Personal attendance and leave", "SmartERP guidance"]
       : role === "hr"
-        ? "attendance, leave requests, employee operations, and SmartERP guidance"
+        ? ["Attendance and leave", "Employee operations", "HR tools"]
         : role === "super_admin"
-          ? "platform operations, company health, and SmartERP guidance"
-          : "jobs, attendance, inventory, finance, and company operations"
+          ? ["Platform operations", "Company health", "Admin tools"]
+          : ["Jobs and service operations", "Attendance and HR", "Inventory, invoices, and reports"]
+    const firstName = user?.name?.split(" ")[0]
     return {
       id: "welcome",
       sender: "ai",
-      text: `Hello ${user?.name?.split(" ")[0] || ""}! I'm **SmartERP AI**, your ERP assistant. I can help with ${roleCapabilities}, using the access available to your account.\n\nWhat would you like to know today?`,
+      text: `${firstName ? `Hi ${firstName}! 👋\n` : "Hello! 👋\n"}I'm **SmartERP AI**, your ERP assistant.\n\nI can help you with:\n${capabilities.map(capability => `• ${capability}`).join("\n")}\n\nChoose a suggestion or ask me anything.`,
       timestamp: new Date(),
       suggestedFollowUps: welcomeSuggestions(),
     }
@@ -877,9 +879,9 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
       <AnimatePresence>
         {!isOpen && (
           <motion.div
-            initial={{ scale: 0.82, opacity: 0 }}
+            initial={reduceMotion ? false : { scale: 0.82, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.82, opacity: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { scale: 0.82, opacity: 0 }}
             className={cn(
               "fixed z-40 flex items-center gap-1.5 transition-all duration-300",
               pathname?.includes("/messages")
@@ -888,8 +890,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
             )}
           >
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={reduceMotion ? undefined : { scale: 1.05 }}
+              whileTap={reduceMotion ? undefined : { scale: 0.95 }}
               onClick={handleOpen}
               id="smart-ai-panel-trigger"
               title="Open SmartERP AI Operations Assistant"
@@ -914,71 +916,60 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
         {isOpen && (
           <motion.div
             key="smart-ai-panel"
-            initial={{ x: 440, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 440, opacity: 0 }}
+            initial={reduceMotion ? false : { y: 18, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={reduceMotion ? { opacity: 0 } : { y: 18, opacity: 0 }}
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
             style={{ overscrollBehavior: "contain" }}
             className={cn(
-              "fixed z-50 flex flex-col overflow-hidden overscroll-contain border border-violet-200/70 bg-background shadow-[0_24px_90px_rgba(19,24,48,.25)] dark:border-violet-300/15",
-              "right-3 bottom-[max(env(safe-area-inset-bottom),0.75rem)] h-[min(720px,calc(100dvh-1.5rem))] w-[min(430px,calc(100vw-1.5rem))] rounded-[26px]",
-              "max-sm:inset-0 max-sm:h-dvh max-sm:w-screen max-sm:rounded-none max-sm:border-none",
-              isExpanded && "inset-3 h-auto w-auto rounded-[28px] max-sm:inset-0 max-sm:rounded-none",
-              isMinimized && "inset-auto bottom-[max(env(safe-area-inset-bottom),1rem)] right-4 h-[76px] w-[min(360px,calc(100vw-2rem))] rounded-2xl shadow-xl max-sm:bottom-[max(env(safe-area-inset-bottom),0.75rem)] max-sm:right-3 max-sm:w-[calc(100vw-1.5rem)]"
+              "fixed z-50 flex flex-col overflow-visible overscroll-contain",
+              "right-3 bottom-[max(env(safe-area-inset-bottom),0.75rem)] h-[min(620px,calc(100dvh-1rem))] w-[min(400px,calc(100vw-1.5rem))] pt-[54px]",
+              "max-sm:inset-0 max-sm:h-dvh max-sm:w-screen max-sm:rounded-none max-sm:pt-0",
+              isExpanded && "inset-3 h-auto w-auto pt-0 max-sm:inset-0",
+              isMinimized && "inset-auto bottom-[max(env(safe-area-inset-bottom),1rem)] right-4 h-[132px] w-[min(360px,calc(100vw-2rem))] pt-0 max-sm:inset-auto max-sm:bottom-[max(env(safe-area-inset-bottom),0.75rem)] max-sm:right-3 max-sm:h-[132px] max-sm:w-[calc(100vw-1.5rem)]"
             )}
             role="dialog"
             aria-modal="false"
             aria-label="SmartERP AI assistant"
           >
+            {!isExpanded && !isMinimized && (
+              <div className="pointer-events-none absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 sm:block">
+                <SmartAIRobot mood={isLoading ? "thinking" : robotMood} size="hero" />
+              </div>
+            )}
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-violet-200/70 bg-background shadow-[0_20px_64px_rgba(19,24,48,.22)] dark:border-violet-300/15 max-sm:rounded-none max-sm:border-0">
             {/* ── Panel Header ───────────────────────────────────────────────── */}
             <div className={cn(
-              "relative flex items-center justify-between border-b border-border/70 px-4 py-3.5",
+              "relative flex min-h-[60px] items-center justify-between border-b border-border/70 px-3 py-2.5",
               "before:absolute before:left-0 before:right-0 before:top-0 before:h-[3px] before:bg-gradient-to-r before:from-violet-500 before:via-indigo-500 before:to-sky-400",
-              "bg-gradient-to-r from-violet-50/90 via-background to-indigo-50/80 dark:from-violet-950/35 dark:via-background dark:to-indigo-950/25",
-              "backdrop-blur-md shrink-0",
-              isMinimized && "rounded-2xl"
-            )}>
-              <div className="flex items-center gap-2.5">
-                <SmartAIRobot mood={isLoading ? "thinking" : robotMood} size="md" />
-                <div>
+              "shrink-0 bg-background"
+            )} style={{ paddingTop: "max(0.625rem, env(safe-area-inset-top))" }}>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <SmartAIRobot mood={isLoading ? "thinking" : robotMood} size="sm" />
+                <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-extrabold text-foreground tracking-tight">SmartERP AI</h2>
                   </div>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">{isLoading || robotMood === "thinking" ? "Thinking through your request…" : robotMood === "listening" ? "Listening to your voice…" : robotMood === "error" ? "Request failed · retry available" : "Your ERP assistant"}</p>
-                  {!isMinimized && (
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      {autoModelBadge ? (
-                        <Badge className="text-[9px] h-4 px-1.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-semibold">
-                          <Check className="h-2.5 w-2.5 mr-1" />
-                          {MODEL_DISPLAY_NAMES[autoModelBadge] || autoModelBadge} (Auto)
-                        </Badge>
-                      ) : (
-                        <Badge className="text-[9px] h-4 px-1.5 bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/20 font-semibold">
-                          <Sparkles className="h-2.5 w-2.5 mr-1" />
-                          {isMultiAgent ? `Multi-Agent (${multiAgentScopes.length > 0 ? multiAgentScopes.length : "select models"})` : (selectedModel === "auto" ? "AUTO MODE" : MODEL_DISPLAY_NAMES[selectedModel])}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
+                  <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{isLoading || robotMood === "thinking" ? "Thinking through your request…" : robotMood === "listening" ? "Listening to your voice…" : robotMood === "error" ? "Request failed · retry available" : "Your ERP assistant"}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" aria-label="Conversation history" title="Conversation history" className="h-8 w-8 rounded-lg hover:bg-muted/60"
-                  onClick={() => setShowHistory(s => !s)}>
-                  <History className="h-4 w-4 text-muted-foreground" />
-                </Button>
-                <Button variant="ghost" size="icon" aria-label="Start a new conversation" title="New conversation" className="h-8 w-8 rounded-lg hover:bg-muted/60"
-                  onClick={startNewConversation}>
-                  <Plus className="h-4 w-4 text-muted-foreground" />
-                </Button>
-                {!isMinimized && <Button variant="ghost" size="icon" aria-label={isExpanded ? "Restore chat window size" : "Expand chat window"} title={isExpanded ? "Restore size" : "Expand"} className="hidden sm:inline-flex h-8 w-8 rounded-lg hover:bg-muted/60"
-                  onClick={() => setIsExpanded(s => !s)}>
-                  {isExpanded ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
-                </Button>}
-                <Button variant="ghost" size="icon" aria-label={isMinimized ? "Restore chat window" : "Minimize chat window"} title={isMinimized ? "Restore" : "Minimize"} className="h-8 w-8 rounded-lg hover:bg-muted/60"
-                  onClick={() => setIsMinimized(s => !s)}>
-                  {isMinimized ? <Maximize2 className="h-4 w-4 text-muted-foreground" /> : <Minimize2 className="h-4 w-4 text-muted-foreground" />}
+              <div className="flex items-center gap-0.5">
+                {!isMinimized && (
+                  <>
+                    <Button variant="ghost" size="icon" aria-label="Conversation history" title="Conversation history" className="h-7 w-7 rounded-lg hover:bg-muted/60" onClick={() => setShowHistory(s => !s)}>
+                      <History className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                    <Button variant="ghost" size="icon" aria-label="Start a new conversation" title="New conversation" className="h-7 w-7 rounded-lg hover:bg-muted/60" onClick={startNewConversation}>
+                      <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                    <Button variant="ghost" size="icon" aria-label={isExpanded ? "Restore chat window size" : "Expand chat window"} title={isExpanded ? "Restore size" : "Expand"} className="hidden h-7 w-7 rounded-lg hover:bg-muted/60 sm:inline-flex" onClick={() => setIsExpanded(s => !s)}>
+                      {isExpanded ? <Minimize2 className="h-3.5 w-3.5 text-muted-foreground" /> : <Maximize2 className="h-3.5 w-3.5 text-muted-foreground" />}
+                    </Button>
+                  </>
+                )}
+                <Button variant="ghost" size="icon" aria-label={isMinimized ? "Restore chat window" : "Minimize chat window"} title={isMinimized ? "Restore" : "Minimize"} className="h-7 w-7 rounded-lg hover:bg-muted/60" onClick={() => setIsMinimized(s => !s)}>
+                  {isMinimized ? <Maximize2 className="h-3.5 w-3.5 text-muted-foreground" /> : <Minimize2 className="h-3.5 w-3.5 text-muted-foreground" />}
                 </Button>
                 <Button variant="ghost" size="icon" aria-label="Close SmartERP AI" className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => { setIsOpen(false); setIsMinimized(false) }}>
@@ -988,15 +979,15 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
             </div>
 
             {!isMinimized && (
-              <div className="flex flex-1 overflow-hidden relative">
+              <div className="relative flex min-h-0 flex-1 overflow-hidden">
                 {/* ── History Sidebar ───────────────────────────────────────── */}
                 <AnimatePresence>
                   {showHistory && (
                     <motion.div
-                      initial={{ width: 0, opacity: 0 }}
+                      initial={reduceMotion ? false : { width: 0, opacity: 0 }}
                       animate={{ width: "auto", opacity: 1 }}
                       exit={{ width: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
+                      transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
                       className="flex flex-col border-r border-border/60 bg-muted/20 shrink-0 overflow-hidden w-full sm:w-[220px] max-sm:absolute max-sm:inset-0 max-sm:z-30 max-sm:bg-background"
                     >
                       <div className="p-2 border-b border-border/40 flex items-center gap-2">
@@ -1080,9 +1071,9 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                 </AnimatePresence>
 
                 {/* ── Main Chat Area ─────────────────────────────────────────── */}
-                <div className="flex flex-col flex-1 overflow-hidden">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                   {/* Model Selector Bar */}
-                  <div className="px-3 py-2 border-b border-border/40 bg-muted/10 shrink-0">
+                  <div className="shrink-0 border-b border-border/40 bg-muted/10 px-3 py-1.5">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setShowModelSelector(s => !s)}
@@ -1111,10 +1102,10 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                     <AnimatePresence>
                       {showModelSelector && (
                         <motion.div
-                          initial={{ height: 0, opacity: 0 }}
+                          initial={reduceMotion ? false : { height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.15 }}
+                          transition={reduceMotion ? { duration: 0 } : { duration: 0.15 }}
                           className="overflow-hidden mt-2"
                         >
                           <div className="grid grid-cols-2 gap-1.5">
@@ -1251,7 +1242,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
 
                   {/* Messages Scroll Area */}
                   <div
-                    className="flex-1 overflow-y-auto px-4 py-3 space-y-4 touch-pan-y overscroll-contain"
+                    className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3 touch-pan-y overscroll-contain"
                     style={{ overscrollBehavior: "contain", WebkitOverflowScrolling: "touch" }}
                   >
                     {messages.map(msg => (
@@ -1271,7 +1262,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                   </div>
 
                   {/* Personalized Quick Actions */}
-                  {topActions.length > 0 && messages.length <= 1 && (
+                  {topActions.length > 0 && messages.length <= 1 && !messages.some(message => message.suggestedFollowUps?.length) && (
                     <div className="px-4 pb-2 flex flex-wrap gap-1.5 shrink-0">
                       {topActions.map(action => (
                         <button
@@ -1289,9 +1280,10 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                   <AnimatePresence>
                     {feedbackDetected && !showFeedbackForm && (
                       <motion.div
-                        initial={{ height: 0, opacity: 0 }}
+                        initial={reduceMotion ? false : { height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
+                        transition={reduceMotion ? { duration: 0 } : undefined}
                         className="overflow-hidden shrink-0"
                       >
                         <div className="mx-4 mb-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2">
@@ -1321,9 +1313,10 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                   <AnimatePresence>
                     {showFeedbackForm && feedbackDetected && (
                       <motion.div
-                        initial={{ height: 0, opacity: 0 }}
+                        initial={reduceMotion ? false : { height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
+                        transition={reduceMotion ? { duration: 0 } : undefined}
                         className="overflow-hidden shrink-0"
                       >
                         <div className="mx-4 mb-2 p-3 rounded-xl border border-border/60 bg-muted/20 space-y-2">
@@ -1361,9 +1354,9 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                   </AnimatePresence>
 
                   {/* Input Area */}
-                  <div className="p-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:p-4 border-t border-border/60 bg-background/50 backdrop-blur shrink-0">
-                    <div className="flex items-end gap-2">
-                      <div className="flex-1 relative">
+                  <div className="shrink-0 border-t border-border/60 bg-background px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2.5 sm:p-3">
+                    <div className="flex items-end gap-1.5 rounded-[18px] border border-border/70 bg-background px-1.5 py-1.5 shadow-sm transition-colors focus-within:border-violet-400/70 focus-within:ring-2 focus-within:ring-violet-500/10">
+                      <div className="relative min-w-0 flex-1">
                         <Textarea
                           ref={textareaRef}
                           value={input}
@@ -1383,7 +1376,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                               : `Ask ${MODEL_DISPLAY_NAMES[selectedModel] || "AI"}…`
                           }
                           rows={1}
-                          className="resize-none text-sm pr-2 rounded-xl border-border/60 bg-muted/30 focus:bg-background transition-all min-h-11 max-h-30 overflow-y-auto"
+                          className="min-h-9 max-h-28 resize-none overflow-y-auto rounded-xl border-0 bg-transparent px-2 py-2 text-sm shadow-none transition-none focus-visible:ring-0 focus-visible:ring-offset-0"
                           style={{ height: "auto" }}
                         />
                       </div>
@@ -1393,7 +1386,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                         size="icon"
                         variant="outline"
                         title="Voice-to-Command / Shop Floor Mic"
-                        className="h-11 w-11 rounded-xl border-border/60 bg-muted/40 hover:bg-muted/80 text-violet-600 dark:text-violet-400 shrink-0"
+                        aria-label="Open voice input"
+                        className="h-9 w-9 shrink-0 rounded-full border-0 bg-muted/70 text-violet-600 hover:bg-muted dark:bg-muted/50 dark:text-violet-400"
                       >
                         <Mic className="h-4 w-4" />
                       </Button>
@@ -1401,7 +1395,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                         onClick={() => sendMessage()}
                         disabled={!input.trim() || isLoading}
                         size="icon"
-                        className="h-11 w-11 rounded-xl bg-linear-to-br from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-lg shrink-0"
+                        aria-label="Send message"
+                        className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 shadow-sm hover:from-violet-700 hover:to-indigo-700"
                       >
                         {isLoading
                           ? <Loader2 className="h-4 w-4 animate-spin text-white" />
@@ -1409,13 +1404,40 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                         }
                       </Button>
                     </div>
-                    <p className="text-[9px] text-muted-foreground/50 mt-1.5 text-center">
-                      SmartERP Intelligence · Enterprise AI · Tenant Isolated · {currentPortal} portal
+                    <p className="mt-1.5 text-center text-[9px] text-muted-foreground/70">
+                      AI responses may be inaccurate. Verify important information.
                     </p>
                   </div>
                 </div>
               </div>
             )}
+            {isMinimized && (
+              <div className="flex shrink-0 items-center gap-1.5 border-t border-border/60 bg-background px-2.5 py-2">
+                <Textarea
+                  ref={textareaRef}
+                  value={input}
+                  disabled={isLoading}
+                  aria-label="Message SmartERP AI"
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault()
+                      sendMessage()
+                    }
+                  }}
+                  placeholder="Ask a question…"
+                  rows={1}
+                  className="min-h-9 max-h-14 min-w-0 flex-1 resize-none overflow-y-auto rounded-xl border-0 bg-muted/40 px-3 py-2 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-violet-500/30"
+                />
+                <Button type="button" onClick={() => setShowVoiceModal(true)} size="icon" variant="ghost" title="Voice input" aria-label="Open voice input" className="h-9 w-9 shrink-0 rounded-full text-violet-600 dark:text-violet-400">
+                  <Mic className="h-4 w-4" />
+                </Button>
+                <Button onClick={() => sendMessage()} disabled={!input.trim() || isLoading} size="icon" aria-label="Send message" className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600">
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4 text-white" />}
+                </Button>
+              </div>
+            )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1459,16 +1481,17 @@ function MessageBubble({
 }) {
   const [showActions, setShowActions] = React.useState(false)
   const [showSources, setShowSources] = React.useState(false)
+  const reduceMotion = useReducedMotion()
 
   if (msg.isTyping) {
     return (
-      <div className="flex gap-2.5 items-start">
+      <div className="flex items-start gap-2" role="status" aria-label="SmartERP AI is thinking">
         <SmartAIRobot mood="thinking" size="sm" />
-        <div className="bg-muted/60 border border-border/40 rounded-2xl rounded-tl-sm px-4 py-3">
+        <div className="rounded-2xl rounded-tl-sm border border-border/40 bg-muted/60 px-3 py-2.5">
           <div className="flex gap-1.5 items-center">
-            <span className="w-2 h-2 rounded-full bg-violet-500 animate-bounce [animation-delay:0ms]" />
-            <span className="w-2 h-2 rounded-full bg-violet-500 animate-bounce [animation-delay:150ms]" />
-            <span className="w-2 h-2 rounded-full bg-violet-500 animate-bounce [animation-delay:300ms]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-bounce [animation-delay:0ms] motion-reduce:animate-none" />
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-bounce [animation-delay:150ms] motion-reduce:animate-none" />
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-bounce [animation-delay:300ms] motion-reduce:animate-none" />
           </div>
         </div>
       </div>
@@ -1479,16 +1502,16 @@ function MessageBubble({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn("flex gap-2.5 items-start", isUser && "flex-row-reverse")}
+      className={cn("flex items-start gap-2", isUser && "flex-row-reverse")}
     >
       {/* Avatar */}
       <div className={cn(
-        "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
+        "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
         isUser
-          ? "bg-linear-to-br from-blue-500 to-blue-700"
-          : "bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-950/60 dark:to-indigo-950/60"
+          ? "bg-gradient-to-br from-blue-500 to-blue-700"
+          : "bg-transparent"
       )}>
         {isUser ? <User className="h-3.5 w-3.5 text-white" /> : <SmartAIRobot mood={msg.isError ? "error" : "idle"} size="sm" />}
       </div>
@@ -1499,12 +1522,12 @@ function MessageBubble({
           onMouseEnter={() => !isUser && setShowActions(true)}
           onMouseLeave={() => !isUser && setShowActions(false)}
           className={cn(
-            "relative rounded-2xl px-4 py-3 text-sm leading-relaxed",
+            "relative rounded-[18px] px-3.5 py-2.5 text-[13px] leading-[1.55]",
             isUser
-              ? "bg-linear-to-br from-violet-600 to-indigo-700 text-white rounded-tr-sm"
+              ? "bg-gradient-to-br from-violet-600 to-indigo-700 text-white rounded-tr-sm"
               : msg.isError
                 ? "bg-rose-500/5 border border-rose-500/20 text-foreground rounded-tl-sm"
-                : "bg-muted/60 border border-border/40 text-foreground rounded-tl-sm"
+                : "bg-slate-50 border border-slate-200/80 text-foreground rounded-tl-sm dark:bg-slate-900/60 dark:border-slate-700/70"
           )}
         >
           {/* Auto-selected model badge */}
@@ -1589,9 +1612,10 @@ function MessageBubble({
           <AnimatePresence>
             {showSources && msg.sources && msg.sources.length > 0 && (
               <motion.div
-                initial={{ height: 0, opacity: 0 }}
+                initial={reduceMotion ? false : { height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
+                transition={reduceMotion ? { duration: 0 } : undefined}
                 className="overflow-hidden mt-2"
               >
                 <div className="flex flex-wrap gap-1">
@@ -1610,9 +1634,10 @@ function MessageBubble({
         <AnimatePresence>
           {!isUser && showActions && (
             <motion.div
-              initial={{ opacity: 0, y: -4 }}
+              initial={reduceMotion ? false : { opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
+              transition={reduceMotion ? { duration: 0 } : undefined}
               className="flex items-center gap-1 mt-1 px-1"
             >
               {[
