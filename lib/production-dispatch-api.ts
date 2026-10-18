@@ -30,9 +30,16 @@ export interface ProductionOrder {
   dispatchedQuantity: number
   outstandingQuantity: number
   machineName?: string | null
+  machineId?: string | null
   assignedEmployeeName?: string | null
   assignedEmployeeId?: string | null
   activeBatchId?: string | null
+  dispatchEmployeeId?: string | null
+  dispatchEmployeeName?: string | null
+  isAssignedOperator?: boolean
+  isAssignedDispatcher?: boolean
+  inspections?: ProductionOrderDetail["inspections"]
+  packingRecords?: ProductionOrderDetail["packingRecords"]
   activeBatchHasReport?: boolean
   latestInspectionResult?: string | null
   latestInspectionReason?: string | null
@@ -82,12 +89,27 @@ export interface ProductionOrderDetail {
   }>
   dispatches: Array<{
     id: string
+    packing_record_id?: string | null
     dispatch_reference: string
     quantity: number
     delivery_reference?: string | null
     carrier?: string | null
     confirmed_by_name: string
     dispatched_at: string
+  }>
+  packingRecords: Array<{
+    id: string
+    inspection_id: string
+    quantity: number
+    package_count: number
+    package_type?: string | null
+    status: "packing" | "packed" | "ready_for_dispatch"
+    notes?: string | null
+    recorded_by_name: string
+    created_at: string
+    updated_at: string
+    dispatched_quantity: number
+    remaining_quantity: number
   }>
   events: Array<{
     id: string
@@ -130,9 +152,23 @@ export interface ProductionOrderDraft {
   priority: "low" | "medium" | "high" | "urgent"
   machineId?: string
   assignedEmployeeId?: string
+  dispatchEmployeeId?: string
   instructions?: string
   jobId?: string
   materials?: Array<{ inventoryItemId: string; plannedQuantity: number; unit?: string }>
+}
+
+export interface ProductionInspectionRecord {
+  id: string
+  inspection_reference: string
+  submitted_quantity: number
+  accepted_quantity: number
+  rejected_quantity: number
+  rework_quantity: number
+  result: string
+  reason?: string | null
+  inspector_name: string
+  inspected_at: string
 }
 
 export interface PlannedMaterialLine {
@@ -178,7 +214,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 }
 
-async function mutateRequest<T>(scope: string, path: string, payload: unknown): Promise<T> {
+async function mutateRequest<T>(scope: string, path: string, payload: unknown, method = "POST"): Promise<T> {
   const body = JSON.stringify(payload)
   const signature = `${scope}:${body}`
   const fingerprintBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(signature))
@@ -193,7 +229,7 @@ async function mutateRequest<T>(scope: string, path: string, payload: unknown): 
   try { window.localStorage.setItem(storageKey, key) } catch {}
   try {
     const result = await request<T>(path, {
-      method: "POST",
+      method,
       headers: { "Content-Type": "application/json", "Idempotency-Key": key },
       body,
     })
@@ -249,6 +285,18 @@ export async function createProductionOrder(payload: ProductionOrderDraft) {
   return mutateRequest<{ order: ProductionOrder }>("create-production-order", "/api/production/orders", payload)
 }
 
+export async function updateProductionAssignments(orderId: string, payload: { assignedEmployeeId?: string | null; dispatchEmployeeId?: string | null; machineId?: string | null; reason: string }) {
+  return mutateRequest<{ order: ProductionOrder }>(`assign-production:${orderId}`, `/api/production/orders/${encodeURIComponent(orderId)}/assignments`, payload)
+}
+
+export async function createProductionPackingRecord(orderId: string, payload: { inspectionId: string; quantity: number; packageCount: number; packageType?: string; notes?: string }) {
+  return mutateRequest<{ packingRecord: ProductionOrderDetail["packingRecords"][number]; remainingPackableQuantity: number }>(`production-packing:${orderId}`, `/api/production/orders/${encodeURIComponent(orderId)}/packing-records`, payload)
+}
+
+export async function advanceProductionPacking(packingId: string, status: "packed" | "ready_for_dispatch") {
+  return mutateRequest<{ packingRecord: { id: string; status: string; updated_at: string } }>(`packing-status:${packingId}`, `/api/production/packing-records/${encodeURIComponent(packingId)}/status`, { status }, "PATCH")
+}
+
 export async function getMyProductionOrders() {
   return request<{ orders: ProductionOrder[] }>("/api/production/my-orders")
 }
@@ -276,6 +324,7 @@ export async function inspectProductionBatch(batchId: string, payload: {
 }
 
 export async function confirmProductionDispatch(orderId: string, payload: {
+  packingRecordId: string
   quantity: number
   confirmed: true
   deliveryReference?: string
