@@ -468,33 +468,35 @@ export function DirectInvoiceModal({
               </div>
 
               {/* Items Table */}
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b-2 border-slate-300 text-[11px] font-extrabold uppercase text-slate-600">
-                    <th className="py-2">Description</th>
-                    <th className="py-2 text-center">HSN</th>
-                    <th className="py-2 text-center">Qty</th>
-                    <th className="py-2 text-right">Rate (₹)</th>
-                    <th className="py-2 text-right">Amount (₹)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs">
-                  {lineItems.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="py-2.5 font-semibold text-slate-800">
-                        {item.description}
-                        <span className="text-[10px] text-slate-400 block font-normal capitalize">Type: {item.item_type}</span>
-                      </td>
-                      <td className="py-2.5 text-center font-mono text-slate-500">{item.hsn_code}</td>
-                      <td className="py-2.5 text-center font-bold text-slate-700">{item.quantity}</td>
-                      <td className="py-2.5 text-right text-slate-600">₹{Number(item.unit_price).toLocaleString("en-IN")}</td>
-                      <td className="py-2.5 text-right font-bold text-slate-900">
-                        ₹{(Number(item.quantity) * Number(item.unit_price)).toLocaleString("en-IN")}
-                      </td>
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full min-w-[480px] text-left border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-slate-300 text-[11px] font-extrabold uppercase text-slate-600">
+                      <th className="py-2 px-3">Description</th>
+                      <th className="py-2 px-2 text-center">HSN</th>
+                      <th className="py-2 px-2 text-center">Qty</th>
+                      <th className="py-2 px-3 text-right">Rate (₹)</th>
+                      <th className="py-2 px-3 text-right">Amount (₹)</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs">
+                    {lineItems.map((item, idx) => (
+                      <tr key={idx}>
+                        <td className="py-2.5 px-3 font-semibold text-slate-800">
+                          {item.description}
+                          <span className="text-[10px] text-slate-400 block font-normal capitalize">Type: {item.item_type}</span>
+                        </td>
+                        <td className="py-2.5 px-2 text-center font-mono text-slate-500">{item.hsn_code}</td>
+                        <td className="py-2.5 px-2 text-center font-bold text-slate-700">{item.quantity}</td>
+                        <td className="py-2.5 px-3 text-right text-slate-600">₹{Number(item.unit_price).toLocaleString("en-IN")}</td>
+                        <td className="py-2.5 px-3 text-right font-bold text-slate-900">
+                          ₹{(Number(item.quantity) * Number(item.unit_price)).toLocaleString("en-IN")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Totals */}
               <div className="flex justify-end pt-2 border-t border-slate-200">

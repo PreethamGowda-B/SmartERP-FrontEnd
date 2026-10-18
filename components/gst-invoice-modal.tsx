@@ -91,8 +91,8 @@ export function GSTInvoiceModal({ isOpen, onClose, customerName = "Acme Construc
           </div>
 
           {/* Line Items Table */}
-          <div className="border rounded-xl overflow-hidden">
-            <table className="w-full text-left border-collapse">
+          <div className="border rounded-xl overflow-x-auto">
+            <table className="w-full min-w-[480px] text-left border-collapse">
               <thead className="bg-muted text-muted-foreground uppercase text-[10px] font-black tracking-wider border-b">
                 <tr>
                   <th className="p-3">Description</th>

@@ -414,8 +414,8 @@ export function InvoiceViewModal({
             </div>
 
             {/* Line Items Table */}
-            <div className="border rounded-xl overflow-hidden">
-              <table className="w-full text-xs text-left">
+            <div className="border rounded-xl overflow-x-auto">
+              <table className="w-full min-w-[480px] text-xs text-left">
                 <thead className="bg-muted text-muted-foreground font-bold uppercase border-b">
                   <tr>
                     <th className="p-3 w-10 text-center">#</th>
