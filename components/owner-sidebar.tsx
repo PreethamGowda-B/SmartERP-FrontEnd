@@ -37,6 +37,7 @@ import {
   ChevronDown,
   ChevronRight,
   Layers,
+  Factory,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationCenterDrawer } from "@/components/notification-center-drawer"
@@ -76,6 +77,7 @@ const navCategories: NavCategory[] = [
     items: [
       { name: "Tasks", href: "/owner/jobs", icon: Briefcase },
       { name: "Customer Jobs", href: "/owner/customer-jobs", icon: UserCheck },
+      { name: "Production & Dispatch", href: "/owner/production", icon: Factory },
       { name: "Sales Pipeline", href: "/owner/crm/pipeline", icon: Flame },
       { name: "Tracking", href: "/owner/tracking", icon: MapPin },
     ],

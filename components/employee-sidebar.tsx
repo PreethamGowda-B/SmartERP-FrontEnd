@@ -33,6 +33,7 @@ import {
   FileText,
   MapPin,
   Sparkles,
+  Factory,
 } from "lucide-react"
 
 export interface NavLeafItem {
@@ -63,6 +64,7 @@ const navCategories: NavCategory[] = [
     items: [
       { name: "Dashboard", href: "/employee", icon: LayoutDashboard },
       { name: "My Tasks & Jobs", href: "/employee/jobs", icon: Briefcase },
+      { name: "Production Workspace", href: "/employee/production", icon: Factory },
       { name: "Time Tracking & Shift", href: "/employee/time-tracking", icon: Clock },
     ],
   },
