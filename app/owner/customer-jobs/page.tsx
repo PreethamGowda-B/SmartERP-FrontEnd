@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { apiClient } from "@/lib/apiClient"
 import {
   Search, RefreshCw, CheckCircle2, XCircle, Clock, AlertCircle,
-  User, Building2, Calendar, ChevronRight, Filter, UserCheck,
+  User, Building2, Calendar, ChevronRight, Filter, UserCheck, Factory,
   Zap, Settings2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -194,6 +194,9 @@ export default function OwnerCustomerJobsPage() {
             <p className="text-muted-foreground text-sm">Review and approve service requests submitted by customers</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => window.location.assign("/owner/manufacturing-requests")} className="gap-2">
+              <Factory className="h-4 w-4" />Manufacturing requests
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)} className="gap-2">
               <Settings2 className="h-4 w-4" />
               Settings

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Search, Filter, RefreshCw, Briefcase } from 'lucide-react';
+import { ArrowLeft, Search, Filter, RefreshCw, Briefcase, Factory } from 'lucide-react';
 import { CustomerNavbar } from '@/components/customer/layout/CustomerNavbar';
 import { JobCard } from '@/components/customer/jobs/JobCard';
 import { LoadingSkeleton } from '@/components/customer/ui/LoadingSkeleton';
@@ -125,11 +125,16 @@ export default function AllJobsPage() {
               <p className="text-xs text-gray-500 mt-0.5">{total} total service requests</p>
             </div>
           </div>
-          <button onClick={() => fetchJobs(page, true)} disabled={isRefreshing}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all">
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => router.push('/customer/manufacturing-requests')}
+              className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-all">
+              <Factory className="h-3.5 w-3.5" />Manufacturing request
+            </button>
+            <button onClick={() => fetchJobs(page, true)} disabled={isRefreshing}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-all">
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />Refresh
+            </button>
+          </div>
         </div>
 
         {/* Filters */}

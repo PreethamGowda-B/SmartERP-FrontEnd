@@ -130,6 +130,8 @@ export default function DedicatedInvoiceEditorPage() {
   const router = useRouter();
   const params = useParams();
   const jobId = params?.id as string;
+  const [productionOrderId, setProductionOrderId] = useState<string | null>(null);
+  const [sourceResolved, setSourceResolved] = useState(false);
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -160,10 +162,19 @@ export default function DedicatedInvoiceEditorPage() {
   // Line items
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
+  useEffect(() => {
+    const search = new URLSearchParams(window.location.search);
+    setProductionOrderId(search.get('source') === 'production' ? search.get('productionOrderId') : null);
+    setSourceResolved(true);
+  }, []);
+
   const fetchEditorData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiClient<{ success: boolean; job: any; prefilled: any; existingInvoice?: any }>(`/api/invoices/editor-data/${jobId}`);
+      const endpoint = productionOrderId
+        ? `/api/invoices/editor-data/production-order/${encodeURIComponent(productionOrderId)}`
+        : `/api/invoices/editor-data/${encodeURIComponent(jobId)}`;
+      const res = await apiClient<{ success: boolean; job: any; prefilled: any; existingInvoice?: any }>(endpoint);
       if (res && res.success) {
         setJobData(res.job);
         setExistingInvoice(res.existingInvoice || null);
@@ -233,13 +244,13 @@ export default function DedicatedInvoiceEditorPage() {
     } finally {
       setLoading(false);
     }
-  }, [jobId, toast]);
+  }, [jobId, productionOrderId, toast]);
 
   useEffect(() => {
-    if (jobId) {
+    if (jobId && sourceResolved) {
       fetchEditorData();
     }
-  }, [jobId, fetchEditorData]);
+  }, [jobId, sourceResolved, fetchEditorData]);
 
   const handleAddLineItem = () => {
     setLineItems([
@@ -321,13 +332,13 @@ export default function DedicatedInvoiceEditorPage() {
   const handleFinalizeInvoice = async () => {
     try {
       setSaving(true);
-      const operationId = String(existingInvoice?.id || jobData?.id || jobId);
+      const operationId = String(existingInvoice?.id || productionOrderId || jobData?.id || jobId);
       if (!idempotencyKeyRef.current || idempotencyKeyRef.current.operationId !== operationId) {
         idempotencyKeyRef.current = { operationId, key: crypto.randomUUID() };
       }
 
       const payload = {
-        jobId: jobData?.id || jobId,
+        ...(productionOrderId ? { productionOrderId } : { jobId: jobData?.id || jobId }),
         idempotency_key: idempotencyKeyRef.current.key,
         customer_name: customerName || jobData?.customer_name || 'Customer',
         customer_email: customerEmail || jobData?.customer_email || '',
@@ -364,11 +375,11 @@ export default function DedicatedInvoiceEditorPage() {
       });
 
       if (res && (res.success || res.invoice)) {
-        const invNum = res.invoice?.invoice_number || 'INV-2026-0001';
+        const invNum = res.invoice?.invoice_number;
         const isEdit = res.reason === 'invoice_updated' || isReissue;
         toast({
           title: isEdit ? `Invoice Updated (Edited ${res.edited_count || 1}x) 📄` : 'Invoice Finalized & Issued! 💰',
-          description: `Invoice ${invNum} saved successfully. Returning to invoices...`,
+          description: `${invNum ? `Invoice ${invNum} ` : 'Invoice '}saved successfully. Returning to invoices...`,
         });
         setTimeout(() => {
           router.push('/owner/finance/invoices');
@@ -405,7 +416,7 @@ export default function DedicatedInvoiceEditorPage() {
               variant="outline"
               size="sm"
               className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold"
-              onClick={() => router.push('/owner/finance/invoices')}
+              onClick={() => router.push(productionOrderId ? '/owner/production' : '/owner/finance/invoices')}
             >
               <ArrowLeft className="h-4 w-4 mr-1" /> Back to Invoices
             </Button>
@@ -422,7 +433,7 @@ export default function DedicatedInvoiceEditorPage() {
             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-3 py-1">
               {jobData?.status?.toUpperCase() || 'COMPLETED'}
             </Badge>
-            <Button onClick={handleFinalizeInvoice} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
+          <Button onClick={handleFinalizeInvoice} disabled={saving || (Boolean(productionOrderId) && existingInvoice?.status !== 'draft')} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
               Finalize & Issue Invoice
             </Button>

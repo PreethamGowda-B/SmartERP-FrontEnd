@@ -196,7 +196,7 @@ export default function EmployeeProductionPage() {
                     {canStart && <Button onClick={() => void start(order)} disabled={busyOrderId === order.id}>{busyOrderId === order.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Start production</Button>}
                     {canReport && <Button variant="outline" onClick={() => { setReportOrderId(reportOrderId === order.id ? "" : order.id); setForm(emptyForm) }}>Report quantities</Button>}
                     {canSubmit && <Button variant="secondary" onClick={() => void submitForQuality(order)} disabled={busyBatchId === order.activeBatchId}>{busyBatchId === order.activeBatchId && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Submit for inspection</Button>}
-                    {!canStart && !canReport && <span className="self-center text-xs text-muted-foreground">Waiting for the next authorized workflow action.</span>}
+                    {!canStart && !canReport && <span className="self-center text-xs text-muted-foreground">{order.status === "dispatched" ? "This order has been dispatched. No further employee action is needed." : "Waiting for the next authorized workflow action."}</span>}
                   </div>
                 </div>}
                 {isOperator && reportOrderId === order.id && <form onSubmit={(event) => void saveReport(event, order)} className="grid gap-3 rounded-xl border bg-background p-4 md:grid-cols-3">

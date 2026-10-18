@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input"
 import {
   createProductionOrder,
+  createOrResumeProductionInvoiceDraft,
   getProductionDashboard,
   getProductionOrder,
   getProductionOrders,
@@ -82,6 +83,7 @@ export default function OwnerProductionPage() {
   const [dispatchAssignment, setDispatchAssignment] = useState("")
   const [packingForm, setPackingForm] = useState({ inspectionId: "", quantity: "", packageCount: "1", packageType: "" })
   const [dispatchConfirmOpen, setDispatchConfirmOpen] = useState(false)
+  const [sourceManufacturingRequestId, setSourceManufacturingRequestId] = useState("")
 
   const load = useCallback(async (nextPage = page, nextStatus = status, search = query) => {
     setLoading(true)
@@ -123,12 +125,51 @@ export default function OwnerProductionPage() {
     }
   }
 
+  useEffect(() => {
+    const requestId = new URLSearchParams(window.location.search).get("manufacturingRequestId")
+    if (!requestId || sourceManufacturingRequestId === requestId) return
+    let cancelled = false
+    void (async () => {
+      setFormError("")
+      setReferencesLoading(true)
+      setShowCreate(true)
+      try {
+        const [requestResponse, refs] = await Promise.all([
+          import("@/lib/apiClient").then(({ apiClient }) => apiClient(`/api/v1/customer-manufacturing-requests/${encodeURIComponent(requestId)}`)),
+          getProductionReferences(),
+        ])
+        if (cancelled) return
+        const request = requestResponse?.data?.request
+        if (!request || !["approved", "production_scheduled"].includes(request.status)) throw new Error("Only an approved manufacturing request can start a production order.")
+        if (request.production_order_id) throw new Error("This request already has a linked production order. Open it from the production register instead.")
+        setReferences(refs)
+        setSourceManufacturingRequestId(requestId)
+        setDraft({
+          ...emptyDraft,
+          customerId: String(request.customer_id),
+          customerOrderReference: request.request_reference,
+          componentName: request.component_name || "",
+          partNumber: request.part_number || "",
+          drawingNumber: request.drawing_number || "",
+          drawingRevision: request.drawing_revision || "",
+          plannedQuantity: Number(request.requested_quantity),
+          unit: request.unit || "pieces",
+          dueDate: String(request.confirmed_due_date || request.requested_completion_date || "").slice(0, 10),
+          instructions: [request.description, request.material_specification && `Material: ${request.material_specification}`, request.dimensions && `Dimensions: ${request.dimensions}`, request.tolerance && `Tolerance: ${request.tolerance}`, request.finish && `Finish: ${request.finish}`, request.instructions].filter(Boolean).join("\n\n"),
+        })
+      } catch (cause: any) {
+        if (!cancelled) setFormError(cause?.message || "Unable to prepare a production order from this request.")
+      } finally { if (!cancelled) setReferencesLoading(false) }
+    })()
+    return () => { cancelled = true }
+  }, [sourceManufacturingRequestId])
+
   const submitOrder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setFormError("")
     setSaving(true)
     try {
-      await createProductionOrder({
+      const created = await createProductionOrder({
         ...draft,
         plannedQuantity: Number(draft.plannedQuantity),
         customerOrderReference: draft.customerOrderReference?.trim() || undefined,
@@ -140,9 +181,24 @@ export default function OwnerProductionPage() {
         jobId: draft.jobId || undefined,
         materials: materialLines.filter((line) => line.inventoryItemId && Number(line.plannedQuantity) > 0),
       })
+      let linkWarning = ""
+      if (sourceManufacturingRequestId && created?.order?.id) {
+        try {
+          const { apiClient } = await import("@/lib/apiClient")
+          const linked = await apiClient(`/api/v1/customer-manufacturing-requests/${encodeURIComponent(sourceManufacturingRequestId)}/link-production-order`, {
+            method: "POST", body: JSON.stringify({ productionOrderId: created.order.id }),
+          })
+          if (!linked?.success) throw new Error(linked?.error || "The production order was created, but the customer request link was not confirmed.")
+        } catch (cause: any) {
+          linkWarning = `Production order ${created.order.orderNumber || created.order.id} was created, but request linking failed: ${cause?.message || "please link it from Manufacturing Requests."}`
+        }
+      }
+      if (sourceManufacturingRequestId) window.history.replaceState({}, "", "/owner/production")
       setShowCreate(false)
       setDraft(emptyDraft)
       setMaterialLines([])
+      setSourceManufacturingRequestId("")
+      if (linkWarning) setError(linkWarning)
       await load(1, status, query)
     } catch (cause: any) {
       setFormError(cause?.message || "The production order could not be saved.")
@@ -223,6 +279,20 @@ export default function OwnerProductionPage() {
       await reloadDetails()
     } catch (cause: any) { setDetailError(cause?.message || "Dispatch could not be confirmed.") }
     finally { setActionBusy(false) }
+  }
+
+  const openInvoiceEditor = async () => {
+    if (!detail?.order) return
+    setActionBusy(true)
+    setDetailError("")
+    try {
+      await createOrResumeProductionInvoiceDraft(detail.order.id)
+      window.location.assign(`/owner/jobs/${encodeURIComponent(detail.order.id)}/invoice-editor?source=production&productionOrderId=${encodeURIComponent(detail.order.id)}`)
+    } catch (cause: any) {
+      setDetailError(cause?.message || "Unable to create or resume the production invoice draft.")
+    } finally {
+      setActionBusy(false)
+    }
   }
 
   const saveDispatchAssignment = async () => {
@@ -335,16 +405,16 @@ export default function OwnerProductionPage() {
 
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
           <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-            <DialogHeader><DialogTitle>Create production order</DialogTitle><DialogDescription>Customer, machine, employee, inventory, and job choices must come from this company’s verified records.</DialogDescription></DialogHeader>
+            <DialogHeader><DialogTitle>Create production order</DialogTitle><DialogDescription>{sourceManufacturingRequestId ? "This order is being prepared from an approved customer manufacturing request. Review quantities and fill any required fields before saving." : "Customer, machine, employee, inventory, and job choices must come from this company’s verified records."}</DialogDescription></DialogHeader>
             {referencesLoading && <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading company references…</div>}
             {!referencesLoading && !references && <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">{formError || "Verified production reference data is unavailable. The order form is disabled."}</div>}
             {references && <form className="grid gap-4 sm:grid-cols-2" onSubmit={submitOrder}>
-              <label className="grid gap-1.5 text-sm sm:col-span-2">Customer *<select required className="h-10 rounded-md border bg-background px-3" value={draft.customerId} onChange={(e) => setDraft({ ...draft, customerId: e.target.value })}><option value="">Choose a customer</option>{references.customers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-              <label className="grid gap-1.5 text-sm">Component name *<Input required value={draft.componentName} onChange={(e) => setDraft({ ...draft, componentName: e.target.value })} maxLength={200} /></label>
-              <label className="grid gap-1.5 text-sm">Part number *<Input required value={draft.partNumber} onChange={(e) => setDraft({ ...draft, partNumber: e.target.value })} maxLength={100} /></label>
-              <label className="grid gap-1.5 text-sm">Drawing number<Input value={draft.drawingNumber} onChange={(e) => setDraft({ ...draft, drawingNumber: e.target.value })} maxLength={100} /></label>
-              <label className="grid gap-1.5 text-sm">Drawing revision<Input value={draft.drawingRevision} onChange={(e) => setDraft({ ...draft, drawingRevision: e.target.value })} maxLength={40} /></label>
-              <label className="grid gap-1.5 text-sm">Planned quantity *<Input required type="number" min="0.001" step="0.001" value={draft.plannedQuantity} onChange={(e) => setDraft({ ...draft, plannedQuantity: Number(e.target.value) })} /></label>
+              <label className="grid gap-1.5 text-sm sm:col-span-2">Customer *<select required disabled={Boolean(sourceManufacturingRequestId)} className="h-10 rounded-md border bg-background px-3 disabled:opacity-70" value={draft.customerId} onChange={(e) => setDraft({ ...draft, customerId: e.target.value })}><option value="">Choose a customer</option>{references.customers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+              <label className="grid gap-1.5 text-sm">Component name *<Input required disabled={Boolean(sourceManufacturingRequestId)} value={draft.componentName} onChange={(e) => setDraft({ ...draft, componentName: e.target.value })} maxLength={200} /></label>
+              <label className="grid gap-1.5 text-sm">Part number *<Input required disabled={Boolean(sourceManufacturingRequestId)} value={draft.partNumber} onChange={(e) => setDraft({ ...draft, partNumber: e.target.value })} maxLength={100} /></label>
+              <label className="grid gap-1.5 text-sm">Drawing number<Input disabled={Boolean(sourceManufacturingRequestId)} value={draft.drawingNumber} onChange={(e) => setDraft({ ...draft, drawingNumber: e.target.value })} maxLength={100} /></label>
+              <label className="grid gap-1.5 text-sm">Drawing revision<Input disabled={Boolean(sourceManufacturingRequestId)} value={draft.drawingRevision} onChange={(e) => setDraft({ ...draft, drawingRevision: e.target.value })} maxLength={40} /></label>
+              <label className="grid gap-1.5 text-sm">Planned quantity *<Input required disabled={Boolean(sourceManufacturingRequestId)} type="number" min="0.001" step="0.001" value={draft.plannedQuantity} onChange={(e) => setDraft({ ...draft, plannedQuantity: Number(e.target.value) })} /></label>
               <label className="grid gap-1.5 text-sm">Unit *<Input required value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} maxLength={24} /></label>
               <label className="grid gap-1.5 text-sm">Required completion date *<Input required type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} /></label>
               <label className="grid gap-1.5 text-sm">Priority<select className="h-10 rounded-md border bg-background px-3" value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: e.target.value as ProductionOrderDraft["priority"] })}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
@@ -386,6 +456,17 @@ export default function OwnerProductionPage() {
                 <div><p className="text-xs text-muted-foreground">Drawing</p><p className="mt-1 font-semibold">{detail.order.drawingNumber || "—"}{detail.order.drawingRevision ? ` · Rev ${detail.order.drawingRevision}` : ""}</p></div>
                 <div><p className="text-xs text-muted-foreground">Due date</p><p className="mt-1 font-semibold">{detail.order.dueDate ? new Date(detail.order.dueDate).toLocaleDateString() : "—"}</p></div>
                 <div><p className="text-xs text-muted-foreground">Open accepted quantity</p><p className="mt-1 font-semibold tabular-nums">{detail.order.outstandingQuantity} {detail.order.unit}</p></div>
+              </section>
+
+              <section className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold">Invoice</h3>
+                    {detail.order.invoice ? <p className="mt-1 text-sm text-muted-foreground">{detail.order.invoice.invoiceNumber} · {detail.order.invoice.status} · {new Intl.NumberFormat(undefined, { style: "currency", currency: "INR" }).format(detail.order.invoice.amount)}{detail.order.invoice.issuedAt ? ` · ${new Date(detail.order.invoice.issuedAt).toLocaleString()}` : ""}</p> : <p className="mt-1 text-sm text-muted-foreground">Invoice is separate from dispatch. It will not update shipped quantity or production status.</p>}
+                  </div>
+                  {detail.order.invoice && detail.order.invoice.status !== "draft" ? <Button variant="outline" onClick={() => window.location.assign("/owner/finance/invoices")}>Open invoice list</Button> : <Button onClick={() => void openInvoiceEditor()} disabled={actionBusy || detail.order.status !== "ready_for_dispatch" || detail.order.acceptedQuantity < detail.order.plannedQuantity}>{actionBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{detail.order.invoice?.status === "draft" ? "Continue draft" : "Create invoice"}</Button>}
+                </div>
+                {detail.order.status === "ready_for_dispatch" && detail.order.acceptedQuantity < detail.order.plannedQuantity && <p className="mt-2 text-xs text-amber-700">The initial invoice workflow supports full-order invoicing only; the full order quantity must pass inspection first.</p>}
               </section>
 
               <section className="space-y-3 rounded-xl border p-4">

@@ -45,6 +45,7 @@ export interface ProductionOrder {
   latestInspectionReason?: string | null
   latestInspectionAt?: string | null
   status: ProductionStatus
+  invoice?: { id: string; invoiceNumber: string; status: string; amount: number; issuedAt?: string | null } | null
   priority: "low" | "medium" | "high" | "urgent"
   dueDate?: string | null
   updatedAt: string
@@ -283,6 +284,14 @@ export async function getProductionReferences() {
 
 export async function createProductionOrder(payload: ProductionOrderDraft) {
   return mutateRequest<{ order: ProductionOrder }>("create-production-order", "/api/production/orders", payload)
+}
+
+export async function createOrResumeProductionInvoiceDraft(orderId: string) {
+  return mutateRequest<{ invoice: { id: string; invoice_number: string; status: string } }>(
+    `production-invoice-draft:${orderId}`,
+    `/api/invoices/production-order/${encodeURIComponent(orderId)}/draft`,
+    {},
+  )
 }
 
 export async function updateProductionAssignments(orderId: string, payload: { assignedEmployeeId?: string | null; dispatchEmployeeId?: string | null; machineId?: string | null; reason: string }) {
