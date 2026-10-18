@@ -46,7 +46,7 @@ export default function EmployeeProductionPage() {
     } catch (cause: any) {
       setOrders([])
       setError(cause instanceof ProductionApiUnavailableError
-        ? "The production workspace is not active yet. No example orders or actions are shown."
+        ? cause.message
         : cause?.message || "Unable to load your assigned production work.")
     } finally {
       setLoading(false)
@@ -127,7 +127,8 @@ export default function EmployeeProductionPage() {
         <section className="grid gap-4">
           {orders.map((order) => {
             const activeBatch = Boolean(order.activeBatchId)
-            const canStart = !activeBatch && ["planned", "rework_required", "on_hold"].includes(order.status)
+            const hasRemainingPlannedQuantity = order.goodQuantity < order.plannedQuantity
+            const canStart = !activeBatch && (["planned", "rework_required", "on_hold"].includes(order.status) || (["ready_for_dispatch", "partially_dispatched"].includes(order.status) && hasRemainingPlannedQuantity))
             const canReport = activeBatch && ["in_production", "rework_required"].includes(order.status)
             const canSubmit = activeBatch && canReport && order.activeBatchHasReport === true
             return <Card key={order.id}>
@@ -142,6 +143,7 @@ export default function EmployeeProductionPage() {
                   <div><p className="text-xs text-muted-foreground">Machine</p><p className="mt-1 font-medium">{order.machineName || "Not assigned"}</p></div>
                   <div><p className="text-xs text-muted-foreground">Due</p><p className="mt-1 font-medium">{order.dueDate ? new Date(order.dueDate).toLocaleDateString() : "—"}</p></div>
                 </div>
+                {order.latestInspectionResult && <div className="rounded-lg border border-violet-200 bg-violet-50/70 p-3 text-sm dark:border-violet-900 dark:bg-violet-950/20"><p className="font-medium">Latest quality result: {order.latestInspectionResult.replaceAll("_", " ")}</p>{order.latestInspectionReason && <p className="mt-1 text-muted-foreground">Inspector feedback: {order.latestInspectionReason}</p>}{order.latestInspectionAt && <p className="mt-1 text-xs text-muted-foreground">{new Date(order.latestInspectionAt).toLocaleString()}</p>}</div>}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm"><span className="text-muted-foreground">Reported:</span> <span className="font-medium tabular-nums">{order.goodQuantity} good · {order.rejectedQuantity} rejected · {order.reworkQuantity} rework</span></div>
                   <div className="flex flex-wrap gap-2">

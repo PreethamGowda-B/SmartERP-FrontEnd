@@ -10,17 +10,21 @@ import { Input } from "@/components/ui/input"
 import {
   createProductionOrder,
   getProductionDashboard,
+  getProductionOrder,
   getProductionOrders,
   getProductionReferences,
   ProductionApiUnavailableError,
   ProductionDashboard,
   ProductionOrder,
+  ProductionOrderDetail,
   ProductionOrderDraft,
   ProductionReferences,
   ProductionStatus,
   PlannedMaterialLine,
+  inspectProductionBatch,
+  confirmProductionDispatch,
 } from "@/lib/production-dispatch-api"
-import { AlertTriangle, Factory, Loader2, Plus, RefreshCw, Search, Truck, X } from "lucide-react"
+import { AlertTriangle, ClipboardCheck, Eye, Factory, Loader2, Plus, RefreshCw, Search, Truck, X } from "lucide-react"
 
 const STATUS_CARDS: Array<{ status: ProductionStatus | "overdue" | "quality_loss"; label: string; color: string }> = [
   { status: "planned", label: "Planned", color: "text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-100" },
@@ -63,6 +67,16 @@ export default function OwnerProductionPage() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState("")
   const [materialLines, setMaterialLines] = useState<PlannedMaterialLine[]>([])
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [detail, setDetail] = useState<ProductionOrderDetail | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState("")
+  const [actionBusy, setActionBusy] = useState(false)
+  const [workflowNotice, setWorkflowNotice] = useState("")
+  const [inspectionBatchId, setInspectionBatchId] = useState("")
+  const [inspectionForm, setInspectionForm] = useState({ accepted: "0", rejected: "0", rework: "0", reason: "" })
+  const [dispatchForm, setDispatchForm] = useState({ quantity: "", deliveryReference: "", carrier: "", transportDetails: "" })
+  const [dispatchConfirmOpen, setDispatchConfirmOpen] = useState(false)
 
   const load = useCallback(async (nextPage = page, nextStatus = status, search = query) => {
     setLoading(true)
@@ -78,7 +92,7 @@ export default function OwnerProductionPage() {
       setPage(Number(result.page) || nextPage)
     } catch (cause: any) {
       setError(cause instanceof ProductionApiUnavailableError
-        ? "Production data is unavailable until the approved production API and database schema are activated. No sample data is shown."
+        ? cause.message
         : cause?.message || "Unable to load production orders.")
       setDashboard(null)
       setOrders([])
@@ -146,6 +160,59 @@ export default function OwnerProductionPage() {
     return dashboard.counts[key as ProductionStatus] ?? 0
   }
 
+  const openDetails = async (orderId: string) => {
+    setDetailOpen(true)
+    setDetail(null)
+    setDetailError("")
+    setWorkflowNotice("")
+    setDetailLoading(true)
+    try { setDetail(await getProductionOrder(orderId)) }
+    catch (cause: any) { setDetailError(cause?.message || "Unable to load production history.") }
+    finally { setDetailLoading(false) }
+  }
+
+  const reloadDetails = async () => {
+    if (!detail?.order.id) return
+    setDetailLoading(true)
+    try { setDetail(await getProductionOrder(detail.order.id)); await load() }
+    catch (cause: any) { setDetailError(cause?.message || "Unable to refresh production history.") }
+    finally { setDetailLoading(false) }
+  }
+
+  const submitInspection = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!inspectionBatchId || !detail) return
+    setActionBusy(true); setDetailError(""); setWorkflowNotice("")
+    try {
+      const result = await inspectProductionBatch(inspectionBatchId, {
+        acceptedQuantity: Number(inspectionForm.accepted), rejectedQuantity: Number(inspectionForm.rejected),
+        reworkQuantity: Number(inspectionForm.rework), reason: inspectionForm.reason.trim() || undefined,
+      })
+      setWorkflowNotice(`Inspection ${result.inspection.reference} saved: ${result.inspection.result}.`)
+      setInspectionBatchId("")
+      await reloadDetails()
+    } catch (cause: any) { setDetailError(cause?.message || "Inspection could not be saved.") }
+    finally { setActionBusy(false) }
+  }
+
+  const submitDispatch = async () => {
+    if (!detail) return
+    setActionBusy(true); setDetailError(""); setWorkflowNotice("")
+    try {
+      const result = await confirmProductionDispatch(detail.order.id, {
+        quantity: Number(dispatchForm.quantity), confirmed: true,
+        deliveryReference: dispatchForm.deliveryReference.trim() || undefined,
+        carrier: dispatchForm.carrier.trim() || undefined,
+        transportDetails: dispatchForm.transportDetails.trim() || undefined,
+      })
+      setDispatchConfirmOpen(false)
+      setWorkflowNotice(`Dispatch ${result.dispatch.reference} confirmed for ${result.dispatch.quantity} ${detail.order.unit} at ${new Date(result.dispatch.dispatchedAt).toLocaleString()}.`)
+      setDispatchForm({ quantity: "", deliveryReference: "", carrier: "", transportDetails: "" })
+      await reloadDetails()
+    } catch (cause: any) { setDetailError(cause?.message || "Dispatch could not be confirmed.") }
+    finally { setActionBusy(false) }
+  }
+
   return (
     <OwnerLayout>
       <main className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
@@ -197,11 +264,11 @@ export default function OwnerProductionPage() {
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full min-w-[1080px] text-sm">
                 <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground"><tr>
-                  <th className="px-3 py-3">Order / customer</th><th className="px-3 py-3">Component</th><th className="px-3 py-3">Part / drawing</th><th className="px-3 py-3">Quantity</th><th className="px-3 py-3">Machine / operator</th><th className="px-3 py-3">Due date</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Dispatch remaining</th>
+                  <th className="px-3 py-3">Order / customer</th><th className="px-3 py-3">Component</th><th className="px-3 py-3">Part / drawing</th><th className="px-3 py-3">Quantity</th><th className="px-3 py-3">Machine / operator</th><th className="px-3 py-3">Due date</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Dispatch remaining</th><th className="px-3 py-3">History</th>
                 </tr></thead>
                 <tbody className="divide-y">
-                  {loading && <tr><td colSpan={8} className="px-4 py-12 text-center text-muted-foreground"><Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />Loading production data…</td></tr>}
-                  {!loading && !error && orders.length === 0 && <tr><td colSpan={8} className="px-4 py-12 text-center"><Factory className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" /><p className="font-medium">No production orders yet</p><p className="mt-1 text-xs text-muted-foreground">Create a production order to start tracing manufacturing and dispatch.</p></td></tr>}
+                  {loading && <tr><td colSpan={9} className="px-4 py-12 text-center text-muted-foreground"><Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />Loading production data…</td></tr>}
+                  {!loading && !error && orders.length === 0 && <tr><td colSpan={9} className="px-4 py-12 text-center"><Factory className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" /><p className="font-medium">No production orders yet</p><p className="mt-1 text-xs text-muted-foreground">Create a production order to start tracing manufacturing and dispatch.</p></td></tr>}
                   {!loading && orders.map((order) => <tr key={order.id} className="hover:bg-muted/30">
                     <td className="px-3 py-3"><div className="font-medium">{order.orderNumber}</div><div className="text-xs text-muted-foreground">{order.customerName}{order.customerOrderReference ? ` · ${order.customerOrderReference}` : ""}</div></td>
                     <td className="px-3 py-3 font-medium">{order.componentName}</td>
@@ -211,6 +278,7 @@ export default function OwnerProductionPage() {
                     <td className="px-3 py-3">{order.dueDate ? new Date(order.dueDate).toLocaleDateString() : "—"}</td>
                     <td className="px-3 py-3"><Badge variant="outline">{STATUS_LABELS[order.status] || order.status}</Badge></td>
                     <td className="px-3 py-3"><div className="flex items-center gap-2"><Truck className="h-4 w-4 text-muted-foreground" /><span className="tabular-nums">{order.outstandingQuantity} {order.unit}</span></div><div className="text-xs text-muted-foreground">{order.dispatchedQuantity} shipped</div></td>
+                    <td className="px-3 py-3"><Button type="button" size="sm" variant="outline" onClick={() => void openDetails(order.id)}><Eye className="mr-1.5 h-3.5 w-3.5" />Details</Button></td>
                   </tr>)}
                 </tbody>
               </table>
@@ -251,6 +319,71 @@ export default function OwnerProductionPage() {
               {formError && <p role="alert" className="text-sm text-destructive sm:col-span-2">{formError}</p>}
               <div className="flex justify-end gap-2 sm:col-span-2"><Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button><Button type="submit" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create order</Button></div>
             </form>}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+          <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto">
+            <DialogHeader><DialogTitle>Production order history</DialogTitle><DialogDescription>Persisted production, inspection, and dispatch records for this company order.</DialogDescription></DialogHeader>
+            {detailLoading && <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading order history…</div>}
+            {detailError && <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{detailError}</div>}
+            {workflowNotice && <div role="status" className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100">{workflowNotice}</div>}
+            {detail && <div className="space-y-5">
+              <section className="grid gap-3 rounded-xl border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div><p className="text-xs text-muted-foreground">Order / status</p><p className="mt-1 font-semibold">{detail.order.orderNumber} · {STATUS_LABELS[detail.order.status]}</p></div>
+                <div><p className="text-xs text-muted-foreground">Component / part</p><p className="mt-1 font-semibold">{detail.order.componentName} · {detail.order.partNumber}</p></div>
+                <div><p className="text-xs text-muted-foreground">Customer</p><p className="mt-1 font-semibold">{detail.order.customerName}{detail.order.customerOrderReference ? ` · ${detail.order.customerOrderReference}` : ""}</p></div>
+                <div><p className="text-xs text-muted-foreground">Good / accepted / dispatched</p><p className="mt-1 font-semibold tabular-nums">{detail.order.goodQuantity} / {detail.order.acceptedQuantity} / {detail.order.dispatchedQuantity} {detail.order.unit}</p></div>
+                <div><p className="text-xs text-muted-foreground">Machine / operator</p><p className="mt-1 font-semibold">{detail.order.machineName || "Unassigned"} / {detail.order.assignedEmployeeName || "Unassigned"}</p></div>
+                <div><p className="text-xs text-muted-foreground">Drawing</p><p className="mt-1 font-semibold">{detail.order.drawingNumber || "—"}{detail.order.drawingRevision ? ` · Rev ${detail.order.drawingRevision}` : ""}</p></div>
+                <div><p className="text-xs text-muted-foreground">Due date</p><p className="mt-1 font-semibold">{detail.order.dueDate ? new Date(detail.order.dueDate).toLocaleDateString() : "—"}</p></div>
+                <div><p className="text-xs text-muted-foreground">Open accepted quantity</p><p className="mt-1 font-semibold tabular-nums">{detail.order.outstandingQuantity} {detail.order.unit}</p></div>
+              </section>
+
+              <section className="space-y-2"><h3 className="flex items-center gap-2 font-semibold"><ClipboardCheck className="h-4 w-4 text-primary" />Batches and quality</h3>
+                {detail.batches.length === 0 && <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No production batches have been started.</p>}
+                {detail.batches.map((batch) => <div key={batch.id} className="grid gap-3 rounded-lg border p-3 md:grid-cols-[1fr_auto] md:items-center">
+                  <div><p className="font-medium">Batch {batch.batch_number} · {batch.status.replaceAll("_", " ")}</p><p className="text-xs text-muted-foreground">Started {new Date(batch.started_at).toLocaleString()} · {Number(batch.good_quantity)} good, {Number(batch.rejected_quantity)} rejected, {Number(batch.rework_quantity)} rework</p></div>
+                  {batch.status === "submitted" && <Button size="sm" variant="outline" onClick={() => { const submitted = Number(batch.good_quantity) + Number(batch.rejected_quantity) + Number(batch.rework_quantity); setInspectionBatchId(batch.id); setInspectionForm({ accepted: String(batch.good_quantity), rejected: String(batch.rejected_quantity), rework: String(batch.rework_quantity), reason: "" }); if (!submitted) setDetailError("This batch has no quantity report to inspect.") }} disabled={actionBusy}>Inspect batch</Button>}
+                </div>)}
+                {inspectionBatchId && <form onSubmit={(event) => void submitInspection(event)} className="grid gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 sm:grid-cols-3">
+                  <p className="font-medium sm:col-span-3">Record inspection outcome</p>
+                  <label className="grid gap-1 text-sm">Accepted<Input type="number" min="0" step="0.001" required value={inspectionForm.accepted} onChange={(event) => setInspectionForm({ ...inspectionForm, accepted: event.target.value })} /></label>
+                  <label className="grid gap-1 text-sm">Rejected<Input type="number" min="0" step="0.001" required value={inspectionForm.rejected} onChange={(event) => setInspectionForm({ ...inspectionForm, rejected: event.target.value })} /></label>
+                  <label className="grid gap-1 text-sm">Rework<Input type="number" min="0" step="0.001" required value={inspectionForm.rework} onChange={(event) => setInspectionForm({ ...inspectionForm, rework: event.target.value })} /></label>
+                  <label className="grid gap-1 text-sm sm:col-span-3">Reason (required for reject or rework)<Input value={inspectionForm.reason} onChange={(event) => setInspectionForm({ ...inspectionForm, reason: event.target.value })} maxLength={2000} /></label>
+                  <div className="flex justify-end gap-2 sm:col-span-3"><Button type="button" variant="ghost" onClick={() => setInspectionBatchId("")}>Cancel</Button><Button type="submit" disabled={actionBusy}>{actionBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save inspection</Button></div>
+                </form>}
+                {detail.inspections.map((inspection) => <div key={inspection.id} className="rounded-lg border p-3 text-sm"><div className="flex flex-wrap justify-between gap-2"><strong>{inspection.inspection_reference} · {inspection.result.replaceAll("_", " ")}</strong><span className="text-muted-foreground">{new Date(inspection.inspected_at).toLocaleString()} · {inspection.inspector_name}</span></div><p className="mt-1 text-muted-foreground">Accepted {inspection.accepted_quantity} · Rejected {inspection.rejected_quantity} · Rework {inspection.rework_quantity}{inspection.reason ? ` · ${inspection.reason}` : ""}</p></div>)}
+              </section>
+
+              <section className="space-y-2"><h3 className="font-semibold">Production reports</h3>{detail.reports.length === 0 && <p className="text-sm text-muted-foreground">No production quantities have been reported.</p>}{detail.reports.map((report) => <div key={report.id} className="rounded-lg border p-3 text-sm"><div className="flex flex-wrap justify-between gap-2"><strong>Good {report.good_quantity} · Rejected {report.rejected_quantity} · Rework {report.rework_quantity}</strong><span className="text-muted-foreground">{report.reported_by_name} · {new Date(report.reported_at).toLocaleString()}</span></div>{report.notes && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{report.notes}</p>}</div>)}</section>
+
+              <section className="space-y-2"><h3 className="font-semibold">Planned material requirements</h3><p className="text-xs text-muted-foreground">Planning references only. This workflow does not reserve, issue, consume, or decrement inventory.</p>{detail.materials.length === 0 && <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No material requirements recorded.</p>}{detail.materials.map((material) => <div key={material.id} className="flex flex-wrap justify-between gap-2 rounded-lg border p-3 text-sm"><span className="font-medium">{material.item_name}</span><span className="tabular-nums text-muted-foreground">{material.planned_quantity} {material.unit || "units"}</span></div>)}</section>
+
+              <section className="space-y-2"><h3 className="font-semibold">Dispatch history</h3>
+                {detail.dispatches.length === 0 && <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">No dispatch has been confirmed.</p>}
+                {detail.dispatches.map((dispatch) => <div key={dispatch.id} className="rounded-lg border p-3 text-sm"><div className="flex flex-wrap justify-between gap-2"><strong>{dispatch.dispatch_reference} · {dispatch.quantity} {detail.order.unit}</strong><span className="text-muted-foreground">{new Date(dispatch.dispatched_at).toLocaleString()} · {dispatch.confirmed_by_name}</span></div><p className="mt-1 text-muted-foreground">{[dispatch.delivery_reference, dispatch.carrier].filter(Boolean).join(" · ") || "No delivery reference recorded"}</p></div>)}
+                {detail.order.outstandingQuantity > 0 && detail.order.acceptedQuantity > detail.order.dispatchedQuantity && <form onSubmit={(event) => { event.preventDefault(); setDispatchConfirmOpen(true) }} className="grid gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 sm:grid-cols-2">
+                  <p className="font-medium sm:col-span-2">Create a dispatch · {detail.order.outstandingQuantity} {detail.order.unit} accepted and not yet shipped</p>
+                  <label className="grid gap-1 text-sm">Quantity to dispatch<Input required type="number" min="0.001" max={detail.order.outstandingQuantity} step="0.001" value={dispatchForm.quantity} onChange={(event) => setDispatchForm({ ...dispatchForm, quantity: event.target.value })} /></label>
+                  <label className="grid gap-1 text-sm">Delivery reference<Input value={dispatchForm.deliveryReference} onChange={(event) => setDispatchForm({ ...dispatchForm, deliveryReference: event.target.value })} maxLength={120} /></label>
+                  <label className="grid gap-1 text-sm">Carrier<Input value={dispatchForm.carrier} onChange={(event) => setDispatchForm({ ...dispatchForm, carrier: event.target.value })} maxLength={120} /></label>
+                  <label className="grid gap-1 text-sm">Transport details<Input value={dispatchForm.transportDetails} onChange={(event) => setDispatchForm({ ...dispatchForm, transportDetails: event.target.value })} maxLength={1000} /></label>
+                  <div className="flex justify-end sm:col-span-2"><Button type="submit" disabled={!Number(dispatchForm.quantity) || actionBusy}><Truck className="mr-2 h-4 w-4" />Review dispatch</Button></div>
+                </form>}
+              </section>
+
+              <section className="space-y-2"><h3 className="font-semibold">Activity timeline</h3>{detail.events.length === 0 && <p className="text-sm text-muted-foreground">No activity recorded.</p>}{detail.events.map((event) => <div key={event.id} className="flex gap-3 border-l-2 border-primary/20 py-1 pl-3"><span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" /><div className="min-w-0"><p className="text-sm font-medium">{event.event_type.replaceAll("_", " ")}{event.quantity != null ? ` · ${event.quantity} ${detail.order.unit}` : ""}</p><p className="text-xs text-muted-foreground">{event.actor_name} · {new Date(event.created_at).toLocaleString()}{event.reason ? ` · ${event.reason}` : ""}</p></div></div>)}</section>
+            </div>}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={dispatchConfirmOpen} onOpenChange={setDispatchConfirmOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>Confirm dispatch</DialogTitle><DialogDescription>This records a dispatch against accepted, undispatched quantity. The record and reference are permanent audit history.</DialogDescription></DialogHeader>
+            <p className="rounded-lg bg-muted p-3 text-sm">{dispatchForm.quantity || 0} {detail?.order.unit || "units"} from {detail?.order.orderNumber}</p>
+            <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setDispatchConfirmOpen(false)} disabled={actionBusy}>Cancel</Button><Button onClick={() => void submitDispatch()} disabled={actionBusy}>{actionBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirm dispatch</Button></div>
           </DialogContent>
         </Dialog>
       </main>

@@ -34,10 +34,72 @@ export interface ProductionOrder {
   assignedEmployeeId?: string | null
   activeBatchId?: string | null
   activeBatchHasReport?: boolean
+  latestInspectionResult?: string | null
+  latestInspectionReason?: string | null
+  latestInspectionAt?: string | null
   status: ProductionStatus
   priority: "low" | "medium" | "high" | "urgent"
   dueDate?: string | null
   updatedAt: string
+}
+
+export interface ProductionOrderDetail {
+  order: ProductionOrder
+  batches: Array<{
+    id: string
+    batch_number: number
+    operator_id: string
+    status: string
+    started_at: string
+    submitted_at?: string | null
+    completed_at?: string | null
+    good_quantity: number
+    rejected_quantity: number
+    rework_quantity: number
+  }>
+  reports: Array<{
+    id: string
+    batch_id: string
+    reported_by_name: string
+    good_quantity: number
+    rejected_quantity: number
+    rework_quantity: number
+    notes?: string | null
+    reported_at: string
+  }>
+  materials: Array<{ id: string; item_name: string; planned_quantity: number; unit?: string | null }>
+  inspections: Array<{
+    id: string
+    inspection_reference: string
+    submitted_quantity: number
+    accepted_quantity: number
+    rejected_quantity: number
+    rework_quantity: number
+    result: string
+    reason?: string | null
+    inspector_name: string
+    inspected_at: string
+  }>
+  dispatches: Array<{
+    id: string
+    dispatch_reference: string
+    quantity: number
+    delivery_reference?: string | null
+    carrier?: string | null
+    confirmed_by_name: string
+    dispatched_at: string
+  }>
+  events: Array<{
+    id: string
+    event_type: string
+    actor_name: string
+    from_status?: string | null
+    to_status?: string | null
+    quantity?: number | null
+    reason?: string | null
+    details: Record<string, unknown>
+    created_at: string
+  }>
 }
 
 export interface ProductionDashboard {
@@ -80,11 +142,16 @@ export interface PlannedMaterialLine {
 }
 
 export class ProductionApiUnavailableError extends Error {
-  constructor() {
-    super("The Production & Dispatch API is not active yet. No production data or actions were simulated.")
+  constructor(message = "Production & Dispatch is unavailable in this deployment. No production data or actions were simulated.") {
+    super(message)
     this.name = "ProductionApiUnavailableError"
   }
 }
+
+// Keep the same key when the client retries the same mutation after a lost
+// response. A changed payload gets a different key; successful calls release it.
+const pendingMutationKeys = new Map<string, string>()
+const MUTATION_STORAGE_PREFIX = "smarterp-production-mutation:"
 
 function unwrap<T>(response: any): T {
   if (response?.success === false) {
@@ -94,10 +161,12 @@ function unwrap<T>(response: any): T {
 }
 
 function normalizeApiError(error: any): Error {
-  if (error?.status === 404 || error?.status === 501 || error?.status === 503) {
-    return new ProductionApiUnavailableError()
-  }
-  return new Error(error?.message || "Unable to reach the production service. Please retry.")
+  if (error?.status === 404) return new ProductionApiUnavailableError("This backend deployment does not expose the Production & Dispatch API yet. No sample production data is shown.")
+  if (error?.status === 501) return new ProductionApiUnavailableError("Production & Dispatch is not enabled in this deployment. No sample production data is shown.")
+  if (error?.status === 503) return new ProductionApiUnavailableError(error?.message || "Production & Dispatch storage or database permissions are not active. No sample production data is shown.")
+  const normalized = new Error(error?.message || "Unable to reach the production service. Please retry.")
+  ;(normalized as Error & { status?: number }).status = error?.status
+  return normalized
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -109,8 +178,54 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 }
 
+async function mutateRequest<T>(scope: string, path: string, payload: unknown): Promise<T> {
+  const body = JSON.stringify(payload)
+  const signature = `${scope}:${body}`
+  const fingerprintBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(signature))
+  const fingerprint = Array.from(new Uint8Array(fingerprintBytes), (value) => value.toString(16).padStart(2, "0")).join("")
+  const storageKey = `${MUTATION_STORAGE_PREFIX}${fingerprint}`
+  let key = pendingMutationKeys.get(signature)
+  if (!key) {
+    try { key = window.localStorage.getItem(storageKey) || undefined } catch { key = undefined }
+  }
+  key ||= crypto.randomUUID()
+  pendingMutationKeys.set(signature, key)
+  try { window.localStorage.setItem(storageKey, key) } catch {}
+  try {
+    const result = await request<T>(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": key },
+      body,
+    })
+    pendingMutationKeys.delete(signature)
+    try { window.localStorage.removeItem(storageKey) } catch {}
+    return result
+  } catch (error) {
+    if (typeof (error as Error & { status?: number }).status === "number" && (error as Error & { status: number }).status < 500) {
+      pendingMutationKeys.delete(signature)
+      try { window.localStorage.removeItem(storageKey) } catch {}
+    }
+    throw error
+  }
+}
+
 export async function getProductionDashboard() {
   return request<ProductionDashboard>("/api/production/dashboard")
+}
+
+export async function getProductionReports(params: { from?: string; to?: string } = {}) {
+  const query = new URLSearchParams()
+  if (params.from) query.set("from", params.from)
+  if (params.to) query.set("to", params.to)
+  const suffix = query.size ? `?${query.toString()}` : ""
+  return request<{
+    from: string | null
+    to: string | null
+    production: { reportCount: number; goodQuantity: number; rejectedQuantity: number; reworkQuantity: number; rejectRate: number }
+    quality: { inspectionCount: number; acceptedQuantity: number; rejectedQuantity: number; reworkQuantity: number }
+    dispatch: { dispatchCount: number; dispatchedQuantity: number }
+    outstanding: { orderCount: number; acceptedQuantity: number }
+  }>(`/api/production/reports${suffix}`)
 }
 
 export async function getProductionOrders(params: { q?: string; status?: string; page?: number; pageSize?: number } = {}) {
@@ -122,16 +237,16 @@ export async function getProductionOrders(params: { q?: string; status?: string;
   return request<{ orders: ProductionOrder[]; page: number; pageSize: number; total: number }>(`/api/production/orders${suffix}`)
 }
 
+export async function getProductionOrder(orderId: string) {
+  return request<ProductionOrderDetail>(`/api/production/orders/${encodeURIComponent(orderId)}`)
+}
+
 export async function getProductionReferences() {
   return request<ProductionReferences>("/api/production/references")
 }
 
 export async function createProductionOrder(payload: ProductionOrderDraft) {
-  return request<{ order: ProductionOrder }>("/api/production/orders", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-    body: JSON.stringify(payload),
-  })
+  return mutateRequest<{ order: ProductionOrder }>("create-production-order", "/api/production/orders", payload)
 }
 
 export async function getMyProductionOrders() {
@@ -139,25 +254,34 @@ export async function getMyProductionOrders() {
 }
 
 export async function startProductionOrder(orderId: string) {
-  return request<{ batchId: string; startedAt: string }>(`/api/production/orders/${encodeURIComponent(orderId)}/start`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-    body: JSON.stringify({}),
-  })
+  return mutateRequest<{ batchId: string; startedAt: string }>(`start-production:${orderId}`, `/api/production/orders/${encodeURIComponent(orderId)}/start`, {})
 }
 
 export async function reportProductionBatch(batchId: string, payload: { goodQuantity: number; rejectedQuantity: number; reworkQuantity: number; notes?: string }) {
-  return request<{ report: { id: string; reportedAt: string } }>(`/api/production/batches/${encodeURIComponent(batchId)}/reports`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-    body: JSON.stringify(payload),
-  })
+  return mutateRequest<{ report: { id: string; reportedAt: string } }>(`production-report:${batchId}`, `/api/production/batches/${encodeURIComponent(batchId)}/reports`, payload)
 }
 
 export async function submitBatchForInspection(batchId: string) {
-  return request<{ submittedAt: string }>(`/api/production/batches/${encodeURIComponent(batchId)}/submit-quality`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-    body: JSON.stringify({}),
-  })
+  return mutateRequest<{ submittedAt: string }>(`submit-quality:${batchId}`, `/api/production/batches/${encodeURIComponent(batchId)}/submit-quality`, {})
+}
+
+export async function inspectProductionBatch(batchId: string, payload: {
+  acceptedQuantity: number
+  rejectedQuantity: number
+  reworkQuantity: number
+  reason?: string
+  notes?: string
+}) {
+  return mutateRequest<{ inspection: { id: string; reference: string; inspectedAt: string; result: string } }>(`inspect-batch:${batchId}`, `/api/production/batches/${encodeURIComponent(batchId)}/inspections`, payload)
+}
+
+export async function confirmProductionDispatch(orderId: string, payload: {
+  quantity: number
+  confirmed: true
+  deliveryReference?: string
+  carrier?: string
+  transportDetails?: string
+  notes?: string
+}) {
+  return mutateRequest<{ dispatch: { id: string; reference: string; quantity: number; dispatchedAt: string; remainingAcceptedQuantity: number } }>(`dispatch-order:${orderId}`, `/api/production/orders/${encodeURIComponent(orderId)}/dispatches`, payload)
 }
