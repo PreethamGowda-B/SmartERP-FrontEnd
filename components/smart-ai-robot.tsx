@@ -1,11 +1,13 @@
 "use client"
 
 import { useId } from "react"
+import Image from "next/image"
+import { Mic, Sparkles } from "lucide-react"
 import { motion, useReducedMotion } from "framer-motion"
 
 export type SmartAIRobotMood = "idle" | "thinking" | "success" | "error" | "listening"
 
-/** Lightweight, project-owned robot mascot used by the shared SmartERP AI panel. */
+/** Shared SmartERP AI mascot: a 3D full-body figure for launcher/hero and a compact face for avatars. */
 export function SmartAIRobot({
   mood = "idle",
   size = "md",
@@ -15,10 +17,10 @@ export function SmartAIRobot({
 }) {
   const reduceMotion = useReducedMotion()
   const id = useId().replace(/:/g, "")
-  // Keep the launcher mascot comfortably inset inside its 68px button.
-  const dimensions = { sm: 38, md: 54, lg: 60, hero: 116 }[size]
+  const dimensions = { sm: 38, md: 54, lg: 88, hero: 128 }[size]
   const eyeColor = mood === "error" ? "#fb7185" : mood === "success" ? "#34d399" : "#69d7ff"
   const shouldAnimate = !reduceMotion && (size !== "sm" || mood === "thinking" || mood === "listening")
+  const usesFullBodyMascot = size === "lg" || size === "hero"
 
   return (
     <motion.div
@@ -28,6 +30,45 @@ export function SmartAIRobot({
       animate={shouldAnimate ? { y: [0, -2, 0] } : undefined}
       transition={shouldAnimate ? { duration: mood === "thinking" ? 0.9 : 3.2, repeat: Infinity, ease: "easeInOut" } : undefined}
     >
+      {usesFullBodyMascot ? (
+        <>
+          <Image
+            src="/ai/smarterp-ai-robot.png"
+            alt=""
+            aria-hidden="true"
+            width={dimensions}
+            height={dimensions}
+            priority={size === "hero"}
+            className="h-full w-full select-none object-contain drop-shadow-[0_10px_12px_rgba(91,75,232,.22)]"
+            draggable={false}
+          />
+          {mood === "thinking" && (
+            <motion.span
+              className="absolute -right-1 top-1 flex h-7 min-w-7 items-center justify-center gap-0.5 rounded-full border border-violet-200 bg-white/95 px-1.5 shadow-[0_4px_12px_rgba(91,75,232,.2)]"
+              aria-hidden="true"
+              animate={reduceMotion ? undefined : { y: [0, -3, 0] }}
+              transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <span className="h-1 w-1 rounded-full bg-violet-500" />
+              <span className="h-1 w-1 rounded-full bg-violet-500/70" />
+              <span className="h-1 w-1 rounded-full bg-violet-500/45" />
+            </motion.span>
+          )}
+          {mood === "listening" && (
+            <span className="absolute bottom-1 right-1 grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-violet-600 text-white shadow-md" aria-hidden="true">
+              <Mic className="h-3.5 w-3.5" />
+            </span>
+          )}
+          {mood === "success" && (
+            <span className="absolute right-1 top-2 grid h-6 w-6 place-items-center rounded-full border-2 border-white bg-emerald-500 text-white shadow-md" aria-hidden="true">
+              <Sparkles className="h-3 w-3" />
+            </span>
+          )}
+          {mood === "error" && (
+            <span className="absolute right-2 top-2 h-3 w-3 rounded-full border-2 border-white bg-rose-500 shadow-sm" aria-hidden="true" />
+          )}
+        </>
+      ) : (
       <svg viewBox="0 0 80 80" width={dimensions} height={dimensions} fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id={`${id}-shell`} x1="16" y1="12" x2="66" y2="70" gradientUnits="userSpaceOnUse">
@@ -87,7 +128,8 @@ export function SmartAIRobot({
           </g>
         )}
       </svg>
-      {mood === "thinking" && (
+      )}
+      {mood === "thinking" && !usesFullBodyMascot && (
         <motion.span className="absolute -right-0.5 top-2 h-2 w-2 rounded-full bg-violet-500" aria-hidden="true"
           animate={reduceMotion ? undefined : { opacity: [.35, 1, .35], scale: [.8, 1.15, .8] }} transition={{ duration: .9, repeat: Infinity }} />
       )}

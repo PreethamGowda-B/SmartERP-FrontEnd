@@ -883,7 +883,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
             animate={{ scale: 1, opacity: 1 }}
             exit={reduceMotion ? { opacity: 0 } : { scale: 0.82, opacity: 0 }}
             className={cn(
-              "fixed z-40 flex items-center gap-1.5 transition-all duration-300",
+              "fixed z-40 flex items-center justify-center transition-all duration-300",
               pathname?.includes("/messages")
                 ? "bottom-24 right-3 sm:bottom-28 sm:right-6"
                 : "bottom-[max(env(safe-area-inset-bottom),0.75rem)] right-3 sm:bottom-6 sm:right-6"
@@ -897,16 +897,16 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
               title="Open SmartERP AI Operations Assistant"
               aria-label="Open SmartERP AI assistant"
               aria-haspopup="dialog"
-              className="group relative flex h-14 w-14 sm:h-[68px] sm:w-[68px] items-center justify-center rounded-full border border-white/90 bg-gradient-to-br from-white via-[#f7f5ff] to-[#eceaff] shadow-[0_10px_32px_rgba(79,70,229,.2)] ring-1 ring-violet-200/80 transition-shadow hover:shadow-[0_12px_36px_rgba(79,70,229,.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-400/40 motion-reduce:transition-none"
+              className="group relative flex h-[86px] w-[76px] items-center justify-center overflow-visible rounded-[30px] border-0 bg-transparent p-0 shadow-none transition-[filter,transform] hover:drop-shadow-[0_12px_18px_rgba(79,70,229,.28)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-400/40 motion-reduce:transition-none sm:h-[104px] sm:w-[92px]"
             >
-              <span className="pointer-events-none absolute inset-1 rounded-full bg-gradient-to-br from-violet-100/80 to-sky-100/70" />
-              <div className="hidden sm:block">
-                <SmartAIRobot mood={robotMood} size="lg" />
-              </div>
-              <div className="sm:hidden">
-                <SmartAIRobot mood={robotMood} size="sm" />
-              </div>
+              <span className="pointer-events-none absolute bottom-2 left-1/2 h-3 w-12 -translate-x-1/2 rounded-full bg-violet-500/20 blur-md sm:bottom-3 sm:h-4 sm:w-16" />
+              <SmartAIRobot mood={robotMood} size="lg" />
             </motion.button>
+            <div className="pointer-events-none absolute bottom-full right-1 mb-2 hidden w-[178px] rounded-2xl border border-violet-100 bg-white/95 px-3.5 py-2.5 text-left text-[12px] leading-snug text-slate-800 shadow-[0_10px_28px_rgba(38,35,91,.14)] backdrop-blur-sm sm:block dark:border-violet-300/15 dark:bg-slate-950/95 dark:text-slate-100">
+              <span className="font-semibold">Hi! Need help?</span>
+              <br />Ask me anything.
+              <span className="absolute -bottom-1.5 right-5 h-3 w-3 rotate-45 border-b border-r border-violet-100 bg-white/95 dark:border-violet-300/15 dark:bg-slate-950/95" />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -933,7 +933,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
             aria-label="SmartERP AI assistant"
           >
             {!isExpanded && !isMinimized && (
-              <div className="pointer-events-none absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 sm:block">
+              <div className="pointer-events-none absolute left-1/2 top-[-16px] z-20 hidden h-[112px] w-32 -translate-x-1/2 overflow-hidden sm:block">
                 <SmartAIRobot mood={isLoading ? "thinking" : robotMood} size="hero" />
               </div>
             )}
@@ -950,7 +950,11 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm font-extrabold text-foreground tracking-tight">SmartERP AI</h2>
                   </div>
-                  <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{isLoading || robotMood === "thinking" ? "Thinking through your request…" : robotMood === "listening" ? "Listening to your voice…" : robotMood === "error" ? "Request failed · retry available" : "Your ERP assistant"}</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+                    <span className={cn("h-1.5 w-1.5 rounded-full", isLoading ? "animate-pulse bg-violet-500" : robotMood === "error" ? "bg-rose-500" : "bg-emerald-500")} />
+                    {isLoading || robotMood === "thinking" ? "Thinking…" : robotMood === "listening" ? "Listening…" : robotMood === "error" ? "Request failed · retry available" : "Online"}
+                  </p>
+                  <p className="truncate text-[10px] text-muted-foreground">Your ERP assistant</p>
                 </div>
               </div>
 
