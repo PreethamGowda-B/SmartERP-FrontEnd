@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useEffect, useState, useCallback } from "react"
-import { motion, AnimatePresence } from "framer-motion"
 import { 
   Building2, 
   CheckCircle2, 
@@ -14,10 +13,8 @@ import {
   ChevronDown,
   RefreshCcw,
   Zap,
-  RotateCcw,
   Receipt,
-  Calendar,
-  X
+  Calendar
 } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
@@ -84,11 +81,6 @@ export default function AdminSubscriptions() {
   const [paymentsPage, setPaymentsPage] = useState(1)
   const [paymentsTotal, setPaymentsTotal] = useState(0)
 
-  // Refund modal state
-  const [refundTarget, setRefundTarget] = useState<PaymentTransaction | null>(null)
-  const [refundReason, setRefundReason] = useState("")
-  const [refundLoading, setRefundLoading] = useState(false)
-
   const fetchSubscriptions = useCallback(async () => {
     setLoadingCompanies(true)
     try {
@@ -146,25 +138,6 @@ export default function AdminSubscriptions() {
       toast.success("Subscription plan updated manually for 30 days")
     } catch {
       toast.error("Failed to update plan")
-    }
-  }
-
-  const handleExecuteRefund = async () => {
-    if (!refundTarget) return
-    setRefundLoading(true)
-    try {
-      await apiClient(`/api/admin/payments/${refundTarget.id}/refund`, {
-        method: 'POST',
-        body: JSON.stringify({ reason: refundReason })
-      })
-      setPayments(prev => prev.map(p => p.id === refundTarget.id ? { ...p, status: 'refunded' } : p))
-      toast.success(`Transaction #${refundTarget.id} marked as refunded`)
-      setRefundTarget(null)
-      setRefundReason("")
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to process refund")
-    } finally {
-      setRefundLoading(false)
     }
   }
 
@@ -321,8 +294,8 @@ export default function AdminSubscriptions() {
             <div className="rounded-2xl bg-white border border-slate-200/90 shadow-2xs overflow-hidden">
               <div className="p-4 border-b border-slate-200/80 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Payment Gateway Transactions</h3>
-                  <p className="text-xs text-slate-500">Total recorded transactions: {paymentsTotal}</p>
+                  <h3 className="text-sm font-bold text-slate-900">Subscription Records</h3>
+                  <p className="text-xs text-slate-500">{paymentsTotal} records. Verified provider payment references are not stored here, so refunds are unavailable.</p>
                 </div>
                 <Button
                   variant="outline"
@@ -344,9 +317,9 @@ export default function AdminSubscriptions() {
                       <th className="py-3.5">Organization</th>
                       <th className="py-3.5">Purchased Tier</th>
                       <th className="py-3.5">Coverage Period</th>
-                      <th className="py-3.5">Status</th>
+                      <th className="py-3.5">Subscription Status</th>
                       <th className="py-3.5">Date</th>
-                      <th className="py-3.5 text-right pr-6">Refund</th>
+                      <th className="py-3.5 text-right pr-6">Provider Refund</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -371,7 +344,6 @@ export default function AdminSubscriptions() {
                       </tr>
                     ) : (
                       payments.map((p) => {
-                        const isRefunded = p.status === 'refunded'
                         return (
                           <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                             <td className="py-3.5 pl-6 font-mono font-bold text-slate-700">
@@ -389,11 +361,7 @@ export default function AdminSubscriptions() {
                               {p.start_date ? new Date(p.start_date).toLocaleDateString() : "—"} → {p.end_date ? new Date(p.end_date).toLocaleDateString() : "—"}
                             </td>
                             <td className="py-3.5">
-                              <Badge className={
-                                isRefunded
-                                  ? "bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-bold"
-                                  : "bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold"
-                              }>
+                              <Badge className="bg-slate-100 text-slate-700 border-slate-200 text-[10px] font-bold">
                                 {p.status || "active"}
                               </Badge>
                             </td>
@@ -401,19 +369,7 @@ export default function AdminSubscriptions() {
                               {safeDistance(p.created_at)}
                             </td>
                             <td className="py-3.5 pr-6 text-right">
-                              {!isRefunded ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setRefundTarget(p)}
-                                  className="h-8 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg text-xs font-semibold"
-                                >
-                                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                                  Refund
-                                </Button>
-                              ) : (
-                                <span className="text-[11px] text-slate-400 font-mono italic">Refunded</span>
-                              )}
+                              <span className="text-[11px] text-slate-400">Not linked</span>
                             </td>
                           </tr>
                         )
@@ -426,65 +382,6 @@ export default function AdminSubscriptions() {
           </div>
         )}
 
-        {/* ── Refund Modal ────────────────────────────────────────────────────── */}
-        <AnimatePresence>
-          {refundTarget && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setRefundTarget(null)}
-                className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs"
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="relative z-50 w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-6 space-y-4"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      Issue Payment Refund
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Transaction #{refundTarget.id} • {refundTarget.company_name}
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => setRefundTarget(null)} className="h-7 w-7 rounded-lg text-slate-400">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-700">Reason for Refund</label>
-                  <Input
-                    type="text"
-                    placeholder="e.g. Administrative refund requested by tenant..."
-                    value={refundReason}
-                    onChange={(e) => setRefundReason(e.target.value)}
-                    className="h-10 text-xs rounded-xl"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-2.5 pt-2">
-                  <Button variant="outline" size="sm" onClick={() => setRefundTarget(null)} className="h-9 px-4 rounded-xl text-xs font-semibold">
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={refundLoading}
-                    onClick={handleExecuteRefund}
-                    className="h-9 px-4 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white"
-                  >
-                    {refundLoading ? "Processing..." : "Confirm Refund"}
-                  </Button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
       </div>
     </AdminLayout>
   )
