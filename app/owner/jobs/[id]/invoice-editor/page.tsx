@@ -496,8 +496,8 @@ export default function DedicatedInvoiceEditorPage() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm text-left">
+              <div className="border rounded-lg overflow-x-auto">
+                <table className="w-full min-w-[560px] text-sm text-left">
                   <thead className="bg-slate-50 text-slate-600 border-b text-xs font-semibold uppercase">
                     <tr>
                       <th className="p-3">Type / Description</th>
@@ -563,7 +563,7 @@ export default function DedicatedInvoiceEditorPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold">Additional Charges & Discounts</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <Label className="text-xs">Equipment Charges (₹)</Label>
                 <Input
@@ -609,7 +609,7 @@ export default function DedicatedInvoiceEditorPage() {
               <CardTitle className="text-base font-semibold">Terms & Customer Notes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-xs">Payment Due Days</Label>
                   <Select value={String(dueDays)} onValueChange={(val) => setDueDays(parseInt(val))}>

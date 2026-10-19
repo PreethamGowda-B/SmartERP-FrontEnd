@@ -66,8 +66,8 @@ export function DashboardTrialBanner() {
             </h3>
             <p className="text-sm text-white/80 mt-0.5 leading-snug">
                 {days <= 3 
-                    ? "Your trial ends very soon! Upgrade now to avoid losing access to premium features." 
-                    : "Enjoy unlimited employees, locations, and AI until your trial ends."}
+                    ? "Your trial ends very soon! Upgrade now to avoid losing access to its configured plan features."
+                    : "Your company's configured Enterprise plan features remain available until the trial expires, subject to each user's role permissions."}
             </p>
           </div>
         </div>

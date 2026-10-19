@@ -50,9 +50,9 @@ interface PaymentTransaction {
 }
 
 const PLANS = [
-  { id: 1, name: 'Free', price: '₹0' },
-  { id: 2, name: 'Basic', price: '₹4,999' },
-  { id: 3, name: 'Pro', price: '₹14,999' }
+  { id: 1, name: 'Starter', price: '₹0' },
+  { id: 2, name: 'Professional', price: '₹999 / month · ₹9,990 / year' },
+  { id: 3, name: 'Enterprise', price: '₹2,499 / month · ₹24,990 / year' }
 ]
 
 function safeDistance(dateStr: string): string {
@@ -228,7 +228,7 @@ export default function AdminSubscriptions() {
             {/* Subscriptions Table */}
             <div className="rounded-2xl bg-white border border-slate-200/90 shadow-2xs overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full min-w-[640px] text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                       <th className="py-3.5 pl-6">Company Name</th>
@@ -274,7 +274,7 @@ export default function AdminSubscriptions() {
                                 ? "bg-amber-50 text-amber-700 border-amber-200 text-[10px] font-bold"
                                 : "bg-slate-100 text-slate-600 border-slate-200 text-[10px]"
                             }>
-                              {c.is_on_trial ? "Free Trial" : "Standard"}
+                              {c.is_on_trial ? "₹1 Trial" : "Standard"}
                             </Badge>
                           </td>
                           <td className="py-3.5 text-slate-500 font-mono text-[11px]">
@@ -333,7 +333,7 @@ export default function AdminSubscriptions() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full min-w-[680px] text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                       <th className="py-3.5 pl-6">TX ID</th>

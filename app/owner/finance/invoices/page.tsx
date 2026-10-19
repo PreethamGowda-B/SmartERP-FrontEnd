@@ -299,7 +299,7 @@ function InvoicesContent() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs text-left">
+                    <table className="w-full min-w-[760px] text-xs text-left">
                       <thead className="bg-muted/50 text-muted-foreground border-b uppercase font-extrabold">
                         <tr>
                           <th className="p-3.5">Invoice #</th>

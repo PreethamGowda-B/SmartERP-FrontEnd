@@ -19,7 +19,7 @@ const LimitContext = createContext<LimitContextType>({
 export function LimitProvider({ children }: { children: React.ReactNode }) {
   const [modalData, setModalData] = useState<LimitModalData | null>(null)
   const [isOpen, setIsOpen] = useState(false)
-  const { plan, isPro, isBasic, isFree } = useSubscription()
+  const { plan, isPro, isBasic } = useSubscription()
 
   const triggerLimitModal = useCallback((data: LimitModalData) => {
     setModalData(data)
@@ -89,26 +89,26 @@ export function LimitProvider({ children }: { children: React.ReactNode }) {
       currentCount: number,
       onUnlockedResume?: () => void
     ): boolean => {
-      if (isPro) return true // Pro has no limits
+      if (isPro && limitType !== "ai_messages") return true // Enterprise has no item/seats limits in the current source catalog.
 
       let maxLimit = 0
       let title = ""
 
       if (limitType === "employee") {
-        maxLimit = isBasic ? 50 : 10
+        maxLimit = plan.employee_limit ?? 10
         title = "Employee Limit Reached"
       } else if (limitType === "job") {
         maxLimit = isBasic ? 100 : 15
         title = "Job Limit Reached"
       } else if (limitType === "inventory") {
-        maxLimit = isBasic ? 500 : 50
+        maxLimit = plan.max_inventory_items ?? 50
         title = "Inventory Limit Reached"
       } else if (limitType === "storage") {
         maxLimit = isBasic ? 5 * 1024 * 1024 * 1024 : 250 * 1024 * 1024
         title = "Storage Limit Reached"
       } else if (limitType === "ai_messages") {
-        maxLimit = isBasic ? 300 : 20
-        title = "Daily AI Limit Reached"
+        maxLimit = isPro ? 30 : isBasic ? 15 : 5
+        title = "Hourly AI Limit Reached"
       }
 
       if (currentCount >= maxLimit) {
@@ -117,7 +117,7 @@ export function LimitProvider({ children }: { children: React.ReactNode }) {
           currentCount,
           maxLimit,
           title,
-          currentPlan: plan.name || (isBasic ? "Basic" : "Free"),
+          currentPlan: plan.name || (isBasic ? "Professional" : "Starter"),
           onUnlockedResume,
         })
         return false // Blocked
@@ -125,7 +125,7 @@ export function LimitProvider({ children }: { children: React.ReactNode }) {
 
       return true // Allowed
     },
-    [isPro, isBasic, plan.name, triggerLimitModal]
+    [isPro, isBasic, plan.name, plan.employee_limit, plan.max_inventory_items, triggerLimitModal]
   )
 
   return (

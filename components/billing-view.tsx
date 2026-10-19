@@ -27,7 +27,18 @@ type PlanInfo = {
   days_remaining: number
   employee_limit: number | null
   max_inventory_items: number | null
+  subscription_status?: string
   features: Record<string, boolean>
+}
+
+type PlanOption = {
+  id: number
+  name: string
+  plan_key: string
+  price_monthly: number
+  price_yearly: number
+  employee_limit: number | null
+  max_inventory_items: number | null
 }
 
 type UsageInfo = { employees: number, inventory_items: number }
@@ -39,6 +50,9 @@ export function BillingView() {
   const [loading, setLoading] = useState(true)
   const [upgrading, setUpgrading] = useState(false)
   const [plan, setPlan] = useState<PlanInfo | null>(null)
+  const [plans, setPlans] = useState<PlanOption[]>([])
+  const [trialEligible, setTrialEligible] = useState(false)
+  const [subscriptionStatus, setSubscriptionStatus] = useState("active")
   const [usage, setUsage] = useState<UsageInfo | null>(null)
   const [isAnnual, setIsAnnual] = useState(true)
 
@@ -48,6 +62,10 @@ export function BillingView() {
         const res = await apiClient("/api/subscription/status")
         setPlan(res.plan)
         setUsage(res.usage)
+        setTrialEligible(Boolean(res.trial_eligible))
+        setSubscriptionStatus(res.subscription_status || "active")
+        const catalog = await apiClient("/api/subscription/plans")
+        setPlans(Array.isArray(catalog) ? catalog : [])
       } catch (err) {
         logger.error("Failed to fetch billing status", err)
       } finally {
@@ -75,56 +93,8 @@ export function BillingView() {
     return <Progress value={pct} className={`h-2 ${colorClass}`} />
   }
 
-  const plans = [
-    {
-      id: 1, name: "Free", limitText: "For small teams starting out", price: 0,
-      features: [
-        "Up to 15 Employees",
-        "Basic Attendance Tracking",
-        "Job / Task Management",
-        "Limited Inventory Management",
-        "Basic Reports"
-      ],
-      missing: []
-    },
-    {
-      id: 2, name: "Basic", limitText: "For growing businesses", price: isAnnual ? 9990 : 999,
-      features: [
-        "Up to 50 Employees",
-        "Attendance Tracking",
-        "Payroll Generation (Basic)",
-        "Leave Management System",
-        "Inventory Management",
-        "Location Tracking",
-        "Basic Reports & Exports",
-        "90-day Message History"
-      ],
-      missing: []
-    },
-    {
-      id: 3, name: "Pro", limitText: "For scale and maximum impact", price: isAnnual ? 24990 : 2499,
-      features: [
-        "Unlimited Employees & Departments",
-        "Multi-Company Management",
-        "Advanced Payroll Automation (Auto Calculations + Deductions)",
-        "AI Chat Assistant (Ask anything about payroll, attendance & system usage)",
-        "Attendance with Offline Sync (PWA Enabled)",
-        "Real-Time Leave Approval System",
-        "Employee Document & Payslip Management",
-        "Smart Reports & Export (PDF/Excel)",
-        "Role-Based Access Control (Owner / HR / Employee)",
-        "Push Notifications (Real-Time Alerts)",
-        "Background Job Processing (Fast Payroll Generation)",
-        "SaaS Billing & Subscription Management",
-        "Priority Support"
-      ],
-      missing: [],
-      popular: true
-    }
-  ]
-
   const formatPrice = (price: number) => {
-    if (price === 0) return "Free"
+    if (price === 0) return "₹0"
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(price)
   }
 
@@ -145,11 +115,11 @@ export function BillingView() {
       }
 
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: orderRes.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderRes.amount,
         currency: orderRes.currency,
         name: "SmartERP",
-        description: `Upgrade to ${plans.find(p => p.id === planId)?.name || 'Basic'} Plan`,
+        description: `Upgrade to ${plans.find(p => p.id === planId)?.name || 'Professional'} Plan`,
         order_id: orderRes.id,
         notes: {
           companyId: user?.company_id,
@@ -175,7 +145,8 @@ export function BillingView() {
                 title: "Upgrade Successful! 🎉",
                 description: "Your plan has been upgraded. Redirecting...",
               })
-              router.push(`/owner/payment-success?order_id=${response.razorpay_order_id}&payment_id=${response.razorpay_payment_id}&plan_id=${planId}&billing_cycle=${billingCycle}&verified=true`)
+              window.dispatchEvent(new CustomEvent("subscription-activated"))
+              router.push("/owner/billing?payment=verified")
             } else {
               throw new Error(verifyRes.message || "Verification failed")
             }
@@ -196,6 +167,10 @@ export function BillingView() {
       }
 
       const rzp = new window.Razorpay(options)
+      rzp.on("payment.failed", (response: any) => {
+        toast({ title: "Payment not completed", description: response?.error?.description || "No subscription change was made.", variant: "destructive" })
+        setUpgrading(false)
+      })
       rzp.open()
 
     } catch (err: any) {
@@ -206,6 +181,50 @@ export function BillingView() {
         variant: "destructive"
       })
     } finally {
+      setUpgrading(false)
+    }
+  }
+
+  const handleStartTrial = async () => {
+    if (upgrading || !trialEligible) return
+    setUpgrading(true)
+    try {
+      const order = await apiClient("/api/subscription/trial/create-order", { method: "POST", body: JSON.stringify({}) })
+      if (!order?.id || !order?.key) throw new Error(order?.message || "Trial payment is unavailable")
+      const checkout = new window.Razorpay({
+        key: order.key, order_id: order.id, amount: order.amount, currency: order.currency,
+        name: "SmartERP", description: "One-time ₹1 payment for a 30-day Enterprise trial",
+        prefill: { name: user?.name, email: user?.email }, theme: { color: "#4f46e5" },
+        handler: async (response: any) => {
+          try {
+            const verified = await apiClient("/api/subscription/trial/verify-payment", {
+              method: "POST", body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            })
+            if (!verified?.success) throw new Error(verified?.message || "Payment verification is pending")
+            window.dispatchEvent(new CustomEvent("subscription-activated"))
+            toast({ title: "30-day trial activated", description: "Your ₹1 payment was verified. The trial will not automatically renew." })
+            const status = await apiClient("/api/subscription/status")
+            setPlan(status.plan)
+            setUsage(status.usage)
+            setTrialEligible(Boolean(status.trial_eligible))
+            setSubscriptionStatus(status.subscription_status || "trial")
+          } catch (error: any) {
+            toast({ title: "Trial payment verification pending", description: error?.message || "Refresh billing status or retry verification.", variant: "destructive" })
+          } finally { setUpgrading(false) }
+        },
+        modal: { ondismiss: () => setUpgrading(false) }
+      })
+      checkout.on("payment.failed", (response: any) => {
+        toast({ title: "Payment not completed", description: response?.error?.description || "The trial was not activated.", variant: "destructive" })
+        setUpgrading(false)
+      })
+      checkout.open()
+    } catch (error: any) {
+      toast({ title: "Unable to start trial", description: error?.message || "Trial payment is not available.", variant: "destructive" })
       setUpgrading(false)
     }
   }
@@ -244,6 +263,22 @@ export function BillingView() {
           </div>
         </div>
 
+        {trialEligible && (
+          <Card className="border-indigo-200 bg-indigo-50/70 dark:border-indigo-900 dark:bg-indigo-950/30">
+            <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="font-bold">Start a 30-day Enterprise trial</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Pay ₹1 once to activate. It does not automatically renew or charge a paid plan.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Refund terms are not configured in the current billing system; confirm the published policy before launch.</p>
+              </div>
+              <Button onClick={handleStartTrial} disabled={upgrading} className="shrink-0 bg-indigo-600 text-white hover:bg-indigo-700">
+                {upgrading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                Pay ₹1 and start trial
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Current Plan Overview Card */}
         {plan && (
           <Card className="border-2 border-indigo-100 dark:border-indigo-900/50 shadow-xl shadow-indigo-100/20 dark:shadow-indigo-900/10 overflow-hidden relative">
@@ -262,13 +297,13 @@ export function BillingView() {
                   </CardTitle>
                   <CardDescription className="text-xs mt-1.5">
                     {plan.is_trial 
-                      ? "You are currently experiencing all our premium features for free." 
+                      ? "Your ₹1 payment activated this 30-day Enterprise trial; it will not auto-renew."
                       : "You are on an active subscription plan."}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2 bg-white dark:bg-zinc-950 px-3 py-1.5 rounded-full border shadow-xs text-xs">
                   <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  <span className="font-medium">Status: Active</span>
+                  <span className="font-medium">Status: {plan.is_trial ? "Trial active" : subscriptionStatus === "pending_trial_payment" ? "Starter · trial payment not made" : subscriptionStatus}</span>
                 </div>
               </div>
             </CardHeader>
@@ -310,6 +345,8 @@ export function BillingView() {
              {plans.map((p) => {
                const isCurrent = plan && !plan.is_trial && plan.id === p.id;
                const isProTrial = plan?.is_trial && p.id === 3;
+               const price = isAnnual ? p.price_yearly : p.price_monthly;
+               const limitSummary = p.employee_limit === null ? "Unlimited employees" : `Up to ${p.employee_limit} employees`;
                
                return (
                  <motion.div 
@@ -317,8 +354,8 @@ export function BillingView() {
                     whileHover={{ y: -4 }}
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                  >
-                    <Card className={`relative h-full flex flex-col ${p.popular ? 'border-2 border-indigo-600 shadow-xl shadow-indigo-600/10' : 'border border-border'}`}>
-                        {p.popular && (
+                    <Card className={`relative h-full flex flex-col ${p.id === 2 ? 'border-2 border-indigo-600 shadow-xl shadow-indigo-600/10' : 'border border-border'}`}>
+                        {p.id === 2 && (
                             <div className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-md flex items-center gap-1">
                                 <Sparkles className="w-3 h-3" /> Most Popular
                             </div>
@@ -328,15 +365,15 @@ export function BillingView() {
                             <CardTitle className="text-xl font-bold flex items-center justify-center gap-2">
                               {p.name}
                             </CardTitle>
-                            <CardDescription className="min-h-8 mt-1.5 text-xs">{p.limitText}</CardDescription>
+                            <CardDescription className="min-h-8 mt-1.5 text-xs">{limitSummary}</CardDescription>
                             <div className="mt-3 flex flex-col items-center justify-center">
                                 <div className="flex items-end gap-1">
-                                    <span className="text-3xl lg:text-4xl font-extrabold tracking-tighter">{formatPrice(p.price)}</span>
-                                    {p.price > 0 && <span className="text-muted-foreground mb-1 font-medium text-xs">/ {isAnnual ? 'yr' : 'mo'}</span>}
+                                    <span className="text-3xl lg:text-4xl font-extrabold tracking-tighter">{formatPrice(price)}</span>
+                                    {price > 0 && <span className="text-muted-foreground mb-1 font-medium text-xs">/ {isAnnual ? 'yr' : 'mo'}</span>}
                                 </div>
-                                {p.price > 0 && isAnnual && (
+                                {price > 0 && isAnnual && (
                                     <span className="text-[10px] text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 font-medium px-2 py-0.5 rounded mt-1.5">
-                                        Equivalent to ~{formatPrice(Math.floor(p.price / 12))} / mo
+                                        Equivalent to ~{formatPrice(Math.floor(p.price_yearly / 12))} / mo
                                     </span>
                                 )}
                             </div>
@@ -344,18 +381,8 @@ export function BillingView() {
                         
                         <CardContent className="flex-grow space-y-4 pt-2">
                             <ul className="space-y-2.5 text-xs">
-                                {p.features.map((f, i) => (
-                                    <li key={i} className="flex items-start gap-2.5">
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                                        <span className="text-zinc-700 dark:text-zinc-300 font-medium leading-tight">{f}</span>
-                                    </li>
-                                ))}
-                                {p.missing.map((m, i) => (
-                                    <li key={`m-${i}`} className="flex items-start gap-2.5 opacity-60">
-                                        <Minus className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
-                                        <span className="text-zinc-500 line-through leading-tight">{m}</span>
-                                    </li>
-                                ))}
+                              <li className="flex items-start gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><span>{p.max_inventory_items === null ? "Unlimited inventory items" : `${p.max_inventory_items} inventory items`}</span></li>
+                              <li className="text-muted-foreground">Available modules are governed by the active company subscription and role permissions.</li>
                             </ul>
                         </CardContent>
                         
@@ -372,7 +399,7 @@ export function BillingView() {
                                 <Button 
                                     onClick={() => handleUpgrade(p.id)} 
                                     disabled={upgrading}
-                                    className={`w-full text-white font-medium shadow-md text-xs h-9 ${p.popular ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900'}`}
+                                    className={`w-full text-white font-medium shadow-md text-xs h-9 ${p.id === 2 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900'}`}
                                 >
                                     {upgrading ? (
                                       <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
@@ -436,7 +463,7 @@ function JobInvoicesSection() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[560px] text-left text-xs">
               <thead>
                 <tr className="border-b text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <th className="py-3 px-4">Invoice #</th>

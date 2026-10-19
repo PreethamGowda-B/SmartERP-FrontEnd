@@ -167,7 +167,13 @@ export default function TimeTrackingPage() {
     window.addEventListener("online", handleOnline)
     window.addEventListener("offline", handleOffline)
     refreshPendingCount()
-    const refresh = () => { fetchTodayAttendance(); fetchHistory(); refreshPendingCount() }
+    const refresh = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return
+      if (typeof navigator !== "undefined" && !navigator.onLine) return
+      fetchTodayAttendance()
+      fetchHistory()
+      refreshPendingCount()
+    }
     const timer = setInterval(refresh, 30000)
     window.addEventListener("focus", refresh)
     window.addEventListener("attendance-status-changed", refresh)

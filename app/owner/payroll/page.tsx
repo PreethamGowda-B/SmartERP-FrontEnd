@@ -65,7 +65,8 @@ const MONTHS = [
 
 function OwnerPayrollContent() {
   const [mounted, setMounted] = useState(false)
-  const { isFree } = useSubscription()
+  const { plan } = useSubscription()
+  const hasPayroll = plan.features?.payroll === true
   const searchParams = useSearchParams()
   const router = useRouter()
   const tabParam = searchParams.get("tab")
@@ -266,13 +267,14 @@ function OwnerPayrollContent() {
   // Get unique years from payrolls
   const uniqueYears = Array.from(new Set(payrolls.map(p => p.payroll_year))).sort((a, b) => b - a)
 
-  if (isFree) {
+  if (!hasPayroll) {
     return (
       <OwnerLayout>
         <LockedFeatureScreen
           featureTitle="Payroll Processing & Payslip Generation"
-          featureDescription="Automated monthly payroll, deductions, increments, and digital payslips require the Basic or Pro Plan."
+          featureDescription="Payroll is not enabled for the current company plan."
           requiredTier="basic"
+          isLocked={!hasPayroll}
         />
       </OwnerLayout>
     )

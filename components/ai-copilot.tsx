@@ -68,11 +68,11 @@ function AICopilotInner({ user, pathname, className }: { user: any; pathname: st
     },
   ])
   const [isTyping, setIsTyping] = React.useState(false)
-  const [planId, setPlanId] = React.useState<number | null>(null)
+  const [hasAIAccess, setHasAIAccess] = React.useState<boolean>(false)
   const [isTrial, setIsTrial] = React.useState<boolean>(false)
   const [loadingPlan, setLoadingPlan] = React.useState(true)
 
-  // Fetch subscription plan status to check Pro tier authorization
+  // Mirror the backend's persisted feature entitlement for a clear UI state.
   React.useEffect(() => {
     if (!user) {
       setLoadingPlan(false)
@@ -83,8 +83,8 @@ function AICopilotInner({ user, pathname, className }: { user: any; pathname: st
       try {
         const res = await apiClient("/api/subscription/status")
         if (res.plan) {
-          setPlanId(res.plan.id)
-          setIsTrial(res.plan.is_trial)
+          setHasAIAccess(res.plan.features?.ai_assistant === true)
+          setIsTrial(res.is_trial === true)
         }
       } catch (err) {
         logger.error("[AI COPILOT] Failed to verify subscription plan", err)
@@ -105,9 +105,6 @@ function AICopilotInner({ user, pathname, className }: { user: any; pathname: st
     shortcut: "⌘I",
     action: () => setIsOpen(true),
   })
-
-  // AI Copilot is an Enterprise Pro feature (Plan ID 3 or Active Pro Trial)
-  const isProPlan = (planId !== null && planId >= 3) || isTrial
 
   // Detect Current Page Context
   const getContextLabel = () => {
@@ -195,31 +192,25 @@ function AICopilotInner({ user, pathname, className }: { user: any; pathname: st
       {/* Copilot Drawer Modal */}
       {isOpen && (
         <>
-          {/* Pro Plan Gate: If user is on Basic or Free Plan */}
-          {!isProPlan && !loadingPlan ? (
+          {/* Entitlement comes from the saved company plan flags. */}
+          {!hasAIAccess && !loadingPlan ? (
             <Card className="fixed bottom-36 right-6 z-[9990] w-96 max-w-[calc(100vw-3rem)] shadow-2xl border-indigo-200 dark:border-indigo-900 overflow-hidden animate-in slide-in-from-bottom-4 duration-300 bg-card">
               <div className="h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
               <CardHeader className="pt-6 text-center">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto text-indigo-600 dark:text-indigo-400 mb-2">
                   <Lock className="h-6 w-6" />
                 </div>
-                <CardTitle className="text-xl font-bold">Pro Feature Locked 🔒</CardTitle>
+                <CardTitle className="text-xl font-bold">AI assistant unavailable 🔒</CardTitle>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  <strong className="text-foreground">AI Copilot Operating Assistant</strong> is exclusively available on the <strong className="text-indigo-600 dark:text-indigo-400">Pro Plan</strong>.
+                  <strong className="text-foreground">AI Copilot Operating Assistant</strong> is not enabled for the current company plan.
                 </p>
               </CardHeader>
               <CardContent className="space-y-3 text-xs text-muted-foreground px-6 pb-6">
                 <div className="p-3 bg-muted/40 rounded-xl space-y-2 border border-border/60">
                   <div className="flex items-center gap-2 font-semibold text-foreground">
                     <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                    <span>What Pro unlocks for your team:</span>
+                    <span>Ask the company owner to review the available plan entitlements.</span>
                   </div>
-                  <ul className="space-y-1 pl-6 list-disc text-[11px]">
-                    <li>24/7 AI Chat Assistant for Payroll, Inventory & Staff</li>
-                    <li>Unlimited Employees & Department management</li>
-                    <li>Advanced Payroll Automation & Offline Attendance Sync</li>
-                    <li>Priority Enterprise Support</li>
-                  </ul>
                 </div>
               </CardContent>
               <CardFooter className="bg-muted/20 border-t border-border/70 p-4 flex gap-2">
@@ -233,12 +224,12 @@ function AICopilotInner({ user, pathname, className }: { user: any; pathname: st
                     router.push("/owner/billing")
                   }}
                 >
-                  Upgrade to Pro <ArrowRight className="h-3.5 w-3.5" />
+                  Review Plans <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </CardFooter>
             </Card>
           ) : (
-            /* Authorized Pro Plan Chat Interface */
+            /* Authorized AI chat interface */
             <Card className="fixed bottom-36 right-6 z-[9990] w-96 max-w-[calc(100vw-3rem)] h-[520px] shadow-2xl border-border/80 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
               <CardHeader className="bg-primary p-4 text-primary-foreground flex flex-row items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">

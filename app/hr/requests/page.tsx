@@ -68,7 +68,7 @@ export default function HRRequestsPage() {
                 <p className="text-xs mt-0.5">Submitted employee applications will appear here for review.</p>
               </div>
             ) : (
-              <table className="w-full text-xs text-left">
+              <table className="w-full min-w-[620px] text-xs text-left">
                 <thead className="bg-muted/50 border-b text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="p-4">Employee</th>

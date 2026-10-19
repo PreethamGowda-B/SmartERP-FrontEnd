@@ -270,6 +270,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         eventSource.close()
         
         if (user && !isCancelled) {
+          // If tab is in background or device is offline, do not spin in reconnect loop.
+          // reconnectWhenActive will cleanly reconnect when the tab becomes active or internet returns.
+          if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+          if (typeof navigator !== 'undefined' && !navigator.onLine) return
+
           // Re-validate token before scheduling reconnect
           await getValidAccessToken()
           if (isCancelled) return
@@ -301,7 +306,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     document.addEventListener("visibilitychange", reconnectWhenActive)
 
     const pollInterval = setInterval(() => {
-      if (user) fetchNotifications()
+      if (user && typeof document !== 'undefined' && document.visibilityState === 'visible' && navigator.onLine) {
+        fetchNotifications()
+      }
     }, 60000)
 
     return () => {

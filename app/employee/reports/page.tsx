@@ -219,7 +219,7 @@ export default function EmployeeReportsPage() {
                                     <CardHeader><CardTitle>Attendance History</CardTitle></CardHeader>
                                     <CardContent>
                                         <div className="overflow-x-auto">
-                                            <table className="w-full text-sm">
+                                            <table className="w-full min-w-[540px] text-sm">
                                                 <thead>
                                                     <tr className="border-b">
                                                         <th className="text-left py-2 pr-4 font-medium">Date</th>
@@ -266,7 +266,7 @@ export default function EmployeeReportsPage() {
                                     <CardHeader><CardTitle>Job History</CardTitle></CardHeader>
                                     <CardContent>
                                         <div className="overflow-x-auto">
-                                            <table className="w-full text-sm">
+                                            <table className="w-full min-w-[500px] text-sm">
                                                 <thead>
                                                     <tr className="border-b">
                                                         <th className="text-left py-2 pr-4 font-medium">Job</th>
@@ -323,7 +323,7 @@ export default function EmployeeReportsPage() {
                                     <CardHeader><CardTitle>Request History</CardTitle></CardHeader>
                                     <CardContent>
                                         <div className="overflow-x-auto">
-                                            <table className="w-full text-sm">
+                                            <table className="w-full min-w-[480px] text-sm">
                                                 <thead>
                                                     <tr className="border-b">
                                                         <th className="text-left py-2 pr-4 font-medium">Item</th>

@@ -21,6 +21,7 @@ export interface PlanFeatures {
 
 export interface SubscriptionPlan {
   id: number
+  plan_key?: string
   name: string
   is_trial: boolean
   days_remaining: number
@@ -31,7 +32,7 @@ export interface SubscriptionPlan {
 
 interface SubscriptionContextType {
   plan: SubscriptionPlan
-  planTier: "free" | "basic" | "pro"
+  planTier: "starter" | "professional" | "enterprise"
   isPro: boolean
   isBasic: boolean
   isFree: boolean
@@ -41,11 +42,11 @@ interface SubscriptionContextType {
 
 const DEFAULT_PLAN: SubscriptionPlan = {
   id: 1,
-  name: "Free",
+  name: "Starter",
   is_trial: false,
   days_remaining: 0,
-  employee_limit: 15,
-  max_inventory_items: 30,
+  employee_limit: 10,
+  max_inventory_items: 50,
   features: {
     payroll: false,
     messages: false,
@@ -61,7 +62,7 @@ const DEFAULT_PLAN: SubscriptionPlan = {
 
 const SubscriptionContext = createContext<SubscriptionContextType>({
   plan: DEFAULT_PLAN,
-  planTier: "free",
+  planTier: "starter",
   isPro: false,
   isBasic: false,
   isFree: true,
@@ -94,26 +95,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     if (user.role === 'super_admin') {
       setPlan({
         id: 0,
+        plan_key: "super_admin",
         name: 'Super Admin',
-        is_trial: false,
-        days_remaining: 36500,
-        employee_limit: null,
-        max_inventory_items: null,
-        features: {
-          payroll: true, messages: true, ai_assistant: true,
-          basic_reports: true, export_reports: true, advanced_reports: true,
-          inventory_images: true, priority_support: true, location_tracking: true
-        }
-      })
-      setLoading(false)
-      return
-    }
-
-    // Employees do not manage subscriptions — give them active features by default
-    if (user.role === 'employee') {
-      setPlan({
-        id: 3,
-        name: 'Employee Standard',
         is_trial: false,
         days_remaining: 36500,
         employee_limit: null,
@@ -175,10 +158,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [fetchSubscriptionStatus, user?.role, isPublic])
 
-  const isPro = plan.id >= 3 || plan.name?.toLowerCase().includes("pro")
-  const isBasic = plan.id === 2 || plan.name?.toLowerCase().includes("basic")
+  const planKey = String(plan.plan_key || "").toLowerCase()
+  const normalizedName = String(plan.name || "").trim().toLowerCase()
+  const isPro = plan.id === 0 || plan.id === 3 || planKey === "enterprise" || normalizedName === "enterprise" || normalizedName === "pro"
+  const isBasic = plan.id === 2 || planKey === "professional" || normalizedName === "professional" || normalizedName === "basic"
   const isFree = !isPro && !isBasic
-  const planTier = isPro ? "pro" : isBasic ? "basic" : "free"
+  const planTier = isPro ? "enterprise" : isBasic ? "professional" : "starter"
 
   return (
     <SubscriptionContext.Provider

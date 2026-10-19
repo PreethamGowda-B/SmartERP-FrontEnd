@@ -204,8 +204,8 @@ Maria Garcia,maria.g@company.com,owner,Executive`
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-xl border border-border overflow-hidden">
-                <Table>
+              <div className="rounded-xl border border-border overflow-x-auto">
+                <Table className="min-w-[500px]">
                   <TableHeader className="bg-muted/40">
                     <TableRow>
                       <TableHead className="text-xs">Status</TableHead>

@@ -28,7 +28,8 @@ import { LockedFeatureScreen } from "@/components/locked-feature-screen"
 import { useSubscription } from "@/contexts/subscription-context"
 
 export default function ArCollectionsPage() {
-  const { isPro } = useSubscription()
+  const { plan } = useSubscription()
+  const hasARCollectionsAccess = plan.features?.ar_collections === true
   const { toast } = useToast()
   const [aging, setAging] = useState<ArAgingSummary | null>(null)
   const [schedules, setSchedules] = useState<ArSchedule[]>([])
@@ -125,13 +126,14 @@ export default function ArCollectionsPage() {
       String(s.invoice_id).includes(searchTerm)
   )
 
-  if (!isPro) {
+  if (!hasARCollectionsAccess) {
     return (
       <OwnerLayout>
         <LockedFeatureScreen
           featureTitle="AR Collections & Automated Dunning Engine"
-          featureDescription="Automated aging schedules, smart payment plan offers, and dunning workflows are exclusive to the Pro plan."
+          featureDescription="Accounts receivable collections are not enabled for the current company plan."
           requiredTier="pro"
+          isLocked={!hasARCollectionsAccess}
         />
       </OwnerLayout>
     )
@@ -250,7 +252,7 @@ export default function ArCollectionsPage() {
             </div>
 
             <div className="rounded-md border overflow-x-auto">
-              <table className="w-full text-sm text-left">
+              <table className="w-full min-w-[700px] text-sm text-left">
                 <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground uppercase">
                   <tr>
                     <th className="px-4 py-3">Client Name</th>

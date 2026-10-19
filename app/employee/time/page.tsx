@@ -59,8 +59,11 @@ export default function EmployeeTimePage() {
   }, [])
 
   useEffect(() => {
-    fetchMyAttendance()
-    const refresh = () => fetchMyAttendance(false)
+    const refresh = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return
+      if (typeof navigator !== "undefined" && !navigator.onLine) return
+      fetchMyAttendance(false)
+    }
     const timer = setInterval(refresh, 30000)
     window.addEventListener("focus", refresh)
     window.addEventListener("attendance-status-changed", refresh)

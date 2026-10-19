@@ -13,11 +13,13 @@ export const AntigravityBackground: React.FC = () => {
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+        if (isMobile) return // Completely preserve mobile CPU/GPU for smooth 60fps scrolling
+
         let width: number, height: number
         let particles: Particle[] = []
         let animationFrameId: number
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-        const particleCount = isMobile ? 25 : 80
+        const particleCount = 80
 
         class Particle {
             x: number = 0
@@ -171,10 +173,13 @@ export const AntigravityBackground: React.FC = () => {
                 className="absolute inset-0 w-full h-full opacity-50"
             />
 
-            {/* Aurora Layers: Lightweight on mobile, full depth on desktop */}
-            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 dark:bg-primary/15 rounded-full blur-[60px] md:blur-[140px] animate-aurora" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-accent/10 dark:bg-accent/15 rounded-full blur-[70px] md:blur-[160px] animate-aurora" style={{ animationDelay: '-10s' }} />
+            {/* Aurora Layers: Lightweight static radial gradient on mobile, full animated depth on desktop */}
+            <div className="hidden md:block absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 dark:bg-primary/15 rounded-full blur-[140px] animate-aurora" />
+            <div className="hidden md:block absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-accent/10 dark:bg-accent/15 rounded-full blur-[160px] animate-aurora" style={{ animationDelay: '-10s' }} />
             <div className="hidden md:block absolute top-[30%] left-[20%] w-[30%] h-[30%] bg-secondary/10 dark:bg-secondary/20 rounded-full blur-[120px] animate-aurora" style={{ animationDelay: '-5s' }} />
+
+            {/* Mobile lightweight gradient fallback without GPU blur filter recalculation */}
+            <div className="block md:hidden absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
 
             {/* Grid Texture */}
             <div className="absolute inset-0 opacity-[0.02] pointer-events-none"

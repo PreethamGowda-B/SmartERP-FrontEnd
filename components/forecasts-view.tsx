@@ -26,7 +26,8 @@ import { LockedFeatureScreen } from "@/components/locked-feature-screen"
 import { useSubscription } from "@/contexts/subscription-context"
 
 export function ForecastsView() {
-  const { isPro } = useSubscription()
+  const { plan } = useSubscription()
+  const hasForecastAccess = plan.features?.inventory_forecasts === true
   const { toast } = useToast()
   const [forecasts, setForecasts] = useState<InventoryForecast[]>([])
   const [suppliers, setSuppliers] = useState<InventorySupplier[]>([])
@@ -152,12 +153,13 @@ export function ForecastsView() {
     f.category.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  if (!isPro) {
+  if (!hasForecastAccess) {
     return (
       <LockedFeatureScreen
         featureTitle="Inventory Demand Forecasting & Reorder AI"
-        featureDescription="AI stock depletion prediction, automatic purchase order generation, and supplier lead-time forecasting are exclusive to the Pro plan."
+        featureDescription="Inventory forecasting is not enabled for the current company plan."
         requiredTier="pro"
+        isLocked={!hasForecastAccess}
       />
     )
   }
@@ -242,14 +244,14 @@ export function ForecastsView() {
 
       {/* Forecasts & Reorder Table Container */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <CardTitle>SKU Demand Forecasts & Dynamic Reorder Points</CardTitle>
             <CardDescription>
               Calculated based on daily usage velocity, lead times, and safety stock requirements
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2 w-72">
+          <div className="flex items-center gap-2 w-full sm:w-72">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search SKU or Category..."
@@ -261,7 +263,7 @@ export function ForecastsView() {
         </CardHeader>
         <CardContent>
           <div className="rounded-md border overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full min-w-[780px] text-sm text-left">
               <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground uppercase">
                 <tr>
                   <th className="px-4 py-3">SKU Name / Category</th>

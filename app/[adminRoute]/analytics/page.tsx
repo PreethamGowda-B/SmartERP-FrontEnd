@@ -46,6 +46,8 @@ import { AdminLayout } from "@/components/admin-layout"
 interface RevenueData {
   mrr: number
   arr: number
+  revenue_basis?: string
+  collected_revenue?: number | null
   planBreakdown: Array<{ plan: string; count: number; price: number; revenue: number }>
   recentUpgrades: Array<{ company_name: string; plan_name: string; updated_at: string }>
   churned: number
@@ -53,9 +55,8 @@ interface RevenueData {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  Free: "#94A3B8",
-  Basic: "#3B82F6",
-  Pro: "#6366F1",
+  Starter: "#94A3B8",
+  Professional: "#3B82F6",
   Enterprise: "#8B5CF6",
 }
 
@@ -130,7 +131,7 @@ export default function AnalyticsPage() {
           {/* MRR */}
           <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Monthly Recurring (MRR)</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Estimated Monthly Recurring</span>
               <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <DollarSign className="h-4 w-4" />
               </div>
@@ -144,8 +145,9 @@ export default function AnalyticsPage() {
               </Badge>
             </div>
             <p className="text-[11px] text-slate-500 pt-0.5">
-              ARR Run Rate: <strong className="text-slate-800 font-semibold font-mono">{loading ? "..." : formatINR(revenueData?.arr || 0)}</strong>
+              Estimated ARR: <strong className="text-slate-800 font-semibold font-mono">{loading ? "..." : formatINR(revenueData?.arr || 0)}</strong>
             </p>
+            <p className="text-[10px] text-amber-700">Not collected revenue. Billing-period and settlement records are not reconciled.</p>
           </div>
 
           {/* Total Companies */}
@@ -221,7 +223,7 @@ export default function AnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-base font-bold text-slate-900">Revenue Trajectory (Last 6 Months)</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Monthly revenue contribution split by Basic & Pro tiers</p>
+                <p className="text-xs text-slate-500 mt-0.5">Estimated active subscription value by Professional and Enterprise tier</p>
               </div>
               <div className="flex items-center gap-3 text-xs font-semibold">
                 <div className="flex items-center gap-1.5">
@@ -281,8 +283,8 @@ export default function AnalyticsPage() {
                       }}
                       formatter={(v: any) => [formatINR(Number(v)), ""]}
                     />
-                    <Area type="monotone" dataKey="basicRevenue" name="Basic Plan" stroke="#3B82F6" strokeWidth={2.5} fill="url(#colorBasic)" />
-                    <Area type="monotone" dataKey="proRevenue" name="Pro Plan" stroke="#6366F1" strokeWidth={2.5} fill="url(#colorPro)" />
+                    <Area type="monotone" dataKey="basicRevenue" name="Professional Plan (estimated)" stroke="#3B82F6" strokeWidth={2.5} fill="url(#colorBasic)" />
+                    <Area type="monotone" dataKey="proRevenue" name="Enterprise Plan (estimated)" stroke="#6366F1" strokeWidth={2.5} fill="url(#colorPro)" />
                   </AreaChart>
                 </ResponsiveContainer>
               )}

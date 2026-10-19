@@ -31,7 +31,7 @@ interface PlanLimitModalProps {
 
 export function PlanLimitModal({ isOpen, onClose, data }: PlanLimitModalProps) {
   const router = useRouter()
-  const { isBasic, isFree } = useSubscription()
+  const { isFree } = useSubscription()
 
   const limitIcons = {
     employee: Users,
@@ -46,7 +46,7 @@ export function PlanLimitModal({ isOpen, onClose, data }: PlanLimitModalProps) {
     job: "Active Jobs",
     inventory: "Inventory Items",
     storage: "Storage Space",
-    ai_messages: "Daily AI Messages",
+    ai_messages: "Hourly AI Requests",
   }
 
   const Icon = limitIcons[data.limitType] || ShieldAlert
@@ -61,9 +61,9 @@ export function PlanLimitModal({ isOpen, onClose, data }: PlanLimitModalProps) {
     return String(val)
   }
 
-  const handleUpgrade = (tier: "basic" | "pro") => {
+  const handleUpgrade = () => {
     onClose()
-    router.push(`/owner/billing?selected=${tier}`)
+    router.push("/owner/billing")
   }
 
   return (
@@ -88,7 +88,7 @@ export function PlanLimitModal({ isOpen, onClose, data }: PlanLimitModalProps) {
                 <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" />
               </h3>
               <p className="text-xs text-muted-foreground">
-                Your current {data.currentPlan || "Free"} Plan limit has been exhausted
+            Your current {data.currentPlan || "Starter"} plan limit has been reached
               </p>
             </div>
           </div>
@@ -108,11 +108,11 @@ export function PlanLimitModal({ isOpen, onClose, data }: PlanLimitModalProps) {
 
           {/* Recommendation Description */}
           <p className="text-xs text-muted-foreground leading-relaxed bg-muted/20 p-3.5 rounded-xl border border-border/40">
-            {data.limitType === "employee" && "Upgrade to Basic (up to 50 employees) or Pro (unlimited workforce) to continue expanding your company."}
-            {data.limitType === "job" && "Upgrade to Basic (up to 100 jobs) or Pro (unlimited active jobs) to manage higher task volumes."}
-            {data.limitType === "inventory" && "Upgrade to Basic (up to 500 items) or Pro (unlimited inventory) to track all products and supplies."}
-            {data.limitType === "storage" && "Upgrade to Basic (5 GB) or Pro (100 GB) to upload more documents and receipts."}
-            {data.limitType === "ai_messages" && "Upgrade to Basic (300 msgs/day) or Pro (unlimited AI) for continuous SmartERP AI assistance."}
+            {data.limitType === "employee" && "Review the Professional and Enterprise plan details for the employee capacity that fits your company."}
+            {data.limitType === "job" && "Review the current plan catalog for higher active-job capacity."}
+            {data.limitType === "inventory" && "Review the current plan catalog for inventory capacity."}
+            {data.limitType === "storage" && "Review the current plan catalog for document storage capacity."}
+            {data.limitType === "ai_messages" && "AI request limits are applied per hour. Review the plan catalog for the quota available to your company."}
           </p>
 
           {/* Key Upgrade Benefits */}
@@ -120,12 +120,12 @@ export function PlanLimitModal({ isOpen, onClose, data }: PlanLimitModalProps) {
             <h4 className="text-[11px] font-bold text-foreground tracking-wide uppercase">Upgrade benefits:</h4>
             <div className="grid grid-cols-2 gap-2 text-xs font-medium text-foreground">
               {[
-                "⚡ Instant Limit Extension",
-                "💳 Full Payroll & Payslips",
-                "📍 Live GPS Tracking",
-                "📈 PDF & Excel Data Exports",
-                "🤖 Specialist AI Assistants",
-                "🔄 Auto-Resume Interrupted Action",
+                "⚡ Higher limits where included",
+                "💳 Review included modules",
+                "📍 Review location access",
+                "📈 Review reporting access",
+                "🤖 Review AI access and quotas",
+                "🔄 Resume after plan change",
               ].map((b, i) => (
                 <div key={i} className="flex items-center gap-1.5">
                   <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
@@ -139,20 +139,20 @@ export function PlanLimitModal({ isOpen, onClose, data }: PlanLimitModalProps) {
           <div className="pt-3 border-t border-border/60 flex flex-col gap-2">
             {isFree && (
               <Button
-                onClick={() => handleUpgrade("basic")}
+                onClick={handleUpgrade}
                 className="w-full h-10 text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md gap-2"
               >
-                <span>Upgrade to Basic Plan</span>
+                <span>Review Professional Plan</span>
                 <ArrowRight className="h-4 w-4 ml-auto" />
               </Button>
             )}
 
             <Button
-              onClick={() => handleUpgrade("pro")}
+              onClick={handleUpgrade}
               className="w-full h-11 text-xs font-bold bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg btn-premium gap-2"
             >
               <Sparkles className="h-4 w-4" />
-              <span>Upgrade to Pro Plan (Unlimited)</span>
+              <span>Review Enterprise Plan</span>
               <ArrowRight className="h-4 w-4 ml-auto" />
             </Button>
 

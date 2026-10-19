@@ -205,9 +205,8 @@ export function AIChatBot({ className }: { className?: string }) {
           sender: "bot",
           widget: data.widget || (data.intercepted ? {
             type: "UPGRADE_PROMPT",
-            title: "🔒 Pro Plan Feature Required",
+            title: "🔒 Feature unavailable on this plan",
             message: data.text,
-            features: ["AI Revenue Forecasting", "GST Reconciliation", "Cross-Module Business Intelligence", "Automated Payroll Validation"],
           } : null),
           navigation: data.navigation || null,
           sources: data.sources || [],
@@ -373,24 +372,12 @@ export function AIChatBot({ className }: { className?: string }) {
                           <div className="p-4 bg-gradient-to-br from-primary/10 via-accent/10 to-background border-2 border-primary/30 rounded-2xl space-y-3 shadow-lg">
                             <div className="flex items-center gap-2 text-sm font-extrabold text-primary">
                               <Sparkles className="h-4 w-4 text-amber-500 animate-spin" />
-                              <span>{m.widget.title || "🚀 SmartERP AI Pro Feature"}</span>
+                              <span>{m.widget.title || "🚀 SmartERP feature access"}</span>
                             </div>
 
                             <p className="text-xs text-muted-foreground leading-relaxed">
                               {m.widget.message}
                             </p>
-
-                            <div className="space-y-1.5 pt-1">
-                              <p className="text-[11px] font-bold text-foreground">Upgrade to Pro to unlock:</p>
-                              <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-                                {m.widget.features?.map((feat, i) => (
-                                  <div key={i} className="flex items-center gap-1 text-muted-foreground font-medium">
-                                    <Zap className="h-3 w-3 text-amber-500 shrink-0" />
-                                    <span>{feat}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
 
                             <Button
                               size="sm"
@@ -398,7 +385,7 @@ export function AIChatBot({ className }: { className?: string }) {
                               className="w-full text-xs font-black uppercase tracking-wider bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground shadow-md gap-1.5 mt-2"
                             >
                               <Sparkles className="h-3.5 w-3.5" />
-                              Upgrade to Pro
+                              Review Plans
                             </Button>
                           </div>
                         )}

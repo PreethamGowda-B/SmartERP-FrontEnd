@@ -9,19 +9,13 @@ import { Button } from "@/components/ui/button"
 
 export default function HRSupportPage() {
   const [loading, setLoading] = useState(true)
-  const [hasAccess, setHasAccess] = useState(true) // HR typically has access if the company is Pro
+  const [hasAccess, setHasAccess] = useState(false)
 
   useEffect(() => {
     async function checkAccess() {
       try {
         const res = await apiClient("/api/subscription/status")
-        const planName = res.plan?.name?.toLowerCase() || "free"
-        
-        if (planName === "pro" || planName.includes("pro")) {
-          setHasAccess(true)
-        } else {
-          setHasAccess(false)
-        }
+        setHasAccess(res.plan?.features?.priority_support === true)
       } catch (err) {
         logger.error("Failed to load subscription status", err)
       } finally {
@@ -110,7 +104,7 @@ export default function HRSupportPage() {
              </div>
              <div>
                 <h3 className="font-bold text-yellow-800 dark:text-yellow-200">Standard Support Active</h3>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 opacity-90">Priority support is a Pro feature. Your company is currently on the Free plan, but you can still reach out via email.</p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 opacity-90">Priority support is not included in your current plan. Standard support channels remain available.</p>
              </div>
           </div>
         )}

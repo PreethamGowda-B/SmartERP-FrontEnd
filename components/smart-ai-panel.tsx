@@ -8,7 +8,7 @@ import {
   Copy, RotateCcw, ExternalLink, Loader2,
   MessageSquarePlus, Bug, AlertTriangle, Lock, Zap,
   History, Plus, Trash2, Edit3, Search, Check, Brain, TrendingUp, Package,
-  CalendarCheck, CreditCard, Users, FileSpreadsheet, Globe, BarChart3,
+  CalendarCheck, CreditCard, Users, FileSpreadsheet, BarChart3,
   ShieldCheck, Clock, Mic, Cpu, Wrench, ShieldAlert
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -89,13 +89,12 @@ const MODEL_SPECS = [
   { key: "hr", label: "HR Assistant", description: "Employees, hiring, performance", icon: Users, plan: "basic", color: "from-cyan-500 to-teal-600" },
   { key: "gst", label: "GST Intelligence", description: "Tax reconciliation, GSTR", icon: FileSpreadsheet, plan: "pro", color: "from-yellow-500 to-orange-600" },
   { key: "executive", label: "Executive AI", description: "KPIs, forecasts, analytics", icon: BarChart3, plan: "pro", color: "from-indigo-500 to-blue-700" },
-  { key: "crm", label: "CRM AI", description: "Sales pipeline, leads, deals", icon: Globe, plan: "basic", color: "from-red-500 to-pink-600" },
 ]
 
 const MODEL_DISPLAY_NAMES: Record<string, string> = {
   auto: "SmartERP Intelligence", cnc: "CNC Service AI", general: "General Assistant", finance: "Finance AI",
   inventory: "Inventory Expert", attendance: "Attendance AI", payroll: "Payroll AI",
-  hr: "HR Assistant", gst: "GST Intelligence", executive: "Executive AI", crm: "CRM AI",
+  hr: "HR Assistant", gst: "GST Intelligence", executive: "Executive AI",
 }
 
 const FEEDBACK_PATTERNS = [

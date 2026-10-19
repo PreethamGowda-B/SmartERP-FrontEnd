@@ -33,7 +33,8 @@ import { LockedFeatureScreen } from "@/components/locked-feature-screen"
 import { useSubscription } from "@/contexts/subscription-context"
 
 export function PayrollAuditView() {
-  const { isPro } = useSubscription()
+  const { plan } = useSubscription()
+  const hasPayroll = plan.features?.payroll === true
   const { toast } = useToast()
   
   const currentDate = new Date()
@@ -132,13 +133,14 @@ export function PayrollAuditView() {
   }
   const displayedChecks = mapPayrollAuditChecks(run?.check_results)
 
-  if (!isPro) {
+  if (!hasPayroll) {
     return (
       <div className="py-4">
         <LockedFeatureScreen
           featureTitle="AI Payroll Pre-Run Audit & Flag Engine"
-          featureDescription="Automated anomaly detection, ghost employee prevention, and salary variance audits require the Pro Plan."
+          featureDescription="Payroll validation is not enabled for the current company plan."
           requiredTier="pro"
+          isLocked={!hasPayroll}
         />
       </div>
     )
@@ -267,7 +269,7 @@ export function PayrollAuditView() {
         </CardHeader>
         <CardContent className="p-0 sm:p-6 pt-2">
           <div className="rounded-none sm:rounded-lg border-y sm:border overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full min-w-[640px] text-sm text-left">
               <thead className="bg-muted/50 text-[11px] font-semibold text-muted-foreground uppercase">
                 <tr>
                   <th className="px-4 py-3">Employee Name</th>

@@ -94,7 +94,7 @@ export function CustomerSignaturePad({ onSaveSignature, disabled = false }: Cust
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs font-bold text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs font-bold text-muted-foreground">
         <span className="flex items-center gap-1.5 text-foreground">
           <Signature className="h-4 w-4 text-primary" />
           Customer Digital E-Signature Pad
@@ -121,7 +121,7 @@ export function CustomerSignaturePad({ onSaveSignature, disabled = false }: Cust
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-3 pt-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
         <Button
           type="button"
           variant="outline"

@@ -29,7 +29,7 @@ export default function TermsPage() {
     {
       id: "subscriptions",
       title: "4. Subscriptions & Payments",
-      content: `${appName} operates on a subscription model. New accounts begin with a 30-day free trial on our Pro tier. After the trial period, continued access requires an active paid subscription. All payments are processed securely through Razorpay. Subscriptions renew automatically unless cancelled. Refunds are evaluated on a case-by-case basis — contact ${contactEmail} within 7 days of a charge for refund requests.`
+      content: `${appName} operates on a subscription model. New company accounts begin on Starter. An eligible company may activate a 30-day Enterprise trial by making a one-time ₹1 payment through Razorpay. The trial payment does not automatically renew or charge a paid plan. At trial expiry, the account returns to Starter unless the owner separately purchases a paid plan. Refund terms for the ₹1 trial payment are not configured; contact ${contactEmail} before paying if you need clarification. Paid plan renewal and cancellation terms are shown during checkout and must not be assumed to be automatic.`
     },
     {
       id: "data",

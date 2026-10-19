@@ -35,7 +35,7 @@ export function LockedFeaturePrompt() {
   const [previousPath, setPreviousPath] = useState<string>("/owner")
   const router = useRouter()
   const pathname = usePathname()
-  const { isPro, isBasic } = useSubscription()
+  const { isPro } = useSubscription()
   const previousPathRef = useRef<string>("/owner")
 
   // Track previous path
@@ -113,9 +113,9 @@ export function LockedFeaturePrompt() {
     }
   }
 
-  const handleGoToBilling = (tier: "basic" | "pro" = "pro") => {
+  const handleGoToBilling = () => {
     setIsOpen(false)
-    router.push(`/owner/billing?selected=${tier}`)
+    router.push("/owner/billing")
   }
 
   if (!lockData) return null
@@ -142,11 +142,11 @@ export function LockedFeaturePrompt() {
               </div>
               <div>
                 <h3 className="text-lg font-extrabold text-foreground tracking-tight flex items-center gap-1.5">
-                  Pro Feature Locked
+                  Feature Unavailable
                   <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" />
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Available in {lockData.feature === 'ai_assistant' ? 'Pro Plan' : 'Basic or Pro Plan'}
+                  Review current plan access
                 </p>
               </div>
             </div>
@@ -160,20 +160,17 @@ export function LockedFeaturePrompt() {
 
           {/* Description */}
           <p className="text-xs leading-relaxed text-muted-foreground bg-muted/30 p-3.5 rounded-xl border border-border/40">
-            {lockData.message || "🔒 This feature is available only in higher plan tiers. Upgrade now to unlock full automation and intelligence."}
+            {lockData.message || "This feature is not enabled for the current company plan. The company owner can review available plans."}
           </p>
 
           {/* Benefits List */}
           <div className="space-y-2 pt-1">
-            <h4 className="text-xs font-bold text-foreground tracking-wide uppercase">Upgrade to unlock:</h4>
+            <h4 className="text-xs font-bold text-foreground tracking-wide uppercase">Review the plan catalog:</h4>
             <div className="grid grid-cols-2 gap-2 text-xs">
               {[
-                "✨ AI Intelligence",
-                "📊 Executive Analytics",
-                "🧾 GST Automation",
-                "💳 Payroll Intelligence",
-                "🤝 CRM Automation",
-                "📈 Advanced Reports",
+                "✓ Check module entitlements",
+                "✓ Check usage limits",
+                "✓ Check role permissions",
               ].map((benefit, i) => (
                 <div key={i} className="flex items-center gap-1.5 font-medium text-foreground">
                   <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
@@ -186,23 +183,13 @@ export function LockedFeaturePrompt() {
           {/* Upgrade Buttons */}
           <div className="pt-3 border-t border-border/60 flex flex-col gap-2">
             <Button
-              onClick={() => handleGoToBilling("pro")}
+              onClick={handleGoToBilling}
               className="w-full h-11 text-xs font-bold bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg btn-premium gap-2"
             >
               <Sparkles className="h-4 w-4" />
-              <span>Upgrade to Pro Plan</span>
+              <span>Review Plans</span>
               <ArrowRight className="h-4 w-4 ml-auto" />
             </Button>
-
-            {!isBasic && (
-              <Button
-                onClick={() => handleGoToBilling("basic")}
-                variant="outline"
-                className="w-full h-10 text-xs font-semibold border-border/80 hover:bg-muted/60"
-              >
-                <span>Upgrade to Basic Plan</span>
-              </Button>
-            )}
 
             <Button
               variant="ghost"

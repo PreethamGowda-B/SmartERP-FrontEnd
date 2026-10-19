@@ -220,7 +220,7 @@ export function CompanyDetailDrawer({
                     <span className="text-slate-400 font-medium block mb-1">Subscription Status</span>
                     <span className="font-semibold text-slate-800 flex items-center gap-1.5">
                       <CreditCard className="h-3.5 w-3.5 text-slate-400" />
-                      {company?.is_on_trial ? "Active Free Trial" : company?.plan_name || "Free Tier"}
+                      {company?.is_on_trial ? "Active ₹1 Trial" : company?.plan_name || "Starter"}
                     </span>
                   </div>
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white">

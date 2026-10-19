@@ -99,7 +99,7 @@ export default function HRAssetsPage() {
                 <p className="text-xs mt-0.5">Click "Add New Asset" to track laptops, SIM cards, & field gear.</p>
               </div>
             ) : (
-              <table className="w-full text-xs text-left">
+              <table className="w-full min-w-[600px] text-xs text-left">
                 <thead className="bg-muted/50 border-b text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="p-4">Asset Tag</th>

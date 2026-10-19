@@ -36,7 +36,7 @@ export default function FeaturesPage() {
               <Link href="/auth/login?mode=login">Sign In</Link>
             </Button>
             <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-500 text-white">
-              <Link href="/auth/login?mode=signup">Start Free Trial</Link>
+              <Link href="/auth/login?mode=signup">Start ₹1 Trial</Link>
             </Button>
           </div>
         </div>

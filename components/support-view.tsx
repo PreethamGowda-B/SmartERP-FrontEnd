@@ -14,15 +14,13 @@ export function SupportView() {
     async function checkAccess() {
       try {
         const res = await apiClient("/api/subscription/status")
-        const planName = res.plan?.name?.toLowerCase() || "free"
-        
-        if (planName === "pro" || planName.includes("pro")) {
+        if (res.plan?.features?.priority_support === true) {
           setHasAccess(true)
         } else {
           triggerFeatureLock({
             feature: "Priority Support",
-            current_plan: res.plan?.name || "FREE",
-            message: "Priority Support is a premium feature reserved for our Pro plan users."
+            current_plan: res.plan?.name || "Starter",
+            message: "Priority support is not enabled for the current company plan. The company owner can review available plans."
           })
           setHasAccess(false)
         }
@@ -49,7 +47,7 @@ export function SupportView() {
         <ShieldCheck className="w-16 h-16 text-muted-foreground/30 mb-4" />
         <h3 className="text-xl font-semibold mb-2">Feature Locked</h3>
         <p className="text-muted-foreground text-xs max-w-sm mb-6">
-          You must upgrade to the Pro plan to access the priority support desk.
+          Priority support is not enabled for the current company plan.
         </p>
       </div>
     )
@@ -101,7 +99,7 @@ export function SupportView() {
         <div className="relative z-10 max-w-3xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-semibold mb-3 text-indigo-700">
             <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-            Pro Plan Priority Desk
+            Priority Support
           </div>
           
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-2 text-slate-900">
@@ -109,7 +107,7 @@ export function SupportView() {
           </h2>
           
           <p className="text-xs md:text-sm text-slate-600 leading-relaxed max-w-2xl">
-            Pro plan users get direct access to priority support channels. Choose a contact method below and our engineering team will assist you quickly.
+            Your subscription's priority support access is active. Choose a contact method below.
           </p>
         </div>
       </div>

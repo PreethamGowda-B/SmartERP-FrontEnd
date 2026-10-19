@@ -79,6 +79,8 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
     async function loadJobs() {
       if (isPublic || !user || !storageKey || loadedScopeRef.current !== scope || requestInFlightRef.current) return
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return
+      if (typeof navigator !== "undefined" && !navigator.onLine) return
       requestInFlightRef.current = true
 
       try {
@@ -185,13 +187,28 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         loadJobs()
         hasSyncedRef.current = true
       }
-      // Poll every 30 seconds for authenticated user
-      intervalId = setInterval(loadJobs, 30000)
-    }
+      // Poll every 30 seconds for authenticated user ONLY when tab is visible and online
+      intervalId = setInterval(() => {
+        if (typeof document !== "undefined" && document.visibilityState === "hidden") return
+        if (typeof navigator !== "undefined" && !navigator.onLine) return
+        loadJobs()
+      }, 30000)
 
-    return () => {
-      mounted = false
-      if (intervalId) clearInterval(intervalId)
+      // Re-sync immediately when returning to tab or regaining internet connection
+      const handleActive = () => {
+        if (typeof document !== "undefined" && document.visibilityState === "visible" && (typeof navigator === "undefined" || navigator.onLine)) {
+          loadJobs()
+        }
+      }
+      document.addEventListener("visibilitychange", handleActive)
+      window.addEventListener("online", handleActive)
+
+      return () => {
+        mounted = false
+        if (intervalId) clearInterval(intervalId)
+        document.removeEventListener("visibilitychange", handleActive)
+        window.removeEventListener("online", handleActive)
+      }
     }
   }, [user, isLoading, isPublic, scope, storageKey])
 

@@ -180,8 +180,15 @@ function JobMessagesTab({ initialJobId }: { initialJobId?: string | null }) {
   const lastMessageId = messages[messages.length - 1]?.id
   const messagesCount = messages.length
   useEffect(() => () => { sseRef.current?.close(); if (reconnectTimeout.current) clearTimeout(reconnectTimeout.current) }, [])
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messagesCount, lastMessageId])
-  useEffect(() => { fetchConversations(); const id = setInterval(fetchConversations, 30_000); return () => clearInterval(id) }, [fetchConversations])
+  useEffect(() => {
+    fetchConversations()
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible" && navigator.onLine) {
+        fetchConversations()
+      }
+    }, 30_000)
+    return () => clearInterval(id)
+  }, [fetchConversations])
   useEffect(() => {
     if (!selectedJobId) return
     const sync = () => {

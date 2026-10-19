@@ -108,7 +108,20 @@ export function setTokens(accessToken: string, refreshToken: string, isAdmin = f
 // strictly partitioned by user auth token (preserving multi-tenant isolation).
 const inFlightGets = new Map<string, Promise<any>>()
 const getCache = new Map<string, { data: any; expiresAt: number }>()
-const GET_CACHE_TTL_MS = 3000 // 3 seconds
+const GET_CACHE_TTL_MS = 3000 // 3 seconds default
+const METADATA_CACHE_TTL_MS = 30000 // 30 seconds for slow-changing metadata
+
+function getCacheTtlForPath(path: string): number {
+  if (
+    path.startsWith('/api/settings/company') ||
+    path.startsWith('/api/subscription/') ||
+    path.startsWith('/api/users/me')
+  ) {
+    return METADATA_CACHE_TTL_MS
+  }
+  return GET_CACHE_TTL_MS
+}
+
 let successfulMutationVersion = 0
 let lastSuccessfulMutationAt = 0
 
@@ -411,11 +424,16 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
     markRequestStart(requestId)
 
     try {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        throw { name: "OfflineError", message: "Internet connection offline", isOffline: true }
+      }
+
       let res: Response
       try {
         // Use controller to handle potential timeouts if needed
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+        const timeoutMs = (options as any)?.timeoutMs || 15000 // 15s timeout
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
         res = await fetch(`${baseUrl}${path}`, {
           ...options,
@@ -426,12 +444,25 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
         })
         clearTimeout(timeoutId)
       } catch (error: any) {
+        if (error.name === "OfflineError" || error.isOffline) {
+          throw error;
+        }
+
+        // Handle direct cancellations (e.g. navigation) - don't log these
+        if (error.name === "AbortError") {
+          throw { name: "AbortError", message: "Request cancelled" };
+        }
+
+        const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+        if (isOffline) {
+          throw { name: "OfflineError", message: "Internet connection offline", isOffline: true };
+        }
+
         // 🚀 PART 2: API RETRY SYSTEM (NETWORK RESILIENCE)
-        // Retry failed requests ONLY IF: network error OR timeout
-        // NOT for 401 / 403 (handled separately)
-        const isTransientError = error.name === 'TypeError' || error.name === 'TimeoutError' || error.message?.includes('fetch')
-        const isGetRequest = !options.method || options.method.toUpperCase() === 'GET'
-        const canRetry = retries > 0 && isTransientError && isGetRequest
+        // Retry failed requests ONLY IF: network error OR timeout, AND device is confirmed online
+        const isTransientError = error.name === "TypeError" || error.name === "TimeoutError" || error.message?.includes("fetch")
+        const isGetRequest = !options.method || options.method.toUpperCase() === "GET"
+        const canRetry = retries > 0 && isTransientError && isGetRequest && !isOffline
 
         if (canRetry) {
           const delay = retries === 2 ? 500 : 1000 // 500ms -> 1000ms
@@ -439,18 +470,8 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
           return apiClient(path, options, retries - 1)
         }
 
-        // Handle direct cancellations (e.g. navigation) - don't log these to Sentry
-        if (error.name === 'AbortError') {
-          throw { name: 'AbortError', message: 'Request cancelled' };
-        }
-
         const safeOriginal = error instanceof Error ? error.message : String(error);
-        const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-        if (!isOffline) {
-          logger.error(`[apiClient] Connection Error: ${path}`, { error: safeOriginal });
-        } else {
-          logger.warn(`[apiClient] Offline connection notice: ${path}`);
-        }
+        logger.error(`[apiClient] Connection Error: ${path}`, { error: safeOriginal });
         throw new Error("Unable to connect to the server. Please check your internet connection and try again.")
       }
 
@@ -495,7 +516,7 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
             current_plan: error.current_plan,
             message: error.message
           })
-          return new Promise(() => {})
+          throw { ...error, status: 403, upgrade_required: true, handled: true }
         }
         throw { ...error, status: res.status }
       }
@@ -524,11 +545,12 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
         getCache.clear()
       }
       if (cacheKey && mutationVersionAtStart === successfulMutationVersion) {
-        getCache.set(cacheKey, { data: result, expiresAt: Date.now() + GET_CACHE_TTL_MS })
+        getCache.set(cacheKey, { data: result, expiresAt: Date.now() + getCacheTtlForPath(path) })
       }
       return result
     } catch (error: any) {
       if (error.name === 'AbortError') throw error;
+      if (error.name === 'OfflineError' || error.isOffline) throw error;
 
       if (error.status >= 500 || !error.status) {
         const safeOriginal = error instanceof Error ? error.message : (typeof error === 'object' && error !== null ? JSON.stringify(error) : String(error));

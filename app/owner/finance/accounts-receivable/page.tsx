@@ -109,7 +109,7 @@ export default function OwnerAccountsReceivablePage() {
               <div className="py-12 text-center text-muted-foreground text-xs font-bold">No overdue collection schedules recorded.</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
+                <table className="w-full min-w-[540px] text-xs text-left">
                   <thead className="bg-muted/50 text-muted-foreground border-b uppercase font-extrabold">
                     <tr>
                       <th className="p-3.5">Invoice #</th>

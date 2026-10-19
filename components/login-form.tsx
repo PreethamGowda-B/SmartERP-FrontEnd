@@ -409,7 +409,7 @@ export function LoginForm() {
                 {mode === "login" ? "Welcome back" : "Create an account"}
               </h1>
               <p className="text-[0.875rem] text-slate-500 font-medium">
-                {mode === "login" ? "Sign in to your workspace" : "Sign up and get 30-day free trial"}
+                {mode === "login" ? "Sign in to your workspace" : "Create an account to activate the ₹1, 30-day trial"}
               </p>
             </div>
 

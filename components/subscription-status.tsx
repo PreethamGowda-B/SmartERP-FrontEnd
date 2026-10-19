@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 
 type SubscriptionStatusData = {
   plan: {
+    id?: number | string
     name: string
     is_trial: boolean
     days_remaining: number
@@ -65,9 +66,10 @@ export function SubscriptionStatus() {
 
   const { plan, usage } = data
 
-  const isPro = plan.name.toLowerCase() === "pro"
-  const isBasic = plan.name.toLowerCase() === "basic"
-  const isFree = plan.name.toLowerCase() === "free"
+  const normalizedPlanName = String(plan.name || "").trim().toLowerCase()
+  const isPro = Number(plan.id) === 3 || normalizedPlanName === "enterprise" || normalizedPlanName === "pro"
+  const isBasic = Number(plan.id) === 2 || normalizedPlanName === "professional" || normalizedPlanName === "basic"
+  const isFree = Number(plan.id) === 1 || normalizedPlanName === "starter" || normalizedPlanName === "free"
   const isTrial = plan.is_trial
   const daysRemaining = plan.days_remaining || 0
 
@@ -77,16 +79,16 @@ export function SubscriptionStatus() {
   if (isExpired) {
     planMessage = `Your ${plan.name.toUpperCase()} plan has expired. Upgrade now to restore access.`
   } else if (isTrial) {
-    planMessage = `Pro Trial Active — Full enterprise features enabled.`
+    planMessage = `30-day Enterprise trial active`
   } else if (isPro) {
     const rawCycle = (data.billing_cycle || "").toLowerCase()
     const isYearly = rawCycle === "yearly" || rawCycle === "annual" || daysRemaining > 45
     const billingCycle = isYearly ? "Yearly" : "Monthly"
-    planMessage = `PRO plan (${billingCycle})`
+    planMessage = `ENTERPRISE plan (${billingCycle})`
   } else if (isBasic) {
-    planMessage = `BASIC plan`
+    planMessage = `PROFESSIONAL plan`
   } else if (isFree) {
-    planMessage = `FREE tier`
+    planMessage = `STARTER tier`
   } else {
     planMessage = `${plan.name.toUpperCase()} plan`
   }

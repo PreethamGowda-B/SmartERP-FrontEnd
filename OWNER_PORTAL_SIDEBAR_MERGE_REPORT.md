@@ -63,7 +63,7 @@ All 5 duplicate standalone entries have now been cleanly removed from the sideba
 No requested features remain unmerged. All intended feature groupings have their corresponding parent hubs active and operational.
 
 - **Documents & Reports**: Both `Documents` (`/owner/documents`) and `Reports` (`/owner/reports`) maintain dedicated standalone pages, and are now grouped together under the intended **Documents & Reports** category header.
-- **Tracking & Sales Pipeline**: Both maintain dedicated pages under **Operations**, matching the required specification.
+- **Tracking** remains under **Operations**. The Sales Pipeline has been retired and removed from navigation.
 
 ---
 
@@ -78,7 +78,6 @@ Owner Portal Sidebar
 ├── ⚙️ Operations
 │   ├── 💼 Tasks (/owner/jobs)
 │   ├── 👤 Customer Jobs (/owner/customer-jobs)
-│   ├── 🔥 Sales Pipeline (/owner/crm/pipeline)
 │   └── 📍 Tracking (/owner/tracking)
 │
 ├── 📡 CNC Service Edition

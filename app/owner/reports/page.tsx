@@ -394,7 +394,7 @@ export default function ReportsPage() {
                   <CardHeader><CardTitle>Employee Performance</CardTitle></CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full min-w-[560px] text-sm">
                         <thead>
                           <tr className="border-b">
                             <th className="text-left py-2 pr-4 font-medium">Employee</th>
@@ -499,7 +499,7 @@ export default function ReportsPage() {
                   <CardHeader><CardTitle>Recent Requests</CardTitle></CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full min-w-[500px] text-sm">
                         <thead>
                           <tr className="border-b">
                             <th className="text-left py-2 pr-4 font-medium">Item</th>

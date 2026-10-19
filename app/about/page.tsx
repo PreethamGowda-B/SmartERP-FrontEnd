@@ -36,7 +36,7 @@ export default function AboutPage() {
         <div className="flex justify-center gap-4">
           <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-500 text-white font-bold">
             <Link href="/auth/login?mode=signup">
-              Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
+              Start ₹1 Trial <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="border-border text-foreground hover:bg-muted font-semibold">

@@ -157,7 +157,7 @@ export default function CustomerInvoiceDetailPage() {
         <Button variant="ghost" size="sm" onClick={() => router.push('/customer/jobs')}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
             <Download className="h-4 w-4 mr-1.5" /> Download PDF
           </Button>
@@ -247,7 +247,7 @@ export default function CustomerInvoiceDetailPage() {
 
           {/* Tax Breakdown */}
           <div className="flex justify-end">
-            <div className="w-72 space-y-2 text-sm">
+            <div className="w-full sm:w-72 space-y-2 text-sm">
               <div className="flex justify-between text-slate-600">
                 <span>Subtotal:</span>
                 <span className="font-medium text-slate-900">₹{Number(invoice.subtotal).toLocaleString('en-IN')}</span>

@@ -43,7 +43,8 @@ function formatLastSeen(ts: string | null): string {
 }
 
 export default function EmployeeTrackingPage() {
-    const { isFree } = useSubscription()
+    const { plan } = useSubscription()
+    const hasLocationTracking = plan.features?.location_tracking === true
     const mapRef = useRef<any>(null)        // L.Map
     const markersRef = useRef<Map<string, any>>(new Map()) // id → L.Marker
     const containerRef = useRef<HTMLDivElement>(null)
@@ -223,13 +224,14 @@ export default function EmployeeTrackingPage() {
     const withoutLocation = employees.filter(e => e.latitude == null)
     const onlineCount = withLocation.filter(e => e.is_online).length
 
-    if (isFree) {
+    if (!hasLocationTracking) {
         return (
             <OwnerLayout>
                 <LockedFeatureScreen
                     featureTitle="Live Employee GPS Tracking"
-                    featureDescription="Real-time map tracking of field staff and geofenced attendance requires the Basic or Pro Plan."
+                    featureDescription="Real-time employee location tracking is not enabled for the current company plan."
                     requiredTier="basic"
+                    isLocked={!hasLocationTracking}
                 />
             </OwnerLayout>
         )

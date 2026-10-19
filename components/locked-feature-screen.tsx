@@ -10,6 +10,7 @@ interface LockedFeatureScreenProps {
   featureTitle: string
   featureDescription: string
   requiredTier?: "basic" | "pro"
+  isLocked?: boolean
   benefits?: string[]
 }
 
@@ -17,20 +18,14 @@ export function LockedFeatureScreen({
   featureTitle,
   featureDescription,
   requiredTier = "pro",
-  benefits = [
-    "AI Intelligence & Multi-Agent Assistant",
-    "Executive Level Analytics & Insights",
-    "Automated GST Reconciliation & Filing",
-    "Full Payroll Processing & Direct Deposit",
-    "CRM Sales Pipeline & Deal Automation",
-    "Advanced Exportable Audit & Financial Reports",
-  ],
+  isLocked,
+  benefits = [],
 }: LockedFeatureScreenProps) {
   const router = useRouter()
   const { isPro, isBasic } = useSubscription()
 
   // If user has required tier, render nothing (allows parent component to show feature)
-  const isUnlocked = requiredTier === "basic" ? (isBasic || isPro) : isPro
+  const isUnlocked = isLocked === undefined ? (requiredTier === "basic" ? (isBasic || isPro) : isPro) : !isLocked
   if (isUnlocked) return null
 
   const handleReturn = () => {
@@ -67,7 +62,7 @@ export function LockedFeatureScreen({
         {/* Benefits Grid */}
         <div className="bg-muted/30 border border-border/60 rounded-2xl p-5 mb-8 text-left">
           <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3">
-            Upgrade to {requiredTier === "pro" ? "Pro Plan" : "Basic or Pro Plan"} to unlock:
+            Review the current plan entitlements and available upgrades:
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs font-medium text-foreground">
             {benefits.map((b, i) => (
@@ -90,11 +85,11 @@ export function LockedFeatureScreen({
           </Button>
 
           <Button
-            onClick={() => router.push(`/owner/billing?selected=${requiredTier}`)}
+            onClick={() => router.push("/owner/billing")}
             className="h-11 px-8 text-xs font-bold bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg btn-premium gap-2"
           >
             <Sparkles className="h-4 w-4" />
-            <span>Upgrade to {requiredTier === "pro" ? "Pro" : "Basic"} Now</span>
+            <span>Review Plans</span>
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>

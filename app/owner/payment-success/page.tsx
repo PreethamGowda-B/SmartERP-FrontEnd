@@ -47,14 +47,15 @@ export default function PaymentSuccessPage() {
   const orderId = searchParams.get("order_id") || "N/A"
   const paymentId = searchParams.get("payment_id") || "N/A"
   const signature = searchParams.get("signature") || ""
-  const planIdParam = searchParams.get("plan_id") || "3"
-  const billingCycleParam = searchParams.get("billing_cycle") || "monthly"
-  const preVerified = searchParams.get("verified") === "true"
+  const planIdParam = searchParams.get("plan_id") || ""
+  const billingCycleParam = searchParams.get("billing_cycle") || ""
+  const requestedPlanId = Number.parseInt(planIdParam, 10)
+  const hasValidPaymentReturn = orderId !== "N/A" && paymentId !== "N/A" && Boolean(signature) && [2, 3].includes(requestedPlanId) && ["monthly", "yearly"].includes(billingCycleParam)
 
   const [stepIndex, setStepIndex] = useState(0)
   const [progress, setProgress] = useState(15)
   const [isActivated, setIsActivated] = useState(false)
-  const [activePlanName, setActivePlanName] = useState<string>("Pro")
+  const [activePlanName, setActivePlanName] = useState<string>("Your plan")
   const [isDelayed, setIsDelayed] = useState(false)
   const [hasError, setHasError] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string>("")
@@ -191,13 +192,18 @@ export default function PaymentSuccessPage() {
   // Active Verification Endpoint Execution
   const triggerActiveVerification = useCallback(async () => {
     if (isVerifying || isActivated) return
+    if (!hasValidPaymentReturn) {
+      setHasError(true)
+      setErrorMessage("Payment verification details are incomplete. No plan change has been applied.")
+      return
+    }
     setIsVerifying(true)
     setHasError(false)
     setErrorMessage("")
 
     console.log(`[Frontend] Payment Success Page Mounted | Order ID: ${orderId} | Payment ID: ${paymentId}`)
     console.log(`[Subscription] Starting Activation | Company ID = ${user?.company_id || 'N/A'}`)
-    console.log(`[Subscription] Current Plan = Free | Target Plan = ${planIdParam}`)
+    console.log(`[Subscription] Current Plan = Starter | Target Plan ID = ${planIdParam}`)
 
     try {
       if (orderId !== "N/A" && paymentId !== "N/A") {
@@ -208,7 +214,7 @@ export default function PaymentSuccessPage() {
             razorpay_order_id: orderId,
             razorpay_payment_id: paymentId,
             razorpay_signature: signature,
-            planId: parseInt(planIdParam, 10) || 3,
+            planId: requestedPlanId,
             billingCycle: billingCycleParam
           })
         })
@@ -216,21 +222,11 @@ export default function PaymentSuccessPage() {
         console.log(`[Subscription] Commit Successful | Response:`, verifyRes)
 
         if (verifyRes.ok || verifyRes.success) {
-          const planName = verifyRes.plan?.name || (planIdParam === "2" ? "Basic" : "Pro")
+          const planName = verifyRes.plan?.name || (requestedPlanId === 2 ? "Professional" : "Enterprise")
           console.log(`[Subscription] Updating AI Permissions... Done!`)
           completeActivation(planName)
           return
         }
-      }
-
-      // Check status fallback
-      const statusRes = await apiClient("/api/subscription/status")
-      console.log(`[Subscription] Status Check Response:`, statusRes)
-
-      const isPaidPlan = statusRes.plan && statusRes.plan.id > 1 && !statusRes.plan.is_trial
-      if (isPaidPlan) {
-        completeActivation(statusRes.plan.name || "Pro")
-        return
       }
 
       // Elapsed check (60s max timeout)
@@ -246,15 +242,6 @@ export default function PaymentSuccessPage() {
       logger.error("[Subscription] Verification attempt error:", err)
       const elapsed = Date.now() - startTimeRef.current
 
-      // Check status as fallback even after catch
-      try {
-        const fallbackRes = await apiClient("/api/subscription/status")
-        if (fallbackRes.plan && fallbackRes.plan.id > 1 && !fallbackRes.plan.is_trial) {
-          completeActivation(fallbackRes.plan.name || "Pro")
-          return
-        }
-      } catch {}
-
       if (elapsed > 60000) {
         setHasError(true)
         setErrorMessage(err.message || "Subscription activation encountered an issue.")
@@ -262,26 +249,22 @@ export default function PaymentSuccessPage() {
     } finally {
       setIsVerifying(false)
     }
-  }, [isVerifying, isActivated, orderId, paymentId, user?.company_id, planIdParam, signature, billingCycleParam, completeActivation])
+  }, [isVerifying, isActivated, hasValidPaymentReturn, orderId, paymentId, user?.company_id, planIdParam, requestedPlanId, signature, billingCycleParam, completeActivation])
 
   // Initial & Polling Execution
   useEffect(() => {
-    if (preVerified) {
-      console.log(`[Frontend] Pre-verified payment parameter detected`)
-      completeActivation(planIdParam === "2" ? "Basic" : "Pro")
-      return
-    }
-
     triggerActiveVerification()
-    pollTimerRef.current = setInterval(() => {
-      setPollCount(p => p + 1)
-      triggerActiveVerification()
-    }, 4000)
+    if (hasValidPaymentReturn) {
+      pollTimerRef.current = setInterval(() => {
+        setPollCount(p => p + 1)
+        triggerActiveVerification()
+      }, 4000)
+    }
 
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current)
     }
-  }, [preVerified, completeActivation, triggerActiveVerification, planIdParam])
+  }, [triggerActiveVerification, hasValidPaymentReturn])
 
   const technicalReportData = `
 ========================================

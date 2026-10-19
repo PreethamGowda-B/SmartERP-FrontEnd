@@ -47,12 +47,21 @@ export function LandingPage() {
   const heroVideoRef = useRef<HTMLVideoElement | null>(null)
   const [isHeroMuted, setIsHeroMuted] = useState(true)
   const [heroVideoError, setHeroVideoError] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [isHeroPlaying, setIsHeroPlaying] = useState(false)
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const setSectionRef = (key: string) => (el: HTMLDivElement | null) => {
     if (el) sectionRefs.current[key] = el
   }
+
+  // Detect mobile viewport to avoid unnecessary high-bandwidth streaming
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsMobile(window.innerWidth < 768)
+    }
+  }, [])
 
   // Pre-warm router cache for instant navigation on button clicks
   useEffect(() => {
@@ -310,7 +319,7 @@ export function LandingPage() {
               className="w-full sm:w-auto text-base font-bold px-8 py-6 bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/30 group cursor-pointer"
             >
               <Link href="/auth/login?mode=signup" prefetch={true}>
-                Start Free Trial
+                Start ₹1 Trial
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
@@ -354,17 +363,44 @@ export function LandingPage() {
             {/* Video Element */}
             <div className="relative aspect-video w-full bg-slate-950 overflow-hidden">
               {!heroVideoError ? (
-                <video
-                  ref={heroVideoRef}
-                  src="/videos/hero-showcase.mp4"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  preload="metadata"
-                  onError={() => setHeroVideoError(true)}
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  <video
+                    ref={heroVideoRef}
+                    src="/videos/hero-showcase.mp4"
+                    autoPlay={!isMobile}
+                    loop
+                    muted
+                    playsInline
+                    preload={isMobile ? "none" : "metadata"}
+                    onError={() => setHeroVideoError(true)}
+                    className="w-full h-full object-cover"
+                  />
+                  {isMobile && !isHeroPlaying && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/75 backdrop-blur-xs p-4 text-center">
+                      <div className="max-w-xs space-y-1.5 mb-3">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-xs font-medium border border-blue-400/30">
+                          <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
+                          Platform Showcase
+                        </span>
+                        <p className="text-xs text-slate-300">
+                          Tap to watch real-time field operations, automated payroll & tracking.
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="bg-primary hover:bg-primary/90 text-white gap-2 shadow-lg rounded-full px-5"
+                        onClick={() => {
+                          if (heroVideoRef.current) {
+                            heroVideoRef.current.play().then(() => setIsHeroPlaying(true)).catch(() => {})
+                          }
+                        }}
+                      >
+                        <Play className="h-4 w-4 fill-white" />
+                        Watch Video Demo
+                      </Button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="relative w-full h-full flex flex-col items-center justify-center bg-linear-to-br from-slate-950 via-slate-900 to-blue-950/70 p-6 sm:p-8 text-center text-white">
                   <div className="max-w-md mx-auto space-y-3">
@@ -398,7 +434,7 @@ export function LandingPage() {
                         onClick={() => router.push("/auth/login?mode=signup")}
                         className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-semibold"
                       >
-                        Start Free Trial
+                        Start ₹1 Trial
                       </Button>
                     </div>
                   </div>
@@ -636,7 +672,7 @@ export function LandingPage() {
                 className="text-sm font-bold px-8 py-6 bg-white hover:bg-slate-100 text-slate-900 shadow-xl cursor-pointer"
               >
                 <Link href="/auth/login?mode=signup" prefetch={true}>
-                  Start Your Free Trial
+                  Start Your ₹1 Trial
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>

@@ -47,7 +47,7 @@ export function BackgroundSubscriptionPoller() {
 
           toast({
             title: "🎉 Your SmartERP Subscription is Active!",
-            description: `Upgraded to ${res.plan.name || "Pro"} Plan. All features are now unlocked.`,
+            description: `${res.plan.name || "Your plan"} is active. Features follow the saved plan entitlements and each user's role permissions.`,
           })
         }
       } catch (err: any) {

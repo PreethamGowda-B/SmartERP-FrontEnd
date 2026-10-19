@@ -185,7 +185,7 @@ export default function AdminLogs() {
           {/* Tab 1: Login History */}
           {activeTab === 'login' && (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[560px] text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                     <th className="py-3.5 pl-6">Actor & Identity</th>
@@ -244,7 +244,7 @@ export default function AdminLogs() {
           {/* Tab 2: Runtime Error Logs */}
           {activeTab === 'error' && (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[620px] text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                     <th className="py-3.5 pl-6">Error Message & Stack</th>
@@ -309,7 +309,7 @@ export default function AdminLogs() {
           {/* Tab 3: Platform Audit Trail */}
           {activeTab === 'audit' && (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[560px] text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/60 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                     <th className="py-3.5 pl-6">Operation Action</th>
