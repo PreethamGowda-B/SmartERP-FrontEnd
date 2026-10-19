@@ -40,9 +40,20 @@ interface Company {
   owner_id: number
   owner_name: string
   owner_email: string
+  plan_id: number
   plan_name: string
   status: string // 'active', 'suspended'
   created_at: string
+}
+
+const PLAN_LABELS: Record<number, string> = {
+  1: "Starter",
+  2: "Professional",
+  3: "Enterprise",
+}
+
+function getPlanLabel(company: Company): string {
+  return PLAN_LABELS[company.plan_id] || company.plan_name || `Unmapped plan (${company.plan_id})`
 }
 
 function safeDistance(dateStr: string): string {
@@ -127,7 +138,7 @@ export default function AdminCompanies() {
        c.owner_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
        c.owner_name?.toLowerCase().includes(searchQuery.toLowerCase()))
     const matchesStatus = filterStatus === "all" || (c.status || 'active') === filterStatus
-    const matchesPlan = filterPlan === "all" || (c.plan_name?.toLowerCase() === filterPlan.toLowerCase())
+    const matchesPlan = filterPlan === "all" || String(c.plan_id) === filterPlan
     return matchesSearch && matchesStatus && matchesPlan
   })
 
@@ -206,9 +217,9 @@ export default function AdminCompanies() {
               className="h-10 px-3 rounded-xl bg-slate-50/50 border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:bg-white cursor-pointer"
             >
               <option value="all">All Plans</option>
-              <option value="free">Free</option>
-              <option value="basic">Basic</option>
-              <option value="pro">Pro</option>
+              <option value="1">Starter</option>
+              <option value="2">Professional</option>
+              <option value="3">Enterprise</option>
             </select>
           </div>
         </div>
@@ -289,7 +300,7 @@ export default function AdminCompanies() {
                         {/* Plan */}
                         <td className="py-3.5">
                           <Badge className="bg-slate-100 text-slate-700 border-slate-200 text-[10px] font-bold">
-                            {c.plan_name || "Free"}
+                            {getPlanLabel(c)}
                           </Badge>
                         </td>
 

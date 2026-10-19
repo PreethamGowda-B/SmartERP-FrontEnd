@@ -29,9 +29,13 @@ interface CompanyDetail {
 }
 
 const PLAN_META: Record<number, { color: string; icon: any; label: string }> = {
-  1: { color: "text-slate-500 bg-slate-50 border-slate-200", icon: Globe, label: "Free" },
-  2: { color: "text-blue-600 bg-blue-50 border-blue-200", icon: Zap, label: "Basic" },
-  3: { color: "text-purple-600 bg-purple-50 border-purple-200", icon: Crown, label: "Pro" },
+  1: { color: "text-slate-500 bg-slate-50 border-slate-200", icon: Globe, label: "Starter" },
+  2: { color: "text-blue-600 bg-blue-50 border-blue-200", icon: Zap, label: "Professional" },
+  3: { color: "text-purple-600 bg-purple-50 border-purple-200", icon: Crown, label: "Enterprise" },
+}
+
+function getPlanLabel(planId: number, fallback?: string): string {
+  return PLAN_META[planId]?.label || fallback || `Unmapped plan (${planId})`
 }
 
 export default function CompanyDetailPage() {
@@ -234,7 +238,7 @@ export default function CompanyDetailPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: "Total Users", value: users.length, icon: Users, color: "text-blue-600" },
-            { label: "Plan", value: company.plan_name || "Free", icon: PlanIcon, color: "text-purple-600" },
+            { label: "Plan", value: getPlanLabel(company.plan_id, company.plan_name), icon: PlanIcon, color: "text-purple-600" },
             { label: "On Trial", value: company.is_on_trial ? "Yes" : "No", icon: Clock, color: "text-amber-600" },
             {
               label: "Expires",
@@ -278,7 +282,7 @@ export default function CompanyDetailPage() {
             <div className={cn("flex items-center gap-3 p-4 rounded-2xl border", planMeta.color)}>
               <PlanIcon className="h-6 w-6" />
               <div>
-                <p className="font-black text-sm uppercase tracking-wide">{company.plan_name || "Free"} Plan</p>
+                <p className="font-black text-sm uppercase tracking-wide">{getPlanLabel(company.plan_id, company.plan_name)} Plan</p>
                 <p className="text-xs opacity-70">Currently Active</p>
               </div>
             </div>
@@ -300,7 +304,7 @@ export default function CompanyDetailPage() {
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-900 focus:outline-none focus:border-slate-900 appearance-none"
                       >
                         {plans.map(p => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
+                          <option key={p.id} value={p.id}>{getPlanLabel(p.id, p.name)}</option>
                         ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />

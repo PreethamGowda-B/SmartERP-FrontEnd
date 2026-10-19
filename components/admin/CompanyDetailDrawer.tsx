@@ -33,6 +33,13 @@ interface CompanyDetailDrawerProps {
   onClose: () => void
 }
 
+const PLAN_LABELS: Record<number, string> = { 1: "Starter", 2: "Professional", 3: "Enterprise" }
+
+function getPlanLabel(company: any): string {
+  const planId = Number(company?.plan_id)
+  return PLAN_LABELS[planId] || company?.plan_name || (Number.isFinite(planId) ? `Unmapped plan (${planId})` : "Plan unavailable")
+}
+
 function safeDistance(dateStr: string): string {
   try {
     const d = new Date(dateStr)
@@ -131,7 +138,7 @@ export function CompanyDetailDrawer({
                     {company?.status === 'active' ? "Active Tenant" : "Suspended"}
                   </Badge>
                   <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] font-bold px-2 py-0">
-                    {company?.plan_name || "Free"} Plan
+                    {getPlanLabel(company)} Plan
                   </Badge>
                 </div>
               </div>
@@ -220,7 +227,7 @@ export function CompanyDetailDrawer({
                     <span className="text-slate-400 font-medium block mb-1">Subscription Status</span>
                     <span className="font-semibold text-slate-800 flex items-center gap-1.5">
                       <CreditCard className="h-3.5 w-3.5 text-slate-400" />
-                      {company?.is_on_trial ? "Active ₹1 Trial" : company?.plan_name || "Starter"}
+                      {company?.is_on_trial ? "Active ₹1 Trial" : getPlanLabel(company)}
                     </span>
                   </div>
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white">

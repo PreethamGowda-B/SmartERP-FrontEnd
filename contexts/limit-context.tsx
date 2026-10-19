@@ -39,7 +39,7 @@ export function LimitProvider({ children }: { children: React.ReactNode }) {
         limitType: details.limitType || "job",
         currentCount: details.currentCount || 0,
         maxLimit: details.maxLimit || 0,
-        currentPlan: details.currentPlan || "Free",
+        currentPlan: details.currentPlan || "Starter",
       })
     }
 

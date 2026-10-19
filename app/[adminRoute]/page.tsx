@@ -85,10 +85,9 @@ interface DashboardData {
 }
 
 const TIER_COLORS: Record<string, string> = {
-  Free: "#94A3B8",
-  Basic: "#3B82F6",
-  Pro: "#6366F1",
-  Enterprise: "#8B5CF6",
+  Starter: "#94A3B8",
+  Professional: "#3B82F6",
+  Enterprise: "#6366F1",
   Other: "#CBD5E1"
 }
 

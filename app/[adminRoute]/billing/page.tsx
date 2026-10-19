@@ -55,6 +55,10 @@ const PLANS = [
   { id: 3, name: 'Enterprise', price: '₹2,499 / month · ₹24,990 / year' }
 ]
 
+function getPlanLabel(planId: number, fallback?: string): string {
+  return PLANS.find((plan) => plan.id === Number(planId))?.name || fallback || `Unmapped plan (${planId})`
+}
+
 function safeDistance(dateStr: string): string {
   try {
     const d = new Date(dateStr)
@@ -265,7 +269,7 @@ export default function AdminSubscriptions() {
                           </td>
                           <td className="py-3.5">
                             <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] font-bold">
-                              {c.plan_name || "Free"}
+                              {getPlanLabel(c.plan_id, c.plan_name)}
                             </Badge>
                           </td>
                           <td className="py-3.5">
@@ -378,7 +382,7 @@ export default function AdminSubscriptions() {
                             </td>
                             <td className="py-3.5">
                               <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] font-bold">
-                                {p.plan_name || "Tier Plan"}
+                                {getPlanLabel(p.plan_id, p.plan_name)}
                               </Badge>
                             </td>
                             <td className="py-3.5 text-slate-500 font-mono text-[11px]">

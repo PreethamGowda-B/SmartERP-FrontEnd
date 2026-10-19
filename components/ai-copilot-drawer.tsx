@@ -93,7 +93,7 @@ export function AiCopilotDrawer() {
           <SheetTitle className="text-base font-extrabold text-white flex items-center gap-2">
             <Bot className="h-5 w-5 text-amber-400" /> SmartERP AI Operations Copilot
           </SheetTitle>
-          <Badge className="bg-amber-400 text-slate-950 font-black text-[10px]">Pro Plan AI</Badge>
+          <Badge className="bg-amber-400 text-slate-950 font-black text-[10px]">AI Operations</Badge>
         </SheetHeader>
 
         {/* Message Log */}

@@ -320,16 +320,16 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   const { isPro, isBasic } = useSubscription()
 
   function isModelLocked(modelKey: string) {
-    if (isPro) return false // Pro: ALL 9 MODELS UNLOCKED!
-    if (modelKey === "auto" || modelKey === "general") return false // Free + Basic: General AI unlocked
+    if (isPro) return false // Enterprise: all specialist models are enabled in this UI.
+    if (modelKey === "auto" || modelKey === "general") return false // Starter + Professional: general AI is enabled.
 
     if (isBasic) {
-      // Basic unlocks: attendance, inventory, hr, support, operations
+      // Professional unlocks: attendance, inventory, HR, support, operations.
       const basicUnlocked = ["attendance", "inventory", "hr", "support", "operations"]
       return !basicUnlocked.includes(modelKey)
     }
 
-    // Free plan: Locks all specialist models except auto & general
+    // Starter limits this selector to general models.
     return true
   }
 
