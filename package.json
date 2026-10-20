@@ -6,6 +6,7 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
+    "test:subscription": "node --test tests/subscription-plan-default.test.js",
     "start": "next start"
   },
   "dependencies": {

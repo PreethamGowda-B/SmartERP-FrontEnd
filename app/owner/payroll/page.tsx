@@ -274,6 +274,7 @@ function OwnerPayrollContent() {
           featureTitle="Payroll Processing & Payslip Generation"
           featureDescription="Payroll is not enabled for the current company plan."
           requiredTier="basic"
+          featureKey="payroll"
           isLocked={!hasPayroll}
         />
       </OwnerLayout>

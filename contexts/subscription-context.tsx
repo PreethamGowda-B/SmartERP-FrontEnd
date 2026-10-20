@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { apiClient, getAccessToken, isTokenExpired } from "@/lib/apiClient"
 import { isPublicRoute } from "@/lib/route-utils"
 import { useAuth } from "./auth-context"
+import { DEFAULT_PLAN } from "@/lib/subscription-plan-default"
 
 export interface PlanFeatures {
   payroll?: boolean
@@ -16,6 +17,8 @@ export interface PlanFeatures {
   inventory_images?: boolean
   priority_support?: boolean
   location_tracking?: boolean
+  ar_collections?: boolean
+  inventory_forecasts?: boolean
   [key: string]: boolean | undefined
 }
 
@@ -40,28 +43,6 @@ interface SubscriptionContextType {
   isFree: boolean
   loading: boolean
   refreshSubscription: () => Promise<void>
-}
-
-const DEFAULT_PLAN: SubscriptionPlan = {
-  id: 1,
-  name: "Starter",
-  is_trial: false,
-  days_remaining: 0,
-  employee_limit: 10,
-  max_inventory_items: 50,
-  max_active_jobs: 15,
-  max_storage_bytes: 250 * 1024 * 1024,
-  features: {
-    payroll: false,
-    messages: false,
-    ai_assistant: false,
-    basic_reports: true,
-    export_reports: false,
-    advanced_reports: false,
-    inventory_images: false,
-    priority_support: false,
-    location_tracking: false,
-  },
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType>({
@@ -110,7 +91,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         features: {
           payroll: true, messages: true, ai_assistant: true,
           basic_reports: true, export_reports: true, advanced_reports: true,
-          inventory_images: true, priority_support: true, location_tracking: true
+          inventory_images: true, priority_support: true, location_tracking: true,
+          ar_collections: true, inventory_forecasts: true
         }
       })
       setLoading(false)

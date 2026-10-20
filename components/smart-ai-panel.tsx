@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAuth } from "@/contexts/auth-context"
 import { useSubscription } from "@/contexts/subscription-context"
+import { hasPlanFeature } from "@/lib/subscription-plan-default"
 import { apiClient, getAuthToken } from "@/lib/apiClient"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -283,7 +284,8 @@ function WidgetRenderer({
 
 export function SmartAIPanel() {
   const { user } = useAuth()
-  const { isPro, isBasic } = useSubscription()
+  const { isPro, isBasic, plan } = useSubscription()
+  const hasAIAccess = hasPlanFeature(plan, "ai_assistant")
 
   function isModelLocked(modelPlan: string) {
     if (isPro) return false // ALL 9 MODELS UNLOCKED FOR PRO! 0 LOCK ICONS!
@@ -301,7 +303,7 @@ export function SmartAIPanel() {
     pathname === "/privacy" ||
     pathname === "/terms"
 
-  if (isPublicPage || !user) return null
+  if (isPublicPage || !user || !hasAIAccess) return null
   return <SmartAIPanelInner user={user} pathname={pathname} />
 }
 

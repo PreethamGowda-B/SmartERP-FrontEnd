@@ -133,6 +133,7 @@ export default function ArCollectionsPage() {
           featureTitle="AR Collections & Automated Dunning Engine"
           featureDescription="Accounts receivable collections are not enabled for the current company plan."
           requiredTier="pro"
+          featureKey="ar_collections"
           isLocked={!hasARCollectionsAccess}
         />
       </OwnerLayout>

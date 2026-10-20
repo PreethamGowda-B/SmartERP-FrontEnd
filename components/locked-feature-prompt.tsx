@@ -35,7 +35,7 @@ export function LockedFeaturePrompt() {
   const [previousPath, setPreviousPath] = useState<string>("/owner")
   const router = useRouter()
   const pathname = usePathname()
-  const { isPro } = useSubscription()
+  const { plan } = useSubscription()
   const previousPathRef = useRef<string>("/owner")
 
   // Track previous path
@@ -90,12 +90,13 @@ export function LockedFeaturePrompt() {
     }
   }, [isOpen, lockData?.targetPath, router])
 
-  // Automatically close prompt if subscription state updates to Pro
+  // Close a server-triggered lock prompt only after the refreshed plan includes
+  // the denied feature. A higher tier label alone is not an entitlement.
   useEffect(() => {
-    if (isPro && isOpen) {
+    if (isOpen && lockData?.feature && plan.features?.[lockData.feature] === true) {
       setIsOpen(false)
     }
-  }, [isPro, isOpen])
+  }, [isOpen, lockData?.feature, plan.features])
 
   // Requirement 5: Return User to Previous Location on close
   const handleCloseAndReturn = () => {

@@ -231,6 +231,7 @@ export default function EmployeeTrackingPage() {
                     featureTitle="Live Employee GPS Tracking"
                     featureDescription="Real-time employee location tracking is not enabled for the current company plan."
                     requiredTier="basic"
+                    featureKey="location_tracking"
                     isLocked={!hasLocationTracking}
                 />
             </OwnerLayout>

@@ -140,6 +140,7 @@ export function PayrollAuditView() {
           featureTitle="AI Payroll Pre-Run Audit & Flag Engine"
           featureDescription="Payroll validation is not enabled for the current company plan."
           requiredTier="pro"
+          featureKey="payroll"
           isLocked={!hasPayroll}
         />
       </div>

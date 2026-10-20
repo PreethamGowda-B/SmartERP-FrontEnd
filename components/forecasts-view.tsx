@@ -159,6 +159,7 @@ export function ForecastsView() {
         featureTitle="Inventory Demand Forecasting & Reorder AI"
         featureDescription="Inventory forecasting is not enabled for the current company plan."
         requiredTier="pro"
+        featureKey="inventory_forecasts"
         isLocked={!hasForecastAccess}
       />
     )

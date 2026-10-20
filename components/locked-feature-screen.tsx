@@ -5,11 +5,13 @@ import { Lock, Sparkles, Check, ArrowRight, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useSubscription } from "@/contexts/subscription-context"
+import { hasPlanFeature } from "@/lib/subscription-plan-default"
 
 interface LockedFeatureScreenProps {
   featureTitle: string
   featureDescription: string
   requiredTier?: "basic" | "pro"
+  featureKey?: string
   isLocked?: boolean
   benefits?: string[]
 }
@@ -18,14 +20,19 @@ export function LockedFeatureScreen({
   featureTitle,
   featureDescription,
   requiredTier = "pro",
+  featureKey,
   isLocked,
   benefits = [],
 }: LockedFeatureScreenProps) {
   const router = useRouter()
-  const { isPro, isBasic } = useSubscription()
+  const { isPro, isBasic, plan } = useSubscription()
 
   // If user has required tier, render nothing (allows parent component to show feature)
-  const isUnlocked = isLocked === undefined ? (requiredTier === "basic" ? (isBasic || isPro) : isPro) : !isLocked
+  const isUnlocked = isLocked === undefined
+    ? featureKey
+      ? hasPlanFeature(plan, featureKey)
+      : (requiredTier === "basic" ? (isBasic || isPro) : isPro)
+    : !isLocked
   if (isUnlocked) return null
 
   const handleReturn = () => {
