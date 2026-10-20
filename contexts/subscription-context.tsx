@@ -27,6 +27,8 @@ export interface SubscriptionPlan {
   days_remaining: number
   employee_limit: number | null
   max_inventory_items: number | null
+  max_active_jobs?: number | null
+  max_storage_bytes?: number | null
   features: PlanFeatures
 }
 
@@ -47,6 +49,8 @@ const DEFAULT_PLAN: SubscriptionPlan = {
   days_remaining: 0,
   employee_limit: 10,
   max_inventory_items: 50,
+  max_active_jobs: 15,
+  max_storage_bytes: 250 * 1024 * 1024,
   features: {
     payroll: false,
     messages: false,
@@ -101,6 +105,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         days_remaining: 36500,
         employee_limit: null,
         max_inventory_items: null,
+        max_active_jobs: null,
+        max_storage_bytes: null,
         features: {
           payroll: true, messages: true, ai_assistant: true,
           basic_reports: true, export_reports: true, advanced_reports: true,

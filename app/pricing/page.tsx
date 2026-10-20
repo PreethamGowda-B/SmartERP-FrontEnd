@@ -6,7 +6,30 @@ import { Building2, CheckCircle, ArrowRight, UserCheck, Sparkles } from "lucide-
 import { useEffect, useState } from "react"
 import { apiClient } from "@/lib/apiClient"
 
-type PricingPlan = { id: number; plan_key: string; name: string; price_monthly: number; price_yearly: number; employee_limit: number | null }
+type PricingPlan = {
+  id: number; plan_key: string; name: string; price_monthly: number; price_yearly: number
+  employee_limit: number | null; max_active_jobs: number | null; max_inventory_items: number | null
+  max_storage_bytes: number | null; features: Record<string, boolean>
+}
+
+const FEATURE_LABELS: Record<string, string> = {
+  messages: "Messaging",
+  basic_reports: "Basic reports",
+  export_reports: "Report exports",
+  payroll: "Payroll",
+  ai_assistant: "AI assistant",
+  advanced_reports: "Advanced reports and analytics",
+  inventory_images: "Inventory image uploads",
+  location_tracking: "Location tracking",
+  ar_collections: "Accounts receivable collections",
+  inventory_forecasts: "Inventory forecasting",
+}
+
+function formatStorage(bytes: number | null) {
+  if (bytes == null) return "Unlimited file storage"
+  if (bytes >= 1024 ** 3) return `${Math.round(bytes / 1024 ** 3)} GB file storage`
+  return `${Math.round(bytes / 1024 ** 2)} MB file storage`
+}
 
 export default function PricingPage() {
   const [plans, setPlans] = useState<PricingPlan[]>([])
@@ -94,6 +117,12 @@ export default function PricingPage() {
                 </div>
                 <div className="space-y-3 mb-8">
                   <div className="flex items-start gap-2.5 text-xs text-foreground font-medium"><CheckCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" /><span>{plan.employee_limit === null ? "Unlimited employees" : `Up to ${plan.employee_limit} employees`}</span></div>
+                  <div className="flex items-start gap-2.5 text-xs text-foreground font-medium"><CheckCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" /><span>{plan.max_active_jobs === null ? "Unlimited active jobs" : `Up to ${plan.max_active_jobs} active jobs`}</span></div>
+                  <div className="flex items-start gap-2.5 text-xs text-foreground font-medium"><CheckCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" /><span>{plan.max_inventory_items === null ? "Unlimited inventory items" : `Up to ${plan.max_inventory_items} inventory items`}</span></div>
+                  <div className="flex items-start gap-2.5 text-xs text-foreground font-medium"><CheckCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" /><span>{formatStorage(plan.max_storage_bytes)}</span></div>
+                  {Object.entries(FEATURE_LABELS).filter(([key]) => plan.features?.[key] === true).map(([key, label]) => (
+                    <div key={key} className="flex items-start gap-2.5 text-xs text-foreground font-medium"><CheckCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" /><span>{label}</span></div>
+                  ))}
                   <p className="text-xs text-muted-foreground">Module access depends on the active subscription and each user's role.</p>
                 </div>
               </div>

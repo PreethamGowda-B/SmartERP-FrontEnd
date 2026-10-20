@@ -27,6 +27,8 @@ type PlanInfo = {
   days_remaining: number
   employee_limit: number | null
   max_inventory_items: number | null
+  max_active_jobs: number | null
+  max_storage_bytes: number | null
   subscription_status?: string
   features: Record<string, boolean>
 }
@@ -39,9 +41,43 @@ type PlanOption = {
   price_yearly: number
   employee_limit: number | null
   max_inventory_items: number | null
+  max_active_jobs: number | null
+  max_storage_bytes: number | null
+  features: Record<string, boolean>
 }
 
-type UsageInfo = { employees: number, inventory_items: number }
+const BILLING_FEATURE_LABELS: Record<string, string> = {
+  messages: "Messaging",
+  basic_reports: "Basic reports",
+  export_reports: "Report exports",
+  payroll: "Payroll",
+  ai_assistant: "AI assistant",
+  advanced_reports: "Advanced reports and analytics",
+  inventory_images: "Inventory image uploads",
+  location_tracking: "Location tracking",
+  ar_collections: "Accounts receivable collections",
+  inventory_forecasts: "Inventory forecasting",
+}
+
+function formatStorageLimit(bytes: number | null) {
+  if (bytes == null) return "Unlimited file storage"
+  if (bytes >= 1024 ** 3) return `${Math.round(bytes / 1024 ** 3)} GB file storage`
+  return `${Math.round(bytes / 1024 ** 2)} MB file storage`
+}
+
+function formatStorageUsage(bytes: number) {
+  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(2)} GB`
+  return `${(bytes / 1024 ** 2).toFixed(1)} MB`
+}
+
+type UsageInfo = { employees: number, inventory_items: number, storage_bytes: number }
+type SubscriptionPayment = {
+  id: string; purpose: string; plan_id: number; billing_cycle: string
+  amount_paise: number | string; currency: string; status: string
+  provider_status?: string | null; razorpay_order_id: string
+  razorpay_payment_id?: string | null; captured_at?: string | null
+  created_at: string; attempts: Array<{ status: string; created_at: string }>
+}
 
 export function BillingView() {
   const router = useRouter()
@@ -55,6 +91,7 @@ export function BillingView() {
   const [subscriptionStatus, setSubscriptionStatus] = useState("active")
   const [usage, setUsage] = useState<UsageInfo | null>(null)
   const [isAnnual, setIsAnnual] = useState(true)
+  const [paymentHistory, setPaymentHistory] = useState<SubscriptionPayment[]>([])
 
   useEffect(() => {
     async function fetchStatus() {
@@ -66,6 +103,8 @@ export function BillingView() {
         setSubscriptionStatus(res.subscription_status || "active")
         const catalog = await apiClient("/api/subscription/plans")
         setPlans(Array.isArray(catalog) ? catalog : [])
+        const payments = await apiClient("/api/subscription/payments")
+        setPaymentHistory(Array.isArray(payments) ? payments : [])
       } catch (err) {
         logger.error("Failed to fetch billing status", err)
       } finally {
@@ -329,6 +368,14 @@ export function BillingView() {
                   {renderProgress(usage?.inventory_items || 0, plan.max_inventory_items)}
                   <p className="text-[11px] text-muted-foreground">Total distinct items in your inventory catalog.</p>
                 </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-xs font-medium mb-1">
+                    <span className="text-muted-foreground flex items-center gap-2">File storage</span>
+                    <span><span className="font-bold text-foreground">{formatStorageUsage(usage?.storage_bytes || 0)}</span> / {plan.max_storage_bytes === null ? 'Unlimited' : formatStorageLimit(plan.max_storage_bytes).replace(' file storage', '')}</span>
+                  </div>
+                  {plan.max_storage_bytes !== null && renderProgress(usage?.storage_bytes || 0, plan.max_storage_bytes)}
+                  <p className="text-[11px] text-muted-foreground">Accounted file uploads and employee documents.</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -381,7 +428,13 @@ export function BillingView() {
                         
                         <CardContent className="flex-grow space-y-4 pt-2">
                             <ul className="space-y-2.5 text-xs">
+                              <li className="flex items-start gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><span>{p.employee_limit === null ? "Unlimited employees" : `${p.employee_limit} employee seats`}</span></li>
+                              <li className="flex items-start gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><span>{p.max_active_jobs === null ? "Unlimited active jobs" : `${p.max_active_jobs} active jobs`}</span></li>
                               <li className="flex items-start gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><span>{p.max_inventory_items === null ? "Unlimited inventory items" : `${p.max_inventory_items} inventory items`}</span></li>
+                              <li className="flex items-start gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><span>{formatStorageLimit(p.max_storage_bytes)}</span></li>
+                              {Object.entries(BILLING_FEATURE_LABELS).filter(([key]) => p.features?.[key] === true).map(([key, label]) => (
+                                <li key={key} className="flex items-start gap-2.5"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><span>{label}</span></li>
+                              ))}
                               <li className="text-muted-foreground">Available modules are governed by the active company subscription and role permissions.</li>
                             </ul>
                         </CardContent>
@@ -417,6 +470,30 @@ export function BillingView() {
              })}
            </div>
         </div>
+
+        <section className="mt-10 rounded-xl border bg-card p-5 sm:p-6">
+          <h3 className="text-lg font-semibold">Subscription payment history</h3>
+          <p className="mt-1 text-xs text-muted-foreground">Provider-confirmed subscription orders and recorded payment attempts.</p>
+          {paymentHistory.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">No subscription payments recorded yet.</p>
+          ) : (
+            <ul className="mt-4 divide-y">
+              {paymentHistory.map((payment) => (
+                <li key={payment.id} className="grid gap-2 py-3 text-xs sm:grid-cols-[1fr_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <p className="font-medium">{payment.purpose === "trial_activation" ? "30-day Enterprise trial" : `${plans.find((p) => p.id === payment.plan_id)?.name || `Plan ${payment.plan_id}`} · ${payment.billing_cycle}`}</p>
+                    <p className="mt-1 break-all text-muted-foreground">Order {payment.razorpay_order_id}{payment.razorpay_payment_id ? ` · Payment ${payment.razorpay_payment_id}` : ""}</p>
+                    <p className="mt-1 text-muted-foreground">{new Date(payment.captured_at || payment.created_at).toLocaleString()} · {payment.attempts?.length || 0} attempt(s)</p>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 sm:justify-end">
+                    <span className="font-semibold">{formatPrice(Number(payment.amount_paise) / 100)}</span>
+                    <Badge variant={payment.status === "captured" ? "default" : "secondary"}>{payment.status}</Badge>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         {/* Job Invoices Section */}
         <JobInvoicesSection />
