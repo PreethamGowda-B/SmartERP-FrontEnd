@@ -1,164 +1,136 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react"
 import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
-import { triggerFeatureLock } from "@/components/locked-feature-prompt"
-import { Phone, Mail, MessageCircle, ArrowRight, ShieldCheck, Zap } from "lucide-react"
+import { getAvailableSupportChannels, formatSupportResponseTarget } from "@/lib/support-policy"
+import { ArrowRight, Mail, MessageCircle, ShieldCheck, TicketCheck } from "lucide-react"
+
+type SupportTicket = {
+  id: number
+  subject: string
+  status: string
+  support_channel: "email" | "whatsapp"
+  support_first_response_due_at: string
+  support_first_responded_at: string | null
+  created_at: string
+}
+
+const SUPPORT_EMAIL = "prozyncinnovations@gmail.com"
+const SUPPORT_WHATSAPP = "918310982308"
 
 export function SupportView() {
+  const [policy, setPolicy] = useState<{ channels: Array<"email" | "whatsapp">; firstResponseBusinessHours: number } | null>(null)
+  const [planName, setPlanName] = useState("your plan")
+  const [tickets, setTickets] = useState<SupportTicket[]>([])
+  const [channel, setChannel] = useState<"email" | "whatsapp">("email")
+  const [subject, setSubject] = useState("")
+  const [message, setMessage] = useState("")
   const [loading, setLoading] = useState(true)
-  const [hasAccess, setHasAccess] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState<{ ticket: SupportTicket; responseTarget: string } | null>(null)
 
-  useEffect(() => {
-    async function checkAccess() {
-      try {
-        const res = await apiClient("/api/subscription/status")
-        if (res.plan?.features?.priority_support === true) {
-          setHasAccess(true)
-        } else {
-          triggerFeatureLock({
-            feature: "Priority Support",
-            current_plan: res.plan?.name || "Starter",
-            message: "Priority support is not enabled for the current company plan. The company owner can review available plans."
-          })
-          setHasAccess(false)
-        }
-      } catch (err) {
-        logger.error("Failed to load subscription status", err)
-      } finally {
-        setLoading(false)
+  const availableChannels: Array<"email" | "whatsapp"> = useMemo(() => getAvailableSupportChannels(policy), [policy])
+  const responseTarget = formatSupportResponseTarget(policy)
+
+  const loadSupport = useCallback(async () => {
+    try {
+      const [policyResponse, ticketResponse] = await Promise.all([
+        apiClient("/api/support/policy"),
+        apiClient("/api/support/tickets"),
+      ])
+      setPolicy(policyResponse.policy)
+      setPlanName(policyResponse.plan_name || "your plan")
+      setTickets(Array.isArray(ticketResponse) ? ticketResponse : [])
+      if (!policyResponse.policy?.channels?.includes(channel)) {
+        setChannel(policyResponse.policy?.channels?.[0] || "email")
       }
+    } catch (err) {
+      logger.error("Failed to load support policy", err)
+      setError("Support details are temporarily unavailable. Refresh the page and try again.")
+    } finally {
+      setLoading(false)
     }
-    checkAccess()
-  }, [])
+  }, [channel])
+
+  useEffect(() => { void loadSupport() }, [loadSupport])
+
+  async function submitRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSubmitting(true)
+    setError("")
+    setSuccess(null)
+    try {
+      const result = await apiClient("/api/support/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject, message, channel }),
+      })
+      setSuccess({ ticket: result.ticket, responseTarget: result.response_target })
+      setSubject("")
+      setMessage("")
+      await loadSupport()
+    } catch (err: any) {
+      setError(err?.message || "Could not submit your request. Please retry.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   if (loading) {
-    return (
-      <div className="flex h-[40vh] items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
+    return <div className="flex h-[40vh] items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
   }
 
-  if (!hasAccess) {
-    return (
-      <div className="flex flex-col h-[50vh] items-center justify-center text-center px-4">
-        <ShieldCheck className="w-16 h-16 text-muted-foreground/30 mb-4" />
-        <h3 className="text-xl font-semibold mb-2">Feature Locked</h3>
-        <p className="text-muted-foreground text-xs max-w-sm mb-6">
-          Priority support is not enabled for the current company plan.
-        </p>
-      </div>
-    )
-  }
-
-  const supportCards = [
-    {
-      id: "call",
-      title: "Book a Call",
-      description: "Speak directly with our support team and get help with your SmartERP setup or issues.",
-      icon: Phone,
-      actionLabel: "Book a Call",
-      href: "tel:9535134351",
-      color: "from-blue-500/10 to-transparent",
-      iconColor: "text-blue-600 dark:text-blue-400",
-      buttonColor: "bg-blue-600 hover:bg-blue-700 text-white"
-    },
-    {
-      id: "email",
-      title: "Email Support",
-      description: "Send us a message and our team will respond as soon as possible.",
-      icon: Mail,
-      actionLabel: "Mail Us",
-      href: "mailto:prozyncinnovations@gmail.com?subject=SmartERP%20Support%20Request",
-      color: "from-indigo-500/10 to-transparent",
-      iconColor: "text-indigo-600 dark:text-indigo-400",
-      buttonColor: "bg-indigo-600 hover:bg-indigo-700 text-white"
-    },
-    {
-      id: "whatsapp",
-      title: "WhatsApp Support",
-      description: "Chat with our support team instantly on WhatsApp for faster assistance.",
-      icon: MessageCircle,
-      actionLabel: "Open WhatsApp",
-      href: "https://wa.me/918310982308?text=Hello%20I%20need%20support%20for%20SmartERP",
-      color: "from-emerald-500/10 to-transparent",
-      iconColor: "text-emerald-600 dark:text-emerald-400",
-      buttonColor: "bg-emerald-600 hover:bg-emerald-700 text-white"
-    }
-  ]
+  const whatsappLink = success?.ticket
+    ? `https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent(`SmartERP support ticket #${success.ticket.id}: ${success.ticket.subject}`)}`
+    : null
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-700 pb-8">
-      {/* Header Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-50 via-white to-indigo-50/50 p-6 md:p-10 border border-border shadow-xs text-slate-900">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-linear-to-br from-indigo-200/20 to-purple-200/0 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-linear-to-tr from-blue-200/20 to-emerald-200/0 blur-3xl pointer-events-none" />
-        
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-semibold mb-3 text-indigo-700">
-            <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-            Priority Support
+      <section className="rounded-3xl border bg-linear-to-br from-slate-50 via-white to-indigo-50/50 p-6 md:p-10 text-slate-900">
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="mt-1 h-6 w-6 text-indigo-600" />
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">{planName} support</p>
+            <h2 className="mt-1 text-2xl md:text-3xl font-extrabold">How can we help?</h2>
+            <p className="mt-2 text-sm text-slate-600">First human response {responseTarget}, Monday–Friday, 9:00 AM–6:00 PM IST. This is a response target, not a resolution-time guarantee.</p>
           </div>
-          
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight mb-2 text-slate-900">
-            SmartERP Dedicated Support
-          </h2>
-          
-          <p className="text-xs md:text-sm text-slate-600 leading-relaxed max-w-2xl">
-            Your subscription's priority support access is active. Choose a contact method below.
-          </p>
         </div>
-      </div>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {availableChannels.map((item: "email" | "whatsapp") => item === "email"
+            ? <a key={item} href={`mailto:${SUPPORT_EMAIL}?subject=SmartERP%20Support%20Request`} className="rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-medium text-indigo-800 underline">Email · {SUPPORT_EMAIL}</a>
+            : <span key={item} className="rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-medium text-indigo-800">WhatsApp</span>)}
+        </div>
+      </section>
 
-      {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-        {supportCards.map((card) => (
-          <div 
-            key={card.id}
-            className="group relative flex flex-col bg-card hover:bg-accent/50 border border-border rounded-3xl p-6 shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1"
-          >
-            <div className={`absolute inset-0 bg-linear-to-b ${card.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
-            
-            <div className="relative z-10 flex-1 flex flex-col">
-              <div className="mb-5 inline-flex p-3 rounded-xl bg-accent border border-border/50 group-hover:scale-110 transition-transform duration-300 shadow-xs self-start">
-                <card.icon className={`w-6 h-6 ${card.iconColor}`} />
-              </div>
-              
-              <h3 className="text-xl font-bold mb-2 tracking-tight">
-                {card.title}
-              </h3>
-              
-              <p className="text-muted-foreground text-xs leading-relaxed mb-6 flex-1">
-                {card.description}
-              </p>
-              
-              <a 
-                href={card.href}
-                target={card.id === "whatsapp" ? "_blank" : "_top"}
-                rel="noopener noreferrer"
-                onClick={(e) => {
-                  if (card.id === "email") {
-                    e.preventDefault()
-                    window.location.href = card.href
-                  }
-                }}
-                className={`inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-medium transition-all duration-300 shadow-xs group-hover:shadow-md ${card.buttonColor}`}
-              >
-                {card.actionLabel}
-                <ArrowRight className="ml-2 w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </a>
-            </div>
+      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {success && (
+        <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <p className="font-semibold">Request #{success.ticket.id} submitted. Target: {success.responseTarget}.</p>
+          {success.ticket.support_channel === "whatsapp" && whatsappLink && <a className="mt-2 inline-flex items-center gap-2 font-semibold underline" href={whatsappLink} target="_blank" rel="noopener noreferrer">Continue in WhatsApp <ArrowRight className="h-4 w-4" /></a>}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <form onSubmit={submitRequest} className="space-y-4 rounded-3xl border bg-card p-6 shadow-xs">
+          <h3 className="text-lg font-bold">Create a support request</h3>
+          <p className="text-sm text-muted-foreground">Submitting here records the request and starts the response-time target.</p>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Choose support channel">
+            {availableChannels.map((item: "email" | "whatsapp") => {
+              const Icon = item === "email" ? Mail : MessageCircle
+              return <button key={item} type="button" onClick={() => setChannel(item)} aria-pressed={channel === item} className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${channel === item ? "border-primary bg-primary/10 font-semibold" : "border-border"}`}><Icon className="h-4 w-4" />{item === "email" ? "Email" : "WhatsApp"}</button>
+            })}
           </div>
-        ))}
-      </div>
+          <label className="block text-sm font-medium">Subject<input required maxLength={255} value={subject} onChange={(event) => setSubject(event.target.value)} className="mt-1 w-full rounded-xl border bg-background px-3 py-2" /></label>
+          <label className="block text-sm font-medium">How can we help?<textarea required maxLength={5000} rows={5} value={message} onChange={(event) => setMessage(event.target.value)} className="mt-1 w-full resize-y rounded-xl border bg-background px-3 py-2" /></label>
+          <button type="submit" disabled={submitting || !policy} className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60">{submitting ? "Submitting…" : "Submit request"}<ArrowRight className="h-4 w-4" /></button>
+        </form>
 
-      {/* Footer / Extra info */}
-      <div className="flex justify-center pt-4">
-        <p className="text-xs text-muted-foreground text-center">
-          Our support hours are Monday to Friday, 9:00 AM – 6:00 PM (IST).
-        </p>
+        <section className="rounded-3xl border bg-card p-6 shadow-xs">
+          <h3 className="flex items-center gap-2 text-lg font-bold"><TicketCheck className="h-5 w-5 text-primary" />Recent requests</h3>
+          {tickets.length === 0 ? <p className="mt-4 text-sm text-muted-foreground">No support requests yet.</p> : <ul className="mt-4 space-y-3">{tickets.map((ticket) => <li key={ticket.id} className="rounded-xl border p-3"><div className="flex items-start justify-between gap-2"><p className="font-semibold">#{ticket.id} · {ticket.subject}</p><span className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">{ticket.status}</span></div><p className="mt-1 text-xs text-muted-foreground">{ticket.support_channel} · {ticket.support_first_responded_at ? `First response ${new Date(ticket.support_first_responded_at).toLocaleString()}` : `Target ${new Date(ticket.support_first_response_due_at).toLocaleString()}`}</p></li>)}</ul>}
+        </section>
       </div>
     </div>
   )

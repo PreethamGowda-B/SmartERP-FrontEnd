@@ -22,6 +22,11 @@ export interface PlanFeatures {
   [key: string]: boolean | undefined
 }
 
+export interface SupportPolicy {
+  channels: ReadonlyArray<"email" | "whatsapp">
+  firstResponseBusinessHours: number
+}
+
 export interface SubscriptionPlan {
   id: number
   plan_key?: string
@@ -33,6 +38,7 @@ export interface SubscriptionPlan {
   max_active_jobs?: number | null
   max_storage_bytes?: number | null
   features: PlanFeatures
+  support_policy: SupportPolicy
 }
 
 interface SubscriptionContextType {
@@ -46,7 +52,7 @@ interface SubscriptionContextType {
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType>({
-  plan: DEFAULT_PLAN,
+  plan: DEFAULT_PLAN as SubscriptionPlan,
   planTier: "starter",
   isPro: false,
   isBasic: false,
@@ -59,19 +65,19 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const { user } = useAuth()
   const pathname = usePathname()
   const isPublic = isPublicRoute(pathname)
-  const [plan, setPlan] = useState<SubscriptionPlan>(DEFAULT_PLAN)
+  const [plan, setPlan] = useState<SubscriptionPlan>(DEFAULT_PLAN as SubscriptionPlan)
   const [loading, setLoading] = useState(true)
 
   const fetchSubscriptionStatus = useCallback(async () => {
     // Never query company subscription on public landing/marketing/auth routes
     if (isPublic) {
-      setPlan(DEFAULT_PLAN)
+      setPlan(DEFAULT_PLAN as SubscriptionPlan)
       setLoading(false)
       return
     }
 
     if (!user) {
-      setPlan(DEFAULT_PLAN)
+      setPlan(DEFAULT_PLAN as SubscriptionPlan)
       setLoading(false)
       return
     }
@@ -93,7 +99,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           basic_reports: true, export_reports: true, advanced_reports: true,
           inventory_images: true, priority_support: true, location_tracking: true,
           ar_collections: true, inventory_forecasts: true
-        }
+        },
+        support_policy: { channels: ["email", "whatsapp"], firstResponseBusinessHours: 4 },
       })
       setLoading(false)
       return

@@ -134,7 +134,6 @@ export function HRSidebar() {
           {navigation.filter((item) => {
             if (item.name === "Messages" && !features.messages) return false
             if (item.name === "Payroll" && !features.payroll) return false
-            if (item.name === "Contact Support" && !features.priority_support) return false
             return true
           }).map((item) => {
             const isActive = isRouteActive(pathname, item.href, hrNavHrefs)

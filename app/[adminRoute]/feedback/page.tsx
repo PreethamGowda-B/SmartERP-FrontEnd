@@ -34,7 +34,7 @@ interface FeedbackItem {
   user_id?: string
   user_name?: string
   user_email?: string
-  company_id?: number
+  company_id?: number | string
   company_name?: string
   type: string // bug, feature, general, support
   subject: string
@@ -42,6 +42,11 @@ interface FeedbackItem {
   status: string // new, open, pending, replied, resolved, closed
   admin_reply?: string
   replied_at?: string
+  support_channel?: "email" | "whatsapp"
+  support_plan_id?: number
+  support_first_response_business_hours?: number
+  support_first_response_due_at?: string
+  support_first_responded_at?: string | null
   created_at: string
   page_url?: string
   severity?: string
@@ -98,7 +103,7 @@ export default function AdminFeedback() {
     try {
       await apiClient(`/api/v1/feedback/${selectedItem.id}/reply`, {
         method: "PATCH",
-        body: JSON.stringify({ reply: replyText, status: "replied" })
+        body: JSON.stringify({ replyMessage: replyText })
       }).catch(async () => {
         // Fallback for general status update
         await apiClient(`/api/v1/feedback/${selectedItem.id}/status`, {
@@ -109,7 +114,7 @@ export default function AdminFeedback() {
 
       setFeedback(prev => prev.map(item => 
         item.id === selectedItem.id 
-          ? { ...item, status: "replied", admin_reply: replyText, replied_at: new Date().toISOString() } 
+          ? { ...item, status: "replied", admin_reply: replyText, replied_at: new Date().toISOString(), support_first_responded_at: item.type === "support" ? (item.support_first_responded_at || new Date().toISOString()) : item.support_first_responded_at }
           : item
       ))
       if (selectedItem) {
@@ -117,10 +122,11 @@ export default function AdminFeedback() {
           ...selectedItem,
           status: "replied",
           admin_reply: replyText,
-          replied_at: new Date().toISOString()
+          replied_at: new Date().toISOString(),
+          support_first_responded_at: selectedItem.type === "support" ? (selectedItem.support_first_responded_at || new Date().toISOString()) : selectedItem.support_first_responded_at,
         })
       }
-      toast.success("Reply recorded and ticket marked replied")
+      toast.success(selectedItem.support_channel === "whatsapp" ? "WhatsApp response recorded" : "Reply emailed and ticket marked replied")
       setReplyText("")
     } catch (err: any) {
       toast.error(err?.message || "Failed to record reply")
@@ -376,6 +382,18 @@ export default function AdminFeedback() {
                     )}
                   </div>
 
+                  {selectedItem.type === "support" && (
+                    <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-100 space-y-1">
+                      <span className="text-indigo-600 font-semibold uppercase text-[10px] block">Support response target</span>
+                      <p className="text-sm font-semibold text-indigo-950">{selectedItem.support_channel || "email"} · {selectedItem.support_first_response_business_hours} business hours</p>
+                      {selectedItem.support_first_responded_at ? (
+                        <p className="text-xs text-emerald-700">First response recorded {safeDistance(selectedItem.support_first_responded_at)}</p>
+                      ) : selectedItem.support_first_response_due_at ? (
+                        <p className={`text-xs ${new Date(selectedItem.support_first_response_due_at).getTime() < Date.now() ? "text-red-700 font-semibold" : "text-indigo-800"}`}>Due {new Date(selectedItem.support_first_response_due_at).toLocaleString()}</p>
+                      ) : <p className="text-xs text-amber-700">No response deadline recorded.</p>}
+                    </div>
+                  )}
+
                   {/* Message Box */}
                   <div className="space-y-1.5">
                     <span className="font-bold text-slate-700 uppercase text-[10px]">User Inquiry / Feedback</span>
@@ -419,7 +437,7 @@ export default function AdminFeedback() {
                         className="h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-1.5"
                       >
                         <Send className="h-3.5 w-3.5" />
-                        {replying ? "Recording..." : "Record & Send Reply"}
+                        {replying ? "Recording..." : selectedItem.support_channel === "whatsapp" ? "Record WhatsApp Response" : "Send Email Reply"}
                       </Button>
                     </div>
                   </div>

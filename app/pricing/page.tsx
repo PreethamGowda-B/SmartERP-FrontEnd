@@ -10,6 +10,7 @@ type PricingPlan = {
   id: number; plan_key: string; name: string; price_monthly: number; price_yearly: number
   employee_limit: number | null; max_active_jobs: number | null; max_inventory_items: number | null
   max_storage_bytes: number | null; features: Record<string, boolean>
+  support_policy?: { channels?: string[]; firstResponseBusinessHours?: number }
 }
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -29,6 +30,15 @@ function formatStorage(bytes: number | null) {
   if (bytes == null) return "Unlimited file storage"
   if (bytes >= 1024 ** 3) return `${Math.round(bytes / 1024 ** 3)} GB file storage`
   return `${Math.round(bytes / 1024 ** 2)} MB file storage`
+}
+
+function formatSupportTarget(hours?: number) {
+  if (!hours || hours <= 0) return ""
+  if (hours % 9 === 0) {
+    const days = hours / 9
+    return `first response within ${days} business day${days === 1 ? "" : "s"}`
+  }
+  return `first response within ${hours} business hours`
 }
 
 export default function PricingPage() {
@@ -123,6 +133,10 @@ export default function PricingPage() {
                   {Object.entries(FEATURE_LABELS).filter(([key]) => plan.features?.[key] === true).map(([key, label]) => (
                     <div key={key} className="flex items-start gap-2.5 text-xs text-foreground font-medium"><CheckCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" /><span>{label}</span></div>
                   ))}
+                  {(plan.support_policy?.channels || ["email"]).map((channel) => (
+                    <div key={`support-${channel}`} className="flex items-start gap-2.5 text-xs text-foreground font-medium"><CheckCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" /><span>{channel === "whatsapp" ? "WhatsApp support" : "Email support"}</span></div>
+                  ))}
+                  <div className="flex items-start gap-2.5 text-xs text-foreground font-medium"><CheckCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" /><span>{formatSupportTarget(plan.support_policy?.firstResponseBusinessHours ?? 18)}</span></div>
                   <p className="text-xs text-muted-foreground">Module access depends on the active subscription and each user's role.</p>
                 </div>
               </div>
