@@ -1,6 +1,7 @@
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 // Using native global fetch
 
-export async function getUserFromServer(cookieHeader: string | undefined, apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') {
+export async function getUserFromServer(cookieHeader: string | undefined, apiBase = getApiOrigin()) {
   if (!cookieHeader) return null;
   try {
     const res = await fetch(`${apiBase}/api/users/me`, {

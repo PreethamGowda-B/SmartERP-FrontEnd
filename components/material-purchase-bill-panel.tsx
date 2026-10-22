@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useCallback, useEffect, useState } from "react"
 import { apiClient } from "@/lib/apiClient"
@@ -83,7 +84,7 @@ export function MaterialPurchaseBillPanel({ requestId, requestStatus }: { reques
   const openInvoice = async (bill: Bill) => {
     setError("")
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+      const apiBase = getApiOrigin()
       const { getAuthToken } = await import("@/lib/apiClient")
       const response = await fetch(`${apiBase}${bill.file_url}`, { headers: { Authorization: `Bearer ${getAuthToken(bill.file_url) || ""}` }, credentials: "include" })
       if (!response.ok) throw new Error("Invoice preview is not available for this account.")

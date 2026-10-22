@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useState, useRef, useEffect } from "react"
 import type React from "react"
@@ -49,7 +50,7 @@ export default function InventoryForm({
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const api = process.env.NEXT_PUBLIC_API_URL || ""
+  const api = getApiOrigin()
 
   const categories = ['Raw Materials', 'Finished Goods', 'Tools', 'Supplies', 'Uncategorized']
   const units = ['bags', 'kg', 'pieces', 'liters', 'boxes', 'meters', 'units']

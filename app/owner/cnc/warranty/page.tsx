@@ -11,14 +11,17 @@ import { ShieldCheck, Plus, CheckCircle2, Package, RefreshCw } from "lucide-reac
 export default function WarrantyClaimsPage() {
   const [claims, setClaims] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState("")
 
   const fetchClaims = useCallback(async () => {
     try {
       setLoading(true)
+      setLoadError("")
       const res = await apiClient<{ success: boolean; claims: any[] }>("/api/warranty-claims")
-      if (res?.claims) setClaims(res.claims)
+      if (!res?.success || !Array.isArray(res.claims)) throw new Error("The server returned an invalid warranty-claims response.")
+      setClaims(res.claims)
     } catch (err: any) {
-      toast.error(err.message || "Failed to load warranty claims")
+      setLoadError(err.message || "Failed to load warranty claims.")
     } finally {
       setLoading(false)
     }
@@ -34,7 +37,7 @@ export default function WarrantyClaimsPage() {
         method: "POST",
         body: JSON.stringify({ status: "approved", credit_amount: 8500 }),
       })
-      toast.success("Warranty claim approved & Credit Note issued!")
+      toast.success("Warranty claim approved; supplier credit amount recorded.")
       fetchClaims()
     } catch (err: any) {
       toast.error(err.message || "Failed to resolve claim")
@@ -49,13 +52,26 @@ export default function WarrantyClaimsPage() {
             <RefreshCw className="h-8 w-8 text-blue-500" /> Supplier Warranty Lifecycle Management
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Track spare part failures, supplier claim approvals, inventory updates, and financial credit notes
+            Track spare part failures, supplier claim approvals, and recorded supplier credit amounts. No finance credit note was issued.
           </p>
         </div>
       </div>
 
+      {loadError && (
+        <div role="alert" className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-destructive">{loadError}</p>
+          <Button type="button" variant="outline" onClick={fetchClaims} disabled={loading}>
+            {loading ? "Retrying..." : "Retry"}
+          </Button>
+        </div>
+      )}
+
       <div className="space-y-4">
-        {claims.length === 0 ? (
+        {loading ? (
+          <p role="status" className="text-sm text-muted-foreground">Loading warranty claims...</p>
+        ) : loadError ? (
+          <p className="text-sm text-muted-foreground">Warranty claims could not be loaded.</p>
+        ) : claims.length === 0 ? (
           <Card className="p-12 text-center text-slate-400">No active warranty claims logged.</Card>
         ) : (
           claims.map((c) => (
@@ -72,7 +88,7 @@ export default function WarrantyClaimsPage() {
                 </Badge>
                 {c.status !== "approved" && (
                   <Button onClick={() => handleResolveClaim(c.id)} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1">
-                    <CheckCircle2 className="h-4 w-4" /> Issue Credit Note
+                    <CheckCircle2 className="h-4 w-4" /> Approve claim (₹8,500 supplier credit)
                   </Button>
                 )}
               </div>

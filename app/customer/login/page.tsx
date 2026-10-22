@@ -1,4 +1,5 @@
 'use client';
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -8,7 +9,7 @@ import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 import { CustomerAuthShell } from '@/components/customer/auth/CustomerAuthShell';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
+const API_URL = getApiOrigin();
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   EMAIL_ALREADY_USED: 'This email is already used in the employee portal. Please use a different email.',

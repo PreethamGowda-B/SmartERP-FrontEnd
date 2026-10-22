@@ -1,4 +1,5 @@
 'use client';
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -82,7 +83,7 @@ export default function CustomerInvoiceDetailPage() {
         performedByName: invoice.customer_name || 'Customer',
       }).catch(() => {});
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
+      const baseUrl = getApiOrigin();
       window.open(`${baseUrl}/api/invoices/${invoice.id}/pdf`, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
       toast({

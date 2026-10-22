@@ -28,6 +28,7 @@ import { OnboardingTourModal } from "@/components/onboarding-tour-modal"
 import { ServerPrewarmer } from "@/components/server-prewarmer"
 import { DomRangeErrorSuppressor } from "@/components/dom-range-error-suppressor"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
+import { getApiOrigin } from "@/lib/api-environment.mjs"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -83,20 +84,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const apiOrigin = getApiOrigin()
+  const shouldPrewarmBackend = process.env.NEXT_PUBLIC_APP_ENV === "production"
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://api.prozync.in" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://api.prozync.in" />
-        {/* Early Backend Prewarmer — wakes sleeping Render backend during initial HTML stream */}
-        <script
+        <link rel="preconnect" href={apiOrigin} crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href={apiOrigin} />
+        {/* Only production gets a background wake-up request; local and staging stay isolated. */}
+        {shouldPrewarmBackend && <script
           id="early-backend-prewarm"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
                   if (window.fetch) {
-                    window.fetch('https://api.prozync.in/health', {
+                    window.fetch(${JSON.stringify(`${apiOrigin}/health`)}, {
                       method: 'GET',
                       mode: 'no-cors',
                       cache: 'no-store'
@@ -106,7 +110,7 @@ export default function RootLayout({
               })();
             `,
           }}
-        />
+        />}
         {/* Recovery script for ChunkLoadError (helps during deployments) */}
         <script
           id="chunk-error-recovery"

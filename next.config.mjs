@@ -1,4 +1,13 @@
 import { withSentryConfig } from "@sentry/nextjs";
+import { resolveApiOrigin } from "./lib/api-environment.mjs";
+
+// Require an explicit environment and API origin before compiling any frontend
+// bundle. This prevents missing local/staging configuration from selecting a
+// production fallback embedded in a client module.
+resolveApiOrigin({
+  appEnvironment: process.env.NEXT_PUBLIC_APP_ENV,
+  apiUrl: process.env.NEXT_PUBLIC_API_URL,
+});
 
 const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },

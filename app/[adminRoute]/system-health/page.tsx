@@ -27,15 +27,15 @@ import { toast } from "sonner"
 
 interface SystemHealthData {
   status: string
-  db_latency_ms: number
-  api_avg_response_ms: number
-  active_users: number
-  active_companies: number
-  active_sse_connections: number
-  notification_delivery_rate: number
-  ai_request_success_rate: number
-  total_jobs_processed: number
-  total_audit_events: number
+  db_latency_ms: number | null
+  api_avg_response_ms: number | null
+  active_users: number | null
+  active_companies: number | null
+  active_sse_connections: number | null
+  notification_delivery_rate: number | null
+  ai_request_success_rate: number | null
+  total_jobs_processed: number | null
+  total_audit_events: number | null
   process: {
     uptime_seconds: number
     heap_used_mb: number
@@ -61,6 +61,10 @@ function formatUptime(seconds: number): string {
   return `${m}m`
 }
 
+function formatMetric(value: number | null | undefined, unit = ''): string {
+  return value == null ? 'Unavailable' : `${value}${unit}`
+}
+
 export default function SystemHealthPage() {
   const [data, setData] = useState<SystemHealthData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -76,6 +80,7 @@ export default function SystemHealthPage() {
         setLastRefreshed(new Date())
       }
     } catch (err: any) {
+      setData(null)
       toast.error(err?.message || "Failed to load System Health telemetry")
     } finally {
       setLoading(false)
@@ -89,7 +94,8 @@ export default function SystemHealthPage() {
     return () => clearInterval(interval)
   }, [fetchHealth])
 
-  const isHealthy = (data?.db_latency_ms || 0) < 50 && (data?.api_avg_response_ms || 0) < 150
+  const healthStatus = data?.status || 'unavailable'
+  const isHealthy = healthStatus === 'healthy'
 
   return (
     <AdminLayout>
@@ -101,9 +107,11 @@ export default function SystemHealthPage() {
               <Badge className={
                 isHealthy
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[10px]"
-                  : "bg-amber-50 text-amber-700 border-amber-200 font-bold text-[10px]"
+                  : healthStatus === 'degraded'
+                    ? "bg-amber-50 text-amber-700 border-amber-200 font-bold text-[10px]"
+                    : "bg-rose-50 text-rose-700 border-rose-200 font-bold text-[10px]"
               }>
-                {isHealthy ? "ALL SYSTEMS OPERATIONAL" : "ELEVATED LATENCY"}
+                {healthStatus === 'healthy' ? "MEASURED CHECKS HEALTHY" : healthStatus === 'degraded' ? "PARTIAL METRICS UNAVAILABLE" : "HEALTH CHECK UNAVAILABLE"}
               </Badge>
               <span className="text-[11px] font-mono text-slate-400">
                 Updated: {lastRefreshed.toLocaleTimeString()}
@@ -141,7 +149,7 @@ export default function SystemHealthPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
-                {loading ? "..." : `${data?.db_latency_ms ?? 0} ms`}
+                {loading ? "..." : formatMetric(data?.db_latency_ms, ' ms')}
               </span>
               <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold">
                 Direct Ping
@@ -160,7 +168,7 @@ export default function SystemHealthPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
-                {loading ? "..." : `${data?.api_avg_response_ms ?? 0} ms`}
+                {loading ? "..." : formatMetric(data?.api_avg_response_ms, ' ms')}
               </span>
               <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] font-bold">
                 HTTP / HTTPS
@@ -179,10 +187,10 @@ export default function SystemHealthPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
-                {loading ? "..." : `${data?.process?.heap_used_mb ?? 0} MB`}
+                {loading ? "..." : formatMetric(data?.process?.heap_used_mb, ' MB')}
               </span>
               <span className="text-xs text-slate-400 font-mono">
-                / {data?.process?.heap_total_mb ?? 0} MB
+                / {formatMetric(data?.process?.heap_total_mb, ' MB')}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">Active garbage-collected V8 memory</p>
@@ -198,7 +206,7 @@ export default function SystemHealthPage() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
-                {loading ? "..." : formatUptime(data?.process?.uptime_seconds || 0)}
+                {loading ? "..." : data?.process ? formatUptime(data.process.uptime_seconds) : 'Unavailable'}
               </span>
               <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] font-bold">
                 Live
@@ -224,28 +232,28 @@ export default function SystemHealthPage() {
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
                 <span className="font-semibold text-slate-600">Operating System Platform:</span>
                 <span className="font-mono font-bold text-slate-900 capitalize">
-                  {data?.system?.os_platform || "Linux"} ({data?.system?.os_type || "POSIX"})
+                  {data?.system ? `${data.system.os_platform} (${data.system.os_type})` : 'Unavailable'}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
                 <span className="font-semibold text-slate-600">CPU Thread Allocation:</span>
                 <span className="font-mono font-bold text-slate-900">
-                  {data?.system?.cpus || 4} Available Virtual Cores
+                  {formatMetric(data?.system?.cpus)} Available Cores
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
                 <span className="font-semibold text-slate-600">Free Host RAM:</span>
                 <span className="font-mono font-bold text-emerald-700">
-                  {data?.system?.free_memory_mb || 0} MB / {data?.system?.total_memory_mb || 0} MB
+                  {data?.system ? `${data.system.free_memory_mb} MB / ${data.system.total_memory_mb} MB` : 'Unavailable'}
                 </span>
               </div>
 
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
                 <span className="font-semibold text-slate-600">Process Resident Set Size (RSS):</span>
                 <span className="font-mono font-bold text-slate-900">
-                  {data?.process?.rss_mb || 0} MB
+                  {formatMetric(data?.process?.rss_mb, ' MB')}
                 </span>
               </div>
             </div>
@@ -265,28 +273,28 @@ export default function SystemHealthPage() {
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
                 <span className="font-semibold text-slate-600">Active SSE Stream Clients:</span>
                 <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 font-mono text-[10px] font-bold">
-                  {data?.active_sse_connections || 0} Live Listeners
+                  {formatMetric(data?.active_sse_connections, ' Live Listeners')}
                 </Badge>
               </div>
 
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
                 <span className="font-semibold text-slate-600">Notification Delivery Rate:</span>
                 <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-mono text-[10px] font-bold">
-                  {data?.notification_delivery_rate || 99.8}%
+                  {formatMetric(data?.notification_delivery_rate, '%')}
                 </Badge>
               </div>
 
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
                 <span className="font-semibold text-slate-600">AI Gemini Pipeline Success Rate:</span>
                 <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-mono text-[10px] font-bold">
-                  {data?.ai_request_success_rate || 99.4}%
+                  {formatMetric(data?.ai_request_success_rate, '%')}
                 </Badge>
               </div>
 
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 text-xs">
                 <span className="font-semibold text-slate-600">Total Recorded Audit Events:</span>
                 <span className="font-mono font-bold text-slate-900">
-                  {(data?.total_audit_events || 0).toLocaleString()}
+                  {data?.total_audit_events == null ? 'Unavailable' : data.total_audit_events.toLocaleString()}
                 </span>
               </div>
             </div>

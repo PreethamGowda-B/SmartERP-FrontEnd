@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +14,7 @@ import { EmployeeLayout } from "@/components/employee-layout"
 
 import { getAccessToken } from "@/lib/apiClient"
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+const API = getApiOrigin()
 
 function authHeaders(): Record<string, string> {
     const token = getAccessToken()

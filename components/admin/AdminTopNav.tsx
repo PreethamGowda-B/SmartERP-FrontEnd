@@ -34,6 +34,8 @@ export function AdminTopNav({
   const pathname = usePathname()
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [latencyMs, setLatencyMs] = useState<number | null>(null)
+  const [healthStatus, setHealthStatus] = useState<'checking' | 'healthy' | 'unavailable'>('checking')
+  const environment = (process.env.NEXT_PUBLIC_APP_ENV || '').trim().toUpperCase() || 'UNCONFIGURED'
 
   // Map route segment to human-readable breadcrumb title
   const pathParts = pathname.split('/').filter(Boolean)
@@ -61,10 +63,15 @@ export function AdminTopNav({
   const checkHealth = async () => {
     try {
       const start = Date.now()
-      await apiClient("/api/health").catch(() => null)
+      const result = await apiClient<{ status?: string; database?: string }>("/api/health")
+      if (result?.status !== 'ok' || result?.database !== 'connected') {
+        throw new Error('Health endpoint did not confirm database connectivity')
+      }
       setLatencyMs(Date.now() - start)
-    } catch (_) {
+      setHealthStatus('healthy')
+    } catch {
       setLatencyMs(null)
+      setHealthStatus('unavailable')
     }
   }
 
@@ -116,11 +123,11 @@ export function AdminTopNav({
       {/* Right Controls & Quick Actions */}
       <div className="flex items-center gap-2.5">
         {/* Real-time System Status Badge */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50/80 border border-emerald-200 text-[11px] font-bold text-emerald-800">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Systems Operational</span>
-          {latencyMs !== null && (
-            <span className="text-[10px] text-emerald-600 font-mono font-medium pl-1 border-l border-emerald-200">
+        <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border text-[11px] font-bold ${healthStatus === 'healthy' ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800' : healthStatus === 'unavailable' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-slate-50 border-slate-200 text-slate-600'}`} role="status" aria-live="polite">
+          <span className={`w-2 h-2 rounded-full ${healthStatus === 'healthy' ? 'bg-emerald-500' : healthStatus === 'unavailable' ? 'bg-rose-500' : 'bg-slate-400 animate-pulse'}`} />
+          <span>{healthStatus === 'healthy' ? 'API + database healthy' : healthStatus === 'unavailable' ? 'Health check unavailable' : 'Checking service health'}</span>
+          {healthStatus === 'healthy' && latencyMs !== null && (
+            <span className="text-[10px] font-mono font-medium pl-1 border-l border-emerald-200">
               {latencyMs}ms
             </span>
           )}
@@ -142,7 +149,7 @@ export function AdminTopNav({
         {/* Tenant Environment Tag */}
         <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100/80 border border-slate-200/60 text-[11px] font-mono font-semibold text-slate-600">
           <Activity className="h-3.5 w-3.5 text-indigo-600" />
-          <span>Production Multi-Tenant</span>
+          <span>{environment} · multi-tenant</span>
         </div>
       </div>
     </header>

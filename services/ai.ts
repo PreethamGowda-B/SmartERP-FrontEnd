@@ -1,3 +1,4 @@
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 export async function askAI({
   message,
   token,
@@ -8,7 +9,7 @@ export async function askAI({
   module?: string;
 }) {
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/ai/chat`,
+    `${getApiOrigin()}/api/ai/chat`,
     {
       method: "POST",
       headers: {

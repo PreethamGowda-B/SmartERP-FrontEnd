@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import Image from "next/image"
@@ -46,7 +47,7 @@ export default function InventoryTable({
   const [items, setItems] = useState<InventoryItem[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
-  const api = process.env.NEXT_PUBLIC_API_URL || ""
+  const api = getApiOrigin()
   const onItemsChangeRef = useRef(onItemsChange)
   useEffect(() => { onItemsChangeRef.current = onItemsChange }, [onItemsChange])
 

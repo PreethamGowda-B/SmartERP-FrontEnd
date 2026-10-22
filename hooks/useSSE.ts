@@ -1,4 +1,5 @@
 'use client';
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 /**
  * hooks/useSSE.ts
@@ -22,7 +23,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import type { SSEEvent } from '@/lib/customerTypes';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
+const BASE_URL = getApiOrigin();
 const DEDUP_WINDOW = 50; // keep last N event_ids
 
 interface UseSSEOptions {

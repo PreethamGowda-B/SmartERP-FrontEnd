@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -6,7 +7,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { setTokens, logger } from "@/lib/apiClient"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+const API_BASE = getApiOrigin()
 
 // ✅ SECURE OAuth callback — exchanges a short-lived one-time code for session cookies
 // Tokens are NEVER passed through the URL (no browser history / Referer leak)

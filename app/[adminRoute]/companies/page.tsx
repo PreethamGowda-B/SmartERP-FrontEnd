@@ -115,22 +115,6 @@ export default function AdminCompanies() {
     }
   }
 
-  const handleDeleteCompany = async (id: number, companyName: string) => {
-    if (!confirm(`Are you sure you want to permanently delete "${companyName}"? This action cannot be undone.`)) {
-      return
-    }
-    setActionLoadingId(id)
-    try {
-      await apiClient(`/api/admin/companies/${id}`, { method: 'DELETE' })
-      setCompanies(prev => prev.filter(c => c.id !== id))
-      toast.success(`Company "${companyName}" deleted successfully`)
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to delete company")
-    } finally {
-      setActionLoadingId(null)
-    }
-  }
-
   const filteredCompanies = (Array.isArray(companies) ? companies : []).filter(c => {
     const matchesSearch = 
       (c.company_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -155,7 +139,7 @@ export default function AdminCompanies() {
               Company Registry
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-              Multi-tenant organization directory, resource quotas, and access control
+              Multi-tenant organization directory, resource quotas, and access control. Suspend or restore companies; permanent deletion is disabled pending retention review.
             </p>
           </div>
 
@@ -351,10 +335,10 @@ export default function AdminCompanies() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              disabled={isLoadingThis}
-                              onClick={() => handleDeleteCompany(c.id, c.company_name)}
-                              className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                              title="Delete Organization"
+                              disabled
+                              className="h-8 w-8 text-slate-300 rounded-lg"
+                              title="Permanent deletion is disabled pending data-retention review"
+                              aria-label="Permanent deletion disabled pending retention review"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>

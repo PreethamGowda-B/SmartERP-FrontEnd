@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { OwnerLayout } from "@/components/owner-layout"
@@ -28,7 +29,7 @@ interface EmployeeLocation {
 }
 
 const POLL_INTERVAL_MS = 5_000
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+const API_URL = getApiOrigin()
 
 function formatLastSeen(ts: string | null): string {
     if (!ts) return "Never"

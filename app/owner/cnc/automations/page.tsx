@@ -21,7 +21,7 @@ export default function AutomationCenterPage() {
   const [formData, setFormData] = useState({
     rule_name: "",
     trigger_event: "machine_health_low",
-    action_type: "auto_pm",
+    action_type: "escalate_priority",
   })
 
   const fetchRules = useCallback(async () => {
@@ -48,7 +48,7 @@ export default function AutomationCenterPage() {
         method: "POST",
         body: JSON.stringify(formData),
       })
-      toast.success("Zero-Code Automation Rule activated!")
+      toast.success("Automation rule saved. It will not run automatically until event wiring is implemented.")
       setIsAddOpen(false)
       fetchRules()
     } catch (err: any) {
@@ -63,10 +63,10 @@ export default function AutomationCenterPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
-            <Zap className="h-8 w-8 text-amber-500" /> Enterprise Zero-Code Automation Center
+            <Zap className="h-8 w-8 text-amber-500" /> Automation Rule Definitions
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Configure automated triggers for PM recommendations, SLA breach escalations, AMC expiry alerts, and stock reservations
+            Rules can be saved, but business-event triggers are not connected and actions will not run automatically.
           </p>
         </div>
         <Button onClick={() => setIsAddOpen(true)} className="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-2">
@@ -86,7 +86,7 @@ export default function AutomationCenterPage() {
                   Trigger: <strong>{r.trigger_event}</strong> ➔ Action: <strong>{r.action_type}</strong>
                 </p>
               </div>
-              <Badge className="bg-emerald-500 text-white font-bold">🟢 Active</Badge>
+              <Badge variant="outline" className="font-bold">Saved · manual evaluation only</Badge>
             </Card>
           ))
         )}
@@ -141,9 +141,7 @@ export default function AutomationCenterPage() {
                     <SelectValue placeholder="Action" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto_pm">Schedule PM Recommendation</SelectItem>
-                    <SelectItem value="notify_owner">Escalate SLA to Owner</SelectItem>
-                    <SelectItem value="reserve_part">Reserve Stock Item</SelectItem>
+                    <SelectItem value="escalate_priority">Set a job priority to urgent</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -154,7 +152,7 @@ export default function AutomationCenterPage() {
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting} className="bg-amber-600 hover:bg-amber-700 text-white font-bold">
-                {submitting ? "Saving..." : "Activate Rule"}
+                {submitting ? "Saving..." : "Save Rule"}
               </Button>
             </DialogFooter>
           </form>

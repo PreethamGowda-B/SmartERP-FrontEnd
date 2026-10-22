@@ -1,4 +1,5 @@
 'use client';
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -825,7 +826,7 @@ export default function JobDetailPage() {
                     <button
                       onClick={() => {
                         customerApi.post(`/api/invoices/${invoice.id}/track`, { actionType: 'downloaded' }).catch(() => {});
-                        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
+                        const baseUrl = getApiOrigin();
                         window.open(`${baseUrl}/api/invoices/${invoice.id}/pdf`, '_blank');
                       }}
                       className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-green-200 text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 transition-colors shadow-xs"

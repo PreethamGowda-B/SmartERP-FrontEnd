@@ -12,6 +12,8 @@ export type ThreatCategory =
   | 'PRIVILEGE_ESCALATION'
   | 'ROUTE_SCAN'
   | 'MULTI_VECTOR_SURGE'
+  | 'COMPANY_SUSPENSION_BREACH'
+  | 'PROMPT_INJECTION'
   | 'GENERAL_ANOMALY'
 
 export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical'

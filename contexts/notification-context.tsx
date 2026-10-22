@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react"
 import { useAuth } from "./auth-context"
@@ -187,7 +188,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       fetchNotifications()
       setupFCM()
 
-      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
+      const BACKEND_URL = getApiOrigin()
       const sseUrl = `${BACKEND_URL}/api/notifications/sse?token=${encodeURIComponent(token)}`
       const eventSource = new EventSource(sseUrl, {
         withCredentials: true,

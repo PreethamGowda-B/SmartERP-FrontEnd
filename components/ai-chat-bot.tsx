@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bot, Send, X, ArrowUpRight, CheckCircle2, AlertTriangle, Building2, Users, HardHat, ExternalLink, Loader2, Sparkles, Lock, Zap } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { getAuthToken } from "@/lib/apiClient"
+import { apiClient } from "@/lib/apiClient"
+import { confirmAiAgentAction, requestAiAgentResponse } from "@/lib/ai-session-request.mjs"
 import { AIVoiceInput } from "@/components/ai-voice-input"
 
 /* ---------------- TYPES ---------------- */
@@ -42,8 +43,6 @@ interface Message {
   intercepted?: boolean
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
-
 /* ---------------- BACKEND CALL ---------------- */
 
 async function askSmartERPAgent(
@@ -52,66 +51,11 @@ async function askSmartERPAgent(
   history: Message[],
   onFeatureLocked: (data: any) => void
 ) {
-  const token = getAuthToken()
-
-  // Derive current portal and current module from active route
-  let currentPortal = "owner"
-  if (pathname.startsWith("/employee")) currentPortal = "employee"
-  else if (pathname.startsWith("/hr")) currentPortal = "hr"
-  else if (pathname.startsWith("/customer")) currentPortal = "customer"
-  else if (pathname.startsWith("/superadmin")) currentPortal = "superadmin"
-
-  const pathSegments = pathname.split("/").filter(Boolean)
-  const currentModule = pathSegments.length > 1 ? pathSegments[1] : "overview"
-
-  const res = await fetch(`${API_URL}/api/ai/agent`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: token ? `Bearer ${token}` : "",
-    },
-    body: JSON.stringify({
-      message,
-      currentPortal,
-      currentModule,
-      currentPagePath: pathname,
-      clientContext: { currentPage: pathname, portal: currentPortal, module: currentModule },
-      history: history.map((m) => ({
-        sender: m.sender,
-        content: m.text,
-      })),
-    }),
-  })
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}))
-    if (res.status === 403 && errorData.upgrade_required) {
-      onFeatureLocked(errorData)
-      throw new Error("PLAN_LOCKED")
-    }
-    throw new Error(errorData.error || errorData.message || "SmartERP Agent request failed")
-  }
-
-  return await res.json()
+  return requestAiAgentResponse({ apiClient, message, pathname, history, onFeatureLocked })
 }
 
 async function confirmAgentAction(toolName: string, params: any) {
-  const token = getAuthToken()
-  const res = await fetch(`${API_URL}/api/ai/confirm-action`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: token ? `Bearer ${token}` : "",
-    },
-    body: JSON.stringify({ toolName, params }),
-  })
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || "Action execution failed")
-  }
-
-  return await res.json()
+  return confirmAiAgentAction({ apiClient, toolName, params })
 }
 
 /* ---------------- COMPONENT ---------------- */

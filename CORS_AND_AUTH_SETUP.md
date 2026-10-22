@@ -108,8 +108,11 @@ res.clearCookie("access_token", {
 
 ## Environment Variables
 
-### Frontend (.env.local or Vercel)
+### Frontend (production deployment only)
+
+This example is for the production deployment. Do not copy it into local or staging environments. All builds now require both `NEXT_PUBLIC_APP_ENV` and `NEXT_PUBLIC_API_URL`; use [FRONTEND_ENVIRONMENT_CONFIGURATION.md](docs/FRONTEND_ENVIRONMENT_CONFIGURATION.md) for local and staging settings.
 \`\`\`
+NEXT_PUBLIC_APP_ENV=production
 NEXT_PUBLIC_API_URL=https://smarterp-backendend.onrender.com
 \`\`\`
 

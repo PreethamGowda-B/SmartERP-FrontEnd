@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useCallback, useEffect, useState } from "react"
 import { apiClient, getAuthToken } from "@/lib/apiClient"
@@ -48,7 +49,7 @@ export function MaterialPurchaseReviewDialog({ request, onUpdated }: { request: 
 
   const openInvoice = async (bill: Bill) => {
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+      const apiBase = getApiOrigin()
       const response = await fetch(`${apiBase}${bill.file_url}`, { headers: { Authorization: `Bearer ${getAuthToken(bill.file_url) || ""}` }, credentials: "include" })
       if (!response.ok) throw new Error("You cannot access this invoice file.")
       const url = URL.createObjectURL(await response.blob())

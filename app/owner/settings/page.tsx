@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -23,7 +24,7 @@ import Link from "next/link"
 import { getAuthToken, apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+const API = getApiOrigin()
 
 function authHeaders(): Record<string, string> {
   const token = getAuthToken()

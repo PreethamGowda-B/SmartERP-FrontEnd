@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { clearPaymentIdempotencyKey, getPaymentIdempotencyKey, type PaymentIdempotencyOperation } from "@/lib/paymentIdempotency"
 import {
   Dialog,
   DialogContent,
@@ -37,16 +38,26 @@ export function RecordPaymentModal({
   const [paymentMethod, setPaymentMethod] = useState<string>("cash")
   const [transactionRef, setTransactionRef] = useState<string>("")
   const [notes, setNotes] = useState<string>("")
+  const paymentOperation = React.useRef<PaymentIdempotencyOperation | null>(null)
+  const initializedInvoiceId = React.useRef<string | null>(null)
+  const invoiceId = invoice?.id ? String(invoice.id) : null
+  const invoiceDue = invoice?.amount_due
+  const invoiceTotal = invoice?.total_amount
+  const invoicePaid = invoice?.amount_paid
 
   // Set default amount to due amount when modal opens
   React.useEffect(() => {
-    if (invoice) {
-      const due = Number(invoice.amount_due ?? (Number(invoice.total_amount || 0) - Number(invoice.amount_paid || 0)))
-      setAmount(due > 0 ? due.toFixed(2) : Number(invoice.total_amount || 0).toFixed(2))
+    if (isOpen && invoiceId) {
+      const invoiceChanged = initializedInvoiceId.current !== invoiceId
+      if (!invoiceChanged && paymentOperation.current) return
+      const due = Number(invoiceDue ?? (Number(invoiceTotal || 0) - Number(invoicePaid || 0)))
+      setAmount(due > 0 ? due.toFixed(2) : Number(invoiceTotal || 0).toFixed(2))
       setTransactionRef("")
       setNotes("")
+      if (invoiceChanged) paymentOperation.current = null
+      initializedInvoiceId.current = invoiceId
     }
-  }, [invoice])
+  }, [isOpen, invoiceId, invoiceDue, invoiceTotal, invoicePaid])
 
   if (!invoice) return null
 
@@ -69,17 +80,23 @@ export function RecordPaymentModal({
 
     try {
       setSubmitting(true)
+      const transactionReference = transactionRef || `COUNTER_${paymentMethod.toUpperCase()}`
+      const idempotencyKey = await getPaymentIdempotencyKey(paymentOperation, {
+        invoiceId: String(invoice.id), amount: payAmount, paymentMethod, transactionReference, notes,
+      })
       const res = await apiClient<{ success: boolean }>(`/api/invoices/${invoice.id}/record-payment`, {
         method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({
           paymentMethod,
           amount: payAmount,
-          transactionReference: transactionRef || `COUNTER_${paymentMethod.toUpperCase()}`,
+          transactionReference,
           notes,
         }),
       })
 
       if (res && res.success) {
+        clearPaymentIdempotencyKey(paymentOperation)
         toast({
           title: "Payment Recorded Successfully",
           description: `Received ₹${payAmount.toLocaleString("en-IN")} via ${paymentMethod.toUpperCase()}.`,

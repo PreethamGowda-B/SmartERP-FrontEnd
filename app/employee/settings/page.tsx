@@ -1,6 +1,7 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,8 +16,9 @@ import { DangerZoneAccountDeletion } from "@/components/danger-zone-account-dele
 
 import { getAuthToken, apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
+import { completeStaffPasswordReset, validateStaffPasswordResetForm } from "@/lib/password-reset-flow.mjs"
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+const API = getApiOrigin()
 
 function authHeaders(): Record<string, string> {
   const token = getAuthToken()
@@ -45,11 +47,13 @@ export default function EmployeeSettingsPage() {
   // ── OTP Password Reset State ──────────────────────────────────────────────
   const [securityTab, setSecurityTab] = useState<"current" | "otp">("current")
   const [resetOtp, setResetOtp] = useState("")
+  const [resetToken, setResetToken] = useState("")
   const [resetPw, setResetPw] = useState("")
   const [resetConfirm, setResetConfirm] = useState("")
   const [sendingResetOtp, setSendingResetOtp] = useState(false)
   const [resetOtpSent, setResetOtpSent] = useState(false)
   const [resettingPw, setResettingPw] = useState(false)
+  const resetSubmitLock = useRef(false)
 
   // ── Company info (read-only) ───────────────────────────────────────────────
   interface CompanyInfo {
@@ -138,12 +142,13 @@ export default function EmployeeSettingsPage() {
     }
     setSendingResetOtp(true)
     try {
-      await apiClient("/api/auth/send-otp", {
+      await apiClient("/api/auth/request-password-reset-otp", {
         method: "POST",
-        body: JSON.stringify({ email: user.email, type: "password_reset" }),
       })
       setResetOtpSent(true)
-      toast({ title: "Verification Code Sent", description: `A 6-digit OTP code has been sent to ${user.email}.` })
+      setResetOtp("")
+      setResetToken("")
+      toast({ title: "Verification code sent", description: `A new code was sent to your account email: ${user.email}.` })
     } catch (err: any) {
       toast({ title: "Failed to send OTP", description: err.message || "Please try again later.", variant: "destructive" })
     } finally {
@@ -152,37 +157,40 @@ export default function EmployeeSettingsPage() {
   }
 
   const handleResetPasswordWithOtp = async () => {
-    if (!resetOtp.trim()) {
-      return toast({ title: "OTP Required", description: "Please enter the 6-digit OTP sent to your email.", variant: "destructive" })
-    }
-    if (resetPw.length < 6) {
-      return toast({ title: "Password too short", description: "At least 6 characters required", variant: "destructive" })
-    }
-    if (resetPw !== resetConfirm) {
-      return toast({ title: "Passwords don't match", variant: "destructive" })
+    if (resetSubmitLock.current) return
+    const validationError = validateStaffPasswordResetForm({
+      otp: resetOtp,
+      password: resetPw,
+      confirmation: resetConfirm,
+      resetToken,
+    })
+    if (validationError) {
+      return toast({ title: "Check the password reset form", description: validationError, variant: "destructive" })
     }
 
+    resetSubmitLock.current = true
     setResettingPw(true)
     try {
-      const res = await apiClient("/api/auth/reset-password", {
-        method: "POST",
-        body: JSON.stringify({
-          email: user?.email,
-          otp: resetOtp.trim(),
-          new_password: resetPw.trim()
-        })
+      await completeStaffPasswordReset({
+        request: apiClient,
+        email: user?.email || "",
+        otp: resetOtp.trim(),
+        password: resetPw,
+        resetToken,
+        onVerified: setResetToken,
       })
 
-      if (res.ok || res.success) {
-        toast({ title: "Password Updated", description: "Your account password has been updated and tracked successfully." })
-        setResetOtp("")
-        setResetPw("")
-        setResetConfirm("")
-        setSecurityTab("current")
-      }
+      toast({ title: "Password updated successfully." })
+      setResetOtp("")
+      setResetToken("")
+      setResetPw("")
+      setResetConfirm("")
+      setResetOtpSent(false)
+      setSecurityTab("current")
     } catch (err: any) {
-      toast({ title: "Password Reset Failed", description: err.message || "Invalid or expired OTP code.", variant: "destructive" })
+      toast({ title: "Password reset failed", description: err.message || "The code may be incorrect or expired. Please try again.", variant: "destructive" })
     } finally {
+      resetSubmitLock.current = false
       setResettingPw(false)
     }
   }
@@ -382,7 +390,7 @@ export default function EmployeeSettingsPage() {
                     <Label className="text-xs font-semibold">New Password</Label>
                     <Input
                       type="password"
-                      placeholder="Min 6 characters"
+                      placeholder="8+ chars with upper, lower, number & symbol"
                       value={resetPw}
                       onChange={(e) => setResetPw(e.target.value)}
                     />
@@ -398,7 +406,7 @@ export default function EmployeeSettingsPage() {
                     />
                   </div>
 
-                  <Button onClick={handleResetPasswordWithOtp} disabled={resettingPw || !resetOtp.trim() || !resetPw.trim()}>
+                  <Button onClick={handleResetPasswordWithOtp} disabled={resettingPw || sendingResetOtp || (!resetToken && !resetOtp.trim()) || !resetPw}>
                     {resettingPw ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Setting Password…</> : "Reset & Save Password"}
                   </Button>
                 </div>

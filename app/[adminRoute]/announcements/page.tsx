@@ -50,6 +50,7 @@ export default function AdminAnnouncements() {
   const [title, setTitle] = useState("")
   const [message, setMessage] = useState("")
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium")
+  const [broadcastIdempotencyKey, setBroadcastIdempotencyKey] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [history, setHistory] = useState<AnnouncementRecord[]>([])
   const [loadingHistory, setLoadingHistory] = useState(true)
@@ -82,14 +83,17 @@ export default function AdminAnnouncements() {
 
     setSending(true)
     try {
-      const res = await apiClient<{ message: string; sent: number }>("/api/admin/announcements", {
+      const idempotencyKey = broadcastIdempotencyKey || crypto.randomUUID()
+      if (!broadcastIdempotencyKey) setBroadcastIdempotencyKey(idempotencyKey)
+      const res = await apiClient<{ message: string; sent: number; replayed?: boolean }>("/api/admin/announcements", {
         method: "POST",
-        body: JSON.stringify({ title, message, priority })
+        body: JSON.stringify({ title, message, priority, idempotency_key: idempotencyKey })
       })
 
       toast.success(res.message || `Broadcast delivered to ${res.sent} company owners!`)
       setTitle("")
       setMessage("")
+      setBroadcastIdempotencyKey(null)
       setShowConfirmModal(false)
       fetchHistory(true)
     } catch (err: any) {
@@ -101,9 +105,9 @@ export default function AdminAnnouncements() {
 
   const handleDelete = async (id: number) => {
     try {
-      await apiClient(`/api/admin/announcements/${id}`, { method: "DELETE" })
+      const result = await apiClient<{ message?: string }>(`/api/admin/announcements/${id}`, { method: "DELETE" })
       setHistory(prev => prev.filter(a => a.id !== id))
-      toast.success("Broadcast record removed from history")
+      toast.success(result.message || "History record removed; recipient notifications remain")
       setDeleteTarget(null)
     } catch (err: any) {
       toast.error(err?.message || "Failed to delete announcement")
@@ -120,7 +124,7 @@ export default function AdminAnnouncements() {
               Global Broadcast Center
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-              Dispatch push notifications and high-priority platform advisories to all registered company owners
+              Send platform advisories to active company owners. Sent notifications cannot be recalled by deleting history.
             </p>
           </div>
 
@@ -157,7 +161,7 @@ export default function AdminAnnouncements() {
                   type="text"
                   placeholder="e.g. Scheduled Infrastructure Maintenance Window..."
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitle(e.target.value); setBroadcastIdempotencyKey(null) }}
                   className="h-10 text-xs rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white"
                 />
               </div>
@@ -167,7 +171,7 @@ export default function AdminAnnouncements() {
                 <div className="grid grid-cols-3 gap-2.5">
                   <button
                     type="button"
-                    onClick={() => setPriority("low")}
+                    onClick={() => { setPriority("low"); setBroadcastIdempotencyKey(null) }}
                     className={`p-2.5 rounded-xl border text-xs font-semibold text-center transition-all ${
                       priority === "low"
                         ? "bg-blue-50 border-blue-300 text-blue-700 ring-2 ring-blue-500/20"
@@ -178,7 +182,7 @@ export default function AdminAnnouncements() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPriority("medium")}
+                    onClick={() => { setPriority("medium"); setBroadcastIdempotencyKey(null) }}
                     className={`p-2.5 rounded-xl border text-xs font-semibold text-center transition-all ${
                       priority === "medium"
                         ? "bg-amber-50 border-amber-300 text-amber-700 ring-2 ring-amber-500/20"
@@ -189,7 +193,7 @@ export default function AdminAnnouncements() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPriority("high")}
+                    onClick={() => { setPriority("high"); setBroadcastIdempotencyKey(null) }}
                     className={`p-2.5 rounded-xl border text-xs font-semibold text-center transition-all ${
                       priority === "high"
                         ? "bg-rose-50 border-rose-300 text-rose-700 ring-2 ring-rose-500/20"
@@ -207,7 +211,7 @@ export default function AdminAnnouncements() {
                   rows={4}
                   placeholder="Write clear, professional instructions or platform updates..."
                   value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  onChange={(e) => { setMessage(e.target.value); setBroadcastIdempotencyKey(null) }}
                   className="w-full p-3 text-xs rounded-xl bg-slate-50/50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors resize-none"
                 />
               </div>
@@ -378,7 +382,7 @@ export default function AdminAnnouncements() {
                     </div>
                     <div>
                       <h3 className="text-base font-bold text-slate-900">Confirm Global Broadcast</h3>
-                      <p className="text-xs text-slate-500">Deliver announcement to all company owners</p>
+                      <p className="text-xs text-slate-500">Deliver once to active company owners</p>
                     </div>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => setShowConfirmModal(false)} className="h-7 w-7 rounded-lg text-slate-400">
@@ -430,7 +434,7 @@ export default function AdminAnnouncements() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="text-base font-bold text-slate-900">Delete Announcement</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to remove this record?</p>
+                    <p className="text-xs text-slate-500 mt-0.5">This removes only the history entry. Notifications already sent remain in recipient accounts.</p>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(null)} className="h-7 w-7 rounded-lg text-slate-400">
                     <X className="h-4 w-4" />

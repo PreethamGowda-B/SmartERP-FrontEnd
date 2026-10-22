@@ -66,7 +66,7 @@ export function UserLoginHistoryDrawer({
     const fetchHistory = async () => {
       setLoading(true)
       try {
-        const res = await apiClient<{ history: any[] }>(`/api/admin/users/${userId}/login-history`)
+        const res = await apiClient<{ history: any[] }>(`/api/admin/users/${userId}/login-history?account_type=staff`)
         if (isMounted) {
           setHistory(res?.history || [])
         }

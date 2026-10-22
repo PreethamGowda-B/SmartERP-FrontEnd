@@ -202,6 +202,10 @@ export function SecurityDashboardView() {
         return { label: 'Privilege Escalation', icon: AlertTriangle, color: 'text-red-600' }
       case 'ROUTE_SCAN':
         return { label: 'Route Enumeration', icon: Globe, color: 'text-blue-500' }
+      case 'PROMPT_INJECTION':
+        return { label: 'AI Prompt Injection', icon: ShieldAlert, color: 'text-purple-600' }
+      case 'COMPANY_SUSPENSION_BREACH':
+        return { label: 'Suspension Breach', icon: ShieldX, color: 'text-red-700' }
       default:
         return { label: category || 'Security Anomaly', icon: Activity, color: 'text-slate-500' }
     }

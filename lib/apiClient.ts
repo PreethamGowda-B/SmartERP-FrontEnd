@@ -1,3 +1,4 @@
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 // ============================================================
 // Token store — shifted to check both sessionStorage and localStorage
 // to support PERSISTENT login (across tab closes) and Android bridge compatibility.
@@ -6,6 +7,13 @@ import { triggerFeatureLock } from "@/components/locked-feature-prompt"
 import { triggerSlowNetworkNotice } from "@/components/slow-network-notice"
 import { logger } from "./logger"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
+import {
+  isProtectedRequestAuthFailure,
+  isRejectedRefreshResponse,
+  isSameAuthSession,
+  resolveAuthScope,
+  withAuthRefreshLock,
+} from "./auth-session.mjs"
 export { logger }
 
 // ─── Slow Network Tracking ──────────────────────────────────────────────────
@@ -45,23 +53,14 @@ const USER_RT = "_rt"
 
 function getStorageKeys(targetPath?: string) {
   if (typeof window === "undefined") return { at: USER_AT, rt: USER_RT }
-  
-  const pathname = window.location.pathname
-  const hostname = window.location.hostname
-  const dynamicAdminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE || ""
-  const isAdminPath = (targetPath && (
-                        targetPath.startsWith('/api/admin') ||
-                        targetPath.startsWith('/api/superadmin') ||
-                        targetPath.startsWith('/api/v1/superadmin') ||
-                        targetPath.startsWith('/api/ai')
-                      )) ||
-                      pathname.includes('/superadmin') ||
-                      pathname.includes('/super-admin') ||
-                      pathname.includes('[adminRoute]') ||
-                      (Boolean(dynamicAdminRoute) && pathname.includes(`/${dynamicAdminRoute}`)) ||
-                      hostname.startsWith('superadmin.')
-  
-  if (isAdminPath) {
+
+  const scope = resolveAuthScope({
+    targetPath,
+    pathname: window.location.pathname,
+    hostname: window.location.hostname,
+    dynamicAdminRoute: process.env.NEXT_PUBLIC_ADMIN_ROUTE || "",
+  })
+  if (scope === "admin") {
     return { at: ADMIN_AT, rt: ADMIN_RT }
   }
   
@@ -176,6 +175,8 @@ export function getAuthToken(targetPath?: string): string | null {
       const u = safeLocalStorage.getJSON<{ accessToken?: string }>("smarterp_admin_user")
       if (u?.accessToken) return u.accessToken
     } catch (_) {}
+    // Never send an Owner/Employee token to an admin-scoped request.
+    return null
   }
   
   // 1. Check primary token in localStorage
@@ -207,6 +208,16 @@ export function getAccessToken(targetPath?: string) {
 export function getRefreshToken(targetPath?: string): string | null {
   if (typeof window !== "undefined") {
     const { rt } = getStorageKeys(targetPath)
+    if (rt === ADMIN_RT) {
+      const adminRefreshToken = safeLocalStorage.getItem(ADMIN_RT) || safeSessionStorage.getItem(ADMIN_RT)
+      if (adminRefreshToken) return adminRefreshToken
+      try {
+        const adminUser = safeLocalStorage.getJSON<{ refreshToken?: string }>("smarterp_admin_user")
+        if (adminUser?.refreshToken) return adminUser.refreshToken
+      } catch (_) {}
+      // Never refresh an admin request with the staff portal's token.
+      return null
+    }
     
     // 1. Check localStorage first (shared across all browser tabs)
     const fromLocal = safeLocalStorage.getItem(rt) || 
@@ -249,20 +260,39 @@ function syncWithAndroid(token: string, refreshToken?: string | null) {
 }
 
 // Helper to handle unified logout across Web and Android
-function handleLogout() {
+function handleLogout(
+  targetPath?: string,
+  expected?: { accessToken?: string | null; refreshToken?: string | null }
+) {
   if (typeof window !== "undefined") {
+    const { at } = getStorageKeys(targetPath)
+    const isAdmin = at === ADMIN_AT
+    if (expected && !isSameAuthSession({
+      expectedAccessToken: expected.accessToken || undefined,
+      expectedRefreshToken: expected.refreshToken || undefined,
+      currentAccessToken: getAuthToken(targetPath),
+      currentRefreshToken: getRefreshToken(targetPath),
+    })) {
+      return false
+    }
+
     logger.warn("[v0] Session expired or invalid token refresh — clearing tokens and redirecting to login")
-    clearTokens() // Clears _at, _rt, accessToken, refreshToken from storage
-    localStorage.removeItem("smarterp_user")
-    localStorage.removeItem("smarterp_admin_user")
-    sessionStorage.removeItem("smarterp_mock_users")
+    clearTokens(isAdmin)
+    if (isAdmin) {
+      safeLocalStorage.removeItem("smarterp_admin_user")
+    } else {
+      safeLocalStorage.removeItem("smarterp_user")
+      sessionStorage.removeItem("smarterp_mock_users")
+    }
 
     if ((window as any).Android?.logout) {
       (window as any).Android.logout()
     } else if (window.location.pathname !== "/" && window.location.pathname !== "/auth/login") {
       window.location.href = "/auth/login"
     }
+    return true
   }
+  return false
 }
 
 /**
@@ -289,19 +319,17 @@ export function isTokenExpired(token: string | null, bufferSeconds = 45): boolea
   }
 }
 
-// ── Session Refresh Queue Mutex ──────────────────────────────────────────────
-// Prevents concurrent 401s / calls from each spawning a separate refresh.
-// All parallel callers await a SINGLE in-flight refreshPromise.
-let refreshPromise: Promise<string | null> | null = null
-let refreshSubscribers: Array<(token: string | null) => void> = []
+// Share concurrent refreshes inside one portal only. Owner/Employee and
+// superadmin sessions can coexist in the same browser profile.
+const refreshPromises = new Map<string, Promise<string | null>>()
+const refreshOutcomes = new Map<string, "pending" | "success" | "invalid" | "unavailable">()
 
-function subscribeTokenRefresh(cb: (token: string | null) => void) {
-  refreshSubscribers.push(cb)
+export function getLastRefreshOutcome(targetPath?: string) {
+  return refreshOutcomes.get(getStorageKeys(targetPath).rt) || "unavailable"
 }
 
-function notifySubscribers(newToken: string | null) {
-  refreshSubscribers.forEach((cb) => cb(newToken))
-  refreshSubscribers = []
+function isPublicAuthEndpoint(path: string) {
+  return /^\/api\/(?:v1\/)?auth\/(?:login|signup|send-otp|forgot-password|verify-reset-otp|reset-password|refresh|check-email|google(?:\/|$))(?:\/|$)/.test(path)
 }
 
 /**
@@ -310,51 +338,110 @@ function notifySubscribers(newToken: string | null) {
  */
 export async function refreshAccessToken(targetPath?: string): Promise<string | null> {
   if (typeof window === "undefined") return null
-  const storedRefreshToken = getRefreshToken(targetPath)
-  if (!storedRefreshToken) return null
-
-  if (refreshPromise) {
-    return new Promise<string | null>((resolve) => {
-      subscribeTokenRefresh(resolve)
-    })
+  const { rt } = getStorageKeys(targetPath)
+  const requestedRefreshToken = getRefreshToken(targetPath)
+  const requestedAccessToken = getAuthToken(targetPath)
+  if (!requestedRefreshToken) {
+    refreshOutcomes.set(rt, "invalid")
+    return null
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+  const existingRefresh = refreshPromises.get(rt)
+  if (existingRefresh) return existingRefresh
 
-  refreshPromise = fetch(`${baseUrl}/api/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ refreshToken: storedRefreshToken }),
-  })
-    .then(async (r) => {
-      if (r.ok) {
-        const data = await r.json()
+  refreshOutcomes.set(rt, "pending")
+  const baseUrl = getApiOrigin()
+
+  const refreshPromise = withAuthRefreshLock(rt, async () => {
+    // Another tab may have rotated the token while this tab waited for the
+    // shared lock. Reuse its live access token instead of replaying the old
+    // refresh token (which the server correctly treats as credential reuse).
+    const expectedAccessToken = getAuthToken(targetPath)
+    const expectedRefreshToken = getRefreshToken(targetPath)
+    if (!expectedRefreshToken) {
+      refreshOutcomes.set(rt, "invalid")
+      return null
+    }
+    if (
+      expectedAccessToken &&
+      !isTokenExpired(expectedAccessToken) &&
+      (expectedRefreshToken !== requestedRefreshToken || expectedAccessToken !== requestedAccessToken)
+    ) {
+      refreshOutcomes.set(rt, "success")
+      return expectedAccessToken
+    }
+
+    const { at } = getStorageKeys(targetPath)
+    const isAdmin = at === ADMIN_AT
+    let response: Response
+    try {
+      response = await fetch(`${baseUrl}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ refreshToken: expectedRefreshToken }),
+      })
+    } catch {
+      refreshOutcomes.set(rt, "unavailable")
+      return null
+    }
+
+    if (response.ok) {
+      try {
+        const data = await response.json()
         if (data.accessToken) {
-          setTokens(data.accessToken, data.refreshToken || storedRefreshToken || "", data.isSuperAdmin)
+          if (!isSameAuthSession({
+            expectedAccessToken: expectedAccessToken || undefined,
+            expectedRefreshToken,
+            currentAccessToken: getAuthToken(targetPath),
+            currentRefreshToken: getRefreshToken(targetPath),
+          })) {
+            // A newer login/refresh won while the response was in flight.
+            refreshOutcomes.set(rt, "success")
+            const current = getAuthToken(targetPath)
+            return current && !isTokenExpired(current) ? current : null
+          }
+          setTokens(data.accessToken, data.refreshToken || expectedRefreshToken, isAdmin)
           syncWithAndroid(data.accessToken, data.refreshToken)
-          notifySubscribers(data.accessToken)
+          refreshOutcomes.set(rt, "success")
           return data.accessToken
         }
+      } catch {
+        // A malformed success response is unavailable, not proof of revocation.
       }
-      if (r.status === 401 || r.status === 403) {
-        clearTokens()
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("smarterp_user")
-          localStorage.removeItem("smarterp_admin_user")
-        }
-      }
-      notifySubscribers(null)
+      refreshOutcomes.set(rt, "unavailable")
       return null
-    })
-    .catch(() => {
-      notifySubscribers(null)
-      return null
-    })
-    .finally(() => {
-      refreshPromise = null
-    })
+    }
 
+    if (isRejectedRefreshResponse(response.status)) {
+      if (isSameAuthSession({
+        expectedAccessToken: expectedAccessToken || undefined,
+        expectedRefreshToken,
+        currentAccessToken: getAuthToken(targetPath),
+        currentRefreshToken: getRefreshToken(targetPath),
+      })) {
+        refreshOutcomes.set(rt, "invalid")
+        handleLogout(targetPath, { accessToken: expectedAccessToken, refreshToken: expectedRefreshToken })
+      } else {
+        refreshOutcomes.set(rt, "success")
+        const current = getAuthToken(targetPath)
+        return current && !isTokenExpired(current) ? current : null
+      }
+      return null
+    }
+
+    // A timeout, offline response, or service error does not prove the refresh
+    // credential was revoked, so retain the cached session and allow retry.
+    refreshOutcomes.set(rt, "unavailable")
+    return null
+  }).catch(() => {
+    refreshOutcomes.set(rt, "unavailable")
+    return null
+  }).finally(() => {
+    if (refreshPromises.get(rt) === refreshPromise) refreshPromises.delete(rt)
+  })
+
+  refreshPromises.set(rt, refreshPromise)
   return refreshPromise
 }
 
@@ -370,7 +457,7 @@ export async function getValidAccessToken(targetPath?: string): Promise<string |
 }
 
 export async function apiClient<T = any>(path: string, options: RequestInit = {}, retries = 2): Promise<T> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+  const baseUrl = getApiOrigin()
   
   const isFormData = options.body instanceof FormData
   const headers: Record<string, string> = {
@@ -421,6 +508,7 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
 
   const executeRequest = async (): Promise<T> => {
     const requestId = Math.random().toString(36).substring(7)
+    const requestAccessToken = currentToken
     markRequestStart(requestId)
 
     try {
@@ -476,34 +564,53 @@ export async function apiClient<T = any>(path: string, options: RequestInit = {}
       }
 
       // ── 401 Interception (Fallback if server rejected active token) ───────────
-      if (res.status === 401) {
+      if (isProtectedRequestAuthFailure(res.status) && !isPublicAuthEndpoint(path)) {
+        const latestAccessToken = getAuthToken(path)
+        if (latestAccessToken !== requestAccessToken) {
+          // This response belongs to a session that has already been replaced.
+          // Do not refresh or clear the newer session because of it.
+          throw new Error("The active session changed while this request was running. Please retry.")
+        }
+
         const storedRefreshToken = getRefreshToken(path)
         if (!storedRefreshToken) {
-          handleLogout()
+          handleLogout(path, requestAccessToken ? { accessToken: requestAccessToken } : undefined)
           throw new Error("Session expired. Please log in again.")
         }
 
         try {
           const freshToken = await refreshAccessToken(path)
           if (freshToken) {
+            const retryRefreshToken = getRefreshToken(path)
+            if (getAuthToken(path) !== freshToken) {
+              throw new Error("The active session changed while this request was running. Please retry.")
+            }
             headers["Authorization"] = `Bearer ${freshToken}`
             res = await fetch(`${baseUrl}${path}`, { ...options, headers, credentials: "include", ...(isGet ? { cache: "no-store" as RequestCache } : {}) })
             if (res.status === 401) {
-              handleLogout()
-              throw new Error("Authentication required. Please log in again.")
+              const didLogout = handleLogout(path, {
+                accessToken: freshToken,
+                refreshToken: retryRefreshToken,
+              })
+              throw new Error(didLogout
+                ? "Authentication required. Please log in again."
+                : "The active session changed while this request was running. Please retry.")
             }
           } else {
-            handleLogout()
-            throw new Error("Session refresh failed. Please log in again.")
+            throw new Error("Could not verify your session. Check your connection and retry.")
           }
         } catch (refreshErr) {
-          handleLogout()
           throw refreshErr
         }
       }
 
       if (!res.ok) {
         const error = await res.json().catch(() => ({ message: res.statusText }))
+        if (res.status === 403 && (error.error === 'company_suspended' || error.error === 'account_suspended' || error.error === 'your_company_is_suspended')) {
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/suspended')) {
+            window.location.href = `/suspended?reason=${encodeURIComponent(error.error)}`
+          }
+        }
         if (res.status === 403 && (error.code === 'PLAN_LIMIT_REACHED' || error.details?.limitType)) {
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('plan-limit-reached', { detail: error.details }))

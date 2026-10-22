@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useState, useRef, useCallback, type KeyboardEvent } from "react"
 import { Button } from "@/components/ui/button"
@@ -195,7 +196,7 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
       const formData = new FormData()
       formData.append("attachment", fileToUpload)
 
-      const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
+      const BACKEND_URL = getApiOrigin()
       const token = getAuthToken() || ""
 
       const response = await fetch(`${BACKEND_URL}/api/messages/upload`, {
@@ -245,7 +246,7 @@ export function MessageInput({ onSend, onTyping, disabled = false }: MessageInpu
       const ext = blob.type.includes("mp4") ? "mp4" : blob.type.includes("ogg") ? "ogg" : "webm"
       formData.append("attachment", blob, `voicenote_${Date.now()}.${ext}`)
 
-      const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
+      const BACKEND_URL = getApiOrigin()
       const token = getAuthToken() || ""
 
       const response = await fetch(`${BACKEND_URL}/api/messages/upload`, {

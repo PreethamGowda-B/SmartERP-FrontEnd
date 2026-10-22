@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { apiClient } from "@/lib/apiClient"
 import { useToast } from "@/hooks/use-toast"
+import { clearPaymentIdempotencyKey, getPaymentIdempotencyKey, type PaymentIdempotencyOperation } from "@/lib/paymentIdempotency"
 
 export function PaymentsView() {
   const { toast } = useToast()
@@ -30,6 +31,7 @@ export function PaymentsView() {
   const [amount, setAmount] = useState("")
   const [notes, setNotes] = useState("")
   const [recording, setRecording] = useState(false)
+  const paymentOperation = React.useRef<PaymentIdempotencyOperation | null>(null)
 
   const fetchPayments = React.useCallback(async () => {
     try {
@@ -70,18 +72,28 @@ export function PaymentsView() {
 
     try {
       setRecording(true)
-      const res = await apiClient<{ success: boolean; message: string }>("/api/finance/payments", {
+      const normalizedAmount = parseFloat(amount)
+      const idempotencyKey = await getPaymentIdempotencyKey(paymentOperation, {
+        invoiceId: selectedInvoiceId,
+        amount: normalizedAmount,
+        paymentMethod,
+        transactionReference: transactionRef,
+        notes,
+      })
+      const res = await apiClient<{ success: boolean; status: string; amountPaid: number; amountDue: number }>("/api/finance/payments/record", {
         method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({
-          invoice_id: selectedInvoiceId,
-          amount: parseFloat(amount),
-          payment_method: paymentMethod,
-          transaction_reference: transactionRef,
+          invoiceId: selectedInvoiceId,
+          amount: normalizedAmount,
+          paymentMethod,
+          transactionReference: transactionRef,
           notes,
         }),
       })
 
       if (res && res.success) {
+        clearPaymentIdempotencyKey(paymentOperation)
         toast({ title: "Payment Recorded", description: "Payment ledger and invoice status updated." })
         setModalOpen(false)
         setSelectedInvoiceId("")

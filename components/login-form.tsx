@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
@@ -18,7 +19,7 @@ import { Building2, Loader2, HardHat, UserPlus, CheckCircle2, RefreshCw, Mail, A
 import { ForgotPasswordModal } from "@/components/auth/ForgotPasswordModal"
 import "@/app/login-page.css"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+const API_URL = getApiOrigin()
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
@@ -213,7 +214,7 @@ export function LoginForm() {
 
         // Check if email is already registered before sending OTP
         try {
-          const checkRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"}/api/auth/check-email`, {
+          const checkRes = await fetch(`${getApiOrigin()}/api/auth/check-email`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email }),
@@ -606,7 +607,7 @@ export function LoginForm() {
               type="button"
               onClick={() => {
                 clearTokens()
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+                const apiUrl = getApiOrigin()
                 const codeParam = companyCode ? `&company_code=${encodeURIComponent(companyCode.trim())}` : ""
                 window.location.href = `${apiUrl}/api/auth/google?role=${activeTab}${codeParam}`
               }}

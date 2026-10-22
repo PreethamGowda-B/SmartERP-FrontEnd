@@ -1,10 +1,11 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { type User, type AuthState, getCurrentUser, signOut } from "@/lib/auth"
-import { setTokens, getRefreshToken, getAccessToken, isTokenExpired, refreshAccessToken } from "@/lib/apiClient"
+import { setTokens, getRefreshToken, getAccessToken, isTokenExpired, refreshAccessToken, getLastRefreshOutcome } from "@/lib/apiClient"
 import { isPublicRoute } from "@/lib/route-utils"
 import { logger } from "@/lib/logger"
 import * as Sentry from "@sentry/nextjs"
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // 4. Check access token & refresh status
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+        const apiUrl = getApiOrigin()
         
         if (!rt && !at) {
           signOut()
@@ -108,10 +109,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const freshToken = await refreshAccessToken()
 
           if (!freshToken) {
-            // Only sign out if the access token is also expired or missing
+            const refreshOutcome = getLastRefreshOutcome()
+            if (refreshOutcome === "invalid") {
+              // refreshAccessToken already cleared only the rejected portal's
+              // tokens. Do not run global signOut and erase another session.
+              if (isMounted) setUser(null)
+              return
+            }
+
+            // A network/server failure cannot establish that a refresh token
+            // was revoked. Keep the cached portal session and let the user retry.
+            if (refreshOutcome === "unavailable" || refreshOutcome === "pending") return
+
+            // If no usable credentials remain, this portal session is expired.
             const currentAt = getAccessToken()
             if (!currentAt || isTokenExpired(currentAt)) {
-              logger.warn("[v0] Stored session is invalid or expired — clearing session and signing out")
+              logger.warn("[v0] Stored session has no usable refresh credential")
               await signOut()
               if (isMounted) {
                 setUser(null)

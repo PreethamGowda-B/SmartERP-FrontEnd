@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
@@ -171,7 +172,7 @@ export default function EmployeeDocumentsPage() {
     if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) {
       return path
     }
-    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in'
+    const baseUrl = getApiOrigin()
     return `${baseUrl.replace(/\/$/, '')}${path.startsWith('/') ? path : '/' + path}`
   }
 

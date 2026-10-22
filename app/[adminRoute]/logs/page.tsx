@@ -71,10 +71,9 @@ export default function AdminLogs() {
         setErrorLogs(res?.logs || [])
         setTotalItems(res?.pagination?.total || 0)
       } else if (activeTab === 'audit') {
-        const res = await apiClient<any[]>(`/api/activities?page=${page}&limit=25`).catch(() => [])
-        const items = Array.isArray(res) ? res : (res as any)?.activities || []
-        setAuditLogs(items)
-        setTotalItems(items.length)
+        const res = await apiClient<{ activities: any[]; pagination: { total: number } }>(`/api/admin/audit-trail?page=${page}&limit=25`)
+        setAuditLogs(res?.activities || [])
+        setTotalItems(res?.pagination?.total || 0)
       } else if (activeTab === 'payments') {
         const res = await apiClient<{ payments: any[]; pagination: { total: number } }>(`/api/admin/payments?page=${page}&limit=25`)
         setPaymentLogs(res?.payments || [])

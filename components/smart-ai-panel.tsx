@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import * as React from "react"
 import { usePathname, useRouter } from "next/navigation"
@@ -77,7 +78,7 @@ interface FeedbackDetection {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+const API_URL = getApiOrigin()
 
 const MODEL_SPECS = [
   { key: "auto", label: "Auto", description: "AI picks the best specialist", icon: Sparkles, plan: "all", color: "from-violet-500 to-purple-600" },
@@ -749,10 +750,19 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
       setRobotMood("idle")
     } catch (err: any) {
       let friendlyText = "I'm temporarily connecting to live services. Please ask again or select a suggested topic below."
+      const apiMessage = err?.message || err?.error
       if (err?.message === "PLAN_LOCKED") {
         friendlyText = "This feature requires a higher plan. Upgrade to unlock full AI capabilities."
-      } else if (err?.message && !err.message.includes("cancelled") && !err.message.includes("Abort")) {
-        friendlyText = `I'm processing your request. If this takes longer than expected, please try one of the quick actions below.`
+      } else if (err?.status === 401) {
+        friendlyText = "Your session could not be authenticated. Please sign in again."
+      } else if (err?.status === 403) {
+        friendlyText = apiMessage || "This account does not have access to the requested company information."
+      } else if (err?.status === 503 && apiMessage) {
+        friendlyText = apiMessage
+      } else if (err?.name === "AbortError" || err?.name === "TimeoutError") {
+        friendlyText = "The AI request timed out. Your session is still available; please retry."
+      } else if (apiMessage && !apiMessage.includes("cancelled") && !apiMessage.includes("Abort")) {
+        friendlyText = "The AI request could not be completed. Please retry in a moment."
       }
 
       const errorMsg: AIMessage = {

@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { EmployeeLayout } from "@/components/employee-layout"
@@ -10,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, RefreshCw } from "lucide-react"
 import { getAccessToken } from "@/lib/apiClient"
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+const API = getApiOrigin()
 
 interface AttendanceRecord {
   id: number

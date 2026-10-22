@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -126,7 +127,7 @@ function JobMessagesTab({ initialJobId }: { initialJobId?: string | null }) {
     const token = getAuthToken()
     if (!token) return
 
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.prozync.in"
+    const BACKEND_URL = getApiOrigin()
     const url = `${BACKEND_URL}/api/customer/jobs/${jobId}/events${token ? `?token=${encodeURIComponent(token)}` : ""}`
     const source = new EventSource(url, { withCredentials: true })
     sseRef.current = source

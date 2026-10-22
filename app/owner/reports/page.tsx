@@ -1,4 +1,5 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,7 +18,7 @@ import { apiClient } from "@/lib/apiClient"
 import { exportToPDF } from "@/lib/export-utils"
 import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+const API = getApiOrigin()
 
 async function fetchReport(endpoint: string, period: string) {
   return await apiClient(`/api/reports/${endpoint}?period=${period}`)

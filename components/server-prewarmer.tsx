@@ -1,11 +1,15 @@
 "use client"
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useEffect } from "react"
 
 export function ServerPrewarmer() {
   useEffect(() => {
-    // Fire a silent background health ping to pre-warm Render instance if sleeping
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prozync.in"
+    // Do not create background traffic in local or staging environments.
+    if (process.env.NEXT_PUBLIC_APP_ENV !== "production") return
+
+    // Fire a silent background health ping to the explicitly configured production API.
+    const backendUrl = getApiOrigin()
     
     // Non-blocking background fetch with low priority
     try {

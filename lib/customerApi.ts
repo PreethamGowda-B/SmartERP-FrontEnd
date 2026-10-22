@@ -1,3 +1,4 @@
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 /**
  * lib/customerApi.ts
  *
@@ -13,7 +14,7 @@
 
 import axios, { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
+const BASE_URL = getApiOrigin();
 
 // In-memory CSRF token store (not localStorage — no XSS risk)
 let csrfToken: string | null = null;

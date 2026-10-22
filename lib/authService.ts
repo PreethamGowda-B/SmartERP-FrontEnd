@@ -1,3 +1,4 @@
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 // ✅ SmartERP authentication system (fixed for Render backend)
 import { logger } from "./logger"
 export interface User {
@@ -29,7 +30,7 @@ export interface AuthState {
 export const signUp = async (userData: SignUpData): Promise<User | null> => {
   try {
     const baseUrl =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000/api"
+      `${getApiOrigin()}/api`
 
     logger.log("[SmartERP] Attempting signup at:", `${baseUrl}/auth/register`)
 
@@ -55,7 +56,7 @@ export const signUp = async (userData: SignUpData): Promise<User | null> => {
 export const signIn = async (email: string, password: string): Promise<User | null> => {
   try {
     const baseUrl =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000/api"
+      `${getApiOrigin()}/api`
 
     logger.log("[SmartERP] Attempting login at:", `${baseUrl}/auth/login`)
 
@@ -81,7 +82,7 @@ export const signIn = async (email: string, password: string): Promise<User | nu
 export const signOut = async (): Promise<void> => {
   try {
     const baseUrl =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000/api"
+      `${getApiOrigin()}/api`
     await fetch(`${baseUrl}/auth/logout`, { method: "POST", credentials: "include" })
   } catch (err) {
     logger.warn("[SmartERP] Logout failed:", err)

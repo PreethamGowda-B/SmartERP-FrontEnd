@@ -7,6 +7,7 @@ import { ShieldCheck, ChevronLeft, ChevronRight, X } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { logger } from "@/lib/logger"
+import { apiClient } from "@/lib/apiClient"
 import { AdminSidebar } from "./admin/AdminSidebar"
 import { AdminTopNav } from "./admin/AdminTopNav"
 
@@ -18,9 +19,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [platformAccess, setPlatformAccess] = useState<'checking' | 'allowed' | 'denied' | 'unavailable'>('checking')
+  const [accessRetry, setAccessRetry] = useState(0)
   const pathname = usePathname()
   const router = useRouter()
   const { user, isLoading } = useAuth()
+  const userId = user?.id
 
   useEffect(() => {
     setMounted(true)
@@ -31,22 +35,55 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     setIsMobileMenuOpen(false)
   }, [pathname])
 
-  // Strict check: Redirect if not super_admin (after loading)
+  // The API is authoritative because it also supports the configured platform-admin email exception.
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'super_admin')) {
-      logger.warn("🚫 Access denied: Not a superadmin")
-      router.push("/superadmin/login")
+    if (isLoading) return
+    if (!userId) {
+      setPlatformAccess('denied')
+      router.replace("/superadmin/login")
+      return
     }
-  }, [user?.id, user?.role, isLoading, router])
 
-  if (!mounted || isLoading || !user || user.role !== 'super_admin') {
+    let active = true
+    setPlatformAccess('checking')
+    apiClient<{ authorized: boolean }>("/api/admin/access")
+      .then((result) => {
+        if (active) setPlatformAccess(result?.authorized ? 'allowed' : 'denied')
+      })
+      .catch((error: any) => {
+        if (!active) return
+        if (error?.status === 401 || error?.status === 403) {
+          logger.warn("🚫 Access denied: platform admin authorization failed")
+          setPlatformAccess('denied')
+          router.replace("/superadmin/login")
+        } else {
+          setPlatformAccess('unavailable')
+        }
+      })
+    return () => { active = false }
+  }, [userId, isLoading, accessRetry, router])
+
+  if (!mounted || isLoading || platformAccess === 'checking') {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 text-slate-900 font-sans">
         <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center mb-4 shadow-sm animate-pulse">
           <ShieldCheck className="h-6 w-6" />
         </div>
-        <p className="text-slate-700 font-semibold tracking-tight text-sm">Authenticating Super Admin Session...</p>
+        <p className="text-slate-700 font-semibold tracking-tight text-sm">Verifying platform administrator access...</p>
         <p className="text-slate-400 text-xs mt-1">SmartERP Enterprise Security Guard</p>
+      </div>
+    )
+  }
+
+  if (platformAccess === 'denied') return null
+
+  if (platformAccess === 'unavailable') {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center gap-4 bg-slate-50 text-slate-900 font-sans">
+        <p className="text-sm font-semibold">Platform access could not be verified because the API is unavailable.</p>
+        <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold" onClick={() => setAccessRetry((value) => value + 1)}>
+          Retry verification
+        </button>
       </div>
     )
   }

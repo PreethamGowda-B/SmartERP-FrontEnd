@@ -14,7 +14,6 @@ import {
   RefreshCw,
   LogOut,
   UserCheck,
-  Trash2,
   X,
   Check,
   Eye,
@@ -45,7 +44,7 @@ interface PlatformUser {
   is_active: boolean
 }
 
-type ActionType = "reset_password" | "force_logout" | "change_role" | "deactivate" | "restore" | "delete" | null
+type ActionType = "reset_password" | "force_logout" | "change_role" | "deactivate" | "restore" | null
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "bg-indigo-50 text-indigo-700 border-indigo-200",
@@ -103,6 +102,10 @@ export default function AdminUsers() {
   }, [fetchUsers])
 
   const openAction = (user: PlatformUser, action: ActionType) => {
+    if ((user.user_type || 'staff') === 'customer' && action !== 'force_logout') {
+      toast.error('This action is available only for staff accounts.')
+      return
+    }
     setSelectedUser(user)
     setActiveAction(action)
     setNewPassword("")
@@ -118,6 +121,9 @@ export default function AdminUsers() {
   const executeAction = async () => {
     if (!selectedUser || !activeAction) return
     setActionLoading(true)
+    const accountType = selectedUser.user_type || 'staff'
+    const accountTypeQuery = `?account_type=${encodeURIComponent(accountType)}`
+    const sameAccount = (user: PlatformUser) => user.id === selectedUser.id && (user.user_type || 'staff') === accountType
 
     try {
       switch (activeAction) {
@@ -126,50 +132,42 @@ export default function AdminUsers() {
             toast.error("Password must be at least 8 characters long")
             return
           }
-          await apiClient(`/api/admin/users/${selectedUser.id}/reset-password`, {
+          await apiClient(`/api/admin/users/${selectedUser.id}/reset-password${accountTypeQuery}`, {
             method: "POST",
-            body: JSON.stringify({ new_password: newPassword })
+            body: JSON.stringify({ new_password: newPassword, account_type: accountType })
           })
           toast.success(`Password reset for ${selectedUser.name}`)
           break
 
         case "change_role":
-          await apiClient(`/api/admin/users/${selectedUser.id}`, {
+          await apiClient(`/api/admin/users/${selectedUser.id}${accountTypeQuery}`, {
             method: "PATCH",
-            body: JSON.stringify({ role: selectedNewRole })
+            body: JSON.stringify({ role: selectedNewRole, account_type: accountType })
           })
-          setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, role: selectedNewRole } : u))
+          setUsers(prev => prev.map(u => sameAccount(u) ? { ...u, role: selectedNewRole } : u))
           toast.success(`Role updated to ${selectedNewRole.toUpperCase()} for ${selectedUser.name}`)
           break
 
         case "force_logout":
-          const logoutRes = await apiClient<{ message?: string }>(`/api/admin/users/${selectedUser.id}/force-logout`, { method: "POST" })
+          const logoutRes = await apiClient<{ message?: string }>(`/api/admin/users/${selectedUser.id}/force-logout${accountTypeQuery}`, { method: "POST" })
           toast.success(logoutRes?.message || `${selectedUser.name} forcefully logged out`)
           break
 
         case "deactivate":
-          await apiClient(`/api/admin/users/${selectedUser.id}`, {
+          await apiClient(`/api/admin/users/${selectedUser.id}${accountTypeQuery}`, {
             method: "DELETE",
-            body: JSON.stringify({ hard_delete: false })
+            body: JSON.stringify({ hard_delete: false, account_type: accountType })
           })
-          setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, is_active: false } : u))
+          setUsers(prev => prev.map(u => sameAccount(u) ? { ...u, is_active: false } : u))
           toast.success(`${selectedUser.name} deactivated`)
           break
 
         case "restore":
-          await apiClient(`/api/admin/users/${selectedUser.id}/restore`, { method: "POST" })
-          setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, is_active: true } : u))
+          await apiClient(`/api/admin/users/${selectedUser.id}/restore${accountTypeQuery}`, { method: "POST" })
+          setUsers(prev => prev.map(u => sameAccount(u) ? { ...u, is_active: true } : u))
           toast.success(`${selectedUser.name} restored to active status`)
           break
 
-        case "delete":
-          await apiClient(`/api/admin/users/${selectedUser.id}`, {
-            method: "DELETE",
-            body: JSON.stringify({ hard_delete: true })
-          })
-          setUsers(prev => prev.filter(u => u.id !== selectedUser.id))
-          toast.success(`${selectedUser.name} permanently deleted`)
-          break
       }
       closeAction()
     } catch (err: any) {
@@ -199,7 +197,7 @@ export default function AdminUsers() {
               User & Identity Management
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-              Cross-company user directory, password overrides, role modifications, and active sessions
+              Cross-company user directory and staff account controls. Customer accounts expose session revocation only. Permanent deletion is disabled pending retention review.
             </p>
           </div>
 
@@ -302,7 +300,7 @@ export default function AdminUsers() {
                   filteredUsers.map((u) => {
                     const isActive = u.is_active !== false
                     return (
-                      <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                      <tr key={`${u.user_type || 'staff'}:${u.id}`} className="hover:bg-slate-50/80 transition-colors">
                         {/* User Identity */}
                         <td className="py-3.5 pl-6">
                           <div className="flex items-center gap-3">
@@ -358,7 +356,8 @@ export default function AdminUsers() {
                         {/* Actions */}
                         <td className="py-3.5 pr-6 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {/* Sessions History Drawer Trigger */}
+                            {/* Staff login history is stored in the staff activity log. */}
+                            {(u.user_type || 'staff') === 'staff' && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -372,7 +371,9 @@ export default function AdminUsers() {
                             >
                               <Clock className="h-3.5 w-3.5" />
                             </Button>
+                            )}
 
+                            {(u.user_type || 'staff') === 'staff' && <>
                             {/* Change Role Trigger */}
                             <Button
                               variant="ghost"
@@ -394,6 +395,7 @@ export default function AdminUsers() {
                             >
                               <Key className="h-3.5 w-3.5" />
                             </Button>
+                            </>}
 
                             {/* Force Logout */}
                             <Button
@@ -406,8 +408,8 @@ export default function AdminUsers() {
                               <LogOut className="h-3.5 w-3.5" />
                             </Button>
 
-                            {/* Deactivate / Restore */}
-                            {isActive ? (
+                            {/* Deactivate / Restore is staff-only and retains account history. */}
+                            {(u.user_type || 'staff') === 'staff' && (isActive ? (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -427,18 +429,7 @@ export default function AdminUsers() {
                               >
                                 <UserCheck className="h-3.5 w-3.5" />
                               </Button>
-                            )}
-
-                            {/* Hard Delete */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openAction(u, "delete")}
-                              title="Hard Delete Account"
-                              className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            ))}
                           </div>
                         </td>
                       </tr>
@@ -522,12 +513,6 @@ export default function AdminUsers() {
                   </p>
                 )}
 
-                {activeAction === "delete" && (
-                  <p className="text-xs text-rose-700 font-semibold">
-                    Warning: This will permanently purge the user record from the database. This action is irreversible.
-                  </p>
-                )}
-
                 <div className="flex items-center justify-end gap-2.5 pt-2">
                   <Button variant="outline" size="sm" onClick={closeAction} className="h-9 px-4 rounded-xl text-xs font-semibold">
                     Cancel
@@ -536,9 +521,7 @@ export default function AdminUsers() {
                     size="sm"
                     disabled={actionLoading}
                     onClick={executeAction}
-                    className={`h-9 px-4 rounded-xl text-xs font-bold text-white ${
-                      activeAction === 'delete' ? "bg-rose-600 hover:bg-rose-700" : "bg-indigo-600 hover:bg-indigo-700"
-                    }`}
+                    className="h-9 px-4 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700"
                   >
                     {actionLoading ? "Processing..." : "Confirm Action"}
                   </Button>

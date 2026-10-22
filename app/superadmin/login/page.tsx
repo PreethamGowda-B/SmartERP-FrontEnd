@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { ShieldCheck, Lock, Mail, ArrowRight, AlertTriangle, Eye, EyeOff, CheckSquare, Square } from "lucide-react"
 import { signIn } from "@/lib/auth"
+import { apiClient } from "@/lib/apiClient"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,9 +32,19 @@ export default function SuperAdminLoginPage() {
 
     try {
       const userDetails = await signIn(email, password)
-      
-      if (!userDetails || userDetails.role !== "super_admin") {
+
+      if (!userDetails) {
         const error = "Access Denied: Account lacks platform-level superadmin privileges."
+        setErrorMsg(error)
+        toast.error(error)
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        await apiClient<{ authorized: boolean }>("/api/admin/access")
+      } catch {
+        const error = "Access denied: this account is not authorized for platform administration."
         setErrorMsg(error)
         toast.error(error)
         setIsLoading(false)

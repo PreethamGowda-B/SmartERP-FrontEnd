@@ -105,9 +105,9 @@ function safeDistance(dateStr: string): string {
 
 export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth()
+  const userId = user?.id
   const pathname = usePathname()
   const [data, setData] = useState<DashboardData | null>(null)
-  const [health, setHealth] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -120,12 +120,8 @@ export default function AdminDashboard() {
     if (showRefreshing) setIsRefreshing(true)
     setError(null)
     try {
-      const [res, healthRes] = await Promise.all([
-        apiClient<DashboardData>("/api/admin/dashboard"),
-        apiClient("/api/admin/health").catch(() => null)
-      ])
+      const res = await apiClient<DashboardData>("/api/admin/dashboard")
       setData(res)
-      setHealth(healthRes)
     } catch (err: any) {
       logger.error("Failed to fetch admin stats:", err)
       setError(err?.message || "Failed to load dashboard metrics.")
@@ -137,7 +133,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (authLoading) return
-    if (!user || user.role !== "super_admin") return
+    if (!userId) return
 
     fetchDashboardData()
 
@@ -145,7 +141,7 @@ export default function AdminDashboard() {
     const handleGlobalRefresh = () => fetchDashboardData(true)
     window.addEventListener("smarterp:admin:refresh", handleGlobalRefresh)
     return () => window.removeEventListener("smarterp:admin:refresh", handleGlobalRefresh)
-  }, [user?.id, user?.role, authLoading, fetchDashboardData])
+  }, [userId, authLoading, fetchDashboardData])
 
   const stats = data?.stats
   const activeChartData = chartView === 'companies' 

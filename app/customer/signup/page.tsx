@@ -1,4 +1,5 @@
 'use client';
+import { getApiOrigin } from "@/lib/api-environment.mjs";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,7 +9,7 @@ import { CompanyCodeField } from '@/components/customer/auth/CompanyCodeField';
 import { CustomerAuthShell } from '@/components/customer/auth/CustomerAuthShell';
 import customerApi from '@/lib/customerApi';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.prozync.in';
+const API_URL = getApiOrigin();
 
 export default function CustomerSignupPage() {
   const router = useRouter();
