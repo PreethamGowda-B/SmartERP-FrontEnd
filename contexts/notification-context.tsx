@@ -179,8 +179,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
 
       // Proactively ensure fresh, non-expired token before connecting
-      const token = await getValidAccessToken()
-      if (!token || isCancelled) {
+      const hasValidSession = Boolean(await getValidAccessToken())
+      if (!hasValidSession || isCancelled) {
         setIsConnected(false)
         return
       }
@@ -189,7 +189,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setupFCM()
 
       const BACKEND_URL = getApiOrigin()
-      const sseUrl = `${BACKEND_URL}/api/notifications/sse?token=${encodeURIComponent(token)}`
+      const sseUrl = `${BACKEND_URL}/api/notifications/sse`
       const eventSource = new EventSource(sseUrl, {
         withCredentials: true,
       })
