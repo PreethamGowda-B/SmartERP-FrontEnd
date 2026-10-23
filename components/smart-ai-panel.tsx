@@ -327,8 +327,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
     if (modelKey === "auto" || modelKey === "general") return false // Starter + Professional: general AI is enabled.
 
     if (isBasic) {
-      // Professional unlocks: attendance, inventory, HR, support, operations.
-      const basicUnlocked = ["attendance", "inventory", "hr", "support", "operations"]
+      // Professional unlocks the current mid-tier specialist choices.
+      const basicUnlocked = ["cnc", "attendance", "inventory", "hr"]
       return !basicUnlocked.includes(modelKey)
     }
 
