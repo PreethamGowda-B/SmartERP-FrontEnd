@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
-import { User, Bell, Shield, Loader2, Eye, EyeOff, Building2, Copy, CheckCheck } from "lucide-react"
+import { User, Bell, Shield, Loader2, Eye, EyeOff, Building2, Copy, CheckCheck, CheckCircle2 } from "lucide-react"
+import { toast as sonnerToast } from "sonner"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { DangerZoneAccountDeletion } from "@/components/danger-zone-account-deletion"
 
@@ -43,6 +44,7 @@ export default function EmployeeSettingsPage() {
   const [passwords, setPasswords] = useState({ current: "", newPw: "", confirm: "" })
   const [showPw, setShowPw] = useState(false)
   const [savingPw, setSavingPw] = useState(false)
+  const [passwordSuccessMessage, setPasswordSuccessMessage] = useState("")
 
   // ── OTP Password Reset State ──────────────────────────────────────────────
   const [securityTab, setSecurityTab] = useState<"current" | "otp">("current")
@@ -170,6 +172,7 @@ export default function EmployeeSettingsPage() {
 
     resetSubmitLock.current = true
     setResettingPw(true)
+    setPasswordSuccessMessage("")
     try {
       await completeStaffPasswordReset({
         request: apiClient,
@@ -180,7 +183,9 @@ export default function EmployeeSettingsPage() {
         onVerified: setResetToken,
       })
 
-      toast({ title: "Password updated successfully." })
+      const successMessage = "Your password was changed successfully. You can use the new password the next time you sign in."
+      setPasswordSuccessMessage(successMessage)
+      sonnerToast.success("Password changed successfully", { description: "Your new password is ready to use." })
       setResetOtp("")
       setResetToken("")
       setResetPw("")
@@ -203,12 +208,15 @@ export default function EmployeeSettingsPage() {
       return toast({ title: "Password too short", description: "At least 6 characters required", variant: "destructive" })
     }
     setSavingPw(true)
+    setPasswordSuccessMessage("")
     try {
       await apiClient("/api/settings/change-password", {
         method: "PUT",
         body: JSON.stringify({ currentPassword: passwords.current, newPassword: passwords.newPw }),
       })
-      toast({ title: "Password changed", description: "Your password has been updated." })
+      const successMessage = "Your password was changed successfully. You can use the new password the next time you sign in."
+      setPasswordSuccessMessage(successMessage)
+      sonnerToast.success("Password changed successfully", { description: "Your new password is ready to use." })
       setPasswords({ current: "", newPw: "", confirm: "" })
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to change password", variant: "destructive" })
@@ -289,6 +297,16 @@ export default function EmployeeSettingsPage() {
               <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Security &amp; Password</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {passwordSuccessMessage && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+                >
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>{passwordSuccessMessage}</span>
+                </div>
+              )}
               <div className="flex rounded-lg bg-muted p-1 text-xs">
                 <button
                   type="button"
