@@ -21,7 +21,7 @@ import { apiClient } from "@/lib/apiClient"
 import {
   FileText, Plus, Trash2, CheckCircle2, Loader2, IndianRupee,
   User, Building2, Eye, Printer, Download, MessageSquare, Mail,
-  Sparkles, QrCode, CreditCard, Banknote, HelpCircle, ArrowRight
+  Sparkles, QrCode, CreditCard, Banknote, HelpCircle, ArrowRight, Receipt
 } from "lucide-react"
 
 interface DirectInvoiceModalProps {
@@ -326,7 +326,7 @@ export function DirectInvoiceModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl w-[calc(100vw-1.5rem)] sm:w-[94vw] max-h-[92dvh] overflow-y-auto rounded-2xl sm:rounded-3xl p-4 sm:p-7">
+      <DialogContent className="w-[calc(100vw-1rem)] sm:w-[94vw] max-w-[calc(100vw-1rem)] sm:max-w-[720px] md:max-w-[880px] lg:max-w-[min(1120px,94vw)] xl:max-w-[min(1240px,94vw)] max-h-[95vh] supports-[height:1dvh]:max-h-[95dvh] sm:max-h-[90vh] sm:supports-[height:1dvh]:max-h-[90dvh] overflow-y-auto p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl border border-border/80 shadow-2xl duration-200">
         <DialogHeader className="sr-only">
           <DialogTitle>Direct Invoice Generator</DialogTitle>
           <DialogDescription>Create and issue counter and walk-in tax invoices</DialogDescription>
@@ -447,7 +447,7 @@ export function DirectInvoiceModal({
               </div>
 
               {/* Bill To Grid */}
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                 <div>
                   <div className="text-[10px] uppercase font-bold text-slate-500">Billed To</div>
                   <div className="font-bold text-sm text-slate-900">{customerName || "Walk-in Customer"}</div>
@@ -456,7 +456,7 @@ export function DirectInvoiceModal({
                   {customerAddress && <div className="text-slate-600">{customerAddress}</div>}
                   {customerGstin && <div className="font-mono font-bold text-slate-800 mt-1">GSTIN: {customerGstin}</div>}
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <div className="text-[10px] uppercase font-bold text-slate-500">Payment Status</div>
                   <Badge className={paymentStatus === "paid" ? "bg-emerald-600 text-white" : "bg-amber-600 text-white"}>
                     {paymentStatus === "paid" ? `PAID (${paymentMethod.toUpperCase()})` : "UNPAID (CREDIT)"}
@@ -500,7 +500,7 @@ export function DirectInvoiceModal({
 
               {/* Totals */}
               <div className="flex justify-end pt-2 border-t border-slate-200">
-                <div className="w-64 space-y-1.5 text-xs">
+                <div className="w-full sm:w-72 space-y-1.5 text-xs">
                   <div className="flex justify-between text-slate-600">
                     <span>Subtotal:</span>
                     <span className="font-semibold text-slate-800">₹{calculations.itemsTotal.toLocaleString("en-IN")}</span>
@@ -573,41 +573,43 @@ export function DirectInvoiceModal({
         {/* FORM VIEW (DEFAULT) */}
         {step === "form" && (
           <div className="space-y-6">
-            <DialogHeader>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold">
-                  <FileText className="w-4 h-4" />
+            <div className="space-y-1 pb-1 border-b border-border/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold shrink-0">
+                  <FileText className="w-5 h-5" />
                 </div>
-                <DialogTitle className="text-xl font-black text-foreground">
-                  Direct / Walk-in Invoice Generator
-                </DialogTitle>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                    Direct / Walk-in Invoice Generator
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Bill walk-in customers and direct counter clients immediately with automatic GST calculation, line items, and payment settlement.
+                  </p>
+                </div>
               </div>
-              <DialogDescription className="text-xs text-muted-foreground">
-                Bill walk-in customers and direct counter clients immediately with automatic GST calculation, line items, and payment settlement.
-              </DialogDescription>
-            </DialogHeader>
+            </div>
 
             {/* Step 1: Customer Selection */}
             <div className="bg-card border border-border/70 rounded-2xl p-4 sm:p-5 space-y-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-primary" />
+                  <User className="w-4 h-4 text-primary shrink-0" />
                   <span className="text-xs font-bold uppercase tracking-wider text-foreground">
                     1. Customer Information
                   </span>
                 </div>
-                <div className="flex items-center gap-1 bg-muted p-1 rounded-xl text-[11px] font-semibold">
+                <div className="flex items-center gap-1 bg-muted p-1 rounded-xl text-[11px] font-semibold w-full sm:w-auto">
                   <button
                     type="button"
                     onClick={() => setCustomerMode("quick_add")}
-                    className={`px-3 py-1 rounded-lg transition-all ${customerMode === "quick_add" ? "bg-card text-foreground shadow-2xs font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`flex-1 sm:flex-none px-3 py-1 rounded-lg transition-all ${customerMode === "quick_add" ? "bg-card text-foreground shadow-2xs font-bold" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     + Walk-in Client
                   </button>
                   <button
                     type="button"
                     onClick={() => setCustomerMode("existing")}
-                    className={`px-3 py-1 rounded-lg transition-all ${customerMode === "existing" ? "bg-card text-foreground shadow-2xs font-bold" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`flex-1 sm:flex-none px-3 py-1 rounded-lg transition-all ${customerMode === "existing" ? "bg-card text-foreground shadow-2xs font-bold" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     Existing Client ({existingCustomers.length})
                   </button>
@@ -615,10 +617,10 @@ export function DirectInvoiceModal({
               </div>
 
               {customerMode === "existing" ? (
-                <div className="space-y-3">
+                <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Select Customer</Label>
                   <Select value={selectedCustomerId} onValueChange={handleSelectCustomer}>
-                    <SelectTrigger className="text-xs rounded-xl">
+                    <SelectTrigger className="text-xs rounded-xl h-9">
                       <SelectValue placeholder="Choose a registered client..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -633,51 +635,51 @@ export function DirectInvoiceModal({
               ) : null}
 
               {/* Customer Fields Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold">Full Name <span className="text-rose-500">*</span></Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Full Name <span className="text-rose-500">*</span></Label>
                   <Input
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     placeholder="Customer / Company Name"
-                    className="text-xs rounded-xl"
+                    className="text-xs rounded-xl h-9"
                     required
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold">Phone Number</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Phone Number</Label>
                   <Input
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
                     placeholder="+91 98765 43210"
-                    className="text-xs rounded-xl"
+                    className="text-xs rounded-xl h-9"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold">Email Address (Optional)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Email Address (Optional)</Label>
                   <Input
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
                     placeholder="client@example.com"
-                    className="text-xs rounded-xl"
+                    className="text-xs rounded-xl h-9"
                   />
                 </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <Label className="text-[11px] font-semibold">Billing Address (Optional)</Label>
-                  <Input
-                    value={customerAddress}
-                    onChange={(e) => setCustomerAddress(e.target.value)}
-                    placeholder="Street, City, State, PIN"
-                    className="text-xs rounded-xl"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-semibold">GSTIN (Optional)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">GSTIN (Optional)</Label>
                   <Input
                     value={customerGstin}
                     onChange={(e) => setCustomerGstin(e.target.value.toUpperCase())}
                     placeholder="e.g. 29ABCDE1234F1Z5"
-                    className="text-xs rounded-xl font-mono uppercase"
+                    className="text-xs rounded-xl font-mono uppercase h-9"
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
+                  <Label className="text-xs font-semibold">Billing Address (Optional)</Label>
+                  <Input
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    placeholder="Street, City, State, PIN"
+                    className="text-xs rounded-xl h-9"
                   />
                 </div>
               </div>
@@ -687,29 +689,29 @@ export function DirectInvoiceModal({
             <div className="bg-card border border-border/70 rounded-2xl p-4 sm:p-5 space-y-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-primary" />
+                  <Sparkles className="w-4 h-4 text-primary shrink-0" />
                   <span className="text-xs font-bold uppercase tracking-wider text-foreground">
                     2. Line Items (Services & Materials)
                   </span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     onClick={() => addLineItem("service")}
-                    className="text-[11px] h-7 rounded-lg font-bold gap-1"
+                    className="flex-1 sm:flex-none text-xs h-8 rounded-xl font-bold gap-1.5"
                   >
-                    <Plus className="w-3 h-3" /> Service
+                    <Plus className="w-3.5 h-3.5" /> Add Service
                   </Button>
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     onClick={() => addLineItem("material")}
-                    className="text-[11px] h-7 rounded-lg font-bold gap-1"
+                    className="flex-1 sm:flex-none text-xs h-8 rounded-xl font-bold gap-1.5"
                   >
-                    <Plus className="w-3 h-3" /> Material / Part
+                    <Plus className="w-3.5 h-3.5" /> Add Material / Part
                   </Button>
                 </div>
               </div>
@@ -719,105 +721,122 @@ export function DirectInvoiceModal({
                 {lineItems.map((item, idx) => (
                   <div
                     key={item.id}
-                    className="p-3.5 bg-muted/30 border border-border/50 rounded-xl space-y-2.5 transition-all"
+                    className="p-3.5 sm:p-4 bg-muted/30 hover:bg-muted/40 border border-border/60 rounded-xl space-y-3 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-extrabold uppercase text-muted-foreground flex items-center gap-1.5">
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-bold uppercase">
-                          {item.item_type}
-                        </Badge>
-                        Item #{idx + 1}
-                      </span>
-                      {lineItems.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeLineItem(item.id)}
-                          className="text-muted-foreground hover:text-rose-600 transition-colors"
-                          title="Remove row"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                    <div className="flex items-center justify-between pb-1 border-b border-border/40">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-extrabold uppercase text-muted-foreground flex items-center gap-1.5">
+                          <Badge variant="secondary" className="text-[10px] px-2 py-0.5 font-bold uppercase">
+                            {item.item_type}
+                          </Badge>
+                          Item #{idx + 1}
+                        </span>
+                        {inventoryItems.length > 0 && item.item_type === "material" && (
+                          <select
+                            onChange={(e) => handlePickInventory(item.id, e.target.value)}
+                            className="text-[11px] text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-lg px-2 py-0.5 font-semibold focus:outline-none cursor-pointer max-w-[200px] sm:max-w-[280px] truncate"
+                            defaultValue=""
+                          >
+                            <option value="" disabled>Pick from Inventory...</option>
+                            {inventoryItems.map((inv) => (
+                              <option key={inv.id} value={inv.id}>
+                                {inv.name} (Qty: {inv.quantity})
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+                        <div className="hidden sm:flex items-center text-xs font-semibold text-muted-foreground">
+                          Line Total: <span className="font-mono font-bold text-foreground ml-1.5">₹{(Number(item.quantity || 0) * Number(item.unit_price || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        {lineItems.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeLineItem(item.id)}
+                            className="p-1 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+                            title="Remove item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
-                      <div className="sm:col-span-6 space-y-1">
-                        <div className="flex justify-between items-center">
-                          <Label className="text-[10px] font-semibold">Description</Label>
-                          {inventoryItems.length > 0 && item.item_type === "material" && (
-                            <select
-                              onChange={(e) => handlePickInventory(item.id, e.target.value)}
-                              className="text-[10px] text-primary bg-transparent font-medium focus:outline-none cursor-pointer"
-                              defaultValue=""
-                            >
-                              <option value="" disabled>Pick from Inventory...</option>
-                              {inventoryItems.map((inv) => (
-                                <option key={inv.id} value={inv.id}>
-                                  {inv.name} (Qty: {inv.quantity})
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                        </div>
+                    {/* Line Item Inputs Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-2.5 sm:gap-3 items-end">
+                      <div className="sm:col-span-2 md:col-span-5 space-y-1">
+                        <Label className="text-[11px] font-semibold">Description / Service Scope</Label>
                         <Input
                           value={item.description}
                           onChange={(e) => updateLineItem(item.id, { description: e.target.value })}
-                          className="text-xs rounded-xl"
+                          className="text-xs rounded-xl h-9"
                           placeholder="Item name / service scope"
                         />
                       </div>
 
-                      <div className="sm:col-span-2 space-y-1">
-                        <Label className="text-[10px] font-semibold">HSN / SAC</Label>
+                      <div className="sm:col-span-1 md:col-span-2 space-y-1">
+                        <Label className="text-[11px] font-semibold">HSN / SAC</Label>
                         <Input
                           value={item.hsn_code}
                           onChange={(e) => updateLineItem(item.id, { hsn_code: e.target.value })}
-                          className="text-xs rounded-xl font-mono text-center"
+                          className="text-xs rounded-xl font-mono text-center h-9"
                           placeholder="998311"
                         />
                       </div>
 
-                      <div className="sm:col-span-2 space-y-1">
-                        <Label className="text-[10px] font-semibold">Quantity</Label>
+                      <div className="sm:col-span-1 md:col-span-2 space-y-1">
+                        <Label className="text-[11px] font-semibold">Quantity</Label>
                         <Input
                           type="number"
                           step="0.01"
                           min="0.01"
                           value={item.quantity}
                           onChange={(e) => updateLineItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
-                          className="text-xs rounded-xl text-center font-bold"
+                          className="text-xs rounded-xl text-center font-bold h-9"
                         />
                       </div>
 
-                      <div className="sm:col-span-2 space-y-1">
-                        <Label className="text-[10px] font-semibold">Unit Price (₹)</Label>
+                      <div className="sm:col-span-2 md:col-span-3 space-y-1">
+                        <Label className="text-[11px] font-semibold">Unit Price (₹)</Label>
                         <Input
                           type="number"
                           step="0.01"
                           min="0"
                           value={item.unit_price}
                           onChange={(e) => updateLineItem(item.id, { unit_price: parseFloat(e.target.value) || 0 })}
-                          className="text-xs rounded-xl text-right font-bold"
+                          className="text-xs rounded-xl text-right font-bold h-9"
                         />
                       </div>
+                    </div>
+
+                    {/* Mobile Line Total Display */}
+                    <div className="sm:hidden flex items-center justify-between pt-1 border-t border-border/30 text-xs font-semibold text-muted-foreground">
+                      <span>Line Total:</span>
+                      <span className="font-mono font-bold text-foreground">₹{(Number(item.quantity || 0) * Number(item.unit_price || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Step 3: GST, Discount & Charges */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Step 3: GST, Discount & Charges and Step 4: Payment Option */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+              {/* Step 3: Taxes & Adjustments */}
               <div className="bg-card border border-border/70 rounded-2xl p-4 sm:p-5 space-y-3.5">
-                <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                  3. Taxes & Adjustments
-                </span>
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    3. Taxes & Adjustments
+                  </span>
+                </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold">GST Rate</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">GST Rate</Label>
                     <Select value={String(gstRate)} onValueChange={(v) => setGstRate(Number(v))}>
-                      <SelectTrigger className="text-xs rounded-xl">
+                      <SelectTrigger className="text-xs rounded-xl h-9">
                         <SelectValue placeholder="GST Rate" />
                       </SelectTrigger>
                       <SelectContent>
@@ -830,33 +849,35 @@ export function DirectInvoiceModal({
                     </Select>
                   </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold">Discount (₹)</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Discount (₹)</Label>
                     <Input
                       type="number"
                       min="0"
+                      step="0.01"
                       value={discountAmount}
                       onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-                      className="text-xs rounded-xl"
+                      className="text-xs rounded-xl h-9"
                       placeholder="0.00"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold">Transport / Conveyance (₹)</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Transport / Conveyance (₹)</Label>
                     <Input
                       type="number"
                       min="0"
+                      step="0.01"
                       value={transportCharges}
                       onChange={(e) => setTransportCharges(parseFloat(e.target.value) || 0)}
-                      className="text-xs rounded-xl"
+                      className="text-xs rounded-xl h-9"
                       placeholder="0.00"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between pt-4">
+                  <div className="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-muted/40 border border-border/50 sm:mt-5">
                     <div>
                       <Label className="text-xs font-semibold cursor-pointer">Inter-State (IGST)</Label>
                       <p className="text-[10px] text-muted-foreground">Applies full IGST</p>
@@ -868,33 +889,36 @@ export function DirectInvoiceModal({
 
               {/* Step 4: Payment Option */}
               <div className="bg-card border border-border/70 rounded-2xl p-4 sm:p-5 space-y-3.5">
-                <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                  4. Payment Collection
-                </span>
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    4. Payment Collection
+                  </span>
+                </div>
 
                 <div className="flex gap-2 bg-muted p-1 rounded-xl text-xs font-bold">
                   <button
                     type="button"
                     onClick={() => setPaymentStatus("paid")}
-                    className={`flex-1 py-1.5 rounded-lg transition-all ${paymentStatus === "paid" ? "bg-card text-emerald-600 shadow-2xs" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`flex-1 py-1.5 rounded-lg transition-all ${paymentStatus === "paid" ? "bg-card text-emerald-600 shadow-2xs font-extrabold" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     💵 Paid at Counter
                   </button>
                   <button
                     type="button"
                     onClick={() => setPaymentStatus("unpaid")}
-                    className={`flex-1 py-1.5 rounded-lg transition-all ${paymentStatus === "unpaid" ? "bg-card text-amber-600 shadow-2xs" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`flex-1 py-1.5 rounded-lg transition-all ${paymentStatus === "unpaid" ? "bg-card text-amber-600 shadow-2xs font-extrabold" : "text-muted-foreground hover:text-foreground"}`}
                   >
                     ⏳ Unpaid / On Credit
                   </button>
                 </div>
 
                 {paymentStatus === "paid" ? (
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-semibold">Payment Mode</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Payment Mode</Label>
                       <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                        <SelectTrigger className="text-xs rounded-xl">
+                        <SelectTrigger className="text-xs rounded-xl h-9">
                           <SelectValue placeholder="Mode" />
                         </SelectTrigger>
                         <SelectContent>
@@ -906,21 +930,21 @@ export function DirectInvoiceModal({
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-semibold">Reference / UTR # (Optional)</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Reference / UTR # (Optional)</Label>
                       <Input
                         value={transactionRef}
                         onChange={(e) => setTransactionRef(e.target.value)}
                         placeholder="e.g. UPI Ref / Receipt No"
-                        className="text-xs rounded-xl"
+                        className="text-xs rounded-xl h-9"
                       />
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold">Credit Terms / Due In</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Credit Terms / Due In</Label>
                     <Select value={String(dueDays)} onValueChange={(v) => setDueDays(Number(v))}>
-                      <SelectTrigger className="text-xs rounded-xl">
+                      <SelectTrigger className="text-xs rounded-xl h-9">
                         <SelectValue placeholder="Due terms" />
                       </SelectTrigger>
                       <SelectContent>
@@ -936,52 +960,63 @@ export function DirectInvoiceModal({
             </div>
 
             {/* Live Financial Total Summary Ribbon */}
-            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <div>
-                <span className="text-[10px] font-extrabold uppercase text-primary">Calculation Summary</span>
-                <div className="text-xs text-muted-foreground">
-                  Subtotal: ₹{calculations.subtotal.toLocaleString("en-IN")} + GST ({gstRate}%): ₹{calculations.totalTax.toLocaleString("en-IN")}
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-                <div className="flex items-center justify-between sm:justify-end gap-3 sm:text-right">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase">Grand Total</div>
-                  <div className="text-xl sm:text-2xl font-black text-foreground">
-                    ₹{calculations.grandTotal.toLocaleString("en-IN")}
+            <div className="sticky bottom-0 -mx-4 sm:-mx-6 lg:-mx-8 -mb-4 sm:-mb-6 lg:-mb-8 p-3.5 sm:p-4 lg:p-5 bg-background/95 backdrop-blur-md border-t border-border/80 shadow-lg z-20 rounded-b-2xl sm:rounded-b-3xl">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-extrabold uppercase text-primary tracking-wider">
+                      Live Calculation Summary
+                    </span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                      {lineItems.length} item{lineItems.length === 1 ? "" : "s"}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span>Items: <strong className="font-mono text-foreground">₹{calculations.itemsTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
+                    {transportCharges > 0 && <span>+ Transport: <strong className="font-mono text-foreground">₹{transportCharges.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>}
+                    {discountAmount > 0 && <span>- Discount: <strong className="font-mono text-emerald-600">₹{discountAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>}
+                    <span>+ {isInterState ? `IGST (${gstRate}%)` : `GST (${gstRate}%)`}: <strong className="font-mono text-foreground">₹{calculations.totalTax.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep("preview")}
-                    className="flex-1 sm:flex-none rounded-xl text-xs font-bold gap-1.5"
-                  >
-                    <Eye className="w-3.5 h-3.5" /> Preview
-                  </Button>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:text-right bg-muted/40 sm:bg-transparent p-2 sm:p-0 rounded-xl">
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Grand Total</div>
+                    <div className="text-xl sm:text-2xl font-black font-mono text-foreground">
+                      ₹{calculations.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
 
-                  <Button
-                    type="button"
-                    onClick={handleIssueInvoice}
-                    disabled={submitting}
-                    className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl gap-2 shadow-md shadow-primary/20"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Issuing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Issue Invoice
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setStep("preview")}
+                      className="flex-1 sm:flex-none rounded-xl text-xs font-bold h-9 px-4 gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> Preview
+                    </Button>
+
+                    <Button
+                      type="button"
+                      onClick={handleIssueInvoice}
+                      disabled={submitting}
+                      className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs h-9 px-5 rounded-xl gap-2 shadow-md shadow-primary/20"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Issuing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Issue Invoice
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-
           </div>
         )}
       </DialogContent>

@@ -47,6 +47,8 @@ interface AIMessage {
   widget?: WidgetPayload | null
   navigation?: { path: string; label: string } | null
   sources?: string[]
+  citations?: Array<{ documentId: string; documentName: string; chunkOrdinal?: number; page?: number | null; section?: string | null }>
+  requestKey?: string
   confidenceScore?: number
   autoSelectedModel?: string | null
   activeModelScope?: string | null
@@ -57,7 +59,7 @@ interface AIMessage {
   scopesUsed?: string[]
   isTyping?: boolean
   isError?: boolean
-  retryAction?: { type: "prompt" } | { type: "confirm"; toolName: string; params: Record<string, unknown> }
+  retryAction?: { type: "prompt"; requestKey?: string } | { type: "confirm"; toolName: string; params: Record<string, unknown> }
 }
 
 interface Conversation {
@@ -115,6 +117,12 @@ function getStorageKey(userId: string) {
   return `smarterp_ai_convs_${userId}`
 }
 
+function createIdempotencyKey(prefix: string) {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`
+}
+
 function loadConversations(userId: string): Conversation[] {
   try {
     const raw = localStorage.getItem(getStorageKey(userId))
@@ -135,6 +143,21 @@ function saveConversations(userId: string, convs: Conversation[]) {
     const toSave = convs.slice(0, 50)
     localStorage.setItem(getStorageKey(userId), JSON.stringify(toSave))
   } catch { /* storage full */ }
+}
+
+function mapPersistedAiMessage(message: any): AIMessage {
+  const metadata = message.response_metadata?.apiResponse || {}
+  return {
+    id: message.id,
+    sender: message.role === "user" ? "user" : "ai",
+    text: message.content,
+    timestamp: new Date(message.created_at),
+    sources: metadata.sources || [],
+    citations: message.citations || metadata.citations || [],
+    widget: metadata.widget || null,
+    confidenceScore: metadata.confidenceScore,
+    latencyMs: metadata.telemetry?.latencyMs,
+  }
 }
 
 function getPreferencesKey(userId: string) {
@@ -350,6 +373,15 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   const [activeConvId, setActiveConvId] = React.useState<string | null>(null)
   const [messages, setMessages] = React.useState<AIMessage[]>([])
   const [historySearch, setHistorySearch] = React.useState("")
+  const [persistentAiEnabled, setPersistentAiEnabled] = React.useState(false)
+  const [documentControlsEnabled, setDocumentControlsEnabled] = React.useState(false)
+  const [aiDocuments, setAiDocuments] = React.useState<any[]>([])
+  const [documentBusy, setDocumentBusy] = React.useState(false)
+  const [documentError, setDocumentError] = React.useState<string | null>(null)
+  const [documentQuery, setDocumentQuery] = React.useState("")
+  const [documentMatches, setDocumentMatches] = React.useState<any[]>([])
+  const [includeDocuments, setIncludeDocuments] = React.useState(false)
+  const [documentFamilyId, setDocumentFamilyId] = React.useState("")
 
   // ── Input state
   const [input, setInput] = React.useState("")
@@ -358,6 +390,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   const [robotMood, setRobotMood] = React.useState<SmartAIRobotMood>("idle")
   const moodTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const confirmLockRef = React.useRef(false)
+  const conversationCreateKeyRef = React.useRef<string | null>(null)
   const [showVoiceModal, setShowVoiceModal] = React.useState(false)
 
   // ── Feedback state
@@ -380,11 +413,62 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   // ── Load conversations from localStorage
   React.useEffect(() => {
     if (user?.id) {
+      setPersistentAiEnabled(false)
+      setDocumentControlsEnabled(false)
       const convs = loadConversations(String(user.id))
       setConversations(convs)
       setTopActions(getTopActions(String(user.id)))
+      let active = true
+      apiClient<any>("/api/ai/capabilities").then(async (capabilities) => {
+        if (!active) return
+        const serverConversations = capabilities?.conversations === true
+        setDocumentControlsEnabled(capabilities?.documents === true)
+        if (serverConversations) {
+          const page = await apiClient<any>("/api/ai/conversations?limit=50")
+          if (!active) return
+          let serverItems = page?.items || []
+          if (serverItems.length === 0) {
+            const created = await apiClient<any>("/api/ai/conversations", { method: "POST", headers: { "Idempotency-Key": createIdempotencyKey("conv") }, body: JSON.stringify({ title: "New Conversation" }) })
+            if (!active) return
+            serverItems = [created.conversation]
+          }
+          const firstServerConversation = serverItems[0]
+          let persistedMessages: AIMessage[] = []
+          if (firstServerConversation?.id) {
+            const opened = await apiClient<any>(`/api/ai/conversations/${encodeURIComponent(firstServerConversation.id)}?limit=100`)
+            if (!active) return
+            persistedMessages = (opened?.conversation?.messages || []).map(mapPersistedAiMessage)
+          }
+          setConversations(serverItems.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            messages: [],
+            createdAt: new Date(item.created_at || Date.now()),
+            updatedAt: new Date(item.updated_at || Date.now()),
+            portal: pathname.startsWith("/employee") ? "employee" : pathname.startsWith("/hr") ? "hr" : "owner",
+          })))
+          setActiveConvId(firstServerConversation?.id || null)
+          setMessages(persistedMessages.length ? persistedMessages : [welcomeMessage()])
+          setPersistentAiEnabled(true)
+        } else setPersistentAiEnabled(false)
+      }).catch(() => { /* Keep the working local history until the server explicitly reports ready. */ })
+      return () => { active = false }
     }
-  }, [user?.id])
+  // welcomeMessage is a render-local formatter; user identity fields and route are the stable inputs.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.name, user?.role, pathname])
+
+  React.useEffect(() => {
+    if (!documentControlsEnabled || !isOpen) return
+    let active = true
+    setDocumentBusy(true)
+    apiClient<any>("/api/ai/documents?limit=50").then((result) => {
+      if (active) setAiDocuments(result?.items || [])
+    }).catch((error: any) => {
+      if (active) setDocumentError(error?.error || "Documents could not be loaded.")
+    }).finally(() => { if (active) setDocumentBusy(false) })
+    return () => { active = false }
+  }, [documentControlsEnabled, isOpen])
 
   // ── Fetch company machines when panel opens or CNC model is active
   React.useEffect(() => {
@@ -465,8 +549,20 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   }, [pathname])
 
   // ── Create new conversation
-  function startNewConversation() {
-    const id = `conv_${Date.now()}`
+  async function startNewConversation() {
+    let id = `conv_${Date.now()}`
+    if (persistentAiEnabled) {
+      try {
+        conversationCreateKeyRef.current ||= createIdempotencyKey("conv")
+        const created = await apiClient<any>("/api/ai/conversations", { method: "POST", headers: { "Idempotency-Key": conversationCreateKeyRef.current }, body: JSON.stringify({ title: "New Conversation" }) })
+        id = created?.conversation?.id
+        if (!id) throw new Error("Conversation was not created.")
+        conversationCreateKeyRef.current = null
+      } catch (error: any) {
+        toast.error(error?.error || "A saved conversation could not be created.")
+        return
+      }
+    }
     const newConv: Conversation = {
       id,
       title: "New Conversation",
@@ -479,7 +575,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
     setMessages(newConv.messages)
     setConversations(prev => {
       const updated = [newConv, ...prev]
-      saveConversations(String(user.id), updated)
+      if (!persistentAiEnabled) saveConversations(String(user.id), updated)
       return updated
     })
     setAutoModelBadge(null)
@@ -541,16 +637,20 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
           : c.title
         return { ...c, messages: msgs, updatedAt: new Date(), title }
       })
-      saveConversations(String(user.id), updated)
+      if (!persistentAiEnabled) saveConversations(String(user.id), updated)
       return updated
     })
   }
 
   // ── Delete conversation
-  function deleteConversation(id: string) {
+  async function deleteConversation(id: string) {
+    if (persistentAiEnabled) {
+      try { await apiClient(`/api/ai/conversations/${encodeURIComponent(id)}`, { method: "DELETE" }) }
+      catch (error: any) { toast.error(error?.error || "Conversation could not be deleted."); return }
+    }
     setConversations(prev => {
       const updated = prev.filter(c => c.id !== id)
-      saveConversations(String(user.id), updated)
+      if (!persistentAiEnabled) saveConversations(String(user.id), updated)
       return updated
     })
     if (activeConvId === id) {
@@ -565,22 +665,87 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
     setRenameValue(conv.title)
   }
 
-  function commitRename(id: string) {
+  async function commitRename(id: string) {
     if (!renameValue.trim()) { setRenamingConvId(null); return }
+    if (persistentAiEnabled) {
+      try { await apiClient(`/api/ai/conversations/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ title: renameValue.trim() }) }) }
+      catch (error: any) { toast.error(error?.error || "Conversation title could not be saved."); return }
+    }
     setConversations(prev => {
       const updated = prev.map(c => c.id === id ? { ...c, title: renameValue.trim() } : c)
-      saveConversations(String(user.id), updated)
+      if (!persistentAiEnabled) saveConversations(String(user.id), updated)
       return updated
     })
     setRenamingConvId(null)
   }
 
   // ── Load conversation
-  function loadConversation(conv: Conversation) {
+  async function loadConversation(conv: Conversation) {
+    if (persistentAiEnabled) {
+      try {
+        const response = await apiClient<any>(`/api/ai/conversations/${encodeURIComponent(conv.id)}?limit=100`)
+        const item = response?.conversation
+        if (!item) throw new Error("Conversation not found.")
+        const loaded: AIMessage[] = (item.messages || []).map(mapPersistedAiMessage)
+        setMessages(loaded.length ? loaded : [welcomeMessage()])
+        setConversations(prev => prev.map(item => item.id === conv.id ? { ...item, messages: loaded } : item))
+      } catch (error: any) { toast.error(error?.error || "Conversation could not be opened."); return }
+    } else {
+      setMessages(conv.messages)
+    }
     setActiveConvId(conv.id)
-    setMessages(conv.messages)
     setShowHistory(false)
     setAutoModelBadge(null)
+  }
+
+  async function uploadAiDocument(file?: File) {
+    if (!file) return
+    setDocumentBusy(true)
+    setDocumentError(null)
+    try {
+      const form = new FormData()
+      form.append("file", file)
+      form.append("title", file.name)
+      if (documentFamilyId) form.append("documentFamilyId", documentFamilyId)
+      const key = createIdempotencyKey("doc")
+      const result = await apiClient<any>("/api/ai/documents", { method: "POST", headers: { "Idempotency-Key": key }, body: form })
+      setAiDocuments((items) => [result.document, ...items.filter((item) => item.document_family_id !== result.document?.document_family_id && item.id !== result.document?.id)])
+      toast.success("Document indexed for keyword search.")
+    } catch (error: any) {
+      setDocumentError(error?.error || "Document upload could not be completed.")
+    } finally { setDocumentBusy(false) }
+  }
+
+  async function deleteAiDocument(id: string) {
+    setDocumentBusy(true)
+    setDocumentError(null)
+    try {
+      await apiClient(`/api/ai/documents/${encodeURIComponent(id)}`, { method: "DELETE" })
+      setAiDocuments((items) => items.filter((item) => item.id !== id))
+      setDocumentMatches((items) => items.filter((item) => item.documentId !== id))
+    } catch (error: any) { setDocumentError(error?.error || "Document could not be deleted.") }
+    finally { setDocumentBusy(false) }
+  }
+
+  async function reindexAiDocument(id: string) {
+    setDocumentBusy(true)
+    setDocumentError(null)
+    try {
+      const result = await apiClient<any>(`/api/ai/documents/${encodeURIComponent(id)}/reindex`, { method: "POST", body: JSON.stringify({}) })
+      setAiDocuments((items) => items.map((item) => item.id === id ? { ...item, processing_status: result?.document?.processing_status || "ready" } : item))
+      toast.success("Document re-indexed.")
+    } catch (error: any) { setDocumentError(error?.error || "Document could not be re-indexed.") }
+    finally { setDocumentBusy(false) }
+  }
+
+  async function searchAiDocuments() {
+    setDocumentBusy(true)
+    setDocumentError(null)
+    try {
+      const result = await apiClient<any>("/api/ai/documents/search", { method: "POST", body: JSON.stringify({ query: documentQuery, limit: 8 }) })
+      setDocumentMatches(result?.results || [])
+    } catch (error: any) { setDocumentError(error?.error || "Document search could not be completed.") }
+    finally { setDocumentBusy(false) }
   }
 
   // ── Detect feedback in input
@@ -636,7 +801,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   }
 
   // ── Send message to AI
-  async function sendMessage(promptText?: string, previousMessages: AIMessage[] = messages) {
+  async function sendMessage(promptText?: string, previousMessages: AIMessage[] = messages, requestKeyOverride?: string) {
     const text = (promptText || input).trim()
     if (!text || isLoading || sendLockRef.current) return
     sendLockRef.current = true
@@ -646,6 +811,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
       sender: "user",
       text,
       timestamp: new Date(),
+      ...(persistentAiEnabled ? { requestKey: requestKeyOverride || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ai_${Date.now()}_${Math.random().toString(36).slice(2)}`) } : {}),
     }
 
     const typingMsg: AIMessage = {
@@ -708,13 +874,17 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
           .slice(-10)
           .map(m => ({ sender: m.sender === "user" ? "user" : "assistant", content: m.text })),
         autoMode: selectedModel === "auto",
+        ...(includeDocuments && documentControlsEnabled ? { includeDocuments: true } : {}),
       }
+
+      if (persistentAiEnabled && activeConvId) body.conversationId = activeConvId
 
       if (scopesToSend.length > 0) body.modelScopes = scopesToSend
 
       const data = await apiClient("/api/ai/agent", {
         method: "POST",
         timeoutMs: 30000,
+        ...(persistentAiEnabled && activeConvId ? { headers: { "Idempotency-Key": userMsg.requestKey || requestKeyOverride || `ai_${Date.now()}` } } : {}),
         body: JSON.stringify(body),
       })
 
@@ -732,6 +902,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
         widget: data.widget || null,
         navigation: data.navigation || null,
         sources: data.sources || [],
+        citations: data.citations || [],
         confidenceScore: data.confidenceScore,
         autoSelectedModel: data.autoSelectedModel,
         activeModelScope: data.activeModelScope,
@@ -758,6 +929,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
         friendlyText = "Your session could not be authenticated. Please sign in again."
       } else if (err?.status === 403) {
         friendlyText = apiMessage || "This account does not have access to the requested company information."
+      } else if (err?.code === "AI_REQUEST_FAILED_REPLAY") {
+        friendlyText = apiMessage || "That saved request already failed. Send a new message to retry it safely."
       } else if (err?.code === "AI_PROMPT_BLOCKED" || err?.code === "INJECTION_IN_ACTION_PARAM") {
         friendlyText = apiMessage || "Sorry, I can't follow instructions that attempt to bypass my security rules. I can still help with your normal SmartERP tasks."
       } else if (err?.isOffline) {
@@ -778,7 +951,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
         text: friendlyText,
         timestamp: new Date(),
         isError: true,
-        retryAction: err?.code === "AI_PROMPT_BLOCKED" ? undefined : { type: "prompt" },
+        retryAction: ["AI_PROMPT_BLOCKED", "AI_REQUEST_FAILED_REPLAY"].includes(err?.code) ? undefined : { type: "prompt", requestKey: userMsg.requestKey },
         suggestedFollowUps: welcomeSuggestions(),
       }
       const errMessages = [...previousMessages, userMsg, errorMsg]
@@ -860,7 +1033,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
   }
 
   // ── Regenerate last AI response
-  async function regenerateLastResponse() {
+  async function regenerateLastResponse(requestKey?: string) {
     const lastAIIndex = messages.findLastIndex(m => m.sender === "ai")
     const lastUserIndex = messages.findLastIndex((m, index) => index < lastAIIndex && m.sender === "user")
     const lastUserMsg = lastUserIndex >= 0 ? messages[lastUserIndex] : undefined
@@ -868,7 +1041,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
     // Keep the transcript up to the failed request, then retry without duplicating its user bubble.
     const beforeRetry = messages.slice(0, lastUserIndex)
     setMessages(beforeRetry)
-    await sendMessage(lastUserMsg.text, beforeRetry)
+    await sendMessage(lastUserMsg.text, beforeRetry, requestKey || lastUserMsg.requestKey)
   }
 
   // ── Toggle multi-agent scope
@@ -1032,6 +1205,44 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                           />
                         </div>
                       </div>
+                      {documentControlsEnabled && (
+                        <div className="space-y-2 border-b border-border/40 p-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-semibold text-muted-foreground">Company documents · keyword search</span>
+                            <label className="cursor-pointer rounded-md border px-2 py-1 text-[10px] font-medium hover:bg-muted/60">
+                              Upload TXT/MD
+                              <input className="sr-only" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" disabled={documentBusy} onChange={(event) => { const file = event.currentTarget.files?.[0]; void uploadAiDocument(file); event.currentTarget.value = "" }} />
+                            </label>
+                          </div>
+                          <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                            <input type="checkbox" checked={includeDocuments} onChange={(event) => setIncludeDocuments(event.target.checked)} />
+                            Use matching documents in AI answers
+                          </label>
+                          <div className="flex gap-1">
+                            <Input value={documentQuery} onChange={(event) => setDocumentQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchAiDocuments() }} placeholder="Search your documents" className="h-7 text-[10px]" />
+                            <Button size="sm" variant="outline" disabled={documentBusy || !documentQuery.trim()} onClick={() => void searchAiDocuments()} className="h-7 px-2 text-[10px]">Search</Button>
+                          </div>
+                          <select aria-label="Document version family" value={documentFamilyId} onChange={(event) => setDocumentFamilyId(event.target.value)} className="h-7 w-full rounded-md border bg-background px-2 text-[10px]">
+                            <option value="">Upload as a new document</option>
+                            {aiDocuments.map((doc) => <option key={doc.document_family_id} value={doc.document_family_id}>New version · {doc.title}</option>)}
+                          </select>
+                          {documentError && <p role="alert" className="text-[10px] text-destructive">{documentError}</p>}
+                          {documentBusy && <p className="text-[10px] text-muted-foreground">Working…</p>}
+                          <div className="max-h-24 space-y-1 overflow-y-auto">
+                            {aiDocuments.map((doc) => (
+                              <div key={doc.id} className="flex items-center gap-1 text-[10px]">
+                                <span className="min-w-0 flex-1 truncate" title={doc.title}>{doc.title} · {doc.processing_status}</span>
+                                {doc.processing_status !== "ready" && <button type="button" aria-label={`Retry indexing ${doc.title}`} onClick={() => void reindexAiDocument(doc.id)} className="rounded p-1 text-muted-foreground hover:bg-violet-500/10 hover:text-violet-600"><RotateCcw className="h-3 w-3" /></button>}
+                                <button type="button" aria-label={`Delete ${doc.title}`} onClick={() => void deleteAiDocument(doc.id)} className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+                              </div>
+                            ))}
+                            {!documentBusy && aiDocuments.length === 0 && <p className="text-[10px] text-muted-foreground">No active documents.</p>}
+                          </div>
+                          {documentMatches.length > 0 && <div className="max-h-28 space-y-1 overflow-y-auto border-t pt-1">
+                            {documentMatches.map((match, index) => <div key={`${match.documentId}-${match.ordinal}-${index}`} className="rounded bg-muted/40 p-1.5 text-[10px]"><strong>{match.documentName} · chunk {Number(match.ordinal) + 1}</strong><p className="mt-0.5 line-clamp-3">{match.content}</p></div>)}
+                          </div>}
+                        </div>
+                      )}
                       <ScrollArea className="flex-1">
                         <div className="p-1.5 space-y-1">
                           {filteredConversations.map(conv => (
@@ -1272,7 +1483,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
                         key={msg.id}
                         msg={msg}
                         onCopy={copyMessage}
-                        onRegenerate={regenerateLastResponse}
+                        onRegenerate={(requestKey) => regenerateLastResponse(requestKey)}
                         onConfirm={confirmAIAction}
                         confirmingTool={confirmingTool}
                         onFollowUp={text => { setInput(""); sendMessage(text); recordPrompt(String(user.id), autoModelBadge || selectedModel, text) }}
@@ -1494,7 +1705,7 @@ function MessageBubble({
 }: {
   msg: AIMessage
   onCopy: (text: string) => void
-  onRegenerate: () => void
+  onRegenerate: (requestKey?: string) => void
   onConfirm: (toolName: string, params: Record<string, unknown>) => void
   confirmingTool: string | null
   onFollowUp: (text: string) => void
@@ -1587,7 +1798,7 @@ function MessageBubble({
               type="button"
               onClick={() => msg.retryAction?.type === "confirm"
                 ? onConfirm(msg.retryAction.toolName, msg.retryAction.params)
-                : onRegenerate()}
+                : onRegenerate(msg.retryAction?.type === "prompt" ? msg.retryAction.requestKey : undefined)}
               className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/25 bg-background/70 px-2.5 py-1.5 text-[11px] font-semibold text-foreground transition-colors hover:bg-rose-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             >
               <RotateCcw className="h-3 w-3" /> Try again
@@ -1664,7 +1875,7 @@ function MessageBubble({
             >
               {[
                 { icon: Copy, label: "Copy", onClick: () => onCopy(msg.text) },
-                { icon: RotateCcw, label: "Regenerate", onClick: onRegenerate },
+                { icon: RotateCcw, label: "Regenerate", onClick: () => onRegenerate() },
                 ...(msg.navigation ? [{ icon: ExternalLink, label: msg.navigation.label, onClick: () => onNavigate(msg.navigation!.path) }] : []),
               ].map(action => (
                 <button
