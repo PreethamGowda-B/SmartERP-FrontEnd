@@ -94,32 +94,16 @@ export default function ShiftRosterPage() {
   const fetchEmployees = useCallback(async () => {
     try {
       setLoading(true)
-      const empRes = await apiClient("/api/employees").catch(() => [])
+      const empRes = await apiClient("/api/employees")
+      if (!Array.isArray(empRes)) throw new Error("Employee roster data was not returned by the server.")
       const empArray = Array.isArray(empRes) ? empRes : []
 
-      // Transform employees to Roster format with default shift assignments
+      // The employee-list API does not currently persist or return roster
+      // assignments. Only display values actually returned by the server.
       const formatted: EmployeeRoster[] = empArray.map((emp: any, idx: number) => {
-        const assignments: Record<string, ShiftAssignment> = {}
-        DAYS_OF_WEEK.forEach((day, dayIdx) => {
-          let defaultShift: ShiftType = "General"
-          if (dayIdx === 5 || dayIdx === 6) {
-            defaultShift = "Weekly Off"
-          } else if (idx % 4 === 1 && dayIdx < 5) {
-            defaultShift = "Morning"
-          } else if (idx % 4 === 2 && dayIdx < 5) {
-            defaultShift = "Evening"
-          } else if (idx % 4 === 3 && dayIdx < 5) {
-            defaultShift = "Night"
-          }
-
-          assignments[day] = {
-            day,
-            shift: defaultShift,
-            startTime: defaultShift === "Morning" ? "07:00 AM" : defaultShift === "Evening" ? "03:00 PM" : defaultShift === "Night" ? "11:00 PM" : "09:00 AM",
-            endTime: defaultShift === "Morning" ? "03:30 PM" : defaultShift === "Evening" ? "11:30 PM" : defaultShift === "Night" ? "07:30 AM" : "06:00 PM",
-          }
-        })
-
+        const assignments = emp.assignments && typeof emp.assignments === "object"
+          ? emp.assignments as Record<string, ShiftAssignment>
+          : {}
         return {
           id: String(emp.id || idx),
           name: emp.name || emp.email || `Employee ${idx + 1}`,
@@ -158,27 +142,7 @@ export default function ShiftRosterPage() {
     if (!editingSlot) return
     try {
       setSavingShift(true)
-      setEmployees(prev =>
-        prev.map(emp => {
-          if (emp.id === editingSlot.employeeId) {
-            return {
-              ...emp,
-              assignments: {
-                ...emp.assignments,
-                [editingSlot.day]: {
-                  day: editingSlot.day,
-                  shift: newShiftType
-                }
-              }
-            }
-          }
-          return emp
-        })
-      )
-      toast.success(`Updated ${editingSlot.employeeName}'s shift for ${editingSlot.day} to ${newShiftType}`)
-      setEditingSlot(null)
-    } catch (err) {
-      toast.error("Failed to update shift")
+      toast.error("Shift changes were not saved. The roster API is not available yet; your selection is still open so you can copy it.")
     } finally {
       setSavingShift(false)
     }
@@ -233,13 +197,13 @@ export default function ShiftRosterPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => toast.info("Exporting Roster PDF...")}
+              onClick={() => toast.error("Roster export is unavailable because no roster export endpoint is connected yet.")}
               className="gap-2 text-xs"
             >
               <Download className="h-3.5 w-3.5" />
               Export Roster PDF
             </Button>
-            <Button size="sm" onClick={() => toast.success("Roster published to all employees via SMS/Push!")} className="gap-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button size="sm" onClick={() => toast.error("Roster was not published. No roster publication service is connected yet.")} className="gap-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white">
               <CheckCircle2 className="h-3.5 w-3.5" />
               Publish Roster
             </Button>
@@ -421,8 +385,11 @@ export default function ShiftRosterPage() {
 
                         {/* Shift Days Columns */}
                         {DAYS_OF_WEEK.map(day => {
-                          const assignment = emp.assignments[day] || { day, shift: "General" }
-                          const shiftType = assignment.shift
+                          const assignment = emp.assignments[day]
+                          const shiftType = assignment?.shift
+                          if (!assignment) {
+                            return <td key={day} className="p-2 text-center"><span className="inline-flex rounded-lg border border-dashed px-3 py-2 text-[10px] text-muted-foreground">Not configured</span></td>
+                          }
                           const colorClass = SHIFT_COLOR_MAP[shiftType] || "bg-muted text-muted-foreground"
                           const IconComp = SHIFT_ICONS[shiftType] || Sun
 

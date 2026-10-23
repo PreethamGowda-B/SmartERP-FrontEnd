@@ -17,7 +17,7 @@ export default function ExecutiveReportsPage() {
   ]
 
   const handleExport = (reportTitle: string, format: string) => {
-    toast.success(`Exported ${reportTitle} in ${format} format!`)
+    toast.error(`${reportTitle} ${format} export is unavailable because this report has no connected data/export endpoint yet.`)
   }
 
   return (
@@ -27,8 +27,8 @@ export default function ExecutiveReportsPage() {
           <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
             <FileText className="h-8 w-8 text-emerald-500" /> Executive Reports Center
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Generate and export Daily Operations, Weekly Performance, Monthly Financial, and AMC Reports in PDF & Excel
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Report export endpoints are not connected yet. Export actions will report this clearly instead of creating a blank or fabricated file.
           </p>
         </div>
       </div>

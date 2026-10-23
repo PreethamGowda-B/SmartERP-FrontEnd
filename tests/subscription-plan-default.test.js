@@ -19,7 +19,7 @@ test("frontend fallback is the canonical Starter plan and denies paid-only featu
     features: {
       payroll: false,
       messages: true,
-      ai_assistant: false,
+      ai_assistant: true,
       basic_reports: true,
       export_reports: true,
       advanced_reports: false,
@@ -57,7 +57,8 @@ test("support screens consume the server policy and create tracked requests inst
 });
 
 test("frontend feature checks follow explicit plan flags, not tier labels", () => {
-  assert.equal(hasPlanFeature(DEFAULT_PLAN, "ai_assistant"), false);
+  assert.equal(hasPlanFeature(DEFAULT_PLAN, "ai_assistant"), true);
+  assert.equal(hasPlanFeature(DEFAULT_PLAN, "payroll"), false);
   assert.equal(hasPlanFeature({ id: 3, name: "Enterprise", features: { payroll: false } }, "payroll"), false);
   assert.equal(hasPlanFeature({ id: 2, name: "Professional", features: { ai_assistant: true } }, "ai_assistant"), true);
   assert.equal(hasPlanFeature({ id: 2, name: "Professional", features: { ar_collections: true } }, "ar_collections"), true);

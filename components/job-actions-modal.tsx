@@ -183,19 +183,6 @@ export function JobActionsModal({ jobId, jobTitle, isOpen, onClose, onActionComp
         }),
       })
 
-      // 2. Also log to legacy job actions table for backward compatibility
-      await apiClient(`/api/jobs/${jobId}/actions`, {
-        method: "POST",
-        body: JSON.stringify({
-          module: selectedOption.category,
-          action_type: selectedOption.id,
-          urgency: selectedOption.urgency,
-          notes,
-          evidence_urls: evidenceUrl ? [evidenceUrl] : [],
-          payload
-        })
-      }).catch(() => {})
-
       toast.success(
         selectedOption.urgency === "emergency"
           ? "🚨 Emergency Alert Sent to Owner!"

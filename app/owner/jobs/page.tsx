@@ -25,6 +25,7 @@ import { SkeletonList } from "@/components/ui/skeleton-card"
 import { ExecutiveJobCard } from "@/components/executive-job-card"
 import { ApprovalCenterView } from "@/components/approval-center-view"
 import { JobDetailsModal } from "@/components/job-details-modal"
+import { toast } from "sonner"
 
 const AUTO_REFRESH_MS = 30_000
 
@@ -115,6 +116,7 @@ function OwnerJobsPageContent() {
       try {
         await deleteJob(job.id)
         setLastUpdated(new Date())
+        toast.success("Job deleted successfully.")
       } catch (err: any) {
         setError({
           title: "Failed to Delete Job",
@@ -132,6 +134,7 @@ function OwnerJobsPageContent() {
       } else {
         await addJob(jobData as Job)
       }
+      toast.success(editingJob ? "Job updated successfully." : "Job created successfully.")
       setIsFormOpen(false)
       setEditingJob(null)
       setLastUpdated(new Date())

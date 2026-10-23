@@ -7,15 +7,13 @@ import { type Job } from "@/lib/data"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/apiClient"
 import { isPublicRoute } from "@/lib/route-utils"
-import { useNotifications } from "@/contexts/notification-context"
 import { logger } from "@/lib/logger"
-import { toast } from "sonner"
 
 interface JobContextType {
   jobs: Job[]
-  addJob: (job: Job) => void
-  updateJob: (id: string, updates: Partial<Job>) => void
-  deleteJob: (id: string) => void
+  addJob: (job: Job) => Promise<Job>
+  updateJob: (id: string, updates: Partial<Job>) => Promise<Job>
+  deleteJob: (id: string) => Promise<void>
   getJobsByEmployee: (employeeId: string) => Job[]
   refreshJobs: () => Promise<void>
 }
@@ -212,7 +210,6 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, isLoading, isPublic, scope, storageKey])
 
-  const { addNotification } = useNotifications()
 
   useEffect(() => {
     if (typeof window !== "undefined" && storageKey && loadedScopeRef.current === scope && jobsScopeRef.current === scope) {
@@ -250,83 +247,31 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("storage", handler)
   }, [scope, storageKey])
 
-  const addJob = useCallback((job: Job) => {
-    setJobs((prev) => [job, ...prev])
-      // persist to backend (best-effort)
-      ; (async () => {
-        try {
-          await apiClient("/api/jobs", { method: "POST", body: JSON.stringify(job) })
-        } catch (err) {
-          logger.warn("Failed to persist job to server", err)
-          toast.error("This job could not be saved. The list will be refreshed from the server.")
-          window.dispatchEvent(new Event("smarterp:jobs-refresh-requested"))
-        }
-      })()
+  const addJob = useCallback(async (job: Job) => {
+    const response = await apiClient<any>("/api/jobs", { method: "POST", body: JSON.stringify(job) })
+    const savedJob = response?.job || response?.data?.job || response?.data || response
+    if (!savedJob?.id) throw new Error("The server did not confirm that the job was saved.")
+    setJobs((prev) => [savedJob, ...prev.filter((existing) => String(existing.id) !== String(savedJob.id))])
+    return savedJob as Job
+  }, [])
 
-    if (job.assignedEmployees && job.assignedEmployees.length > 0) {
-      job.assignedEmployees.forEach((employeeId) => {
-        addNotification({
-          type: "job",
-          title: "New Job Assignment",
-          message: `You've been assigned to the "${job.title}" project. Check your jobs page for details.`,
-          priority: "medium",
-          data: { jobId: job.id, jobTitle: job.title, userId: employeeId },
-        })
-      })
-    }
-  }, [addNotification])
-
-  const updateJob = useCallback((id: string, updates: Partial<Job>) => {
-    setJobs((prev) => {
-      const updatedJobs = prev.map((job) => {
-        if (job.id === id) {
-          const updatedJob = { ...job, ...updates }
-
-          if (updates.assignedEmployees) {
-            const previousEmployees = job.assignedEmployees || []
-            const newEmployees = updates.assignedEmployees.filter((empId) => !previousEmployees.includes(empId))
-
-            newEmployees.forEach((employeeId) => {
-              addNotification({
-                type: "job",
-                title: "New Job Assignment",
-                message: `You've been assigned to the "${updatedJob.title}" project. Check your jobs page for details.`,
-                priority: "medium",
-                data: { jobId: updatedJob.id, jobTitle: updatedJob.title, userId: employeeId },
-              })
-            })
-          }
-
-          return updatedJob
-        }
-        return job
-      })
-      return updatedJobs
+  const updateJob = useCallback(async (id: string, updates: Partial<Job>) => {
+    const response = await apiClient<any>(`/api/jobs/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
     })
+    const savedJob = response?.job || response?.data?.job || response?.data || response
+    if (!savedJob?.id || String(savedJob.id) !== String(id)) {
+      throw new Error("The server did not confirm that the job update was saved.")
+    }
+    setJobs((prev) => prev.map((job) => String(job.id) === String(id) ? savedJob : job))
+    return savedJob as Job
+  }, [])
 
-      // best-effort update to backend
-      ; (async () => {
-        try {
-          await apiClient(`/api/jobs/${id}`, { method: "PUT", body: JSON.stringify(updates) })
-        } catch (err) {
-          logger.warn("Failed to update job on server", err)
-          toast.error("The job update could not be saved. The list will be refreshed from the server.")
-          window.dispatchEvent(new Event("smarterp:jobs-refresh-requested"))
-        }
-      })()
-  }, [addNotification])
-
-  const deleteJob = useCallback((id: string) => {
-    setJobs((prev) => prev.filter((job) => job.id !== id))
-      ; (async () => {
-        try {
-          await apiClient(`/api/jobs/${id}`, { method: "DELETE" })
-        } catch (err) {
-          logger.warn("Failed to delete job on server", err)
-          toast.error("The job could not be deleted. The list will be refreshed from the server.")
-          window.dispatchEvent(new Event("smarterp:jobs-refresh-requested"))
-        }
-      })()
+  const deleteJob = useCallback(async (id: string) => {
+    const response = await apiClient<any>(`/api/jobs/${encodeURIComponent(id)}`, { method: "DELETE" })
+    if (response?.success !== true) throw new Error(response?.message || "The server did not confirm that the job was deleted.")
+    setJobs((prev) => prev.filter((job) => String(job.id) !== String(id)))
   }, [])
 
   const getJobsByEmployee = useCallback((employeeId: string) => {

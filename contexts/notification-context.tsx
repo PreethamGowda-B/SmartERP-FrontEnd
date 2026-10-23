@@ -8,6 +8,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { apiClient, getAuthToken, getValidAccessToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { playEnterpriseChime } from "@/lib/sound-chime"
+import { mergeNotificationsById, notificationIdentity } from "@/lib/notification-dedupe"
 
 export interface Notification {
   id: string
@@ -59,6 +60,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [reconnectTrigger, setReconnectTrigger] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const messagingHandlerRef = useRef<MessagingSSEHandler | null>(null)
+  const seenNotificationIdsRef = useRef<Set<string>>(new Set())
+  const notificationOwnerKey = user
+    ? `${String(user.id)}:${String((user as any).companyId ?? (user as any).company_id ?? "")}`
+    : null
+  const notificationOwnerKeyRef = useRef<string | null>(notificationOwnerKey)
+
+  useEffect(() => {
+    if (notificationOwnerKeyRef.current === notificationOwnerKey) return
+    notificationOwnerKeyRef.current = notificationOwnerKey
+    seenNotificationIdsRef.current.clear()
+    setNotifications([])
+  }, [notificationOwnerKey])
 
   const toggleMute = useCallback(() => {
     setIsMuted((prev) => {
@@ -87,6 +100,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!user || !getAuthToken()) return
     try {
       const data = await apiClient("/api/notifications")
+      if (notificationOwnerKeyRef.current !== notificationOwnerKey) return
       const parsed = Array.isArray(data) ? data.map((n: any) => {
         let parsedData = n.data
         if (typeof parsedData === "string") {
@@ -94,7 +108,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         }
         return { ...n, data: parsedData }
       }) : []
-      setNotifications(parsed)
+      for (const notification of parsed) {
+        const id = notificationIdentity(notification)
+        if (id !== null) seenNotificationIdsRef.current.add(id)
+      }
+      setNotifications((current) => mergeNotificationsById(parsed, current))
       logger.log(`✅ Fetched ${parsed.length} notifications`)
     } catch (error: any) {
       const isAuthErr = error?.status === 401 || error?.status === '401' || error?.message === "Authentication required"
@@ -102,7 +120,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         logger.error("❌ Error fetching notifications:", error)
       }
     }
-  }, [user, isCustomerRoute])
+  }, [user, isCustomerRoute, notificationOwnerKey])
 
   // Initialize FCM and request permission
   const setupFCM = useCallback(async () => {
@@ -218,15 +236,22 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             }
             logger.log("🔔 New notification received:", notification)
 
-            if (typeof window !== "undefined") {
+            // SSE may replay after reconnect or deliver an event already
+            // included in the initial/polled API response. Use the persisted
+            // notification ID only; identical text from distinct events stays
+            // distinct.
+            const notificationId = notificationIdentity(notification)
+            const isDuplicateDelivery = notificationId !== null && seenNotificationIdsRef.current.has(notificationId)
+            if (notificationId !== null) seenNotificationIdsRef.current.add(notificationId)
+
+            if (!isDuplicateDelivery && typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("smarterp:notification", { detail: notification }))
             }
 
             // 1. Update Notification Center state
-            setNotifications((prev) => {
-              if (notification?.id && prev.some((item) => item.id === notification.id)) return prev
-              return [notification, ...prev]
-            })
+            setNotifications((prev) => mergeNotificationsById([notification], prev))
+
+            if (isDuplicateDelivery) return
 
             // 2. Play Crisp Web Audio Chime Sound (if not muted)
             if (!isMuted) {
@@ -338,7 +363,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       created_at: new Date().toISOString(),
       read: false,
     }
-    setNotifications((prev) => [newNotification, ...prev])
+    setNotifications((prev) => mergeNotificationsById([newNotification], prev))
   }
 
   const markAsRead = async (id: string) => {
@@ -350,9 +375,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setNotifications((prev) =>
         prev.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)),
       )
+      toast.success("Notification marked as read.")
       logger.log(`✅ Notification ${id} marked as read`)
     } catch (error) {
       logger.error("❌ Error marking notification as read:", error)
+      toast.error("Could not mark the notification as read. Please retry.")
     }
   }
 
@@ -363,9 +390,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       })
 
       setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })))
+      toast.success("All notifications marked as read.")
       logger.log("✅ All notifications marked as read")
     } catch (error) {
       logger.error("❌ Error marking all as read:", error)
+      toast.error("Could not mark notifications as read. Please retry.")
     }
   }
 

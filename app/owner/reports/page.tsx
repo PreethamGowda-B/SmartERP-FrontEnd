@@ -1,6 +1,4 @@
 "use client"
-import { getApiOrigin } from "@/lib/api-environment.mjs";
-
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -17,8 +15,7 @@ import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
 import { exportToPDF } from "@/lib/export-utils"
 import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
-
-const API = getApiOrigin()
+import { toast } from "sonner"
 
 async function fetchReport(endpoint: string, period: string) {
   return await apiClient(`/api/reports/${endpoint}?period=${period}`)
@@ -76,11 +73,11 @@ export default function ReportsPage() {
   const [period, setPeriod] = useState("month")
   const [activeTab, setActiveTab] = useState("attendance")
 
-  const [attendance, setAttendance] = useState<any>({ totals: { total_hours: 0, avg_daily: 0 }, rows: [] })
-  const [jobs, setJobs] = useState<any>({ summary: { completed: 0, total: 0, in_progress: 0 }, rows: [] })
-  const [employees, setEmployees] = useState<any>({ rows: [] })
-  const [materials, setMaterials] = useState<any>({ summary: { total: 0, pending: 0, approved: 0 }, rows: [] })
-  const [inventory, setInventory] = useState<any>({ summary: { total_items: 0, low_stock_count: 0, total_value: 0 }, rows: [] })
+  const [attendance, setAttendance] = useState<any>(null)
+  const [jobs, setJobs] = useState<any>(null)
+  const [employees, setEmployees] = useState<any>(null)
+  const [materials, setMaterials] = useState<any>(null)
+  const [inventory, setInventory] = useState<any>(null)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -88,19 +85,27 @@ export default function ReportsPage() {
   const loadAll = useCallback(async (p: string) => {
     setLoading(true)
     setError("")
+    setAttendance(null)
+    setJobs(null)
+    setEmployees(null)
+    setMaterials(null)
+    setInventory(null)
     try {
       const [att, job, emp, mat, inv] = await Promise.all([
-        fetchReport("attendance", p).catch(() => null),
-        fetchReport("jobs", p).catch(() => null),
-        fetchReport("employees", p).catch(() => null),
-        fetchReport("materials", p).catch(() => null),
-        fetchReport("inventory", p).catch(() => null),
+        fetchReport("attendance", p),
+        fetchReport("jobs", p),
+        fetchReport("employees", p),
+        fetchReport("materials", p),
+        fetchReport("inventory", p),
       ])
-      setAttendance(att || { totals: { total_hours: 160, avg_daily: 8 }, rows: [] })
-      setJobs(job || { summary: { completed: 12, total: 15 }, rows: [] })
-      setEmployees(emp || { rows: [] })
-      setMaterials(mat || { summary: { total: 8, pending: 2 }, rows: [] })
-      setInventory(inv || { summary: { total_items: 24, total_value: 15000 }, rows: [] })
+      if ([att, job, emp, mat, inv].some((result) => result == null)) {
+        throw new Error("One or more report services returned no data. Refresh to try again.")
+      }
+      setAttendance(att)
+      setJobs(job)
+      setEmployees(emp)
+      setMaterials(mat)
+      setInventory(inv)
     } catch (e: any) {
       setError(e.message || "Failed to load report data")
     } finally {
@@ -111,7 +116,10 @@ export default function ReportsPage() {
   useEffect(() => { loadAll(period) }, [period, loadAll])
 
   const handleExport = () => {
-    if (!attendance || !jobs || !materials || !inventory) return
+    if (!attendance || !jobs || !materials || !inventory) {
+      toast.error("Reports are not ready to export. Load all report data first.")
+      return
+    }
 
     const periodLabel = period.toUpperCase()
     const dateStr = new Date().toISOString().split("T")[0]
@@ -140,27 +148,32 @@ export default function ReportsPage() {
       { section: "Inventory", metric: "Categories", value: inventory.summary?.category_count ?? 0 },
     ]
 
-    exportToPDF({
-      filename: `SmartERP_Report_${periodLabel}_${dateStr}`,
-      title: `SmartERP Summary Report — ${periodLabel}`,
-      subtitle: `Period: ${periodLabel} | Generated: ${new Date().toLocaleString()}`,
-      columns: [
-        { header: "Section", dataKey: "section", type: "text" },
-        { header: "Metric", dataKey: "metric", type: "text" },
-        { header: "Value", dataKey: "value", type: "text" },
-      ],
-      data: summaryData,
-      summary: [
-        { label: "Period", value: periodLabel },
-        { label: "Attendance Records", value: attendance.totals?.total_records ?? 0 },
-        { label: "Total Jobs", value: jobs.summary?.total ?? 0 },
-        { label: "Jobs Completed", value: jobs.summary?.completed ?? 0 },
-        { label: "Material Requests", value: materials.summary?.total ?? 0 },
-        { label: "Inventory Items", value: inventory.summary?.total_items ?? 0 },
-        { label: "Low Stock Alerts", value: inventory.summary?.low_stock_count ?? 0 },
-        { label: "Export Date", value: dateStr },
-      ],
-    })
+    try {
+      exportToPDF({
+        filename: `SmartERP_Report_${periodLabel}_${dateStr}`,
+        title: `SmartERP Summary Report — ${periodLabel}`,
+        subtitle: `Period: ${periodLabel} | Generated: ${new Date().toLocaleString()}`,
+        columns: [
+          { header: "Section", dataKey: "section", type: "text" },
+          { header: "Metric", dataKey: "metric", type: "text" },
+          { header: "Value", dataKey: "value", type: "text" },
+        ],
+        data: summaryData,
+        summary: [
+          { label: "Period", value: periodLabel },
+          { label: "Attendance Records", value: attendance.totals?.total_records ?? 0 },
+          { label: "Total Jobs", value: jobs.summary?.total ?? 0 },
+          { label: "Jobs Completed", value: jobs.summary?.completed ?? 0 },
+          { label: "Material Requests", value: materials.summary?.total ?? 0 },
+          { label: "Inventory Items", value: inventory.summary?.total_items ?? 0 },
+          { label: "Low Stock Alerts", value: inventory.summary?.low_stock_count ?? 0 },
+          { label: "Export Date", value: dateStr },
+        ],
+      })
+      toast.success("Report PDF downloaded.")
+    } catch {
+      toast.error("The report PDF could not be generated. Your report data is still available on this page.")
+    }
   }
 
   const jTot = Number(jobs?.summary?.total ?? 0)
@@ -192,7 +205,7 @@ export default function ReportsPage() {
             <Button variant="outline" onClick={() => loadAll(period)} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
             </Button>
-            <Button onClick={handleExport} disabled={loading || !attendance}>
+            <Button onClick={handleExport} disabled={loading || Boolean(error) || !attendance || !jobs || !materials || !inventory}>
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
@@ -212,7 +225,7 @@ export default function ReportsPage() {
           </div>
         )}
 
-        {!loading && (
+        {!loading && !error && attendance && jobs && employees && materials && inventory && (
           <>
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

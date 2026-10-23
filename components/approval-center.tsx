@@ -25,7 +25,7 @@ import type { ColumnDef } from "@/components/data-table/data-table-types"
 export interface ApprovalItem {
   id: string
   title: string
-  category: "Material Request" | "Leave Request" | "Payroll Approval" | "Job Approval"
+  category: "Material Request" | "Leave Request" | "Payroll Approval" | "Job Approval" | "Work Request"
   requester: string
   requestedDate: string
   amountOrQty?: string
@@ -34,107 +34,84 @@ export interface ApprovalItem {
 }
 
 export function ApprovalCenter() {
-  const [approvals, setApprovals] = React.useState<ApprovalItem[]>([
-    {
-      id: "app-1",
-      title: "50x Safety Helmets Procurement",
-      category: "Material Request",
-      requester: "John Doe",
-      requestedDate: "2026-07-26",
-      amountOrQty: "50 units",
-      status: "pending",
-      details: "Required for new site expansion in Sector 4.",
-    },
-    {
-      id: "app-2",
-      title: "Annual Leave Request (3 Days)",
-      category: "Leave Request",
-      requester: "Sarah Smith",
-      requestedDate: "2026-07-25",
-      amountOrQty: "3 Days",
-      status: "pending",
-      details: "Personal leave request for August 5-7.",
-    },
-    {
-      id: "app-3",
-      title: "July Executive Payroll Disbursement",
-      category: "Payroll Approval",
-      requester: "HR Department",
-      requestedDate: "2026-07-24",
-      amountOrQty: "₹4,85,000",
-      status: "pending",
-      details: "Monthly payroll authorization for 24 staff members.",
-    },
-    {
-      id: "app-4",
-      title: "Structural Wiring Job Sign-off",
-      category: "Job Approval",
-      requester: "Mike Johnson",
-      requestedDate: "2026-07-23",
-      amountOrQty: "100% Complete",
-      status: "approved",
-      details: "Client accepted final deliverable.",
-    },
-  ])
+  const [approvals, setApprovals] = React.useState<ApprovalItem[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [loadError, setLoadError] = React.useState<string | null>(null)
+  const [busyIds, setBusyIds] = React.useState<Set<string>>(new Set())
+  const busyIdsRef = React.useRef(new Set<string>())
 
-  React.useEffect(() => {
-    async function loadFieldActions() {
-      try {
-        const { apiClient } = await import("@/lib/apiClient")
-        const res = await apiClient<{ success: boolean; requests: any[] }>("/api/work-requests?status=pending")
-        if (res && res.success && Array.isArray(res.requests) && res.requests.length > 0) {
-          const mapped: ApprovalItem[] = res.requests.map((fa: any) => ({
-            id: fa.id,
-            title: `Work Request: ${fa.title || 'FIELD REQUEST'}`,
-            category: "Job Approval",
-            requester: fa.submitted_by_name || "Field Employee",
-            requestedDate: new Date(fa.created_at).toLocaleDateString(),
-            amountOrQty: fa.urgency ? fa.urgency.toUpperCase() : "NORMAL",
-            status: fa.status === 'pending' ? 'pending' : (fa.status === 'approved' ? 'approved' : 'rejected'),
-            details: fa.reason || `Type: ${fa.request_type}`
-          }))
-          setApprovals((prev) => [...mapped, ...prev.filter(p => !p.id.includes('-'))])
-        }
-      } catch (err) {
-        // Fallback silently if unauthenticated or offline
-      }
+  const loadApprovals = React.useCallback(async () => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const { apiClient } = await import("@/lib/apiClient")
+      const res = await apiClient<{ success: boolean; requests: any[] }>("/api/work-requests?status=all")
+      if (!res?.success || !Array.isArray(res.requests)) throw new Error("The approvals response was invalid.")
+      const visibleStatuses = new Set(["pending", "approved", "rejected"])
+      setApprovals(res.requests.filter((request: any) => visibleStatuses.has(request.status)).map((request: any) => ({
+        id: String(request.id),
+        title: request.title || `Work request: ${request.request_type || "Request"}`,
+        category: "Work Request",
+        requester: request.submitted_by_name || "Employee",
+        requestedDate: request.created_at ? new Date(request.created_at).toLocaleDateString() : "—",
+        amountOrQty: request.urgency ? String(request.urgency).toUpperCase() : undefined,
+        status: request.status === "approved" ? "approved" : request.status === "rejected" ? "rejected" : "pending",
+        details: request.reason || `Type: ${request.request_type || "work request"}`,
+      })))
+    } catch (error) {
+      setLoadError("Could not load approval requests. Please retry.")
+    } finally {
+      setLoading(false)
     }
-    loadFieldActions()
   }, [])
+
+  React.useEffect(() => { void loadApprovals() }, [loadApprovals])
 
   const [activeTab, setActiveTab] = React.useState<string>("pending")
 
   const handleApprove = async (id: string) => {
-    setApprovals((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: "approved" } : a))
-    )
-    if (!id.startsWith("app-")) {
-      try {
-        const { apiClient } = await import("@/lib/apiClient")
-        await apiClient(`/api/jobs/actions/${id}/respond`, {
-          method: "PATCH",
-          body: JSON.stringify({ decision: "approved", owner_response: "Approved via Approval Center" })
-        })
-        const { toast } = await import("sonner")
-        toast.success("Field Action Approved!")
-      } catch (e) {}
+    if (busyIdsRef.current.has(id)) return
+    busyIdsRef.current.add(id)
+    setBusyIds(new Set(busyIdsRef.current))
+    try {
+      const { apiClient } = await import("@/lib/apiClient")
+      const result = await apiClient<{ success: boolean }>(`/api/work-requests/${encodeURIComponent(id)}/action`, {
+        method: "PATCH",
+        body: JSON.stringify({ action: "approve", owner_response: "Approved via Approval Center" }),
+      })
+      if (!result?.success) throw new Error("The request was not confirmed as approved.")
+      setApprovals((prev) => prev.map((item) => item.id === id ? { ...item, status: "approved" } : item))
+      const { toast } = await import("sonner")
+      toast.success("Request approved.")
+    } catch (error) {
+      const { toast } = await import("sonner")
+      toast.error(error instanceof Error ? error.message : "Could not approve request.")
+    } finally {
+      busyIdsRef.current.delete(id)
+      setBusyIds(new Set(busyIdsRef.current))
     }
   }
 
   const handleReject = async (id: string) => {
-    setApprovals((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: "rejected" } : a))
-    )
-    if (!id.startsWith("app-")) {
-      try {
-        const { apiClient } = await import("@/lib/apiClient")
-        await apiClient(`/api/jobs/actions/${id}/respond`, {
-          method: "PATCH",
-          body: JSON.stringify({ decision: "rejected", owner_response: "Declined via Approval Center" })
-        })
-        const { toast } = await import("sonner")
-        toast.error("Field Action Rejected")
-      } catch (e) {}
+    if (busyIdsRef.current.has(id)) return
+    busyIdsRef.current.add(id)
+    setBusyIds(new Set(busyIdsRef.current))
+    try {
+      const { apiClient } = await import("@/lib/apiClient")
+      const result = await apiClient<{ success: boolean }>(`/api/work-requests/${encodeURIComponent(id)}/action`, {
+        method: "PATCH",
+        body: JSON.stringify({ action: "reject", owner_response: "Declined via Approval Center" }),
+      })
+      if (!result?.success) throw new Error("The request was not confirmed as rejected.")
+      setApprovals((prev) => prev.map((item) => item.id === id ? { ...item, status: "rejected" } : item))
+      const { toast } = await import("sonner")
+      toast.success("Request rejected.")
+    } catch (error) {
+      const { toast } = await import("sonner")
+      toast.error(error instanceof Error ? error.message : "Could not reject request.")
+    } finally {
+      busyIdsRef.current.delete(id)
+      setBusyIds(new Set(busyIdsRef.current))
     }
   }
 
@@ -207,9 +184,10 @@ export function ApprovalCenter() {
         <div className="flex items-center gap-1.5 justify-end">
           {item.status === "pending" ? (
             <>
-              <Button
+            <Button
                 size="sm"
                 className="h-7 text-xs px-2.5 bg-emerald-600 hover:bg-emerald-700"
+                disabled={busyIds.has(item.id)}
                 onClick={() => handleApprove(item.id)}
               >
                 <Check className="h-3 w-3 mr-1" /> Approve
@@ -218,6 +196,7 @@ export function ApprovalCenter() {
                 size="sm"
                 variant="outline"
                 className="h-7 text-xs px-2.5 text-rose-600 hover:bg-rose-50"
+                disabled={busyIds.has(item.id)}
                 onClick={() => handleReject(item.id)}
               >
                 <X className="h-3 w-3 mr-1" /> Reject
@@ -249,7 +228,14 @@ export function ApprovalCenter() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <EnterpriseDataTable<ApprovalItem>
+        {loadError ? (
+          <div role="alert" className="p-6 text-sm text-destructive">
+            <p>{loadError}</p>
+            <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void loadApprovals()}>Retry</Button>
+          </div>
+        ) : loading ? (
+          <div role="status" className="p-6 text-sm text-muted-foreground">Loading approval requests…</div>
+        ) : <EnterpriseDataTable<ApprovalItem>
           data={filteredData}
           columns={columns}
           getRowId={(a) => a.id}
@@ -264,7 +250,7 @@ export function ApprovalCenter() {
               <Button
                 size="sm"
                 className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => selected.forEach((s) => handleApprove(s.id))}
+                onClick={() => void Promise.all(selected.map((s) => handleApprove(s.id)))}
               >
                 Approve Selected ({selected.length})
               </Button>
@@ -272,13 +258,13 @@ export function ApprovalCenter() {
                 size="sm"
                 variant="outline"
                 className="h-7 text-xs text-rose-600 hover:bg-rose-50"
-                onClick={() => selected.forEach((s) => handleReject(s.id))}
+                onClick={() => void Promise.all(selected.map((s) => handleReject(s.id)))}
               >
                 Reject Selected ({selected.length})
               </Button>
             </div>
           )}
-        />
+        />}
       </CardContent>
     </Card>
   )

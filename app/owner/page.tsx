@@ -117,7 +117,8 @@ export default function OwnerDashboard() {
   const [loading, setLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
-  const [pendingApprovals, setPendingApprovals] = useState(0)
+  const [pendingApprovals, setPendingApprovals] = useState<number | null>(null)
+  const [approvalLoadError, setApprovalLoadError] = useState<string | null>(null)
   const [attentionItems, setAttentionItems] = useState<any[]>([])
   const [projectFilter, setProjectFilter] = useState<"all" | "in_progress" | "high_priority">("all")
   const [currentTime, setCurrentTime] = useState<Date | null>(null)
@@ -134,17 +135,26 @@ export default function OwnerDashboard() {
     try {
       if (showLoading) setLoading(true)
       setError(null)
-      const [metricsData, activityData, approvalData] = await Promise.all([
+      const [metricsData, activityData, approvalResult] = await Promise.all([
         apiClient<DashboardMetrics>("/api/dashboard/owner/metrics"),
         apiClient<RecentActivity[]>("/api/dashboard/owner/recent-activity"),
-        apiClient<{ requests?: any[] }>("/api/work-requests?status=pending").catch(() => ({ requests: [] })),
+        apiClient<{ requests?: any[] }>("/api/work-requests?status=pending")
+          .then((data) => ({ data, error: null as string | null }))
+          .catch(() => ({ data: null, error: "Pending approvals could not be loaded. Please retry." })),
       ])
       setMetrics(metricsData)
       setRecentActivity(Array.isArray(activityData) ? activityData : [])
       setLastSyncedAt(new Date())
-      const workRequests = approvalData?.requests || []
-      setPendingApprovals(workRequests.length)
-      setAttentionItems(workRequests.slice(0, 3))
+      if (approvalResult.error || !Array.isArray(approvalResult.data?.requests)) {
+        setApprovalLoadError(approvalResult.error || "The pending approvals response was invalid.")
+        setPendingApprovals(null)
+        setAttentionItems([])
+      } else {
+        const workRequests = approvalResult.data?.requests || []
+        setApprovalLoadError(null)
+        setPendingApprovals(workRequests.length)
+        setAttentionItems(workRequests.slice(0, 3))
+      }
     } catch (err: any) {
       logger.error("Error fetching dashboard data:", err)
       setError({
@@ -525,13 +535,13 @@ export default function OwnerDashboard() {
           </Card>
         </div>
 
-        {pendingApprovals > 0 && (
+        {(approvalLoadError || (pendingApprovals !== null && pendingApprovals > 0)) && (
           <section className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"><AlertTriangle className="h-4 w-4" /></span>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-foreground">Needs your attention <span className="ml-1 rounded-full bg-amber-200 px-2 py-0.5 text-[10px] text-amber-900 dark:bg-amber-900 dark:text-amber-100">{pendingApprovals}</span></p>
-                <p className="truncate text-xs text-muted-foreground">{attentionItems.map((item) => item.title).filter(Boolean).join(' · ') || 'Requests are waiting for review'}</p>
+                <p className="text-sm font-bold text-foreground">{approvalLoadError ? "Approvals unavailable" : <>Needs your attention <span className="ml-1 rounded-full bg-amber-200 px-2 py-0.5 text-[10px] text-amber-900 dark:bg-amber-900 dark:text-amber-100">{pendingApprovals}</span></>}</p>
+                <p className="truncate text-xs text-muted-foreground">{approvalLoadError || attentionItems.map((item) => item.title).filter(Boolean).join(' · ') || 'Requests are waiting for review'}</p>
               </div>
             </div>
             <Button size="sm" variant="outline" className="h-9 shrink-0 gap-2 rounded-lg border-amber-300 bg-white/70 text-xs font-semibold text-amber-900 hover:bg-white dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100" onClick={() => router.push('/owner/jobs?view=approvals')}>
