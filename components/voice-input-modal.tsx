@@ -93,6 +93,7 @@ export function VoiceInputModal({ isOpen, onClose, onSuccess, onError, onListeni
     try {
       const res = await apiClient<{ text?: string; error?: string }>("/api/ai/agent", {
         method: "POST",
+        timeoutMs: 30000,
         body: JSON.stringify({
           message: transcript,
           currentPortal: portal,

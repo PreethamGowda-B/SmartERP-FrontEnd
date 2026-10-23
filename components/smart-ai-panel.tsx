@@ -714,6 +714,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
 
       const data = await apiClient("/api/ai/agent", {
         method: "POST",
+        timeoutMs: 30000,
         body: JSON.stringify(body),
       })
 

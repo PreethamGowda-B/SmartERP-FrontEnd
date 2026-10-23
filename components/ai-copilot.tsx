@@ -140,6 +140,7 @@ function AICopilotInner({ user, pathname, className }: { user: any; pathname: st
 
       const res = await apiClient("/api/ai/agent", {
         method: "POST",
+        timeoutMs: 30000,
         body: JSON.stringify({
           message: query,
           history: historyPayload,

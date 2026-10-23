@@ -456,7 +456,9 @@ export async function getValidAccessToken(targetPath?: string): Promise<string |
   return await refreshAccessToken(targetPath)
 }
 
-export async function apiClient<T = any>(path: string, options: RequestInit = {}, retries = 2): Promise<T> {
+export type ApiRequestInit = RequestInit & { timeoutMs?: number }
+
+export async function apiClient<T = any>(path: string, options: ApiRequestInit = {}, retries = 2): Promise<T> {
   const baseUrl = getApiOrigin()
   
   const isFormData = options.body instanceof FormData
