@@ -758,6 +758,8 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
         friendlyText = "Your session could not be authenticated. Please sign in again."
       } else if (err?.status === 403) {
         friendlyText = apiMessage || "This account does not have access to the requested company information."
+      } else if (err?.code === "AI_PROMPT_BLOCKED" || err?.code === "INJECTION_IN_ACTION_PARAM") {
+        friendlyText = "I couldn't process that request because it contains instructions that conflict with SmartERP's safety rules. Please rephrase it as a normal business question."
       } else if (err?.status === 503 && apiMessage) {
         friendlyText = apiMessage
       } else if (err?.name === "AbortError" || err?.name === "TimeoutError") {
