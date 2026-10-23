@@ -1,4 +1,5 @@
 import { getApiOrigin } from "@/lib/api-environment.mjs";
+import { isOfflineFetchFailure } from "@/lib/api-network-status.mjs";
 // ============================================================
 // Token store — shifted to check both sessionStorage and localStorage
 // to support PERSISTENT login (across tab closes) and Android bridge compatibility.
@@ -514,10 +515,6 @@ export async function apiClient<T = any>(path: string, options: ApiRequestInit =
     markRequestStart(requestId)
 
     try {
-      if (typeof navigator !== "undefined" && !navigator.onLine) {
-        throw { name: "OfflineError", message: "Internet connection offline", isOffline: true }
-      }
-
       let res: Response
       try {
         // Use controller to handle potential timeouts if needed
@@ -543,16 +540,23 @@ export async function apiClient<T = any>(path: string, options: ApiRequestInit =
           throw { name: "AbortError", message: "Request cancelled" };
         }
 
-        const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-        if (isOffline) {
-          throw { name: "OfflineError", message: "Internet connection offline", isOffline: true };
+        // navigator.onLine is only a browser hint and may be false while the
+        // API is reachable. We already attempted fetch here, so use it only to
+        // qualify a real network failure rather than short-circuiting requests.
+        const deviceReportsOffline = typeof navigator !== "undefined" && !navigator.onLine;
+        if (isOfflineFetchFailure(error, deviceReportsOffline)) {
+          throw {
+            name: "OfflineError",
+            message: "SmartERP could not be reached. Your device may be offline or the service may be temporarily unreachable.",
+            isOffline: true,
+          };
         }
 
         // 🚀 PART 2: API RETRY SYSTEM (NETWORK RESILIENCE)
         // Retry failed requests ONLY IF: network error OR timeout, AND device is confirmed online
         const isTransientError = error.name === "TypeError" || error.name === "TimeoutError" || error.message?.includes("fetch")
         const isGetRequest = !options.method || options.method.toUpperCase() === "GET"
-        const canRetry = retries > 0 && isTransientError && isGetRequest && !isOffline
+        const canRetry = retries > 0 && isTransientError && isGetRequest && !deviceReportsOffline
 
         if (canRetry) {
           const delay = retries === 2 ? 500 : 1000 // 500ms -> 1000ms

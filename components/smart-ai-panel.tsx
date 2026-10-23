@@ -761,7 +761,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
       } else if (err?.code === "AI_PROMPT_BLOCKED" || err?.code === "INJECTION_IN_ACTION_PARAM") {
         friendlyText = apiMessage || "Sorry, I can't follow instructions that attempt to bypass my security rules. I can still help with your normal SmartERP tasks."
       } else if (err?.isOffline) {
-        friendlyText = "You're offline. Reconnect to the internet, then try your request again."
+        friendlyText = "SmartERP couldn't be reached. Your device may be offline or the service may be temporarily unavailable. Check your connection and retry."
       } else if (err?.name === "AbortError" || err?.name === "TimeoutError") {
         friendlyText = "The AI request timed out. Your session is still available; please retry."
       } else if (["AI_PROVIDER_NOT_CONFIGURED", "AI_PROVIDER_UNAVAILABLE", "AI_DATA_UNAVAILABLE", "AI_TOOL_EXECUTION_FAILED", "AI_AGENT_ITERATION_LIMIT", "AI_TOOL_ARGUMENTS_INVALID", "AI_WORKFLOW_NOT_IMPLEMENTED", "AI_EMPTY_RESPONSE", "AI_AGENT_FAILED", "AI_REQUEST_TIMEOUT"].includes(err?.code) && apiMessage) {
