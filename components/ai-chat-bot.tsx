@@ -86,11 +86,20 @@ export function AIChatBot({ className }: { className?: string }) {
     setConfirmingAction(toolName)
     try {
       const result = await confirmAgentAction(toolName, params)
+      const needsMoreConfirmation = result?.requiresUserConfirmation === true || result?.type === "ACTION_CONFIRMATION_REQUIRED"
+      const actionFailed = result?.success === false || Boolean(result?.error)
+      const responseText = result?.message || result?.text || (
+        needsMoreConfirmation
+          ? "The server requested another confirmation. The action has not been completed."
+          : result?.success === true
+            ? "The server confirmed the action completed."
+            : "The server returned a result. Check the related module to verify its final status."
+      )
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now(),
-          text: `✅ Action Executed: ${result.message || "Operation completed successfully."}`,
+          text: `${actionFailed || needsMoreConfirmation ? "⚠️" : result?.success === true ? "✅" : "ℹ️"} ${responseText}`,
           sender: "bot",
         },
       ])
@@ -99,7 +108,7 @@ export function AIChatBot({ className }: { className?: string }) {
         ...prev,
         {
           id: Date.now(),
-          text: `❌ Action Failed: ${err.message || "Failed to execute action."}`,
+          text: `❌ Action Failed: ${err?.error || err?.message || "Failed to execute action."}`,
           sender: "bot",
         },
       ])
@@ -189,7 +198,7 @@ export function AIChatBot({ className }: { className?: string }) {
           ...prev,
           {
             id: Date.now() + 1,
-            text: err.message || "SmartERP Agent is temporarily unavailable. Please try again.",
+          text: err?.error || err?.message || "SmartERP Agent is temporarily unavailable. Please try again.",
             sender: "bot",
           },
         ])

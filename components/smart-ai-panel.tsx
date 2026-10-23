@@ -751,7 +751,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
       setRobotMood("idle")
     } catch (err: any) {
       let friendlyText = "I'm temporarily connecting to live services. Please ask again or select a suggested topic below."
-      const apiMessage = err?.message || err?.error
+      const apiMessage = err?.error || err?.message
       if (err?.message === "PLAN_LOCKED") {
         friendlyText = "This feature requires a higher plan. Upgrade to unlock full AI capabilities."
       } else if (err?.status === 401) {
@@ -759,13 +759,17 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
       } else if (err?.status === 403) {
         friendlyText = apiMessage || "This account does not have access to the requested company information."
       } else if (err?.code === "AI_PROMPT_BLOCKED" || err?.code === "INJECTION_IN_ACTION_PARAM") {
-        friendlyText = "I couldn't process that request because it contains instructions that conflict with SmartERP's safety rules. Please rephrase it as a normal business question."
-      } else if (err?.status === 503 && apiMessage) {
-        friendlyText = apiMessage
+        friendlyText = apiMessage || "Sorry, I can't follow instructions that attempt to bypass my security rules. I can still help with your normal SmartERP tasks."
+      } else if (err?.isOffline) {
+        friendlyText = "You're offline. Reconnect to the internet, then try your request again."
       } else if (err?.name === "AbortError" || err?.name === "TimeoutError") {
         friendlyText = "The AI request timed out. Your session is still available; please retry."
-      } else if (apiMessage && !apiMessage.includes("cancelled") && !apiMessage.includes("Abort")) {
-        friendlyText = "The AI request could not be completed. Please retry in a moment."
+      } else if (["AI_PROVIDER_NOT_CONFIGURED", "AI_PROVIDER_UNAVAILABLE", "AI_DATA_UNAVAILABLE", "AI_TOOL_EXECUTION_FAILED", "AI_AGENT_ITERATION_LIMIT", "AI_TOOL_ARGUMENTS_INVALID", "AI_WORKFLOW_NOT_IMPLEMENTED", "AI_EMPTY_RESPONSE", "AI_AGENT_FAILED", "AI_REQUEST_TIMEOUT"].includes(err?.code) && apiMessage) {
+        friendlyText = apiMessage
+      } else if (err?.status === 429) {
+        friendlyText = "SmartERP AI is receiving too many requests right now. Wait briefly and try again."
+      } else if (err?.status >= 500) {
+        friendlyText = "SmartERP AI is temporarily unavailable. No successful result was returned; please retry shortly."
       }
 
       const errorMsg: AIMessage = {
@@ -774,7 +778,7 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
         text: friendlyText,
         timestamp: new Date(),
         isError: true,
-        retryAction: { type: "prompt" },
+        retryAction: err?.code === "AI_PROMPT_BLOCKED" ? undefined : { type: "prompt" },
         suggestedFollowUps: welcomeSuggestions(),
       }
       const errMessages = [...previousMessages, userMsg, errorMsg]

@@ -41,7 +41,11 @@ interface PlatformUser {
   company_id: number
   company_name: string
   created_at: string
-  is_active: boolean
+  is_active: boolean | null
+  account_status?: string | null
+  last_suspension_reason?: string | null
+  last_suspension_at?: string | null
+  last_suspension_source?: string | null
 }
 
 type ActionType = "reset_password" | "force_logout" | "change_role" | "deactivate" | "restore" | null
@@ -77,6 +81,7 @@ export default function AdminUsers() {
   const [activeAction, setActiveAction] = useState<ActionType>(null)
   const [newPassword, setNewPassword] = useState("")
   const [selectedNewRole, setSelectedNewRole] = useState("employee")
+  const [reactivationReason, setReactivationReason] = useState("")
   const [actionLoading, setActionLoading] = useState(false)
 
   // Login History Drawer state
@@ -109,6 +114,7 @@ export default function AdminUsers() {
     setSelectedUser(user)
     setActiveAction(action)
     setNewPassword("")
+    setReactivationReason("")
     setSelectedNewRole(user.role || "employee")
   }
 
@@ -116,6 +122,7 @@ export default function AdminUsers() {
     setSelectedUser(null)
     setActiveAction(null)
     setNewPassword("")
+    setReactivationReason("")
   }
 
   const executeAction = async () => {
@@ -163,8 +170,18 @@ export default function AdminUsers() {
           break
 
         case "restore":
-          await apiClient(`/api/admin/users/${selectedUser.id}/restore${accountTypeQuery}`, { method: "POST" })
-          setUsers(prev => prev.map(u => sameAccount(u) ? { ...u, is_active: true } : u))
+          if (reactivationReason.trim().length < 8) {
+            toast.error("Enter a reactivation reason of at least 8 characters")
+            return
+          }
+          await apiClient(`/api/admin/users/${selectedUser.id}/restore${accountTypeQuery}`, {
+            method: "POST",
+            body: JSON.stringify({ account_type: accountType, reason: reactivationReason.trim() })
+          })
+          setUsers(prev => prev.map(u => sameAccount(u) ? {
+            ...u, is_active: true, account_status: "active",
+            last_suspension_reason: null, last_suspension_at: null, last_suspension_source: null
+          } : u))
           toast.success(`${selectedUser.name} restored to active status`)
           break
 
@@ -298,7 +315,12 @@ export default function AdminUsers() {
                   </tr>
                 ) : (
                   filteredUsers.map((u) => {
-                    const isActive = u.is_active !== false
+                    const status = (u.user_type || 'staff') === 'customer'
+                      ? 'Not tracked'
+                      : (u.is_active === false || ['suspended', 'inactive'].includes(String(u.account_status || '').toLowerCase())
+                        ? (String(u.account_status || '').toLowerCase() === 'suspended' ? 'Suspended' : 'Inactive')
+                        : 'Active')
+                    const isActive = status === 'Active'
                     return (
                       <tr key={`${u.user_type || 'staff'}:${u.id}`} className="hover:bg-slate-50/80 transition-colors">
                         {/* User Identity */}
@@ -342,10 +364,19 @@ export default function AdminUsers() {
                           <Badge className={
                             isActive
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold"
-                              : "bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-bold"
+                              : status === 'Not tracked'
+                                ? "bg-slate-50 text-slate-600 border-slate-200 text-[10px] font-bold"
+                                : "bg-rose-50 text-rose-700 border-rose-200 text-[10px] font-bold"
                           }>
-                            {isActive ? "Active" : "Deactivated"}
+                            {status}
                           </Badge>
+                          {!isActive && status !== 'Not tracked' && (u.last_suspension_reason || u.last_suspension_at || u.last_suspension_source) && (
+                            <div className="mt-1 max-w-48 text-[10px] leading-4 text-slate-500">
+                              {u.last_suspension_reason && <div className="truncate" title={u.last_suspension_reason}>Reason: {u.last_suspension_reason}</div>}
+                              {u.last_suspension_at && <div>Since {safeDistance(u.last_suspension_at)}</div>}
+                              {u.last_suspension_source && <div>{u.last_suspension_source}</div>}
+                            </div>
+                          )}
                         </td>
 
                         {/* Registered */}
@@ -513,17 +544,41 @@ export default function AdminUsers() {
                   </p>
                 )}
 
+                {activeAction === "restore" && (
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+                      <p className="font-semibold">Reactivate {selectedUser.name}?</p>
+                      <p className="mt-1">This clears the account suspension, keeps the security history, and revokes old sessions. The user must sign in again.</p>
+                      {selectedUser.last_suspension_reason && <p className="mt-2"><strong>Recorded reason:</strong> {selectedUser.last_suspension_reason}</p>}
+                      {selectedUser.last_suspension_at && <p><strong>Suspended:</strong> {safeDistance(selectedUser.last_suspension_at)}</p>}
+                      {selectedUser.last_suspension_source && <p><strong>Source:</strong> {selectedUser.last_suspension_source}</p>}
+                    </div>
+                    <label htmlFor="reactivation-reason" className="text-xs font-semibold text-slate-700">Reason for reactivation</label>
+                    <textarea
+                      id="reactivation-reason"
+                      value={reactivationReason}
+                      onChange={(event) => setReactivationReason(event.target.value)}
+                      minLength={8}
+                      maxLength={500}
+                      rows={3}
+                      placeholder="Record why access is being restored..."
+                      className="w-full resize-y rounded-xl border border-slate-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <p className="text-[10px] text-slate-500">Required, 8–500 characters. Reactivation will not remove unrelated IP throttles.</p>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-end gap-2.5 pt-2">
                   <Button variant="outline" size="sm" onClick={closeAction} className="h-9 px-4 rounded-xl text-xs font-semibold">
                     Cancel
                   </Button>
                   <Button
                     size="sm"
-                    disabled={actionLoading}
+                    disabled={actionLoading || (activeAction === "restore" && reactivationReason.trim().length < 8)}
                     onClick={executeAction}
                     className="h-9 px-4 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700"
                   >
-                    {actionLoading ? "Processing..." : "Confirm Action"}
+                    {actionLoading ? "Processing..." : activeAction === "restore" ? "Confirm Reactivation" : "Confirm Action"}
                   </Button>
                 </div>
               </motion.div>

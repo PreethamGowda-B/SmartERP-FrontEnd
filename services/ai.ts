@@ -23,9 +23,14 @@ export async function askAI({
     }
   );
 
+  const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error("AI request failed");
+    throw Object.assign(new Error(payload?.error || payload?.message || 'SmartERP AI could not complete this request.'), {
+      status: res.status,
+      code: payload?.code,
+      error: payload?.error,
+    });
   }
 
-  return res.json();
+  return payload;
 }
