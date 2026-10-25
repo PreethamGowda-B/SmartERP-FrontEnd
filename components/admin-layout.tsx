@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger"
 import { apiClient } from "@/lib/apiClient"
 import { AdminSidebar } from "./admin/AdminSidebar"
 import { AdminTopNav } from "./admin/AdminTopNav"
+import { isSuperAdminPortalContext } from "@/lib/superadmin-routing.mjs"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -25,10 +26,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter()
   const { user, isLoading } = useAuth()
   const userId = user?.id
+  const [isSuperAdminContext, setIsSuperAdminContext] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    setIsSuperAdminContext(isSuperAdminPortalContext(window.location.hostname, pathname))
+  }, [pathname])
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -37,6 +43,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   // The API is authoritative because it also supports the configured platform-admin email exception.
   useEffect(() => {
+    if (!isSuperAdminContext) {
+      setPlatformAccess('denied')
+      return
+    }
     if (isLoading) return
     if (!userId) {
       setPlatformAccess('denied')
@@ -61,7 +71,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         }
       })
     return () => { active = false }
-  }, [userId, isLoading, accessRetry, router])
+  }, [userId, isLoading, accessRetry, router, isSuperAdminContext])
+
+  if (mounted && !isSuperAdminContext) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center text-slate-700">
+        <p>The Super Admin console is available only at superadmin.prozync.in.</p>
+      </div>
+    )
+  }
 
   if (!mounted || isLoading || platformAccess === 'checking') {
     return (

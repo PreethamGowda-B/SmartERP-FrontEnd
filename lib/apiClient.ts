@@ -59,7 +59,6 @@ function getStorageKeys(targetPath?: string) {
     targetPath,
     pathname: window.location.pathname,
     hostname: window.location.hostname,
-    dynamicAdminRoute: process.env.NEXT_PUBLIC_ADMIN_ROUTE || "",
   })
   if (scope === "admin") {
     return { at: ADMIN_AT, rt: ADMIN_RT }

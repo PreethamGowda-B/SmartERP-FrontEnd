@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { isSuperAdminHost, isSuperAdminPath } from "./lib/superadmin-routing.mjs"
 
 // Paths that are always allowed through — never redirect these or you get infinite loops
 const ALWAYS_ALLOWED = [
@@ -13,13 +14,33 @@ export function middleware(request: NextRequest) {
     const host = request.headers.get("host") || ""
     const pathname = request.nextUrl.pathname
     const cleanHost = host.replace(/:\d+$/, "")
+    const onSuperAdminHost = isSuperAdminHost(cleanHost)
+
+    // Legacy public /jobs links must open the Owner jobs screen, never the
+    // catch-all [adminRoute] page. Keep the dedicated Super Admin host scoped.
+    if (pathname === "/jobs") {
+        const normalizedHost = cleanHost.toLowerCase()
+        if (onSuperAdminHost && normalizedHost !== "localhost" && normalizedHost !== "127.0.0.1") {
+            return NextResponse.rewrite(new URL("/not-found", request.url))
+        }
+        return NextResponse.redirect(new URL("/owner/jobs", request.url))
+    }
+
+    // The platform console belongs only to its dedicated host. Never expose
+    // its login/route on company, employee, customer, or preview domains.
+    if (isSuperAdminPath(pathname) && !onSuperAdminHost) {
+        return NextResponse.rewrite(new URL("/not-found", request.url))
+    }
 
     // Subdomain-specific root rewrites/redirects
-    if (cleanHost === "superadmin.prozync.in") {
+    if (cleanHost.toLowerCase() === "superadmin.prozync.in") {
         if (pathname === "/") {
             return NextResponse.redirect(new URL("/superadmin", request.url))
         }
         if (pathname.startsWith("/auth")) {
+            // The OAuth callback must run on this host so the exchanged admin
+            // tokens stay in the Super Admin browser session.
+            if (pathname === "/auth/callback") return NextResponse.next()
             return NextResponse.redirect(new URL("/superadmin/login", request.url))
         }
     }
@@ -79,10 +100,7 @@ export function middleware(request: NextRequest) {
 
       // If targeting an unrecognized top-level segment (potential [adminRoute] access):
       if (!activeTopLevelPaths.includes(`/${topLevelSegment}`)) {
-        const adminSlug = process.env.ADMIN_ROUTE || process.env.NEXT_PUBLIC_ADMIN_ROUTE;
-        if (!adminSlug || topLevelSegment !== adminSlug) {
-          return NextResponse.rewrite(new URL("/not-found", request.url))
-        }
+        return NextResponse.rewrite(new URL("/not-found", request.url))
       }
     }
 

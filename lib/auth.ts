@@ -1,4 +1,5 @@
 import { getApiOrigin } from "@/lib/api-environment.mjs";
+import { isSuperAdminPortalContext } from "@/lib/superadmin-routing.mjs"
 import { setTokens, clearTokens } from "@/lib/apiClient"
 import { logger } from "./logger"
 import { safeLocalStorage } from "./storage"
@@ -98,6 +99,10 @@ export const signIn = async (email: string, password: string): Promise<User | nu
     const userDetails = data.user || data
     const isSuperAdmin = userDetails.role === 'super_admin'
 
+    if (isSuperAdmin && typeof window !== "undefined" && !isSuperAdminPortalContext(window.location.hostname, window.location.pathname)) {
+      throw new Error("Super Admin sign-in is available only at superadmin.prozync.in.")
+    }
+
     // ✅ Store tokens in memory for Authorization header (cross-domain safe)
     if (data.accessToken && data.refreshToken) {
       setTokens(data.accessToken, data.refreshToken, isSuperAdmin)
@@ -150,20 +155,17 @@ export const signOut = async (): Promise<void> => {
 export const getCurrentUser = (): User | null => {
   if (typeof window === "undefined") return null
 
-  // Priority: If on an admin path, check admin user first
+  // Use the platform-admin session only on its dedicated host (or local
+  // /superadmin development route). A configurable path slug must never turn
+  // /owner or another company portal into an admin session.
   const pathname = window.location.pathname
   const hostname = window.location.hostname
-  const dynamicAdminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE || ""
-  const isAdminPath = pathname.includes('/superadmin') ||
-                      pathname.includes('/super-admin') ||
-                      pathname.includes('[adminRoute]') ||
-                      (Boolean(dynamicAdminRoute) && pathname.includes(`/${dynamicAdminRoute}`)) ||
-                      hostname.startsWith('superadmin.')
+  const isAdminPath = isSuperAdminPortalContext(hostname, pathname)
 
   if (isAdminPath) {
     const adminUser = safeLocalStorage.getJSON<User>("smarterp_admin_user")
     if (adminUser) return adminUser
   }
 
-  return safeLocalStorage.getJSON<User>("smarterp_user") || safeLocalStorage.getJSON<User>("smarterp_admin_user")
+  return safeLocalStorage.getJSON<User>("smarterp_user")
 }

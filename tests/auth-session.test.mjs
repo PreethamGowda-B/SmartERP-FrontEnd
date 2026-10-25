@@ -13,7 +13,8 @@ test("Owner AI requests use the Owner session namespace", () => {
 });
 
 test("Superadmin AI requests use the active Superadmin page namespace", () => {
-  assert.equal(resolveAuthScope({ targetPath: "/api/ai/agent", pathname: "/superadmin/system-health" }), "admin");
+  assert.equal(resolveAuthScope({ targetPath: "/api/ai/agent", pathname: "/superadmin/system-health", hostname: "superadmin.prozync.in" }), "admin");
+  assert.equal(resolveAuthScope({ targetPath: "/api/ai/agent", pathname: "/superadmin/system-health", hostname: "www.prozync.in" }), "user");
   assert.equal(resolveAuthScope({ targetPath: "/api/superadmin/users", pathname: "/owner" }), "admin");
   assert.equal(resolveAuthScope({ targetPath: "/api/administer/users", pathname: "/owner" }), "user");
 });

@@ -15,6 +15,7 @@ import { signIn, signUp } from "@/lib/auth"
 import { apiClient, clearTokens } from "@/lib/apiClient"
 import { safeLocalStorage } from "@/lib/storage"
 import { useAuth } from "@/contexts/auth-context"
+import { isSuperAdminPortalContext } from "@/lib/superadmin-routing.mjs"
 import { Building2, Loader2, HardHat, UserPlus, CheckCircle2, RefreshCw, Mail, ArrowLeft, Eye, EyeOff, TrendingUp, Users, Clock, Calendar, Bell } from "lucide-react"
 import { ForgotPasswordModal } from "@/components/auth/ForgotPasswordModal"
 import "@/app/login-page.css"
@@ -170,6 +171,11 @@ export function LoginForm() {
         const user: any = await signIn(email, password)
         if (user) {
           const isSuperAdmin = user.role === "super_admin"
+          if (isSuperAdmin && !isSuperAdminPortalContext(window.location.hostname, window.location.pathname)) {
+            setError("Super Admin sign-in is available only at superadmin.prozync.in.")
+            setIsLoading(false)
+            return
+          }
           const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
           safeLocalStorage.setJSON(userKey, user)
 
@@ -179,7 +185,9 @@ export function LoginForm() {
           }
 
           setUser(user)
-          if (user.role === "owner") {
+          if (isSuperAdmin) {
+            router.replace("/superadmin")
+          } else if (user.role === "owner") {
             router.push("/owner")
           } else if (user.role === "hr") {
             router.push("/hr")

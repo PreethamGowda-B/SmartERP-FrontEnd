@@ -73,7 +73,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/icon.png",
-    shortcut: "/favicon.ico",
+    shortcut: "/icon.png",
     apple: "/icon.png",
   },
   manifest: "/manifest.json",
@@ -111,16 +111,61 @@ export default function RootLayout({
             `,
           }}
         />}
-        {/* Recovery script for ChunkLoadError (helps during deployments) */}
+        {/* Recover once after reconnecting, without creating an offline reload loop. */}
         <script
           id="chunk-error-recovery"
           dangerouslySetInnerHTML={{
             __html: `
-              window.addEventListener('error', function(e) {
-                if (e.message && (e.message.includes('ChunkLoadError') || e.message.includes('Loading chunk'))) {
+              (function() {
+                var pendingKey = 'smarterp:network-recovery-pending';
+                var attemptsKey = 'smarterp:network-recovery-attempts';
+                var hadAssetError = false;
+                function reloadOnce() {
+                  try {
+                    if (Number(sessionStorage.getItem(attemptsKey) || 0) >= 1) return;
+                    sessionStorage.setItem(attemptsKey, '1');
+                    sessionStorage.removeItem(pendingKey);
+                  } catch (e) {
+                    // If the browser blocks session storage, prefer a manual
+                    // reload over risking an automatic reload loop.
+                    return;
+                  }
                   window.location.reload();
                 }
-              }, true);
+                window.addEventListener('load', function() {
+                  if (!hadAssetError) {
+                    try { sessionStorage.removeItem(attemptsKey); } catch (e) {}
+                  }
+                });
+                window.addEventListener('offline', function() {
+                  try { sessionStorage.setItem(pendingKey, '1'); } catch (e) {}
+                });
+                window.addEventListener('online', function() {
+                  try {
+                    if (sessionStorage.getItem(pendingKey) === '1') {
+                      window.setTimeout(reloadOnce, 300);
+                    }
+                  } catch (e) {}
+                });
+                window.addEventListener('error', function(event) {
+                  var target = event.target;
+                  var failedAsset = target && (
+                    target.tagName === 'SCRIPT' ||
+                    (target.tagName === 'LINK' && target.rel === 'stylesheet')
+                  );
+                  var chunkFailure = event.message && (
+                    event.message.includes('ChunkLoadError') ||
+                    event.message.includes('Loading chunk')
+                  );
+                  if (!failedAsset && !chunkFailure) return;
+                  hadAssetError = true;
+                  if (!navigator.onLine) {
+                    try { sessionStorage.setItem(pendingKey, '1'); } catch (e) {}
+                    return;
+                  }
+                  reloadOnce();
+                }, true);
+              })();
             `,
           }}
         />

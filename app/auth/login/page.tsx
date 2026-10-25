@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { LoginForm } from "@/components/login-form"
 import { Loader2 } from "lucide-react"
+import { isSuperAdminPortalContext } from "@/lib/superadmin-routing.mjs"
 
 export default function LoginPage() {
   const { user, isLoading } = useAuth()
@@ -12,9 +13,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !isLoading) {
-      const adminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE
       if (user.role === "super_admin") {
-        router.push(adminRoute ? `/${adminRoute}` : "/superadmin")
+        router.replace(isSuperAdminPortalContext(window.location.hostname, window.location.pathname) ? "/superadmin" : "/not-found")
       } else if (user.role === "owner") {
         router.push("/owner")
       } else if (user.role === "hr") {

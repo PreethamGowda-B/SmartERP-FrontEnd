@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { setTokens, logger } from "@/lib/apiClient"
+import { isSuperAdminPortalContext } from "@/lib/superadmin-routing.mjs"
 
 const API_BASE = getApiOrigin()
 
@@ -33,16 +34,18 @@ function CallbackContent() {
     const { setUser } = useAuth()
 
     useEffect(() => {
+        const onSuperAdminHost = window.location.hostname.toLowerCase() === "superadmin.prozync.in"
+        const loginPath = onSuperAdminHost ? "/superadmin/login" : "/login"
         const code = searchParams.get("code")
         const errorParam = searchParams.get("error")
 
         if (errorParam) {
-            router.push(`/login?error=${errorParam}`)
+            router.replace(`${loginPath}?error=${encodeURIComponent(errorParam)}`)
             return
         }
 
         if (!code) {
-            router.push("/login?error=missing_code")
+            router.replace(`${loginPath}?error=missing_code`)
             return
         }
 
@@ -52,14 +55,20 @@ function CallbackContent() {
             try {
                 const user = JSON.parse(decodeURIComponent(userParam))
                 const isSuperAdmin = user.role === "super_admin"
+                if (isSuperAdmin && !isSuperAdminPortalContext(window.location.hostname, window.location.pathname)) {
+                    router.replace("/not-found")
+                    return
+                }
+                if (onSuperAdminHost && !isSuperAdmin) {
+                    router.replace("/superadmin/login?error=unauthorized")
+                    return
+                }
                 const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
                 localStorage.setItem(userKey, JSON.stringify(user))
                 setUser(user)
                 // Note: no tokens available in fallback path — user will need to refresh on next load
                 if (isSuperAdmin) {
-                    const adminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE
-                    if (adminRoute) router.push(`/${adminRoute}/dashboard`)
-                    else router.push("/not-found")
+                    router.replace("/superadmin")
                 } else if (user.role === "owner") {
                     router.push("/owner")
                 } else if (user.role === "hr") {
@@ -68,7 +77,7 @@ function CallbackContent() {
                     router.push("/employee")
                 }
             } catch {
-                router.push("/login?error=auth_failed")
+                router.replace(`${loginPath}?error=auth_failed`)
             }
             return
         }
@@ -76,12 +85,20 @@ function CallbackContent() {
         // Primary path: exchange the one-time code
         exchangeOAuthCode(code).then((result) => {
             if (!result || !result.user) {
-                router.push("/login?error=auth_failed")
+                router.replace(`${loginPath}?error=auth_failed`)
                 return
             }
 
             const user = result.user
             const isSuperAdmin = user.role === "super_admin"
+            if (isSuperAdmin && !isSuperAdminPortalContext(window.location.hostname, window.location.pathname)) {
+                router.replace("/not-found")
+                return
+            }
+            if (onSuperAdminHost && !isSuperAdmin) {
+                router.replace("/superadmin/login?error=unauthorized")
+                return
+            }
 
             // Store tokens in sessionStorage — same as regular email/password login
             // Without this, the auth context background refresh fires with no token and logs the user out
@@ -98,8 +115,7 @@ function CallbackContent() {
             // Redirect based on role — use window.location.href so fresh token context loads across all components & SSE connections
             let target = "/owner"
             if (isSuperAdmin) {
-                const adminRoute = process.env.NEXT_PUBLIC_ADMIN_ROUTE
-                target = adminRoute ? `/${adminRoute}/dashboard` : "/superadmin"
+                target = "/superadmin"
             } else if (user.role === "hr") {
                 target = "/hr"
             } else if (user.role === "employee") {

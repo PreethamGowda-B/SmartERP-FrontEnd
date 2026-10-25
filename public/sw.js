@@ -19,7 +19,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
       try {
-        await cache.addAll([OFFLINE_URL, '/favicon.ico', '/icon.png']);
+        await cache.addAll([OFFLINE_URL, '/icon.png']);
       } catch (err) {
         // If a resource is missing, log and continue — don't block SW install
         console.warn('[sw.js] Pre-cache failed for one or more resources:', err);

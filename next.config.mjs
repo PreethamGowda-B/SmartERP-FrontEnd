@@ -22,6 +22,9 @@ const securityHeaders = [
 const nextConfig = {
   async redirects() {
     return [
+      // Serve the generated app icon when browsers request the conventional
+      // favicon URL; the repository has no separate .ico asset.
+      { source: "/favicon.ico", destination: "/icon.png", permanent: true },
       // ── Finance GST backward-compat redirects ─────────────────────────────
       // All old GST/reconciliation routes → unified GST & Tax module
       { source: "/owner/gst-reconciliation", destination: "/owner/finance/gst", permanent: false },
