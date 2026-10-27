@@ -1,13 +1,15 @@
 {
-  "name": "my-v0-project",
+  "name": "smarterp-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
     "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "lint": "next lint",
-    "test:subscription": "node --test tests/subscription-plan-default.test.js",
-    "start": "next start"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs tests/*.test.js",
+    "test:subscription": "node --test tests/subscription-plan-default.test.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
