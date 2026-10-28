@@ -64,7 +64,7 @@ export default function HRSettingsPage() {
   const handleUpdateNotifs = async () => {
     setSavingNotif(true)
     try {
-      await apiClient("/api/settings/notifications", {
+      await apiClient("/api/settings/notification-prefs", {
         method: "PUT",
         body: JSON.stringify(notifPrefs),
       })
