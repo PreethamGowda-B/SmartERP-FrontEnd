@@ -36,3 +36,17 @@ test("Subscription card redesign matches required visual structure and elements"
   // 5. Subtle green accent
   assert.match(componentSrc, /bg-gradient-to-tr from-emerald-500/, "Must include subtle green gradient accent");
 });
+
+test("Subscription card includes dismissible cross button and session-based restoration", () => {
+  const componentSrc = fs.readFileSync(path.join(__dirname, "../components/subscription-status.tsx"), "utf8");
+  const authSrc = fs.readFileSync(path.join(__dirname, "../lib/auth.ts"), "utf8");
+
+  // Verify dismiss button presence and icon
+  assert.match(componentSrc, /handleDismiss/, "Must provide handleDismiss callback");
+  assert.match(componentSrc, /<X\s+className=/, "Must render X cross icon button");
+  assert.match(componentSrc, /sessionStorage\.setItem\("smarterp_dismiss_sub_card"/, "Must persist dismissal in sessionStorage");
+  assert.match(componentSrc, /if \(isDismissed/, "Must hide component when dismissed");
+
+  // Verify auth session resets dismissal on login and logout
+  assert.match(authSrc, /sessionStorage\.removeItem\("smarterp_dismiss_sub_card"\)/, "Must clear dismissal on auth sign-in / sign-out");
+});

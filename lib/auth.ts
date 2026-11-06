@@ -116,6 +116,9 @@ export const signIn = async (email: string, password: string): Promise<User | nu
       ...(data.refreshToken && { refreshToken: data.refreshToken }),
     }
     safeLocalStorage.setJSON(userKey, userObj)
+    if (typeof window !== "undefined") {
+      try { sessionStorage.removeItem("smarterp_dismiss_sub_card"); } catch {}
+    }
 
     return userObj
   } catch (error) {
@@ -145,6 +148,9 @@ export const signOut = async (): Promise<void> => {
   clearTokens()
   safeLocalStorage.removeItem("smarterp_user")
   safeLocalStorage.removeItem("smarterp_admin_user")
+  if (typeof window !== "undefined") {
+    try { sessionStorage.removeItem("smarterp_dismiss_sub_card"); } catch {}
+  }
 
   // ✅ Notify Android bridge to clear native session
   if (typeof window !== "undefined" && (window as any).Android?.logout) {

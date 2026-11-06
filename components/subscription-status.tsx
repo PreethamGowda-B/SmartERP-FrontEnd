@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,6 +13,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Settings,
+  X,
 } from "lucide-react"
 import Link from "next/link"
 import { useSubscription } from "@/contexts/subscription-context"
@@ -19,13 +21,39 @@ import { cn } from "@/lib/utils"
 
 export function SubscriptionStatus() {
   const { statusData: data, loading, error: subError, refreshSubscription } = useSubscription()
+  const [isDismissed, setIsDismissed] = useState(false)
 
-  if (loading) return null
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const dismissed = sessionStorage.getItem("smarterp_dismiss_sub_card")
+      if (dismissed === "true") {
+        setIsDismissed(true)
+      }
+    }
+  }, [])
+
+  const handleDismiss = () => {
+    setIsDismissed(true)
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("smarterp_dismiss_sub_card", "true")
+    }
+  }
+
+  if (isDismissed || loading) return null
 
   if (subError || !data) {
     return (
-      <Card className="rounded-[20px] border border-border shadow-xs bg-muted/40">
-        <CardContent className="p-3.5 flex items-center justify-between gap-2.5 text-muted-foreground text-xs">
+      <Card className="rounded-[20px] border border-border shadow-xs bg-muted/40 relative">
+        <button
+          type="button"
+          onClick={handleDismiss}
+          className="absolute top-2.5 right-2.5 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          title="Dismiss"
+          aria-label="Dismiss"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+        <CardContent className="p-3.5 flex items-center justify-between gap-2.5 text-muted-foreground text-xs pr-8">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
             <span>Subscription status synchronizing.</span>
@@ -163,6 +191,17 @@ export function SubscriptionStatus() {
 
       {/* Main Subscription Card - Recreated according to reference image */}
       <Card className="rounded-[20px] border border-slate-200/90 bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden relative dark:border-slate-800 dark:bg-card">
+        {/* Dismiss / Close button */}
+        <button
+          type="button"
+          onClick={handleDismiss}
+          className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3.5 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors z-20 cursor-pointer"
+          title="Dismiss subscription card"
+          aria-label="Dismiss subscription card"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
         {/* Subtle organic green background accent near bottom left (matching reference) */}
         <div className="pointer-events-none absolute bottom-0 left-0 w-80 h-16 bg-gradient-to-tr from-emerald-500/[0.08] via-emerald-500/[0.02] to-transparent rounded-bl-[20px]" />
         <svg
@@ -175,7 +214,7 @@ export function SubscriptionStatus() {
         </svg>
 
         <CardContent className="p-4 sm:px-6 sm:py-4.5 relative z-10">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6 pr-6 lg:pr-8">
             
             {/* 1. Left: Subscription icon, Organization tier, Plan name, Status */}
             <div className="flex items-center gap-3.5 min-w-0">
