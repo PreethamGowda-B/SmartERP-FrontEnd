@@ -28,7 +28,6 @@ import {
   Headset,
   Megaphone,
   Files,
-  UserCheck,
   ShieldCheck,
   Radio,
   Bot,
@@ -73,32 +72,32 @@ const navCategories: NavCategory[] = [
   {
     title: "Operations",
     items: [
-      { name: "Tasks", href: "/owner/jobs", icon: Briefcase },
-      { name: "Customer Jobs", href: "/owner/customer-jobs", icon: UserCheck },
+      {
+        name: "Tasks",
+        href: "/owner/jobs",
+        icon: Briefcase,
+        aliases: ["/owner/customer-jobs"],
+      },
       { name: "Production & Dispatch", href: "/owner/production", icon: Factory },
       { name: "Tracking", href: "/owner/tracking", icon: MapPin },
     ],
   },
   {
-    title: "CNC Service Edition",
+    title: "Service Operations",
     items: [
-      {
-        name: "Command Center",
-        icon: Radio,
-        isGroup: true,
-        children: [
-          { name: "Command Center", href: "/owner/cnc/command-center", icon: Radio },
-          { name: "Executive BI", href: "/owner/cnc/bi", icon: BarChart3 },
-          { name: "AI Audit Trail", href: "/owner/cnc/ai-activity", icon: Bot },
-        ],
-      },
       {
         name: "Service Operations",
         icon: Cpu,
         isGroup: true,
         children: [
           { name: "Machine Registry", href: "/owner/machines", icon: Cpu },
-          { name: "SLA Management", href: "/owner/cnc/sla", icon: Clock },
+          { name: "Command Center", href: "/owner/cnc/command-center", icon: Radio },
+          { name: "Vendors", href: "/owner/cnc/vendors", icon: Briefcase },
+          { name: "Warranty Management", href: "/owner/cnc/warranty", icon: ShieldCheck },
+          { name: "Route Optimization", href: "/owner/cnc/route-optimization", icon: MapPin },
+          { name: "Automations", href: "/owner/cnc/automations", icon: Bot },
+          { name: "Executive BI", href: "/owner/cnc/bi", icon: BarChart3 },
+          { name: "Service Reports", href: "/owner/cnc/reports", icon: Layers },
         ],
       },
     ],
@@ -129,20 +128,25 @@ const navCategories: NavCategory[] = [
     ],
   },
   {
-    title: "Finance",
+    title: "Finance & Billing",
     items: [
-      { name: "Finance Hub", href: "/owner/finance", icon: DollarSign },
       {
         name: "Invoices & Billing",
         href: "/owner/finance/invoices",
         icon: Files,
-        aliases: ["/owner/finance/payments"],
+        aliases: ["/owner/finance", "/owner/finance/payments"],
       },
       {
         name: "GST & Tax",
         href: "/owner/finance/gst",
         icon: ShieldCheck,
-        aliases: ["/owner/gst-reconciliation"],
+        aliases: ["/owner/gst-reconciliation", "/owner/finance/gst-reconciliation", "/owner/finance/gst-reports"],
+      },
+      {
+        name: "Accounts Receivable",
+        href: "/owner/ar-collections",
+        icon: DollarSign,
+        aliases: ["/owner/finance/accounts-receivable"],
       },
     ],
   },
@@ -210,7 +214,6 @@ const STORAGE_KEY_GROUPS = "smarterp_owner_sidebar_groups"
 export function OwnerSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    "Command Center": true,
     "Service Operations": true,
   })
 
