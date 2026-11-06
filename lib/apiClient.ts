@@ -262,7 +262,8 @@ function syncWithAndroid(token: string, refreshToken?: string | null) {
 // Helper to handle unified logout across Web and Android
 function handleLogout(
   targetPath?: string,
-  expected?: { accessToken?: string | null; refreshToken?: string | null }
+  expected?: { accessToken?: string | null; refreshToken?: string | null },
+  reason?: string | boolean
 ) {
   if (typeof window !== "undefined") {
     const { at } = getStorageKeys(targetPath)
@@ -285,10 +286,26 @@ function handleLogout(
       sessionStorage.removeItem("smarterp_mock_users")
     }
 
+    const isCustomer = targetPath?.startsWith('/api/customer') || window.location.pathname.startsWith('/customer')
+    const isSuperAdmin = isAdmin || targetPath?.startsWith('/api/superadmin') || window.location.pathname.startsWith('/superadmin')
+    const isInactivity = reason === "expired_inactivity" || reason === true
+    const queryParam = isInactivity ? "?expired=inactivity" : ""
+
+    const loginPath = isSuperAdmin
+      ? `/superadmin/login${queryParam}`
+      : isCustomer
+      ? `/customer/login${queryParam}`
+      : `/auth/login${queryParam}`
+
     if ((window as any).Android?.logout) {
       (window as any).Android.logout()
-    } else if (window.location.pathname !== "/" && window.location.pathname !== "/auth/login") {
-      window.location.href = "/auth/login"
+    } else if (
+      window.location.pathname !== "/" &&
+      window.location.pathname !== "/auth/login" &&
+      window.location.pathname !== "/customer/login" &&
+      window.location.pathname !== "/superadmin/login"
+    ) {
+      window.location.href = loginPath
     }
     return true
   }
@@ -321,10 +338,12 @@ export function isTokenExpired(token: string | null, bufferSeconds = 45): boolea
 
 // Share concurrent refreshes inside one portal only. Owner/Employee and
 // superadmin sessions can coexist in the same browser profile.
-const refreshPromises = new Map<string, Promise<string | null>>()
-const refreshOutcomes = new Map<string, "pending" | "success" | "invalid" | "unavailable">()
+export type RefreshOutcome = "pending" | "success" | "invalid" | "unavailable" | "expired_inactivity"
 
-export function getLastRefreshOutcome(targetPath?: string) {
+const refreshPromises = new Map<string, Promise<string | null>>()
+const refreshOutcomes = new Map<string, RefreshOutcome>()
+
+export function getLastRefreshOutcome(targetPath?: string): RefreshOutcome {
   return refreshOutcomes.get(getStorageKeys(targetPath).rt) || "unavailable"
 }
 
@@ -420,8 +439,16 @@ export async function refreshAccessToken(targetPath?: string): Promise<string | 
         currentAccessToken: getAuthToken(targetPath),
         currentRefreshToken: getRefreshToken(targetPath),
       })) {
-        refreshOutcomes.set(rt, "invalid")
-        handleLogout(targetPath, { accessToken: expectedAccessToken, refreshToken: expectedRefreshToken })
+        let isExpiredInactivity = false
+        try {
+          const errData = await response.clone().json()
+          if (errData?.code === "SESSION_EXPIRED_INACTIVITY" || errData?.expired) {
+            isExpiredInactivity = true
+          }
+        } catch (_) {}
+
+        refreshOutcomes.set(rt, isExpiredInactivity ? "expired_inactivity" : "invalid")
+        handleLogout(targetPath, { accessToken: expectedAccessToken, refreshToken: expectedRefreshToken }, isExpiredInactivity)
       } else {
         refreshOutcomes.set(rt, "success")
         const current = getAuthToken(targetPath)

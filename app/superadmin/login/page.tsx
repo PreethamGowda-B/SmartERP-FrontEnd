@@ -25,6 +25,17 @@ export default function SuperAdminLoginPage() {
   const router = useRouter()
   const { setUser } = useAuth()
 
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      const expired = params.get("expired")
+      const reason = params.get("reason")
+      if (expired === "inactivity" || reason === "inactivity") {
+        setErrorMsg("Your session expired due to inactivity. Please sign in again.")
+      }
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)

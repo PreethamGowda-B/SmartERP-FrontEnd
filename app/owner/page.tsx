@@ -132,19 +132,44 @@ export default function OwnerDashboard() {
   }, [])
 
   const fetchDashboardData = useCallback(async (showLoading = true) => {
+    if (authLoading || !user) return
     try {
       if (showLoading) setLoading(true)
       setError(null)
-      const [metricsData, activityData, approvalResult] = await Promise.all([
+      const [metricsRes, activityRes, approvalSettled] = await Promise.allSettled([
         apiClient<DashboardMetrics>("/api/dashboard/owner/metrics"),
         apiClient<RecentActivity[]>("/api/dashboard/owner/recent-activity"),
         apiClient<{ requests?: any[] }>("/api/work-requests?status=pending")
           .then((data) => ({ data, error: null as string | null }))
           .catch(() => ({ data: null, error: "Pending approvals could not be loaded. Please retry." })),
       ])
-      setMetrics(metricsData)
-      setRecentActivity(Array.isArray(activityData) ? activityData : [])
+
+      if (metricsRes.status === "fulfilled") {
+        setMetrics(metricsRes.value)
+      } else {
+        const err = metricsRes.reason
+        const isAbort = err?.name === "AbortError" || err?.message?.toLowerCase()?.includes("cancelled") || err?.message?.toLowerCase()?.includes("aborted")
+        if (!isAbort) {
+          logger.warn("Metrics fetch issue:", err?.message || err)
+          if (!metrics) {
+            setError({
+              title: "Dashboard update failed",
+              message: err?.message || "We couldn't synchronize your business metrics. Check your connection.",
+            })
+          }
+        }
+      }
+
+      if (activityRes.status === "fulfilled") {
+        setRecentActivity(Array.isArray(activityRes.value) ? activityRes.value : [])
+      }
+
       setLastSyncedAt(new Date())
+
+      const approvalResult = approvalSettled.status === "fulfilled"
+        ? approvalSettled.value
+        : { data: null, error: "Pending approvals could not be loaded. Please retry." }
+
       if (approvalResult.error || !Array.isArray(approvalResult.data?.requests)) {
         setApprovalLoadError(approvalResult.error || "The pending approvals response was invalid.")
         setPendingApprovals(null)
@@ -156,22 +181,25 @@ export default function OwnerDashboard() {
         setAttentionItems(workRequests.slice(0, 3))
       }
     } catch (err: any) {
-      logger.error("Error fetching dashboard data:", err)
-      setError({
-        title: "Dashboard update failed",
-        message: err.message || "We couldn't synchronize your business metrics. Check your connection.",
-      })
+      const isAbort = err?.name === "AbortError" || err?.message?.toLowerCase()?.includes("cancelled") || err?.message?.toLowerCase()?.includes("aborted")
+      if (!isAbort) {
+        logger.error("Error fetching dashboard data:", err)
+        setError({
+          title: "Dashboard update failed",
+          message: err?.message || "We couldn't synchronize your business metrics. Check your connection.",
+        })
+      }
     } finally {
       if (showLoading) setLoading(false)
     }
-  }, [])
+  }, [authLoading, user, metrics])
 
   useEffect(() => {
-    if (!authLoading) fetchDashboardData()
-  }, [fetchDashboardData, authLoading])
+    if (!authLoading && user) fetchDashboardData()
+  }, [fetchDashboardData, authLoading, user])
 
   useEffect(() => {
-    if (authLoading) return
+    if (authLoading || !user) return
     const refreshForOperationalChange = (event: Event) => {
       const detail = (event as CustomEvent<any>).detail
       if (!detail?.type || ["job", "chat_message", "material_request", "invoice", "invoice_issued", "attendance"].includes(String(detail.type).toLowerCase())) {
@@ -186,7 +214,7 @@ export default function OwnerDashboard() {
       window.removeEventListener("smarterp:notification", refreshForOperationalChange)
       window.clearInterval(fallback)
     }
-  }, [authLoading, fetchDashboardData])
+  }, [authLoading, user, fetchDashboardData])
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true)

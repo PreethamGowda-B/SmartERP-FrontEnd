@@ -8,7 +8,10 @@ import { logger } from "@/lib/logger"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
+import { useAuth } from "@/contexts/auth-context"
+
 export function DashboardTrialBanner() {
+  const { user, isLoading } = useAuth()
   const [data, setData] = useState<{
     is_trial: boolean
     days_remaining: number
@@ -17,18 +20,28 @@ export function DashboardTrialBanner() {
   const [isVisible, setIsVisible] = useState(true)
 
   useEffect(() => {
+    if (isLoading || !user) return
+
+    let cancelled = false
     async function fetchBanner() {
       try {
         const res = await apiClient("/api/subscription/trial-status")
-        if (res.is_trial && res.days_remaining > 0) {
+        if (!cancelled && res?.is_trial && res?.days_remaining > 0) {
           setData(res)
         }
-      } catch (err) {
-        logger.error("Failed to fetch trial banner status", err)
+      } catch (err: any) {
+        if (err?.name === "AbortError" || err?.message?.toLowerCase().includes("cancelled") || err?.status === 401) {
+          return
+        }
+        logger.warn("Trial banner unavailable:", err?.message || err)
       }
     }
     fetchBanner()
-  }, [])
+
+    return () => {
+      cancelled = true
+    }
+  }, [isLoading, user])
 
   if (!data || !isVisible) return null
 

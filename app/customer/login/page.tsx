@@ -35,8 +35,15 @@ function LoginContent() {
   useEffect(() => {
     const oauthError = searchParams.get('error');
     const registered = searchParams.get('registered');
-    if (oauthError) setError(OAUTH_ERROR_MESSAGES[oauthError] || 'Sign-in failed. Please try again.');
-    else if (registered === '1') setSuccessMessage('Account created. You can now sign in.');
+    const expired = searchParams.get('expired');
+    const reason = searchParams.get('reason');
+    if (expired === 'inactivity' || reason === 'inactivity') {
+      setError('Your session expired due to inactivity. Please sign in again.');
+    } else if (oauthError) {
+      setError(OAUTH_ERROR_MESSAGES[oauthError] || 'Sign-in failed. Please try again.');
+    } else if (registered === '1') {
+      setSuccessMessage('Account created. You can now sign in.');
+    }
   }, [searchParams]);
 
   useEffect(() => {

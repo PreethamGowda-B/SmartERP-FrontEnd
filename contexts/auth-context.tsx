@@ -32,7 +32,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const at = getAccessToken()
         const rt = getRefreshToken()
 
-        // 1. If on a public page and tokens are missing or already expired, clear stale cache
+        // 1. If no user or tokens exist in storage, resolve loading immediately
+        if (!currentUser && !at && !rt) {
+          if (isMounted) {
+            setUser(null)
+            setIsLoading(false)
+          }
+          return
+        }
+
+        // 2. If on a public page and tokens are missing or already expired, clear stale cache
         if (isPublic && (!at || isTokenExpired(at)) && !rt) {
           if (currentUser) {
             await signOut()
@@ -44,29 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        // 2. Only optimistically update user state if on a private route or access token is still valid
-        if (currentUser && isMounted && (!isPublic || (at && !isTokenExpired(at)))) {
-          setUser(currentUser)
-          setIsLoading(false)
-        }
-        
-        // 3. If there is NO cached user, stop loading immediately
-        if (!currentUser) {
-          if (isMounted) setIsLoading(false)
-          return
-        }
-
-        // 4. Check access token & refresh status
         const apiUrl = getApiOrigin()
-        
-        if (!rt && !at) {
-          signOut()
-          if (isMounted) { setUser(null); setIsLoading(false) }
-          return
-        }
 
-        // If access token is still fresh, sync profile directly without prematurely rotating refresh token
+        // 3. If access token is still fresh, sync profile directly without prematurely rotating refresh token
         if (at && !isTokenExpired(at)) {
+          if (currentUser && isMounted) {
+            setUser(currentUser)
+          }
           try {
             const meController = new AbortController()
             const meTimeoutId = setTimeout(() => meController.abort(), 3500)
@@ -85,23 +78,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.setItem("company_code", freshUser.company_code)
               }
               logger.log("[v0] ✅ Profile synced with latest DB state")
+              if (isMounted) setIsLoading(false)
               return
             } else if (meRes.status === 401 || meRes.status === 403) {
               // Access token was rejected by server — fall through to refresh
               logger.log("[v0] Access token rejected by server, falling back to refresh")
             } else {
               // Non-auth error (e.g. 500, network offline) — preserve active session
+              if (isMounted) setIsLoading(false)
               return
             }
           } catch {
             // Profile fetch timeout/failure — keep active cached user session
+            if (isMounted) setIsLoading(false)
             return
           }
         }
 
+        // 4. Token expired or rejected — DO NOT mark loading false prematurely!
+        // Keep isLoading true so dashboard/widgets do not mount with expired token.
         if (!rt) {
-          signOut()
-          if (isMounted) { setUser(null); setIsLoading(false) }
+          await signOut()
+          if (isMounted) {
+            setUser(null)
+            setIsLoading(false)
+          }
           return
         }
 
@@ -110,16 +111,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (!freshToken) {
             const refreshOutcome = getLastRefreshOutcome()
-            if (refreshOutcome === "invalid") {
-              // refreshAccessToken already cleared only the rejected portal's
-              // tokens. Do not run global signOut and erase another session.
-              if (isMounted) setUser(null)
+            if (refreshOutcome === "invalid" || refreshOutcome === "expired_inactivity") {
+              if (isMounted) {
+                setUser(null)
+                setIsLoading(false)
+              }
               return
             }
 
             // A network/server failure cannot establish that a refresh token
             // was revoked. Keep the cached portal session and let the user retry.
-            if (refreshOutcome === "unavailable" || refreshOutcome === "pending") return
+            if (refreshOutcome === "unavailable" || refreshOutcome === "pending") {
+              if (currentUser && isMounted) setUser(currentUser)
+              if (isMounted) setIsLoading(false)
+              return
+            }
 
             // If no usable credentials remain, this portal session is expired.
             const currentAt = getAccessToken()
@@ -154,13 +160,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   localStorage.setItem("company_code", freshUser.company_code)
                 }
                 logger.log("[v0] ✅ Profile synced with latest DB state")
+              } else if (currentUser && isMounted) {
+                setUser(currentUser)
               }
             } catch {
-              // Profile fetch timeout/failure — keep cached user session
+              if (currentUser && isMounted) setUser(currentUser)
             }
           }
         } catch (fetchErr: any) {
           logger.warn("[v0] Token refresh timeout or network error — keeping cached user session:", fetchErr)
+          if (currentUser && isMounted) setUser(currentUser)
         }
       } catch (err) {
         logger.error("[v0] Auth initialization error:", err)

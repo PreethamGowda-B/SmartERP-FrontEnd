@@ -97,7 +97,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setNotifications([])
       return
     }
-    if (!user || !getAuthToken()) return
+    if (isLoading || !user || !getAuthToken()) return
     try {
       const data = await apiClient("/api/notifications")
       if (notificationOwnerKeyRef.current !== notificationOwnerKey) return
@@ -116,11 +116,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       logger.log(`✅ Fetched ${parsed.length} notifications`)
     } catch (error: any) {
       const isAuthErr = error?.status === 401 || error?.status === '401' || error?.message === "Authentication required"
-      if (!isAuthErr) {
-        logger.error("❌ Error fetching notifications:", error)
+      const isAbortErr = error?.name === "AbortError" || error?.message?.toLowerCase()?.includes("cancelled") || error?.message?.toLowerCase()?.includes("aborted")
+      if (!isAuthErr && !isAbortErr) {
+        logger.warn("⚠️ Notifications temporarily unavailable:", error?.message || error)
       }
     }
-  }, [user, isCustomerRoute, notificationOwnerKey])
+  }, [user, isLoading, isCustomerRoute, notificationOwnerKey])
 
   // Initialize FCM and request permission
   const setupFCM = useCallback(async () => {

@@ -153,7 +153,7 @@ customerApi.interceptors.response.use(
         await fetchCsrfToken();
         onRefreshed();
         return customerApi(originalRequest);
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('_customer_at');
           sessionStorage.removeItem('_customer_at');
@@ -161,7 +161,8 @@ customerApi.interceptors.response.use(
         // Refresh failed — clear queued requests and redirect to login
         onRefreshed();
         if (typeof window !== 'undefined' && window.location.pathname.startsWith('/customer') && window.location.pathname !== '/customer/login') {
-          window.location.href = '/customer/login';
+          const isExpiredInactivity = refreshError?.response?.data?.code === 'SESSION_EXPIRED_INACTIVITY' || refreshError?.response?.data?.expired;
+          window.location.href = isExpiredInactivity ? '/customer/login?expired=inactivity' : '/customer/login';
         }
         return Promise.reject(refreshError);
       } finally {

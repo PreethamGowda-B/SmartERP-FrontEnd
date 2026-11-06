@@ -58,6 +58,11 @@ export function LoginForm() {
       const urlParams = new URLSearchParams(window.location.search)
       const errorParam = urlParams.get("error")
       const modeParam = urlParams.get("mode")
+      const expiredParam = urlParams.get("expired")
+      const reasonParam = urlParams.get("reason")
+      if (expiredParam === "inactivity" || reasonParam === "inactivity") {
+        setError("Your session expired due to inactivity. Please sign in again.")
+      }
       if (errorParam === "account_suspended") {
         router.push("/suspended")
       }
