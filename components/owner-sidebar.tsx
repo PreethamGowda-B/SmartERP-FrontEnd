@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { NavLink } from "@/components/nav-link"
-import { apiClient } from "@/lib/apiClient"
+import { useSubscription } from "@/contexts/subscription-context"
 import { usePathname, useRouter } from "next/navigation"
 import { cn, isRouteActive } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -40,7 +40,6 @@ import {
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationCenterDrawer } from "@/components/notification-center-drawer"
-import { logger } from "@/lib/logger"
 
 export interface NavLeafItem {
   name: string
@@ -226,12 +225,8 @@ export function OwnerSidebar() {
     }
   }, [])
 
-  const [features, setFeatures] = useState<Record<string, boolean>>({
-    payroll: false,
-    messages: false,
-    location_tracking: false,
-    priority_support: false,
-  })
+  const { plan } = useSubscription()
+  const features = (plan?.features || {}) as Record<string, boolean>
   const pathname = usePathname()
   const router = useRouter()
   const { user, signOut } = useAuth()
@@ -287,19 +282,6 @@ export function OwnerSidebar() {
     }
   }
 
-  useEffect(() => {
-    async function fetchPlan() {
-      try {
-        const res = await apiClient("/api/subscription/status")
-        if (res && res.plan && res.plan.features) {
-          setFeatures(res.plan.features)
-        }
-      } catch (err) {
-        logger.error("Sidebar failed to fetch plan status:", err)
-      }
-    }
-    fetchPlan()
-  }, [])
 
   return (
     <>

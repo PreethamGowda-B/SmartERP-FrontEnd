@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { NavLink } from "@/components/nav-link"
-import { apiClient } from "@/lib/apiClient"
+import { useSubscription } from "@/contexts/subscription-context"
 import { usePathname } from "next/navigation"
 import { cn, isRouteActive } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -34,7 +34,6 @@ import {
   HeartPulse
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { logger } from "@/lib/logger"
 
 const navigation = [
   { name: "Operations Dashboard", href: "/hr", icon: LayoutDashboard },
@@ -60,11 +59,8 @@ const hrNavHrefs = navigation.map((n) => n.href)
 
 export function HRSidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [features, setFeatures] = useState<Record<string, boolean>>({
-    payroll: false,
-    messages: false,
-    priority_support: false
-  })
+  const { plan } = useSubscription()
+  const features = (plan?.features || {}) as Record<string, boolean>
   const pathname = usePathname()
   const { user, signOut } = useAuth()
 
@@ -73,19 +69,6 @@ export function HRSidebar() {
     window.location.href = "/"
   }
 
-  useEffect(() => {
-    async function fetchPlan() {
-      try {
-        const res = await apiClient("/api/subscription/status")
-        if (res && res.plan && res.plan.features) {
-          setFeatures(res.plan.features)
-        }
-      } catch (err) {
-        logger.error("HR Sidebar failed to fetch plan status:", err)
-      }
-    }
-    fetchPlan()
-  }, [])
 
   return (
     <>

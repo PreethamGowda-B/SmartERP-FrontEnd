@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Sparkles, CalendarDays, AlertTriangle, ArrowRight, X } from "lucide-react"
-import { apiClient } from "@/lib/apiClient"
-import { logger } from "@/lib/logger"
+import { useSubscription } from "@/contexts/subscription-context"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
@@ -12,40 +11,14 @@ import { useAuth } from "@/contexts/auth-context"
 
 export function DashboardTrialBanner() {
   const { user, isLoading } = useAuth()
-  const [data, setData] = useState<{
-    is_trial: boolean
-    days_remaining: number
-    banner_message: string
-  } | null>(null)
+  const { plan, loading: subLoading } = useSubscription()
   const [isVisible, setIsVisible] = useState(true)
 
-  useEffect(() => {
-    if (isLoading || !user) return
+  if (isLoading || !user) return null
+  if (subLoading || !isVisible) return null
+  if (!plan?.is_trial || (plan?.days_remaining ?? 0) <= 0) return null
 
-    let cancelled = false
-    async function fetchBanner() {
-      try {
-        const res = await apiClient("/api/subscription/trial-status")
-        if (!cancelled && res?.is_trial && res?.days_remaining > 0) {
-          setData(res)
-        }
-      } catch (err: any) {
-        if (err?.name === "AbortError" || err?.message?.toLowerCase().includes("cancelled") || err?.status === 401) {
-          return
-        }
-        logger.warn("Trial banner unavailable:", err?.message || err)
-      }
-    }
-    fetchBanner()
-
-    return () => {
-      cancelled = true
-    }
-  }, [isLoading, user])
-
-  if (!data || !isVisible) return null
-
-  const days = data.days_remaining
+  const days = plan.days_remaining
 
   // Determine urgency styling
   let bgColor = "bg-indigo-600 dark:bg-indigo-900"

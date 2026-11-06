@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { useRegisterCommand } from "@/hooks/useRegisterCommand"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/apiClient"
+import { useSubscription } from "@/contexts/subscription-context"
 import { logger } from "@/lib/logger"
 import { cn } from "@/lib/utils"
 
@@ -73,28 +74,17 @@ function AICopilotInner({ user, pathname, className }: { user: any; pathname: st
   const [loadingPlan, setLoadingPlan] = React.useState(true)
 
   // Mirror the backend's persisted feature entitlement for a clear UI state.
+  const { plan, loading: subLoading } = useSubscription()
+
   React.useEffect(() => {
     if (!user) {
       setLoadingPlan(false)
       return
     }
-
-    async function checkPlan() {
-      try {
-        const res = await apiClient("/api/subscription/status")
-        if (res.plan) {
-          setHasAIAccess(res.plan.features?.ai_assistant === true)
-          setIsTrial(res.is_trial === true)
-        }
-      } catch (err) {
-        logger.error("[AI COPILOT] Failed to verify subscription plan", err)
-      } finally {
-        setLoadingPlan(false)
-      }
-    }
-
-    checkPlan()
-  }, [user?.id, user?.company_id])
+    setHasAIAccess(plan?.features?.ai_assistant === true)
+    setIsTrial(plan?.is_trial === true)
+    setLoadingPlan(subLoading)
+  }, [user, plan, subLoading])
 
   // Register Command Palette Action (⌘I)
   useRegisterCommand({

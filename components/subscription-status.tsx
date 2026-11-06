@@ -1,13 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Zap, Clock, ArrowRight, ShieldCheck, Users, Box, AlertCircle, Sparkles, AlertTriangle } from "lucide-react"
 import Link from "next/link"
-import { apiClient, getAccessToken } from "@/lib/apiClient"
-import { logger } from "@/lib/logger"
+import { useSubscription } from "@/contexts/subscription-context"
 import { cn } from "@/lib/utils"
 
 type SubscriptionStatusData = {
@@ -28,37 +26,21 @@ type SubscriptionStatusData = {
 }
 
 export function SubscriptionStatus() {
-  const [data, setData] = useState<SubscriptionStatusData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-
-  useEffect(() => {
-    async function fetchStatus() {
-      if (!getAccessToken()) {
-        setLoading(false)
-        return
-      }
-      try {
-        const res = await apiClient("/api/subscription/status")
-        setData(res)
-      } catch (err) {
-        logger.error("Failed to fetch subscription status:", err)
-        setError(true)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchStatus()
-  }, [])
+  const { statusData: data, loading, error: subError, refreshSubscription } = useSubscription()
 
   if (loading) return null
 
-  if (error || !data) {
+  if (subError || !data) {
     return (
-      <Card className="border-border shadow-xs bg-red-50/50 dark:bg-red-950/20">
-        <CardContent className="p-3.5 flex items-center gap-2.5 text-red-600 dark:text-red-400 text-xs">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          <span className="font-medium">Unable to synchronize subscription status.</span>
+      <Card className="border-border shadow-xs bg-muted/40">
+        <CardContent className="p-3.5 flex items-center justify-between gap-2.5 text-muted-foreground text-xs">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
+            <span>Subscription status synchronizing.</span>
+          </div>
+          <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => void refreshSubscription(true)}>
+            Retry
+          </Button>
         </CardContent>
       </Card>
     )

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { CheckCircle2, Sparkles, X, ArrowRight, Zap } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
+import { useSubscription } from "@/contexts/subscription-context"
 import {
   Dialog,
   DialogContent,
@@ -18,31 +19,17 @@ import { logger } from "@/lib/logger"
 
 export function TrialWelcomeModal({ onConfirm }: { onConfirm?: () => void }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const [trialEligible, setTrialEligible] = useState(false)
+  const { statusData, loading: subLoading } = useSubscription()
   const router = useRouter()
 
   useEffect(() => {
-    let mounted = true;
-
-    async function checkStatus() {
-      try {
-        const data = await apiClient("/api/subscription/status")
-        if (mounted && data.is_first_login && (data.plan.is_trial || data.trial_eligible)) {
-          setTrialEligible(Boolean(data.trial_eligible))
-          setIsOpen(true)
-        }
-      } catch (err) {
-        logger.error("Failed to fetch subscription status:", err)
-      } finally {
-        if (mounted) setIsLoading(false)
-      }
+    if (subLoading || !statusData) return
+    if (statusData.is_first_login && (statusData.plan?.is_trial || statusData.trial_eligible)) {
+      setTrialEligible(Boolean(statusData.trial_eligible))
+      setIsOpen(true)
     }
-
-    checkStatus()
-
-    return () => { mounted = false }
-  }, [])
+  }, [statusData, subLoading])
 
   const handleDismiss = async () => {
     setIsOpen(false)
@@ -59,7 +46,7 @@ export function TrialWelcomeModal({ onConfirm }: { onConfirm?: () => void }) {
     router.push("/owner/billing")
   }
 
-  if (isLoading || !isOpen) return null
+  if (subLoading || !isOpen) return null
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleDismiss()}>

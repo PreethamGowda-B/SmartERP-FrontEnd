@@ -153,8 +153,10 @@ export default function OwnerDashboard() {
           logger.warn("Metrics fetch issue:", err?.message || err)
           if (!metrics) {
             setError({
-              title: "Dashboard update failed",
-              message: err?.message || "We couldn't synchronize your business metrics. Check your connection.",
+              title: "Business metrics unavailable",
+              message: err?.name === "TimeoutError" || err?.isTimeout || err?.message?.includes("timed out")
+                ? "The metrics request timed out while contacting the server. Click retry to reload."
+                : (err?.message || "We couldn't synchronize your business metrics. Check your connection."),
             })
           }
         }
@@ -185,8 +187,10 @@ export default function OwnerDashboard() {
       if (!isAbort) {
         logger.error("Error fetching dashboard data:", err)
         setError({
-          title: "Dashboard update failed",
-          message: err?.message || "We couldn't synchronize your business metrics. Check your connection.",
+          title: "Business metrics unavailable",
+          message: err?.name === "TimeoutError" || err?.isTimeout || err?.message?.includes("timed out")
+            ? "The metrics request timed out while contacting the server. Click retry to reload."
+            : (err?.message || "We couldn't synchronize your business metrics. Check your connection."),
         })
       }
     } finally {
@@ -336,15 +340,7 @@ export default function OwnerDashboard() {
     )
   }
 
-  if (error && !metrics) {
-    return (
-      <OwnerLayout>
-        <div className="max-w-2xl mx-auto py-16 px-4">
-          <ErrorView title={error.title} message={error.message} onRetry={() => fetchDashboardData(true)} />
-        </div>
-      </OwnerLayout>
-    )
-  }
+
 
   return (
     <OwnerLayout>
@@ -411,6 +407,29 @@ export default function OwnerDashboard() {
         </div>
 
         {/* ─── C. Advanced Executive KPI Cards ───────────────────────────── */}
+        {error && !metrics ? (
+          <Card className="rounded-2xl border border-amber-300/80 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 shrink-0">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-950 dark:text-amber-100">{error.title}</p>
+                  <p className="text-xs text-amber-800 dark:text-amber-300">{error.message}</p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void fetchDashboardData(true)}
+                className="h-8 gap-1.5 rounded-xl border-amber-300 bg-white/80 text-xs font-semibold text-amber-900 hover:bg-white dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100 shrink-0"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Retry Metrics
+              </Button>
+            </div>
+          </Card>
+        ) : (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {/* 1. Active Jobs */}
           <Card
@@ -562,6 +581,7 @@ export default function OwnerDashboard() {
             </CardContent>
           </Card>
         </div>
+        )}
 
         {(approvalLoadError || (pendingApprovals !== null && pendingApprovals > 0)) && (
           <section className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between">

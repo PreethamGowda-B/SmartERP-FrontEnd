@@ -545,17 +545,49 @@ export async function apiClient<T = any>(path: string, options: ApiRequestInit =
       try {
         // Use controller to handle potential timeouts if needed
         const controller = new AbortController()
-        const timeoutMs = (options as any)?.timeoutMs || 15000 // 15s timeout
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+        let isTimedOut = false
+        const timeoutMs = (options as any)?.timeoutMs || 30000 // 30s timeout
+        const timeoutId = setTimeout(() => {
+          isTimedOut = true
+          controller.abort()
+        }, timeoutMs)
 
-        res = await fetch(`${baseUrl}${path}`, {
-          ...options,
-          headers,
-          credentials: "include",
-          ...(isGet ? { cache: "no-store" as RequestCache } : {}),
-          signal: controller.signal
-        })
-        clearTimeout(timeoutId)
+        const callerSignal = options.signal
+        let callerAbortHandler: (() => void) | null = null
+        if (callerSignal) {
+          if (callerSignal.aborted) {
+            controller.abort()
+          } else {
+            callerAbortHandler = () => controller.abort()
+            callerSignal.addEventListener("abort", callerAbortHandler)
+          }
+        }
+
+        try {
+          res = await fetch(`${baseUrl}${path}`, {
+            ...options,
+            headers,
+            credentials: "include",
+            ...(isGet ? { cache: "no-store" as RequestCache } : {}),
+            signal: controller.signal
+          })
+          clearTimeout(timeoutId)
+          if (callerSignal && callerAbortHandler) {
+            callerSignal.removeEventListener("abort", callerAbortHandler)
+          }
+        } catch (fetchErr: any) {
+          clearTimeout(timeoutId)
+          if (callerSignal && callerAbortHandler) {
+            callerSignal.removeEventListener("abort", callerAbortHandler)
+          }
+          if (isTimedOut) {
+            const timeoutErr = new Error("Request timed out. Please check your network connection.")
+            timeoutErr.name = "TimeoutError"
+            ;(timeoutErr as any).isTimeout = true
+            throw timeoutErr
+          }
+          throw fetchErr
+        }
       } catch (error: any) {
         if (error.name === "OfflineError" || error.isOffline) {
           throw error;
@@ -580,7 +612,7 @@ export async function apiClient<T = any>(path: string, options: ApiRequestInit =
 
         // 🚀 PART 2: API RETRY SYSTEM (NETWORK RESILIENCE)
         // Retry failed requests ONLY IF: network error OR timeout, AND device is confirmed online
-        const isTransientError = error.name === "TypeError" || error.name === "TimeoutError" || error.message?.includes("fetch")
+        const isTransientError = error.name === "TypeError" || error.name === "TimeoutError" || error.isTimeout || error.message?.includes("fetch") || error.message?.includes("timed out")
         const isGetRequest = !options.method || options.method.toUpperCase() === "GET"
         const canRetry = retries > 0 && isTransientError && isGetRequest && !deviceReportsOffline
 
@@ -637,6 +669,11 @@ export async function apiClient<T = any>(path: string, options: ApiRequestInit =
       }
 
       if (!res.ok) {
+        if ((res.status === 502 || res.status === 503 || res.status === 504) && isGet && retries > 0) {
+          const delay = retries === 2 ? 500 : 1000
+          await new Promise(resolve => setTimeout(resolve, delay))
+          return apiClient(path, options, retries - 1)
+        }
         const error = await res.json().catch(() => ({ message: res.statusText }))
         if (res.status === 403 && (error.error === 'company_suspended' || error.error === 'account_suspended' || error.error === 'your_company_is_suspended')) {
           if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/suspended')) {

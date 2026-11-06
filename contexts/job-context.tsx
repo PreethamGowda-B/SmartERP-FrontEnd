@@ -333,6 +333,8 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(storageKey, JSON.stringify(normalized))
       }
     } catch (err: any) {
+      const isAbort = err?.name === "AbortError" || err?.message?.toLowerCase()?.includes("cancelled") || err?.message?.toLowerCase()?.includes("aborted")
+      if (isAbort) return
       setRefreshError(true)
       const isAuthErr = err?.status === 401 || err?.status === '401' || err?.message === "Authentication required" || JSON.stringify(err || {}).includes('401')
       if (!isAuthErr) {

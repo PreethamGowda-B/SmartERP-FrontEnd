@@ -22,11 +22,13 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
   const [message, setMessage] = useState<string | null>(null)
   
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const safetyTimerRef = useRef<NodeJS.Timeout | null>(null)
   const displayStartTimeRef = useRef<number | null>(null)
   const pathname = usePathname()
 
   const stopLoading = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
+    if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current)
     
     setIsActivelyLoading(false)
     setShouldShow(false)
@@ -39,17 +41,24 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
     setIsActivelyLoading(true)
     
     if (timerRef.current) clearTimeout(timerRef.current)
+    if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current)
     
     timerRef.current = setTimeout(() => {
       setShouldShow(true)
       displayStartTimeRef.current = Date.now()
     }, ANTI_FLICKER_DELAY)
-  }, [])
+
+    // Safety timeout: auto-clear after 5 seconds so UI never gets stuck dimmed
+    safetyTimerRef.current = setTimeout(() => {
+      stopLoading()
+    }, 5000)
+  }, [stopLoading])
 
   useEffect(() => {
     stopLoading()
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
+      if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current)
     }
   }, [pathname, stopLoading])
 
