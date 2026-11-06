@@ -3,15 +3,10 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
-import { exportToPDF } from "@/lib/export-utils"
+import { ExportColumn, exportToPDF } from "@/lib/export-utils"
 import { toast } from "sonner"
 import { logger } from "@/lib/logger"
 
-interface ExportColumn {
-  header: string
-  dataKey: string
-  type?: "text" | "number" | "currency" | "date" | "status" | "priority"
-}
 
 interface ExportButtonProps {
   filename: string

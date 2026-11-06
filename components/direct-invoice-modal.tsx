@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { apiClient } from "@/lib/apiClient"
+import { printInvoiceDocument } from "@/lib/invoice-print"
 import {
   FileText, Plus, Trash2, CheckCircle2, Loader2, IndianRupee,
   User, Building2, Eye, Printer, Download, MessageSquare, Mail,
@@ -297,7 +298,41 @@ export function DirectInvoiceModal({
 
   // Quick Action dispatches from Success Screen
   const handlePrint = (_invoiceId: string) => {
-    window.print()
+    if (!createdInvoiceResult?.invoice) return
+    printInvoiceDocument({
+      invoice: {
+        ...createdInvoiceResult.invoice,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_email: customerEmail,
+        customer_address: customerAddress,
+        customer_gstin: customerGstin,
+        payment_method: paymentStatus === "paid" ? paymentMethod : null,
+        payment_status: paymentStatus,
+        customer_notes: customerNotes,
+        subtotal: calculations.subtotal,
+        discount_amount: discountAmount,
+        transport_charges: transportCharges,
+        gst_rate: gstRate,
+        is_inter_state: isInterState,
+        total_tax: calculations.totalTax,
+        cgst: calculations.cgst,
+        sgst: calculations.sgst,
+        igst: calculations.igst,
+        total_amount: calculations.grandTotal,
+        amount_paid: paymentStatus === "paid" ? calculations.grandTotal : 0,
+        amount_due: paymentStatus === "paid" ? 0 : calculations.grandTotal,
+      },
+      company: createdInvoiceResult.company || {},
+      lineItems: lineItems.map((item) => ({
+        description: item.description,
+        hsn_code: item.hsn_code,
+        item_type: item.item_type,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_amount: Number(item.quantity || 0) * Number(item.unit_price || 0),
+      })),
+    })
   }
 
   const handleWhatsApp = async (invoiceId: string) => {

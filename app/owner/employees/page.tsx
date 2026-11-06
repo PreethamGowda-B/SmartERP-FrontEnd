@@ -358,9 +358,9 @@ export default function EmployeesPage() {
                 { header: "Department", dataKey: "department" },
                 { header: "Position", dataKey: "position" },
                 { header: "Role", dataKey: "role" },
-                { header: "Status", dataKey: "status" },
+                { header: "Status", dataKey: "status", type: "status" },
                 { header: "Location", dataKey: "location" },
-                { header: "Hours This Week", dataKey: "hoursThisWeek" },
+                { header: "Hours This Week", dataKey: "hoursThisWeek", type: "number" },
                 { header: "Joined Date", dataKey: "created_at", type: "date" },
               ]}
             />

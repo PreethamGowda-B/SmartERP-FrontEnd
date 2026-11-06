@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { apiClient } from "@/lib/apiClient"
+import { printInvoiceDocument } from "@/lib/invoice-print"
 import { useToast } from "@/hooks/use-toast"
 import {
   Printer,
@@ -108,178 +109,11 @@ export function InvoiceViewModal({
 
   const handlePrint = () => {
     if (!data) return
-
-    const { invoice, company, lineItems } = data
-    const formattedDate = new Date(invoice.created_at || Date.now()).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
+    printInvoiceDocument({
+      invoice: data.invoice,
+      company: data.company,
+      lineItems: data.lineItems || [],
     })
-    const formattedDueDate = invoice.due_date
-      ? new Date(invoice.due_date).toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
-      : "On Receipt"
-
-    const companyName = company.legal_name || company.name || "BUSINESS ENTERPRISE"
-    const companyAddress = company.address
-      ? `${company.address}${company.city ? ", " + company.city : ""}${
-          company.state ? ", " + company.state : ""
-        } ${company.pincode || ""}`
-      : ""
-
-    const upiQrUrl = company.upi_id
-      ? `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
-          `upi://pay?pa=${company.upi_id}&pn=${companyName}&am=${invoice.total_amount}&cu=INR`
-        )}`
-      : null
-
-    const itemsRows = lineItems
-      .map(
-        (item: any, idx: number) => `
-      <tr style="border-bottom: 1px solid #e2e8f0;">
-        <td style="padding: 10px; font-size: 12px; color: #334155; text-align: center;">${idx + 1}</td>
-        <td style="padding: 10px; font-size: 12px; color: #0f172a; font-weight: 600;">
-          ${item.description || "Service"}
-          <div style="font-size: 11px; color: #64748b; font-weight: 400; margin-top: 2px;">HSN/SAC: ${
-            item.hsn_code || "998311"
-          }</div>
-        </td>
-        <td style="padding: 10px; font-size: 12px; color: #334155; text-align: center;">${
-          item.quantity || 1
-        }</td>
-        <td style="padding: 10px; font-size: 12px; color: #334155; text-align: right;">₹${Number(
-          item.unit_price || 0
-        ).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-        <td style="padding: 10px; font-size: 12px; color: #0f172a; font-weight: 700; text-align: right;">₹${Number(
-          item.total_amount || 0
-        ).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
-      </tr>
-    `
-      )
-      .join("")
-
-    const printHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Tax Invoice - ${invoice.invoice_number}</title>
-        <style>
-          @page { size: A4; margin: 12mm; }
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 0; padding: 20px; color: #0f172a; line-height: 1.5; }
-          .card { max-width: 820px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 8px; padding: 28px; }
-          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 20px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-          th { background: #f8fafc; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 2px solid #cbd5e1; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <div class="header">
-            <div>
-              <div style="font-size: 22px; font-weight: 900; color: #1e293b;">${companyName}</div>
-              <div style="font-size: 11px; color: #475569;">${companyAddress}</div>
-              ${company.gstin ? `<div style="font-size: 11px; font-weight: 700; color: #0f172a; margin-top: 4px;">GSTIN: ${company.gstin}</div>` : ""}
-              ${company.phone ? `<div style="font-size: 11px; color: #64748b;">Phone: ${company.phone}</div>` : ""}
-            </div>
-            <div style="text-align: right;">
-              <div style="font-size: 16px; font-weight: 900; color: #2563eb;">TAX INVOICE</div>
-              <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-top: 2px;">${invoice.invoice_number}</div>
-              <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Date: ${formattedDate}</div>
-              <div style="font-size: 11px; color: #64748b;">Due: ${formattedDueDate}</div>
-              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: ${invoice.status === "paid" ? "#16a34a" : "#ca8a04"};">
-                Status: ${invoice.status || "Issued"}
-              </div>
-            </div>
-          </div>
-
-          <div style="display: flex; justify-content: space-between; background: #f8fafc; padding: 14px; border-radius: 6px; margin-bottom: 20px;">
-            <div>
-              <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Billed To</div>
-              <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 2px;">${invoice.customer_name || "Customer"}</div>
-              ${invoice.customer_address ? `<div style="font-size: 11px; color: #475569;">${invoice.customer_address}</div>` : ""}
-              ${invoice.customer_gstin ? `<div style="font-size: 11px; font-weight: 700; color: #0f172a;">GSTIN: ${invoice.customer_gstin}</div>` : ""}
-              ${invoice.customer_phone ? `<div style="font-size: 11px; color: #64748b;">Phone: ${invoice.customer_phone}</div>` : ""}
-            </div>
-            <div style="text-align: right;">
-              <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Payment Terms</div>
-              <div style="font-size: 12px; font-weight: 700; color: #0f172a; margin-top: 2px;">${invoice.payment_terms || "Due on Receipt"}</div>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th style="text-align: center; width: 40px;">#</th>
-                <th style="text-align: left;">Item & Description</th>
-                <th style="text-align: center; width: 60px;">Qty</th>
-                <th style="text-align: right; width: 100px;">Rate</th>
-                <th style="text-align: right; width: 110px;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsRows}
-            </tbody>
-          </table>
-
-          <div style="display: flex; justify-content: space-between; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
-            <div style="width: 50%;">
-              ${company.bank_name ? `
-                <div style="font-size: 11px; color: #475569;">
-                  <strong>Bank Transfer Details:</strong><br/>
-                  Bank: ${company.bank_name}<br/>
-                  A/C No: ${company.account_number || "N/A"}<br/>
-                  IFSC: ${company.ifsc_code || "N/A"}
-                </div>
-              ` : ""}
-            </div>
-            <div style="width: 45%;">
-              <table style="width: 100%; font-size: 12px;">
-                <tr><td style="padding: 3px 0; color: #64748b;">Subtotal:</td><td style="text-align: right; font-weight: 600;">₹${Number(invoice.subtotal || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td></tr>
-                ${invoice.discount_amount > 0 ? `<tr><td style="padding: 3px 0; color: #16a34a;">Discount:</td><td style="text-align: right; color: #16a34a; font-weight: 600;">-₹${Number(invoice.discount_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td></tr>` : ""}
-                ${invoice.is_inter_state ? `
-                  <tr><td style="padding: 3px 0; color: #64748b;">IGST (${invoice.gst_rate || 18}%):</td><td style="text-align: right; font-weight: 600;">₹${Number(invoice.igst || invoice.total_tax || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td></tr>
-                ` : `
-                  <tr><td style="padding: 3px 0; color: #64748b;">CGST (${(invoice.gst_rate || 18)/2}%):</td><td style="text-align: right; font-weight: 600;">₹${Number(invoice.cgst || (invoice.total_tax / 2) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td></tr>
-                  <tr><td style="padding: 3px 0; color: #64748b;">SGST (${(invoice.gst_rate || 18)/2}%):</td><td style="text-align: right; font-weight: 600;">₹${Number(invoice.sgst || (invoice.total_tax / 2) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td></tr>
-                `}
-                <tr style="border-top: 2px solid #0f172a;"><td style="padding: 8px 0; font-size: 14px; font-weight: 800;">Grand Total:</td><td style="text-align: right; font-size: 16px; font-weight: 900; color: #2563eb;">₹${Number(invoice.total_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td></tr>
-                <tr><td style="padding: 4px 0; color: #64748b;">Amount Paid:</td><td style="text-align: right; font-weight: 700; color: #16a34a;">₹${Number(invoice.amount_paid || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td></tr>
-                <tr><td style="padding: 4px 0; font-weight: 800; color: #0f172a;">Balance Due:</td><td style="text-align: right; font-weight: 800; color: ${invoice.amount_due > 0 ? "#dc2626" : "#16a34a"};">₹${Number(invoice.amount_due || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td></tr>
-              </table>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-
-    // Print seamlessly inside hidden iframe
-    let iframe = printIframeRef.current
-    if (!iframe) {
-      iframe = document.createElement("iframe")
-      iframe.style.position = "fixed"
-      iframe.style.right = "0"
-      iframe.style.bottom = "0"
-      iframe.style.width = "0"
-      iframe.style.height = "0"
-      iframe.style.border = "none"
-      document.body.appendChild(iframe)
-      printIframeRef.current = iframe
-    }
-
-    const doc = iframe.contentWindow?.document
-    if (doc) {
-      doc.open()
-      doc.write(printHtml)
-      doc.close()
-      setTimeout(() => {
-        iframe?.contentWindow?.focus()
-        iframe?.contentWindow?.print()
-      }, 300)
-    }
   }
 
   const handleDownloadHtml = () => {

@@ -299,9 +299,9 @@ export default function OwnerAttendancePage() {
                 { header: "Employee", dataKey: "employee_name" },
                 { header: "Email", dataKey: "employee_email" },
                 { header: "Date", dataKey: "date", type: "date" },
-                { header: "Check In", dataKey: "check_in", type: "date" },
-                { header: "Check Out", dataKey: "check_out", type: "date" },
-                { header: "Status", dataKey: "status" },
+                { header: "Check In", dataKey: "check_in", type: "time" },
+                { header: "Check Out", dataKey: "check_out", type: "time" },
+                { header: "Status", dataKey: "status", type: "status" },
                 { header: "Hours", dataKey: "working_hours", type: "number" },
               ]}
             />

@@ -139,7 +139,7 @@ function InventoryContent() {
                         { header: "Category", dataKey: "category" },
                         { header: "Quantity", dataKey: "quantity", type: "number" },
                         { header: "Min Stock", dataKey: "min_quantity", type: "number" },
-                        { header: "Status", dataKey: "status" },
+                        { header: "Status", dataKey: "status", type: "status" },
                         { header: "Supplier", dataKey: "supplier_name" },
                         { header: "Description", dataKey: "description" }
                       ]}
