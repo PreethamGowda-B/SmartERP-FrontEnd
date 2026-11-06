@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/apiClient"
 import { isPublicRoute } from "@/lib/route-utils"
 import { logger } from "@/lib/logger"
+import { RefreshCw } from "lucide-react"
 
 interface JobContextType {
   jobs: Job[]
@@ -16,6 +17,15 @@ interface JobContextType {
   deleteJob: (id: string) => Promise<void>
   getJobsByEmployee: (employeeId: string) => Job[]
   refreshJobs: () => Promise<void>
+}
+
+
+function extractJobsArray(payload: any): any[] | null {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.jobs)) return payload.jobs
+  if (Array.isArray(payload?.data?.jobs)) return payload.data.jobs
+  if (Array.isArray(payload?.data)) return payload.data
+  return null
 }
 
 const JobContext = createContext<JobContextType | undefined>(undefined)
@@ -27,6 +37,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
   const [jobs, setJobs] = useState<Job[]>([])
   const [refreshError, setRefreshError] = useState(false)
+  const [isRetrying, setIsRetrying] = useState(false)
   const hasSyncedRef = useRef(false)
   const loadedScopeRef = useRef<string | null>(null)
   const activeScopeRef = useRef<string | null>(null)
@@ -85,10 +96,11 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
         logger.log("[v0] Fetching jobs from backend...")
         const serverJobs = await apiClient("/api/jobs", { method: "GET", skipCache: true } as RequestInit)
         logger.log("[v0] Successfully fetched jobs:", serverJobs)
-        if (mounted && activeScopeRef.current === scope && Array.isArray(serverJobs)) {
+        const rawJobs = extractJobsArray(serverJobs)
+        if (mounted && activeScopeRef.current === scope && rawJobs) {
           setRefreshError(false)
           // Normalize server jobs so each job has a stable shape the UI expects.
-          const normalized = serverJobs.map((s: any) => {
+          const normalized = rawJobs.map((s: any) => {
             // prefer an explicit assignedEmployees array if present
             const assignedArr = Array.isArray(s.assignedEmployees) ? s.assignedEmployees : null
             // fallback to top-level assigned_employee_id, assigned_to, or assignedTo
@@ -295,54 +307,93 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
   }, [jobs])
 
   const refreshJobs = useCallback(async () => {
-    if (isPublic || !user || !storageKey || loadedScopeRef.current !== scope) return
-    // A refresh button/event must not silently report success just because an
-    // initial or periodic request is already running. Wait for it to finish,
-    // then perform this authoritative refresh.
-    while (requestInFlightRef.current) {
-      await new Promise<void>((resolve) => requestWaitersRef.current.push(resolve))
-      if (activeScopeRef.current !== scope) return
+    if (isPublic || !user) return
+    setIsRetrying(true)
+
+    // Ensure scope is active
+    if (activeScopeRef.current !== scope) {
+      activeScopeRef.current = scope
+      loadedScopeRef.current = scope
+    }
+
+    // Wait at most 2 seconds if a background request is currently in-flight
+    if (requestInFlightRef.current) {
+      const waitTimeout = new Promise<void>((resolve) => setTimeout(resolve, 2000))
+      const inFlightDone = new Promise<void>((resolve) => requestWaitersRef.current.push(resolve))
+      await Promise.race([waitTimeout, inFlightDone])
     }
     requestInFlightRef.current = true
+
     try {
       logger.log("[v0] Manually refreshing jobs...")
       const serverJobs = await apiClient("/api/jobs", { method: "GET", skipCache: true } as RequestInit)
-      if (!Array.isArray(serverJobs)) throw new Error("The server returned an incomplete jobs response.")
-      if (activeScopeRef.current === scope && Array.isArray(serverJobs)) {
-        const normalized = serverJobs.map((s: any) => {
-          const assignedArr = Array.isArray(s.assignedEmployees) ? s.assignedEmployees : null
-          const topAssigned = (s as any).assigned_to ?? (s as any).assignedTo ?? null
-          const assignedEmployees = Array.isArray(assignedArr)
-            ? assignedArr.map((a: any) => String(a))
-            : topAssigned != null
-              ? [String(topAssigned)]
-              : []
+      const rawJobs = extractJobsArray(serverJobs)
+      if (!rawJobs) throw new Error("The server returned an incomplete jobs response.")
 
-          return {
-            id: s.id?.toString?.() ?? String(s._db_row?.id ?? s.id ?? ""),
-            title: s.title ?? s.name ?? s.jobTitle ?? "",
-            description: s.description ?? s.details ?? "",
-            assignedEmployees,
-            ...s,
-          }
-        })
+      const normalized = rawJobs.map((s: any) => {
+        const assignedArr = Array.isArray(s.assignedEmployees) ? s.assignedEmployees : null
+        const topAssigned = (s as any).assigned_to ?? (s as any).assignedTo ?? null
+        const assignedEmployees = Array.isArray(assignedArr)
+          ? assignedArr.map((a: any) => String(a))
+          : topAssigned != null
+            ? [String(topAssigned)]
+            : []
 
-        setRefreshError(false)
-        jobsScopeRef.current = scope
-        setJobs(normalized)
+        const flatInvoiceId = s.invoice_id ?? s.invoiceId ?? null
+        const flatInvoiceTotal = s.invoice_total_amount ?? s.invoiceTotal ?? null
+        const nestedInvoice = s.invoice && typeof s.invoice === "object" ? s.invoice : null
+        const normalizedJobId = s.id?.toString?.() ?? String(s._db_row?.id ?? s.id ?? "")
+        const invoice = flatInvoiceId
+          ? {
+              id: String(flatInvoiceId),
+              job_id: normalizedJobId,
+              invoice_number: s.invoice_number ?? nestedInvoice?.invoice_number ?? "",
+              version_number: s.invoice_version_number ?? s.version_number ?? nestedInvoice?.version_number ?? 1,
+              edited_count: s.invoice_edited_count ?? s.edited_count ?? nestedInvoice?.edited_count ?? 0,
+              total_amount: flatInvoiceTotal != null
+                ? Number(flatInvoiceTotal)
+                : Number(nestedInvoice?.total_amount ?? 0),
+              status: s.invoice_status ?? nestedInvoice?.status ?? "issued",
+              viewed_at: s.invoice_viewed_at ?? nestedInvoice?.viewed_at ?? null,
+              downloaded_at: s.invoice_downloaded_at ?? nestedInvoice?.downloaded_at ?? null,
+            }
+          : (nestedInvoice ? { ...nestedInvoice, job_id: nestedInvoice.job_id || normalizedJobId } : null)
+
+        return {
+          id: normalizedJobId,
+          title: s.title ?? s.name ?? s.jobTitle ?? "",
+          description: s.description ?? s.details ?? "",
+          assignedEmployees,
+          invoice,
+          ...s,
+        }
+      })
+
+      normalized.sort((a: any, b: any) => {
+        const timeA = new Date(a.created_at || a.startDate || a.created_date || 0).getTime()
+        const timeB = new Date(b.created_at || b.startDate || b.created_date || 0).getTime()
+        return timeB - timeA
+      })
+
+      setRefreshError(false)
+      jobsScopeRef.current = scope
+      setJobs(normalized)
+      if (storageKey) {
         localStorage.setItem(storageKey, JSON.stringify(normalized))
       }
     } catch (err: any) {
       const isAbort = err?.name === "AbortError" || err?.message?.toLowerCase()?.includes("cancelled") || err?.message?.toLowerCase()?.includes("aborted")
-      if (isAbort) return
-      setRefreshError(true)
-      const isAuthErr = err?.status === 401 || err?.status === '401' || err?.message === "Authentication required" || JSON.stringify(err || {}).includes('401')
-      if (!isAuthErr) {
-        logger.error("[v0] Failed to refresh jobs:", err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err)))
+      if (!isAbort) {
+        setRefreshError(true)
+        const isAuthErr = err?.status === 401 || err?.status === '401' || err?.message === "Authentication required" || JSON.stringify(err || {}).includes('401')
+        if (!isAuthErr) {
+          logger.error("[v0] Failed to refresh jobs:", err instanceof Error ? err.message : (typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err)))
+        }
       }
     } finally {
       requestInFlightRef.current = false
       requestWaitersRef.current.splice(0).forEach((resolve) => resolve())
+      setIsRetrying(false)
     }
   }, [user, isPublic, scope, storageKey])
 
@@ -383,8 +434,19 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     >
       <>
         {refreshError && !isPublic && (
-          <div role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900">
-            {jobs.length > 0 ? "Showing the last loaded jobs. The latest refresh failed." : "Could not refresh the jobs list. It may be incomplete."} <button type="button" className="font-semibold underline" onClick={() => void refreshJobs()}>Retry</button>
+          <div role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900 flex items-center justify-center gap-2">
+            <span>
+              {jobs.length > 0 ? "Showing the last loaded jobs. The latest refresh failed." : "Could not refresh the jobs list. It may be incomplete."}
+            </span>
+            <button
+              type="button"
+              disabled={isRetrying}
+              className="font-semibold underline hover:text-amber-950 disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5 ml-1"
+              onClick={() => void refreshJobs()}
+            >
+              {isRetrying && <RefreshCw className="h-3 w-3 animate-spin inline" />}
+              {isRetrying ? "Retrying..." : "Retry"}
+            </button>
           </div>
         )}
         {children}
