@@ -401,9 +401,9 @@ export default function OwnerDashboard() {
         </section>
 
         {/* Subscription and inventory callouts */}
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 xl:items-stretch">
-          <div className="min-w-0 xl:col-span-8"><SubscriptionStatus /></div>
-          <div className="min-w-0 xl:col-span-4 [&>div]:h-full [&>div>div]:h-full"><ProactiveAIInsights /></div>
+        <div className="space-y-3">
+          <SubscriptionStatus />
+          <ProactiveAIInsights />
         </div>
 
         {/* ─── C. Advanced Executive KPI Cards ───────────────────────────── */}
