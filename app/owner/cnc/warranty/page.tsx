@@ -100,7 +100,7 @@ export default function WarrantyClaimsPage() {
         method: "POST",
         body: JSON.stringify({ status: actionStatus, credit_amount: actionStatus === "approved" ? 8500 : 0 }),
       })
-      toast.success(actionStatus === "approved" ? "Warranty claim approved; supplier credit amount recorded." : "Warranty claim closed.")
+      toast.success(actionStatus === "approved" ? "Warranty claim approved; supplier credit amount recorded. No finance credit note was issued." : "Warranty claim closed.")
       fetchClaimsAndMachines()
     } catch (err: any) {
       toast.error(err.message || "Failed to update claim")

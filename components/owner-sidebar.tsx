@@ -142,12 +142,6 @@ const navCategories: NavCategory[] = [
         icon: ShieldCheck,
         aliases: ["/owner/gst-reconciliation", "/owner/finance/gst-reconciliation", "/owner/finance/gst-reports"],
       },
-      {
-        name: "Accounts Receivable",
-        href: "/owner/ar-collections",
-        icon: DollarSign,
-        aliases: ["/owner/finance/accounts-receivable"],
-      },
     ],
   },
   {

@@ -10,6 +10,7 @@ import { AIChatBot } from "@/components/ai-chat-bot"
 import { useLoading } from "@/contexts/loading-context"
 import PageTransition from './page-transition'
 import DotsLoader from '@/components/dots-loader'
+import { cn } from "@/lib/utils"
 
 interface HRLayoutProps {
   children: React.ReactNode
@@ -59,7 +60,10 @@ function MainContent({ children }: { children: React.ReactNode }) {
   const { isActivelyLoading } = useLoading()
   return (
     <main
-      className={`p-3 sm:p-4 lg:p-8 transition-all duration-400 ease-in-out ${isActivelyLoading ? 'opacity-30 translate-y-2 blur-[2px]' : 'opacity-100 translate-y-0 filter-none'}`}>
+      className={cn(
+        "p-3 sm:p-4 lg:p-6 pb-24 sm:pb-28 transition-opacity duration-150 ease-out",
+        isActivelyLoading ? "opacity-50" : "opacity-100"
+      )}>
       {children}
     </main>
   )

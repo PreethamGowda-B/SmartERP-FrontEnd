@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
-import { User, Bell, Shield, Loader2, Eye, EyeOff, Building2, Copy, CheckCheck, CheckCircle2 } from "lucide-react"
+import { User, Bell, Shield, Loader2, Eye, EyeOff, Building2, Copy, CheckCheck, CheckCircle2, Check } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { toast as sonnerToast } from "sonner"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { DangerZoneAccountDeletion } from "@/components/danger-zone-account-deletion"
@@ -443,12 +444,22 @@ export default function EmployeeSettingsPage() {
             <CardContent className="space-y-4">
               {/* Company ID — always visible */}
               <div className="space-y-2">
-                <Label>Company ID</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Company ID</Label>
+                  {copied && (
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in slide-in-from-right-1 duration-200">
+                      <Check className="h-3 w-3 stroke-[3]" /> Copied!
+                    </span>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <Input
                     value={companyInfo?.company_id || "—"}
                     disabled
-                    className="font-mono text-sm opacity-80 flex-1"
+                    className={cn(
+                      "font-mono text-sm opacity-80 flex-1 transition-all",
+                      copied && "border-emerald-500 ring-1 ring-emerald-500/30"
+                    )}
                   />
                   {companyInfo?.company_id && (
                     <Button
@@ -456,9 +467,17 @@ export default function EmployeeSettingsPage() {
                       variant="outline"
                       size="icon"
                       onClick={copyCompanyId}
+                      className={cn(
+                        "transition-all duration-200 shrink-0",
+                        copied && "border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:border-emerald-600 dark:text-emerald-300"
+                      )}
                       title="Copy Company ID"
                     >
-                      {copied ? <CheckCheck className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                      {copied ? (
+                        <Check className="h-4 w-4 text-emerald-600 animate-in zoom-in-75 duration-200" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </Button>
                   )}
                 </div>

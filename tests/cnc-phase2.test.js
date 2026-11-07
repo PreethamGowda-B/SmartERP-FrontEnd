@@ -20,11 +20,14 @@ test('CNC purchase-order page collects and reviews user-provided values before i
   assert.doesNotMatch(page, /Fanuc India Spares Ltd|Spindle Servo Motor 7\.5kW|total_cost: 45000/);
 });
 
-test('route-optimization UI provides technician dispatch routing and calculates verified stops', () => {
+test('route-optimization UI discloses the missing provider and disables fabricated estimates', () => {
   const page = read('app/owner/cnc/route-optimization/page.tsx');
   assert.match(page, /Technician Dispatch Route Optimization/);
   assert.match(page, /Multi-Stop Dispatch Builder/);
-  assert.match(page, /Calculate Optimized Route/);
+  assert.match(page, /routing provider, which is not configured yet/);
+  assert.match(page, /disabled\s+className=/);
+  assert.match(page, /Routing Provider Not Configured/);
+  assert.doesNotMatch(page, /Calculate Optimized Route/);
   assert.match(page, /\/api\/route-optimization/);
 });
 

@@ -60,7 +60,7 @@ export default function RouteOptimizationPage() {
     "Peenya Industrial Area, Phase 2",
     "Bommasandra Industrial Area",
   ])
-  const [calculating, setCalculating] = useState(false)
+  const [, setCalculating] = useState(false)
   const [routeResult, setRouteResult] = useState<CalculatedRoute | null>(null)
 
   const fetchDispatches = useCallback(async () => {
@@ -152,7 +152,7 @@ export default function RouteOptimizationPage() {
             <Navigation className="h-8 w-8 text-emerald-600" /> Technician Dispatch Route Optimization
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Multi-stop technician route planner, travel mileage estimator, fuel reimbursement calculator, and live Google Maps dispatch
+            Active dispatches are available below. Route distances, travel times, and fuel estimates require a routing provider, which is not configured yet.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchDispatches} className="gap-2">
@@ -236,18 +236,10 @@ export default function RouteOptimizationPage() {
                 <div className="pt-4 border-t flex justify-end">
                   <Button
                     type="submit"
-                    disabled={calculating}
+                    disabled
                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2"
                   >
-                    {calculating ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 animate-spin" /> Calculating Optimum Route...
-                      </>
-                    ) : (
-                      <>
-                        <Navigation className="h-4 w-4" /> Calculate Optimized Route
-                      </>
-                    )}
+                    <Navigation className="h-4 w-4" /> Routing Provider Not Configured
                   </Button>
                 </div>
               </form>
@@ -306,7 +298,7 @@ export default function RouteOptimizationPage() {
             <Card className="border shadow-md bg-linear-to-b from-white to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/20">
               <CardHeader className="border-b pb-4">
                 <div className="flex items-center justify-between">
-                  <Badge className="bg-emerald-600 text-white font-semibold">Route Optimized</Badge>
+                  <Badge className="bg-slate-500 text-white font-semibold">Provider Result</Badge>
                   <span className="text-xs text-slate-400">
                     {new Date(routeResult.calculated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
@@ -375,9 +367,9 @@ export default function RouteOptimizationPage() {
           ) : (
             <Card className="border border-dashed p-10 text-center text-slate-400 space-y-3">
               <Navigation className="h-12 w-12 mx-auto text-slate-300 dark:text-slate-700 stroke-[1.5]" />
-              <h3 className="font-bold text-slate-700 dark:text-slate-300">No Route Calculated Yet</h3>
+              <h3 className="font-bold text-slate-700 dark:text-slate-300">Route Calculation Unavailable</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Fill in the technician stops on the left and click "Calculate Optimized Route" to generate navigation directions and fuel allowances.
+                Configure a routing provider before calculating distances, travel times, directions, or fuel allowances.
               </p>
             </Card>
           )}

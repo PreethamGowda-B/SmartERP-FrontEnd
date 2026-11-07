@@ -14,7 +14,8 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
-import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Users, Loader2, Eye, EyeOff, Sparkles, Download, Database, CreditCard, Headset } from "lucide-react"
+import { Building2, User, Bell, Shield, Globe, SettingsIcon, Copy, Check, Users, Loader2, Eye, EyeOff, Sparkles, Download, Database, CreditCard, Headset } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { OwnerLayout } from "@/components/owner-layout"
 import { DangerZoneAccountDeletion } from "@/components/danger-zone-account-deletion"
 import { BillingView } from "@/components/billing-view"
@@ -112,6 +113,7 @@ function SettingsContent() {
   const [inviteLink, setInviteLink] = useState("")
   const [loadingInvite, setLoadingInvite] = useState(false)
   const [exportingBackup, setExportingBackup] = useState(false)
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
 
   const handleDownloadBackup = async () => {
     setExportingBackup(true)
@@ -292,8 +294,13 @@ function SettingsContent() {
     } finally { setLoadingInvite(false) }
   }
 
-  const copyToClipboard = (text: string, label: string) => {
+  const copyToClipboard = (text: string, label: string, key?: string) => {
+    if (!text) return
     navigator.clipboard.writeText(text)
+    if (key) {
+      setCopiedKey(key)
+      setTimeout(() => setCopiedKey(null), 2500)
+    }
     toast({ title: "Copied!", description: `${label} copied to clipboard` })
   }
 
@@ -311,16 +318,16 @@ function SettingsContent() {
               </p>
             </div>
 
-            <TabsList className="grid grid-cols-3 w-full sm:w-auto h-10 p-1 bg-muted/70">
-              <TabsTrigger value="profile" className="flex items-center gap-1.5 text-xs font-medium">
+            <TabsList className="grid grid-cols-3 w-full sm:w-auto h-11 p-1 bg-card rounded-2xl border border-border/70 shadow-xs">
+              <TabsTrigger value="profile" className="flex items-center gap-1.5 text-xs font-semibold rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all">
                 <SettingsIcon className="h-3.5 w-3.5" />
                 <span>Company & Profile</span>
               </TabsTrigger>
-              <TabsTrigger value="billing" className="flex items-center gap-1.5 text-xs font-medium">
+              <TabsTrigger value="billing" className="flex items-center gap-1.5 text-xs font-semibold rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all">
                 <CreditCard className="h-3.5 w-3.5" />
                 <span>Plan & Billing</span>
               </TabsTrigger>
-              <TabsTrigger value="support" className="flex items-center gap-1.5 text-xs font-medium">
+              <TabsTrigger value="support" className="flex items-center gap-1.5 text-xs font-semibold rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs transition-all">
                 <Headset className="h-3.5 w-3.5" />
                 <span>Priority Support</span>
               </TabsTrigger>
@@ -427,17 +434,41 @@ function SettingsContent() {
                 <Textarea value={company.terms_and_conditions} onChange={(e) => setCompany((p) => ({ ...p, terms_and_conditions: e.target.value }))} placeholder="1. Payment due within 15 days..." />
               </div>
               <div className="space-y-2">
-                <Label>Company ID (Permanent Code)</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Company ID (Permanent Code)</Label>
+                  {copiedKey === "company_id_profile" && (
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in slide-in-from-right-1 duration-200">
+                      <Check className="h-3 w-3 stroke-[3]" /> Copied!
+                    </span>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <Input
                     value={company.company_id}
                     readOnly
                     placeholder="e.g. MYCO001"
-                    className="font-mono bg-muted opacity-80 cursor-not-allowed"
+                    className={cn(
+                      "font-mono bg-muted opacity-80 cursor-not-allowed transition-all",
+                      copiedKey === "company_id_profile" && "border-emerald-500 ring-1 ring-emerald-500/30"
+                    )}
                   />
                   {company.company_id && (
-                    <Button variant="outline" size="icon" onClick={() => copyToClipboard(company.company_id, "Company ID")}>
-                      <Copy className="h-4 w-4" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copyToClipboard(company.company_id, "Company ID", "company_id_profile")}
+                      className={cn(
+                        "transition-all duration-200 shrink-0",
+                        copiedKey === "company_id_profile" && "border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:border-emerald-600 dark:text-emerald-300"
+                      )}
+                      title="Copy Company ID"
+                    >
+                      {copiedKey === "company_id_profile" ? (
+                        <Check className="h-4 w-4 text-emerald-600 animate-in zoom-in-75 duration-200" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </Button>
                   )}
                 </div>
@@ -632,23 +663,79 @@ function SettingsContent() {
               {company.company_id ? (
                 <>
                   <div className="space-y-2">
-                    <Label>Company ID</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>Company ID</Label>
+                      {copiedKey === "company_id_team" && (
+                        <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in slide-in-from-right-1 duration-200">
+                          <Check className="h-3 w-3 stroke-[3]" /> Copied!
+                        </span>
+                      )}
+                    </div>
                     <div className="flex gap-2">
-                      <Input value={company.company_id} readOnly className="font-mono text-lg font-semibold" />
-                      <Button variant="outline" size="icon" onClick={() => copyToClipboard(company.company_id, "Company ID")}>
-                        <Copy className="h-4 w-4" />
+                      <Input
+                        value={company.company_id}
+                        readOnly
+                        className={cn(
+                          "font-mono text-lg font-semibold transition-all",
+                          copiedKey === "company_id_team" && "border-emerald-500 ring-1 ring-emerald-500/30"
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyToClipboard(company.company_id, "Company ID", "company_id_team")}
+                        className={cn(
+                          "transition-all duration-200 shrink-0",
+                          copiedKey === "company_id_team" && "border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:border-emerald-600 dark:text-emerald-300"
+                        )}
+                        title="Copy Company ID"
+                      >
+                        {copiedKey === "company_id_team" ? (
+                          <Check className="h-4 w-4 text-emerald-600 animate-in zoom-in-75 duration-200" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                     <p className="text-sm text-muted-foreground">Share this ID with employees to join your company</p>
                   </div>
                   <Separator />
                   <div className="space-y-2">
-                    <Label>Employee Invite Link</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>Employee Invite Link</Label>
+                      {copiedKey === "invite_link" && (
+                        <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in slide-in-from-right-1 duration-200">
+                          <Check className="h-3 w-3 stroke-[3]" /> Link copied!
+                        </span>
+                      )}
+                    </div>
                     {inviteLink ? (
                       <div className="flex gap-2">
-                        <Input value={inviteLink} readOnly className="text-sm" />
-                        <Button variant="outline" size="icon" onClick={() => copyToClipboard(inviteLink, "Invite link")}>
-                          <Copy className="h-4 w-4" />
+                        <Input
+                          value={inviteLink}
+                          readOnly
+                          className={cn(
+                            "text-sm transition-all",
+                            copiedKey === "invite_link" && "border-emerald-500 ring-1 ring-emerald-500/30"
+                          )}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => copyToClipboard(inviteLink, "Invite link", "invite_link")}
+                          className={cn(
+                            "transition-all duration-200 shrink-0",
+                            copiedKey === "invite_link" && "border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:border-emerald-600 dark:text-emerald-300"
+                          )}
+                          title="Copy Invite Link"
+                        >
+                          {copiedKey === "invite_link" ? (
+                            <Check className="h-4 w-4 text-emerald-600 animate-in zoom-in-75 duration-200" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     ) : (
