@@ -285,9 +285,9 @@ export function SubscriptionStatus() {
             <div className="hidden lg:block w-px h-12 bg-slate-200/80 dark:bg-slate-800 shrink-0" />
 
             {/* 3. Section: Crew and SKU limits with separate icons */}
-            <div className="flex flex-row sm:flex-row lg:flex-col gap-2 min-w-0">
+            <div className="grid grid-cols-2 sm:flex sm:flex-row lg:flex-col gap-2 w-full sm:w-auto min-w-0">
               {/* Crew Pill */}
-              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-[#EEF4FF] border border-blue-100/90 dark:bg-blue-950/20 dark:border-blue-900/40 min-w-[130px]">
+              <div className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#EEF4FF] border border-blue-100/90 dark:bg-blue-950/20 dark:border-blue-900/40 min-w-0 sm:min-w-[130px] flex-1 sm:flex-initial">
                 <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 dark:bg-blue-900/50 dark:text-blue-400">
                   <Users className="h-3.5 w-3.5" />
                 </div>
@@ -300,7 +300,7 @@ export function SubscriptionStatus() {
               </div>
 
               {/* SKUs Pill */}
-              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-[#F8F2FD] border border-purple-100/90 dark:bg-purple-950/20 dark:border-purple-900/40 min-w-[130px]">
+              <div className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#F8F2FD] border border-purple-100/90 dark:bg-purple-950/20 dark:border-purple-900/40 min-w-0 sm:min-w-[130px] flex-1 sm:flex-initial">
                 <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 dark:bg-purple-900/50 dark:text-purple-400">
                   <Package className="h-3.5 w-3.5" />
                 </div>

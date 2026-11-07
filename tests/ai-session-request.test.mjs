@@ -82,10 +82,12 @@ test("confirmed AI actions also use the authenticated shared API client", async 
   let call;
   const result = await confirmAiAgentAction({
     apiClient: async (...args) => { call = args; return { success: true }; },
-    toolName: "attendance_summary",
-    params: { date: "today" },
+    toolName: "create_job",
+    params: { title: "Breakdown" },
+    approvalToken: "signed-approval-token",
   });
   assert.equal(call[0], "/api/ai/confirm-action");
-  assert.equal(JSON.parse(call[1].body).toolName, "attendance_summary");
+  assert.equal(JSON.parse(call[1].body).toolName, "create_job");
+  assert.equal(JSON.parse(call[1].body).approval_token, "signed-approval-token");
   assert.equal(result.success, true);
 });

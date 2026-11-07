@@ -37,6 +37,8 @@ interface WidgetPayload {
   features?: string[]
   toolName?: string
   params?: Record<string, unknown>
+  approval_token?: string
+  approval_expires_in_seconds?: number
 }
 
 interface AIMessage {
@@ -59,7 +61,7 @@ interface AIMessage {
   scopesUsed?: string[]
   isTyping?: boolean
   isError?: boolean
-  retryAction?: { type: "prompt"; requestKey?: string } | { type: "confirm"; toolName: string; params: Record<string, unknown> }
+  retryAction?: { type: "prompt"; requestKey?: string }
 }
 
 interface Conversation {
@@ -217,7 +219,7 @@ function WidgetRenderer({
   confirming,
 }: {
   widget: WidgetPayload
-  onConfirm?: (toolName: string, params: Record<string, unknown>) => void
+  onConfirm?: (toolName: string, params: Record<string, unknown>, approvalToken: string) => void
   confirming?: boolean
 }) {
   if (!widget) return null
@@ -287,16 +289,26 @@ function WidgetRenderer({
             <strong>Action:</strong> {(widget as any).proposedAction}
           </div>
         )}
+        {widget.params && Object.keys(widget.params).length > 0 && (
+          <dl className="grid gap-1 rounded-lg border border-border/60 bg-background/70 p-2 text-[11px] sm:grid-cols-2">
+            {Object.entries(widget.params).slice(0, 8).map(([key, value]) => (
+              <div key={key} className="min-w-0">
+                <dt className="inline font-semibold capitalize">{key.replaceAll("_", " ")}: </dt>
+                <dd className="inline break-words text-muted-foreground">{String(value ?? "—").slice(0, 160)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
         <Button
           size="sm"
-          disabled={!widget.toolName || confirming}
+          disabled={!widget.toolName || !widget.approval_token || confirming}
           className="w-full text-xs h-8 bg-red-600 hover:bg-red-700 text-white font-bold gap-1.5 disabled:opacity-60"
-          onClick={() => widget.toolName && onConfirm?.(widget.toolName, widget.params || {})}
+          onClick={() => widget.toolName && widget.approval_token && onConfirm?.(widget.toolName, widget.params || {}, widget.approval_token)}
         >
           {confirming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
           {confirming ? "Processing confirmation…" : widget.toolName ? "Confirm this action" : "Action confirmation unavailable"}
         </Button>
-        {!widget.toolName && <p className="text-[10px] text-muted-foreground">This proposal has no executable action reference, so nothing was submitted.</p>}
+        {(!widget.toolName || !widget.approval_token) && <p className="text-[10px] text-muted-foreground">This proposal is missing its secure server approval reference, so nothing was submitted.</p>}
       </div>
     )
   }
@@ -965,14 +977,14 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
     }
   }
 
-  async function confirmAIAction(toolName: string, params: Record<string, unknown>) {
+  async function confirmAIAction(toolName: string, params: Record<string, unknown>, approvalToken: string) {
     if (confirmLockRef.current) return
     confirmLockRef.current = true
     setConfirmingTool(toolName)
     try {
       const result = await apiClient<any>("/api/ai/confirm-action", {
         method: "POST",
-        body: JSON.stringify({ toolName, params }),
+        body: JSON.stringify({ toolName, params, approval_token: approvalToken }),
       })
       const stillNeedsConfirmation = result?.requiresUserConfirmation === true ||
         result?.type === "ACTION_CONFIRMATION_REQUIRED" ||
@@ -1000,11 +1012,18 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
       else setRobotMood("idle")
       if (moodTimeoutRef.current) clearTimeout(moodTimeoutRef.current)
       moodTimeoutRef.current = setTimeout(() => setRobotMood("idle"), 1800)
-    } catch {
+    } catch (error: any) {
+      const failureText = error?.code === "AI_APPROVAL_INVALID"
+        ? "This approval expired or is invalid. Ask the assistant to prepare a new proposal. No changes were made."
+        : error?.code === "AI_APPROVAL_ALREADY_USED"
+          ? "This approval was already used. Check the related module before requesting another action."
+          : error?.code === "AI_APPROVAL_STORE_UNAVAILABLE"
+            ? "Secure approval verification is temporarily unavailable. No changes were made; try again after service is restored."
+            : error?.error || error?.message || "The action could not be confirmed. Check the related module before retrying."
       const responseMessage: AIMessage = {
         id: `confirm_error_${Date.now()}`,
         sender: "ai",
-        text: "The confirmation request did not return a final result. Check the related module before retrying to avoid repeating an action.",
+        text: failureText,
         timestamp: new Date(),
         isError: true,
       }
@@ -1706,7 +1725,7 @@ function MessageBubble({
   msg: AIMessage
   onCopy: (text: string) => void
   onRegenerate: (requestKey?: string) => void
-  onConfirm: (toolName: string, params: Record<string, unknown>) => void
+  onConfirm: (toolName: string, params: Record<string, unknown>, approvalToken: string) => void
   confirmingTool: string | null
   onFollowUp: (text: string) => void
   onNavigate: (path: string) => void
@@ -1796,9 +1815,7 @@ function MessageBubble({
           {msg.isError && msg.retryAction && (
             <button
               type="button"
-              onClick={() => msg.retryAction?.type === "confirm"
-                ? onConfirm(msg.retryAction.toolName, msg.retryAction.params)
-                : onRegenerate(msg.retryAction?.type === "prompt" ? msg.retryAction.requestKey : undefined)}
+              onClick={() => onRegenerate(msg.retryAction?.requestKey)}
               className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/25 bg-background/70 px-2.5 py-1.5 text-[11px] font-semibold text-foreground transition-colors hover:bg-rose-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             >
               <RotateCcw className="h-3 w-3" /> Try again

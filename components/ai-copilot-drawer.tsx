@@ -40,12 +40,14 @@ export function AiCopilotDrawer() {
         body: JSON.stringify({
           prompt: textToSend,
           confirm_action: confirm,
+          approval_token: confirm ? pendingConfirmation?.approvalToken : undefined,
         }),
       })
 
       if (res?.requires_confirmation) {
         setPendingConfirmation({
           prompt: textToSend,
+          approvalToken: res.approval_token,
           level: res.execution_level,
           interpretation: res.ai_interpretation,
           message: res.message,

@@ -291,13 +291,13 @@ export default function EmployeeProductionPage() {
     <EmployeeLayout>
       <div className="space-y-6 max-w-7xl mx-auto pb-12">
         {/* Header matching other Employee Portal pages */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border/60 pb-5">
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 border-b border-border/60 pb-4 sm:pb-5">
+          <div className="space-y-1 min-w-0 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-foreground break-words">
                 Production &amp; Dispatch Workspace
               </h1>
-              <Badge variant="outline" className="text-[10px] font-mono tracking-wider font-bold py-0.5 px-2 bg-amber-500/10 text-amber-700 border-amber-500/30">
+              <Badge variant="outline" className="text-[10px] font-mono tracking-wider font-bold py-0.5 px-2 bg-amber-500/10 text-amber-700 border-amber-500/30 shrink-0">
                 Workshop Operations
               </Badge>
             </div>
@@ -306,10 +306,10 @@ export default function EmployeeProductionPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <span className="text-[10px] text-muted-foreground hidden lg:flex items-center gap-1 font-mono">
-              <Clock className="h-3 w-3 text-amber-500" />
-              LAST SYNC: {lastSync ? lastSync.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "Just now"}
+          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1 font-mono">
+              <Clock className="h-3 w-3 text-amber-500 shrink-0" />
+              LAST SYNC: {lastSync ? lastSync.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Just now"}
             </span>
 
             <Button
@@ -317,7 +317,7 @@ export default function EmployeeProductionPage() {
               size="sm"
               onClick={() => void load()}
               disabled={loading}
-              className="h-9 text-xs font-bold rounded-xl gap-1.5 border-border/70 hover:bg-amber-500/10 hover:text-amber-700"
+              className="h-8 sm:h-9 text-xs font-bold rounded-xl gap-1.5 border-border/70 hover:bg-amber-500/10 hover:text-amber-700 shrink-0"
             >
               <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
               Sync Orders
@@ -326,29 +326,29 @@ export default function EmployeeProductionPage() {
         </div>
 
         {/* 4 Metric Cards matching Employee Portal UI */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           <Card
             onClick={() => setActiveTab("all")}
             className={cn(
-              "border-border/80 shadow-xs hover:shadow-md transition-all cursor-pointer",
+              "border-border/80 shadow-xs hover:shadow-md transition-all cursor-pointer overflow-hidden",
               activeTab === "all" && "border-amber-500 ring-2 ring-amber-500/20"
             )}
           >
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <CardContent className="p-3 sm:p-5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate">
                     Assigned Orders
                   </p>
-                  <div className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 text-foreground">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight mt-0.5 sm:mt-1 text-foreground">
                     {totalCount}
                   </div>
-                  <span className="text-[11px] text-muted-foreground mt-0.5 inline-block">
+                  <span className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 block truncate">
                     Total workload
                   </span>
                 </div>
-                <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <Factory className="h-5 w-5" />
+                <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+                  <Factory className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
               </div>
             </CardContent>
@@ -357,25 +357,25 @@ export default function EmployeeProductionPage() {
           <Card
             onClick={() => setActiveTab("in_production")}
             className={cn(
-              "border-border/80 shadow-xs hover:shadow-md transition-all cursor-pointer",
+              "border-border/80 shadow-xs hover:shadow-md transition-all cursor-pointer overflow-hidden",
               activeTab === "in_production" && "border-blue-500 ring-2 ring-blue-500/20"
             )}
           >
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">
+            <CardContent className="p-3 sm:p-5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 truncate">
                     In Machining
                   </p>
-                  <div className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 text-foreground">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight mt-0.5 sm:mt-1 text-foreground">
                     {inProductionCount}
                   </div>
-                  <span className="text-[11px] text-muted-foreground mt-0.5 inline-block">
+                  <span className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 block truncate">
                     Active on bench
                   </span>
                 </div>
-                <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  <Wrench className="h-5 w-5" />
+                <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                  <Wrench className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
               </div>
             </CardContent>
@@ -384,25 +384,25 @@ export default function EmployeeProductionPage() {
           <Card
             onClick={() => setActiveTab("ready_for_dispatch")}
             className={cn(
-              "border-border/80 shadow-xs hover:shadow-md transition-all cursor-pointer",
+              "border-border/80 shadow-xs hover:shadow-md transition-all cursor-pointer overflow-hidden",
               activeTab === "ready_for_dispatch" && "border-emerald-500 ring-2 ring-emerald-500/20"
             )}
           >
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-                    Ready to Dispatch
+            <CardContent className="p-3 sm:p-5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 truncate">
+                    Ready Dispatch
                   </p>
-                  <div className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 text-emerald-600 dark:text-emerald-400">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight mt-0.5 sm:mt-1 text-emerald-600 dark:text-emerald-400">
                     {readyDispatchCount}
                   </div>
-                  <span className="text-[11px] text-muted-foreground mt-0.5 inline-block">
-                    QC approved lots
+                  <span className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 block truncate">
+                    QC approved
                   </span>
                 </div>
-                <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <PackageCheck className="h-5 w-5" />
+                <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <PackageCheck className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
               </div>
             </CardContent>
@@ -411,25 +411,25 @@ export default function EmployeeProductionPage() {
           <Card
             onClick={() => setActiveTab("completed")}
             className={cn(
-              "border-border/80 shadow-xs hover:shadow-md transition-all cursor-pointer",
+              "border-border/80 shadow-xs hover:shadow-md transition-all cursor-pointer overflow-hidden",
               activeTab === "completed" && "border-purple-500 ring-2 ring-purple-500/20"
             )}
           >
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-purple-600 dark:text-purple-400">
+            <CardContent className="p-3 sm:p-5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 truncate">
                     Dispatched
                   </p>
-                  <div className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 text-foreground">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight mt-0.5 sm:mt-1 text-foreground">
                     {completedCount}
                   </div>
-                  <span className="text-[11px] text-muted-foreground mt-0.5 inline-block">
-                    Shipped to client
+                  <span className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 block truncate">
+                    Shipped out
                   </span>
                 </div>
-                <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                  <Truck className="h-5 w-5" />
+                <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 shrink-0">
+                  <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
               </div>
             </CardContent>
@@ -438,11 +438,11 @@ export default function EmployeeProductionPage() {
 
         {/* View Switcher Ribbon & Search */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 p-1.5 bg-card rounded-2xl border border-border/70 shadow-xs overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1.5 p-1 sm:p-1.5 bg-card rounded-2xl border border-border/70 shadow-xs overflow-x-auto no-scrollbar -mx-1 px-1 sm:mx-0 sm:px-1.5">
             <Button
               variant={activeTab === "all" ? "default" : "ghost"}
               size="sm"
-              className={cn("h-8 text-xs font-bold rounded-xl px-3.5", activeTab === "all" && "bg-amber-600 text-white hover:bg-amber-700 shadow-xs")}
+              className={cn("h-8 text-xs font-bold rounded-xl px-3 shrink-0 whitespace-nowrap", activeTab === "all" && "bg-amber-600 text-white hover:bg-amber-700 shadow-xs")}
               onClick={() => setActiveTab("all")}
             >
               <Layers className="h-3.5 w-3.5 mr-1.5 shrink-0" />
@@ -452,7 +452,7 @@ export default function EmployeeProductionPage() {
             <Button
               variant={activeTab === "in_production" ? "default" : "ghost"}
               size="sm"
-              className={cn("h-8 text-xs font-bold rounded-xl px-3.5", activeTab === "in_production" && "bg-blue-600 text-white hover:bg-blue-700 shadow-xs")}
+              className={cn("h-8 text-xs font-bold rounded-xl px-3 shrink-0 whitespace-nowrap", activeTab === "in_production" && "bg-blue-600 text-white hover:bg-blue-700 shadow-xs")}
               onClick={() => setActiveTab("in_production")}
             >
               <Wrench className="h-3.5 w-3.5 mr-1.5 shrink-0" />
@@ -462,7 +462,7 @@ export default function EmployeeProductionPage() {
             <Button
               variant={activeTab === "ready_for_dispatch" ? "default" : "ghost"}
               size="sm"
-              className={cn("h-8 text-xs font-bold rounded-xl px-3.5", activeTab === "ready_for_dispatch" && "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs")}
+              className={cn("h-8 text-xs font-bold rounded-xl px-3 shrink-0 whitespace-nowrap", activeTab === "ready_for_dispatch" && "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs")}
               onClick={() => setActiveTab("ready_for_dispatch")}
             >
               <PackageCheck className="h-3.5 w-3.5 mr-1.5 shrink-0" />
@@ -472,7 +472,7 @@ export default function EmployeeProductionPage() {
             <Button
               variant={activeTab === "completed" ? "default" : "ghost"}
               size="sm"
-              className={cn("h-8 text-xs font-bold rounded-xl px-3.5", activeTab === "completed" && "bg-purple-600 text-white hover:bg-purple-700 shadow-xs")}
+              className={cn("h-8 text-xs font-bold rounded-xl px-3 shrink-0 whitespace-nowrap", activeTab === "completed" && "bg-purple-600 text-white hover:bg-purple-700 shadow-xs")}
               onClick={() => setActiveTab("completed")}
             >
               <Truck className="h-3.5 w-3.5 mr-1.5 shrink-0" />
@@ -486,7 +486,7 @@ export default function EmployeeProductionPage() {
               placeholder="Search component, order, customer..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 text-xs rounded-xl bg-card border-border/70"
+              className="pl-9 h-9 text-xs rounded-xl bg-card border-border/70 w-full"
             />
           </div>
         </div>
@@ -558,22 +558,22 @@ export default function EmployeeProductionPage() {
                   key={order.id}
                   className="rounded-2xl border-border/80 shadow-xs hover:shadow-md transition-all overflow-hidden bg-card"
                 >
-                  <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/20 pb-4">
+                  <CardHeader className="p-3.5 sm:p-5 border-b border-border/60 bg-muted/20 pb-3.5 sm:pb-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-base sm:text-lg font-bold text-foreground">
+                          <h2 className="text-base sm:text-lg font-bold text-foreground break-words">
                             {order.componentName}
                           </h2>
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${statusMeta.badgeClass}`}>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border shrink-0 ${statusMeta.badgeClass}`}>
                             <StatusIcon className="h-3 w-3" />
                             {statusMeta.label}
                           </span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${priorityPillClass}`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border shrink-0 ${priorityPillClass}`}>
                             {order.priority}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground font-mono">
                           <span className="font-bold text-amber-700 dark:text-amber-400">{order.orderNumber}</span>
                           <span>•</span>
                           <span>Part: {order.partNumber}</span>
@@ -582,54 +582,54 @@ export default function EmployeeProductionPage() {
                       </div>
 
                       {/* Quick progress indicator */}
-                      <div className="text-left sm:text-right">
-                        <p className="text-xs font-semibold text-muted-foreground">Order Target</p>
-                        <p className="text-sm font-bold text-foreground">
+                      <div className="flex items-center justify-between sm:flex-col sm:items-end pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
+                        <p className="text-[11px] sm:text-xs font-semibold text-muted-foreground">Order Target</p>
+                        <p className="text-xs sm:text-sm font-bold text-foreground">
                           {order.goodQuantity} / {order.plannedQuantity} {order.unit}
                         </p>
                       </div>
                     </div>
                   </CardHeader>
 
-                  <CardContent className="p-4 sm:p-5 space-y-4">
+                  <CardContent className="p-3.5 sm:p-5 space-y-4">
                     {/* 4 Cell Metadata Grid with Icons */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 sm:p-4 rounded-xl bg-muted/30 border border-border/60 text-xs">
-                      <div className="space-y-1">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-xl bg-muted/30 border border-border/60 text-xs">
+                      <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
-                          <Building2 className="h-3.5 w-3.5 text-blue-500" />
-                          <span>Customer Facility</span>
+                          <Building2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                          <span className="truncate">Customer</span>
                         </div>
-                        <p className="font-semibold text-foreground text-sm truncate">
+                        <p className="font-semibold text-foreground text-xs sm:text-sm truncate" title={order.customerName || "In-House Workshop"}>
                           {order.customerName || "In-House Workshop"}
                         </p>
                       </div>
 
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
-                          <Cpu className="h-3.5 w-3.5 text-amber-500" />
-                          <span>Machine / Station</span>
+                          <Cpu className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          <span className="truncate">Machine / Station</span>
                         </div>
-                        <p className="font-semibold text-foreground text-sm truncate">
+                        <p className="font-semibold text-foreground text-xs sm:text-sm truncate" title={order.machineName || "CNC Service Bench"}>
                           {order.machineName || "CNC Service Bench"}
                         </p>
                       </div>
 
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
-                          <Box className="h-3.5 w-3.5 text-emerald-500" />
-                          <span>Plan &amp; Unit</span>
+                          <Box className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                          <span className="truncate">Plan &amp; Unit</span>
                         </div>
-                        <p className="font-semibold text-foreground text-sm">
+                        <p className="font-semibold text-foreground text-xs sm:text-sm truncate">
                           {order.plannedQuantity} {order.unit}
                         </p>
                       </div>
 
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
-                          <Calendar className="h-3.5 w-3.5 text-purple-500" />
-                          <span>Required Due Date</span>
+                          <Calendar className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+                          <span className="truncate">Required Due</span>
                         </div>
-                        <p className="font-semibold text-foreground text-sm">
+                        <p className="font-semibold text-foreground text-xs sm:text-sm truncate">
                           {order.dueDate ? new Date(order.dueDate).toLocaleDateString("en-IN") : "—"}
                         </p>
                       </div>
@@ -639,8 +639,8 @@ export default function EmployeeProductionPage() {
                     {order.latestInspectionResult && (
                       <div className="flex items-start gap-3 p-3 rounded-xl bg-violet-50/60 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-900 text-xs">
                         <ShieldCheck className="h-4 w-4 text-violet-600 dark:text-violet-400 mt-0.5 shrink-0" />
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="font-bold text-violet-900 dark:text-violet-200">
                               Quality Inspection: {order.latestInspectionResult.replace(/_/g, " ").toUpperCase()}
                             </span>
@@ -651,7 +651,7 @@ export default function EmployeeProductionPage() {
                             )}
                           </div>
                           {order.latestInspectionReason && (
-                            <p className="text-violet-700 dark:text-violet-300">
+                            <p className="text-violet-700 dark:text-violet-300 break-words">
                               Feedback: {order.latestInspectionReason}
                             </p>
                           )}
@@ -662,7 +662,7 @@ export default function EmployeeProductionPage() {
                     {/* Operator Workflow Controls */}
                     {isOperator && (
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-border/50">
-                        <div className="text-xs text-muted-foreground flex items-center gap-2">
+                        <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1.5 sm:gap-2">
                           <span className="font-bold text-foreground">Machining Status:</span>
                           <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">{order.goodQuantity} good</span>
                           <span>•</span>
@@ -671,13 +671,13 @@ export default function EmployeeProductionPage() {
                           <span className="font-mono text-amber-600 dark:text-amber-400 font-semibold">{order.reworkQuantity} rework</span>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                           {canStart && (
                             <Button
                               size="sm"
                               onClick={() => void start(order)}
                               disabled={busyOrderId === order.id}
-                              className="h-8 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl gap-1.5 shadow-2xs"
+                              className="w-full sm:w-auto h-8.5 sm:h-8 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl gap-1.5 shadow-2xs"
                             >
                               {busyOrderId === order.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wrench className="h-3.5 w-3.5" />}
                               Start Production Batch
@@ -692,7 +692,7 @@ export default function EmployeeProductionPage() {
                                 setReportOrderId(reportOrderId === order.id ? "" : order.id)
                                 setForm(emptyForm)
                               }}
-                              className="h-8 text-xs font-bold rounded-xl gap-1.5 border-border/70 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-blue-700 dark:text-blue-300"
+                              className="w-full sm:w-auto h-8.5 sm:h-8 text-xs font-bold rounded-xl gap-1.5 border-border/70 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-blue-700 dark:text-blue-300"
                             >
                               <ClipboardList className="h-3.5 w-3.5" />
                               {reportOrderId === order.id ? "Close Report" : "Log Batch Output"}
@@ -704,7 +704,7 @@ export default function EmployeeProductionPage() {
                               size="sm"
                               onClick={() => void submitForQuality(order)}
                               disabled={busyBatchId === order.activeBatchId}
-                              className="h-8 text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white rounded-xl gap-1.5 shadow-2xs"
+                              className="w-full sm:w-auto h-8.5 sm:h-8 text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white rounded-xl gap-1.5 shadow-2xs"
                             >
                               {busyBatchId === order.activeBatchId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                               Submit for Inspection
@@ -947,17 +947,17 @@ export default function EmployeeProductionPage() {
                             {(order.packingRecords || []).map((record) => (
                               <div
                                 key={record.id}
-                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-card border border-border/70 text-xs"
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-card border border-border/70 text-xs"
                               >
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center gap-2">
+                                <div className="space-y-0.5 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <span className="font-bold text-foreground">
                                       {record.quantity} {order.unit}
                                     </span>
                                     <span className="text-muted-foreground">
                                       ({record.package_count} {record.package_type || "package"})
                                     </span>
-                                    <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                                    <Badge variant="outline" className="text-[10px] uppercase font-mono shrink-0">
                                       {record.status.replace(/_/g, " ")}
                                     </Badge>
                                   </div>
@@ -966,14 +966,14 @@ export default function EmployeeProductionPage() {
                                   </p>
                                 </div>
 
-                                <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end sm:justify-start shrink-0">
                                   {record.status === "packing" && (
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       onClick={() => void progressPacking(record.id, "packed")}
                                       disabled={Boolean(busyPackingId)}
-                                      className="h-7 text-xs rounded-lg"
+                                      className="h-8 text-xs rounded-lg w-full sm:w-auto"
                                     >
                                       Mark Packed
                                     </Button>
@@ -984,7 +984,7 @@ export default function EmployeeProductionPage() {
                                       size="sm"
                                       onClick={() => void progressPacking(record.id, "ready_for_dispatch")}
                                       disabled={Boolean(busyPackingId)}
-                                      className="h-7 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
+                                      className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg w-full sm:w-auto"
                                     >
                                       Ready for Dispatch
                                     </Button>
@@ -1005,9 +1005,9 @@ export default function EmployeeProductionPage() {
                                           carrier: "",
                                         })
                                       }}
-                                      className="h-7 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg gap-1"
+                                      className="h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg gap-1.5 shadow-xs w-full sm:w-auto"
                                     >
-                                      <Truck className="h-3 w-3" /> Dispatch Now
+                                      <Truck className="h-3.5 w-3.5" /> Dispatch Now
                                     </Button>
                                   )}
                                 </div>
@@ -1026,7 +1026,7 @@ export default function EmployeeProductionPage() {
 
         {/* 🚚 Confirm Dispatch Dialog matching SmartERP UI Modal styling */}
         <Dialog open={Boolean(dispatchTarget)} onOpenChange={(open) => !open && !busyPackingId && setDispatchTarget(null)}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-md mx-auto max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold flex items-center gap-2">
                 <Truck className="h-5 w-5 text-emerald-600" /> Confirm Delivery Dispatch

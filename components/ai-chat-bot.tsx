@@ -28,6 +28,7 @@ interface WidgetPayload {
   delayedJobs?: Array<any>
   toolName?: string
   params?: any
+  approval_token?: string
   message?: string
   features?: string[]
 }
@@ -54,8 +55,8 @@ async function askSmartERPAgent(
   return requestAiAgentResponse({ apiClient, message, pathname, history, onFeatureLocked })
 }
 
-async function confirmAgentAction(toolName: string, params: any) {
-  return confirmAiAgentAction({ apiClient, toolName, params })
+async function confirmAgentAction(toolName: string, params: any, approvalToken: string) {
+  return confirmAiAgentAction({ apiClient, toolName, params, approvalToken })
 }
 
 /* ---------------- COMPONENT ---------------- */
@@ -82,10 +83,10 @@ export function AIChatBot({ className }: { className?: string }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  const handleActionConfirm = async (toolName: string, params: any) => {
+  const handleActionConfirm = async (toolName: string, params: any, approvalToken: string) => {
     setConfirmingAction(toolName)
     try {
-      const result = await confirmAgentAction(toolName, params)
+      const result = await confirmAgentAction(toolName, params, approvalToken)
       const needsMoreConfirmation = result?.requiresUserConfirmation === true || result?.type === "ACTION_CONFIRMATION_REQUIRED"
       const actionFailed = result?.success === false || Boolean(result?.error)
       const responseText = result?.message || result?.text || (
@@ -104,11 +105,18 @@ export function AIChatBot({ className }: { className?: string }) {
         },
       ])
     } catch (err: any) {
+      const failureText = err?.code === "AI_APPROVAL_INVALID"
+        ? "This approval expired or is invalid. Ask for a new proposal. No changes were made."
+        : err?.code === "AI_APPROVAL_ALREADY_USED"
+          ? "This approval was already used. Check the related module before requesting another action."
+          : err?.code === "AI_APPROVAL_STORE_UNAVAILABLE"
+            ? "Secure approval verification is temporarily unavailable. No changes were made."
+            : err?.error || err?.message || "Failed to execute action."
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now(),
-          text: `❌ Action Failed: ${err?.error || err?.message || "Failed to execute action."}`,
+          text: `❌ Action Failed: ${failureText}`,
           sender: "bot",
         },
       ])
@@ -364,10 +372,20 @@ export function AIChatBot({ className }: { className?: string }) {
                               <span>Confirmation Required</span>
                             </div>
                             <p className="text-xs text-muted-foreground">{m.widget.message}</p>
+                            {m.widget.params && Object.keys(m.widget.params).length > 0 && (
+                              <dl className="grid gap-1 rounded-lg border border-amber-500/20 bg-background/70 p-2 text-[11px] sm:grid-cols-2">
+                                {Object.entries(m.widget.params).slice(0, 8).map(([key, value]) => (
+                                  <div key={key} className="min-w-0">
+                                    <dt className="inline font-semibold capitalize">{key.replaceAll("_", " ")}: </dt>
+                                    <dd className="inline break-words text-muted-foreground">{String(value ?? "—").slice(0, 160)}</dd>
+                                  </div>
+                                ))}
+                              </dl>
+                            )}
                             <Button
                               size="sm"
-                              disabled={confirmingAction === m.widget.toolName}
-                              onClick={() => handleActionConfirm(m.widget!.toolName!, m.widget!.params)}
+                              disabled={confirmingAction === m.widget.toolName || !m.widget.approval_token}
+                              onClick={() => m.widget!.approval_token && handleActionConfirm(m.widget!.toolName!, m.widget!.params, m.widget!.approval_token)}
                               className="w-full text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white"
                             >
                               {confirmingAction === m.widget.toolName ? (

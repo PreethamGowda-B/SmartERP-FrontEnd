@@ -17,4 +17,5 @@ export function confirmAiAgentAction(options: {
   apiClient: ApiClient;
   toolName: string;
   params: any;
+  approvalToken?: string;
 }): Promise<any>;
