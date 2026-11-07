@@ -265,8 +265,32 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     const response = await apiClient<any>("/api/jobs", { method: "POST", body: JSON.stringify(job) })
     const savedJob = response?.job || response?.data?.job || response?.data || response
     if (!savedJob?.id) throw new Error("The server did not confirm that the job was saved.")
-    setJobs((prev) => [savedJob, ...prev.filter((existing) => String(existing.id) !== String(savedJob.id))])
-    return savedJob as Job
+
+    const normalizedJob: Job = {
+      ...job,
+      ...savedJob,
+      id: String(savedJob.id),
+      title: savedJob.title || job.title,
+      description: savedJob.description || job.description || "",
+      client: savedJob.client || savedJob.data?.client || job.client || "",
+      location: savedJob.location || savedJob.data?.location || job.location || "",
+      startDate: savedJob.startDate || savedJob.data?.startDate || job.startDate || "",
+      endDate: savedJob.endDate || savedJob.data?.endDate || job.endDate || "",
+      budget: Number(savedJob.budget ?? savedJob.data?.budget ?? job.budget ?? 0),
+      priority: savedJob.priority || job.priority || "medium",
+      status: savedJob.status || job.status || "pending",
+      assignedEmployees: Array.isArray(savedJob.assignedEmployees)
+        ? savedJob.assignedEmployees.map(String)
+        : savedJob.assigned_to
+          ? [String(savedJob.assigned_to)]
+          : Array.isArray(job.assignedEmployees)
+            ? job.assignedEmployees.map(String)
+            : [],
+      created_at: savedJob.created_at || new Date().toISOString(),
+    }
+
+    setJobs((prev) => [normalizedJob, ...prev.filter((existing) => String(existing.id) !== String(normalizedJob.id))])
+    return normalizedJob
   }, [])
 
   const updateJob = useCallback(async (id: string, updates: Partial<Job>) => {
@@ -278,8 +302,31 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
     if (!savedJob?.id || String(savedJob.id) !== String(id)) {
       throw new Error("The server did not confirm that the job update was saved.")
     }
-    setJobs((prev) => prev.map((job) => String(job.id) === String(id) ? savedJob : job))
-    return savedJob as Job
+
+    const normalizedJob: Job = {
+      ...updates,
+      ...savedJob,
+      id: String(id),
+      title: savedJob.title || updates.title || "",
+      description: savedJob.description || updates.description || "",
+      client: savedJob.client || savedJob.data?.client || updates.client || "",
+      location: savedJob.location || savedJob.data?.location || updates.location || "",
+      startDate: savedJob.startDate || savedJob.data?.startDate || updates.startDate || "",
+      endDate: savedJob.endDate || savedJob.data?.endDate || updates.endDate || "",
+      budget: Number(savedJob.budget ?? savedJob.data?.budget ?? updates.budget ?? 0),
+      priority: savedJob.priority || updates.priority || "medium",
+      status: savedJob.status || updates.status || "pending",
+      assignedEmployees: Array.isArray(savedJob.assignedEmployees)
+        ? savedJob.assignedEmployees.map(String)
+        : savedJob.assigned_to
+          ? [String(savedJob.assigned_to)]
+          : Array.isArray(updates.assignedEmployees)
+            ? updates.assignedEmployees.map(String)
+            : [],
+    }
+
+    setJobs((prev) => prev.map((job) => String(job.id) === String(id) ? { ...job, ...normalizedJob } : job))
+    return normalizedJob
   }, [])
 
   const deleteJob = useCallback(async (id: string) => {

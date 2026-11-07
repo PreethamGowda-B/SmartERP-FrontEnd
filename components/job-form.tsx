@@ -11,7 +11,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
-import { CalendarIcon, Loader2, Users as UsersIcon } from "lucide-react"
+import { CalendarIcon, Loader2, Users as UsersIcon, AlertCircle } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { apiClient } from "@/lib/apiClient"
@@ -20,9 +20,10 @@ import { logger } from "@/lib/logger"
 
 interface JobFormProps {
   job?: Job
-  onSubmit: (job: Partial<Job>) => void
+  onSubmit: (job: Partial<Job>) => Promise<any> | void
   onCancel: () => void
   isLoading?: boolean
+  error?: string | null
 }
 
 // ─── Memoized Sub-Components to isolate typing re-renders ─────────────────────
@@ -161,8 +162,15 @@ const VisibilitySwitch = memo(function VisibilitySwitch({
 
 // ─── Main Optimized JobForm Component ─────────────────────────────────────────
 
-export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
+export function JobForm({ job, onSubmit, onCancel, isLoading, error }: JobFormProps) {
   const [jobType, setJobType] = useState<"general" | "machine">((job as any)?.machine_id ? "machine" : "general")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setSubmitError(error || null)
+  }, [error])
+
   const [formData, setFormData] = useState({
     title: job?.title || "",
     client: job?.client || "",
@@ -215,14 +223,25 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
     fetchMachines()
   }, [])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit({
-      ...formData,
-      budget: Number.parseFloat(formData.budget) || 0,
-      startDate: formData.startDate?.toISOString().split("T")[0],
-      endDate: formData.endDate?.toISOString().split("T")[0],
-    })
+    if (isSubmitting || isLoading) return
+    setSubmitError(null)
+    setIsSubmitting(true)
+    try {
+      const payload: Partial<Job> = {
+        ...formData,
+        budget: Number.parseFloat(formData.budget) || 0,
+        startDate: formData.startDate ? format(formData.startDate, "yyyy-MM-dd") : undefined,
+        endDate: formData.endDate ? format(formData.endDate, "yyyy-MM-dd") : undefined,
+      }
+      await onSubmit(payload)
+    } catch (err: any) {
+      const msg = err?.message || err?.error || "Failed to save job. Please check form details and try again."
+      setSubmitError(msg)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleEmployeeToggle = useCallback((employeeId: string) => {
@@ -488,12 +507,19 @@ export function JobForm({ job, onSubmit, onCancel, isLoading }: JobFormProps) {
             onChange={handleVisibilityChange}
           />
 
+          {submitError && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold animate-in fade-in duration-200">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <div className="flex-1 break-words leading-relaxed">{submitError}</div>
+            </div>
+          )}
+
           <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
+            <Button type="button" variant="outline" onClick={onCancel} disabled={Boolean(isLoading || isSubmitting)} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
-              {isLoading ? (
+            <Button type="submit" disabled={Boolean(isLoading || isSubmitting)} className="w-full sm:w-auto font-bold">
+              {isLoading || isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {job ? "Updating..." : "Creating..."}

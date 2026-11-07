@@ -58,6 +58,7 @@ function OwnerJobsPageContent() {
   const [editingJob, setEditingJob] = useState<Job | null>(null)
   const [viewingJob, setViewingJob] = useState<Job | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
 
@@ -99,14 +100,25 @@ function OwnerJobsPageContent() {
 
   useEffect(() => {
     handleRefresh()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const action = searchParams.get("action")
+    if (action === "new" || action === "create") {
+      setFormError(null)
+      setEditingJob(null)
+      setIsFormOpen(true)
+    }
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreateJob = () => {
+    setFormError(null)
     setEditingJob(null)
     setIsFormOpen(true)
   }
 
   const handleEditJob = (job: Job) => {
+    setFormError(null)
     setEditingJob(job)
     setIsFormOpen(true)
   }
@@ -128,6 +140,7 @@ function OwnerJobsPageContent() {
 
   const handleSubmitJob = async (jobData: Partial<Job>) => {
     setIsSubmitting(true)
+    setFormError(null)
     try {
       if (editingJob) {
         await updateJob(editingJob.id, jobData)
@@ -137,12 +150,16 @@ function OwnerJobsPageContent() {
       toast.success(editingJob ? "Job updated successfully." : "Job created successfully.")
       setIsFormOpen(false)
       setEditingJob(null)
+      setActiveTab("all")
+      setStatusFilter("all")
+      setEmployeeStatusFilter("all")
+      await refreshJobs()
       setLastUpdated(new Date())
     } catch (err: any) {
-      setError({
-        title: editingJob ? "Failed to Update Job" : "Failed to Create Job",
-        message: err.message || "An error occurred while saving the job. Please try again.",
-      })
+      const message = err.message || "An error occurred while saving the job. Please try again."
+      setFormError(message)
+      toast.error(message)
+      throw err
     } finally {
       setIsSubmitting(false)
     }
@@ -393,7 +410,13 @@ function OwnerJobsPageContent() {
         />
 
         {/* Job Form Dialog */}
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <Dialog open={isFormOpen} onOpenChange={(open) => {
+          setIsFormOpen(open)
+          if (!open) {
+            setFormError(null)
+            setEditingJob(null)
+          }
+        }}>
           <DialogContent className="max-w-4xl w-[calc(100vw-1.5rem)] sm:w-full p-4 sm:p-6 max-h-[92dvh] overflow-y-auto rounded-2xl">
             <DialogHeader>
               <DialogTitle className="font-extrabold text-xl">{editingJob ? "Edit Job Parameters" : "Create New Enterprise Job"}</DialogTitle>
@@ -406,8 +429,9 @@ function OwnerJobsPageContent() {
             <JobForm
               job={editingJob || undefined}
               onSubmit={handleSubmitJob}
-              onCancel={() => { setIsFormOpen(false); setEditingJob(null) }}
+              onCancel={() => { setIsFormOpen(false); setEditingJob(null); setFormError(null) }}
               isLoading={isSubmitting}
+              error={formError}
             />
           </DialogContent>
         </Dialog>
