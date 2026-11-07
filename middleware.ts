@@ -16,6 +16,13 @@ export function middleware(request: NextRequest) {
     const cleanHost = host.replace(/:\d+$/, "")
     const onSuperAdminHost = isSuperAdminHost(cleanHost)
 
+    // Keep old bookmarks and OAuth redirects out of the dynamic admin route.
+    // `/login` is not a staff page; on the main portal it must canonicalize to
+    // the existing staff login, while the dedicated admin host keeps its own.
+    if (pathname === "/login") {
+        return NextResponse.redirect(new URL(onSuperAdminHost ? "/superadmin/login" : "/auth/login", request.url))
+    }
+
     // Legacy public /jobs links must open the Owner jobs screen, never the
     // catch-all [adminRoute] page. Keep the dedicated Super Admin host scoped.
     if (pathname === "/jobs") {

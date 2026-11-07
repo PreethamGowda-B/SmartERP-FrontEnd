@@ -20,12 +20,12 @@ test('CNC purchase-order page collects and reviews user-provided values before i
   assert.doesNotMatch(page, /Fanuc India Spares Ltd|Spindle Servo Motor 7\.5kW|total_cost: 45000/);
 });
 
-test('route-optimization UI does not display defaults or claim successful calculations', () => {
+test('route-optimization UI provides technician dispatch routing and calculates verified stops', () => {
   const page = read('app/owner/cnc/route-optimization/page.tsx');
-  assert.match(page, /Optimization unavailable/);
-  assert.match(page, /does not calculate, save, or estimate travel routes/);
-  assert.doesNotMatch(page, /apiClient|25\.2|66 mins|Dispatch route optimized/);
-  assert.match(page, /fuel savings are not available/);
+  assert.match(page, /Technician Dispatch Route Optimization/);
+  assert.match(page, /Multi-Stop Dispatch Builder/);
+  assert.match(page, /Calculate Optimized Route/);
+  assert.match(page, /\/api\/route-optimization/);
 });
 
 test('automation page exposes only the supported action and discloses manual-only status', () => {

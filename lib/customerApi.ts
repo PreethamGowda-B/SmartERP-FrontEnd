@@ -154,13 +154,17 @@ customerApi.interceptors.response.use(
         onRefreshed();
         return customerApi(originalRequest);
       } catch (refreshError: any) {
-        if (typeof window !== 'undefined') {
+        // A rejected refresh proves that the session is no longer valid. A
+        // timeout, offline device, or 5xx does not; preserve the session so a
+        // transient outage cannot sign a customer out.
+        const refreshStatus = refreshError?.response?.status;
+        const isRejectedRefresh = refreshStatus === 401 || refreshStatus === 403;
+        if (isRejectedRefresh && typeof window !== 'undefined') {
           localStorage.removeItem('_customer_at');
           sessionStorage.removeItem('_customer_at');
         }
-        // Refresh failed — clear queued requests and redirect to login
         onRefreshed();
-        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/customer') && window.location.pathname !== '/customer/login') {
+        if (isRejectedRefresh && typeof window !== 'undefined' && window.location.pathname.startsWith('/customer') && window.location.pathname !== '/customer/login') {
           const isExpiredInactivity = refreshError?.response?.data?.code === 'SESSION_EXPIRED_INACTIVITY' || refreshError?.response?.data?.expired;
           window.location.href = isExpiredInactivity ? '/customer/login?expired=inactivity' : '/customer/login';
         }

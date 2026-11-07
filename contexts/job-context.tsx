@@ -8,7 +8,8 @@ import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/apiClient"
 import { isPublicRoute } from "@/lib/route-utils"
 import { logger } from "@/lib/logger"
-import { RefreshCw } from "lucide-react"
+import { RefreshCw, X } from "lucide-react"
+import { toast } from "sonner"
 
 interface JobContextType {
   jobs: Job[]
@@ -38,6 +39,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
   const [jobs, setJobs] = useState<Job[]>([])
   const [refreshError, setRefreshError] = useState(false)
   const [isRetrying, setIsRetrying] = useState(false)
+  const [isDismissed, setIsDismissed] = useState(false)
   const hasSyncedRef = useRef(false)
   const loadedScopeRef = useRef<string | null>(null)
   const activeScopeRef = useRef<string | null>(null)
@@ -433,7 +435,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       <>
-        {refreshError && !isPublic && (
+        {refreshError && !isDismissed && !isPublic && (
           <div role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900 flex items-center justify-center gap-2">
             <span>
               {jobs.length > 0 ? "Showing the last loaded jobs. The latest refresh failed." : "Could not refresh the jobs list. It may be incomplete."}
@@ -442,10 +444,27 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
               type="button"
               disabled={isRetrying}
               className="font-semibold underline hover:text-amber-950 disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5 ml-1"
-              onClick={() => void refreshJobs()}
+              onClick={async () => {
+                toast.loading("Reconnecting to server...", { id: "manual-jobs-retry" })
+                try {
+                  await refreshJobs()
+                  toast.success("Jobs updated successfully!", { id: "manual-jobs-retry" })
+                  setIsDismissed(true)
+                } catch (e: any) {
+                  toast.error(e?.message || "Could not reach server. Please retry in a few moments.", { id: "manual-jobs-retry" })
+                }
+              }}
             >
               {isRetrying && <RefreshCw className="h-3 w-3 animate-spin inline" />}
               {isRetrying ? "Retrying..." : "Retry"}
+            </button>
+            <button
+              type="button"
+              className="ml-3 text-amber-600 hover:text-amber-900 cursor-pointer p-0.5 rounded hover:bg-amber-100 transition-colors"
+              aria-label="Dismiss notice"
+              onClick={() => setIsDismissed(true)}
+            >
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}

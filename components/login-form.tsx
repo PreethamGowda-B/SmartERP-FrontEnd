@@ -58,6 +58,7 @@ export function LoginForm() {
       const urlParams = new URLSearchParams(window.location.search)
       const errorParam = urlParams.get("error")
       const modeParam = urlParams.get("mode")
+      const portalParam = urlParams.get("portal")
       const expiredParam = urlParams.get("expired")
       const reasonParam = urlParams.get("reason")
       if (expiredParam === "inactivity" || reasonParam === "inactivity") {
@@ -70,6 +71,13 @@ export function LoginForm() {
         setMode("login")
       } else if (modeParam === "signup") {
         setMode("signup")
+      }
+      // Employee and owner accounts use this shared sign-in page. HR has no
+      // separate credential form, so it intentionally uses the owner tab.
+      if (portalParam === "employee") {
+        setActiveTab("employee")
+      } else if (portalParam === "owner" || portalParam === "hr") {
+        setActiveTab("owner")
       }
     }
   }, [router])

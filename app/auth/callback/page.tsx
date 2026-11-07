@@ -35,7 +35,9 @@ function CallbackContent() {
 
     useEffect(() => {
         const onSuperAdminHost = window.location.hostname.toLowerCase() === "superadmin.prozync.in"
-        const loginPath = onSuperAdminHost ? "/superadmin/login" : "/login"
+        // `/login` is a legacy catch-all route that is reserved for the Super
+        // Admin console. Staff OAuth failures must return to the staff portal.
+        const loginPath = onSuperAdminHost ? "/superadmin/login" : "/auth/login"
         const code = searchParams.get("code")
         const errorParam = searchParams.get("error")
 

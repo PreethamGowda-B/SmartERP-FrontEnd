@@ -20,6 +20,7 @@ export default function OwnerMachineRegistryPage() {
   const router = useRouter()
   const [machines, setMachines] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [customers, setCustomers] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
 
@@ -27,6 +28,7 @@ export default function OwnerMachineRegistryPage() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [formData, setFormData] = useState({
+    customer_id: "",
     machine_name: "",
     make: "Haas",
     model: "VMC-850",
@@ -38,8 +40,17 @@ export default function OwnerMachineRegistryPage() {
   const fetchMachines = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await apiClient<{ success: boolean; machines: any[] }>("/api/machines")
-      setMachines(res.machines || [])
+      const [res, custRes] = await Promise.allSettled([
+        apiClient<{ success: boolean; machines: any[] }>("/api/machines"),
+        apiClient<any>("/api/customers").catch(() => ({ customers: [] })),
+      ])
+      if (res.status === "fulfilled") {
+        setMachines(res.value.machines || [])
+      }
+      if (custRes.status === "fulfilled") {
+        const custList = custRes.value?.customers || custRes.value?.data || (Array.isArray(custRes.value) ? custRes.value : [])
+        setCustomers(Array.isArray(custList) ? custList : [])
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to load CNC machine registry")
     } finally {
@@ -55,10 +66,14 @@ export default function OwnerMachineRegistryPage() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      await apiClient.post("/api/machines", {
+      const payload: any = {
         ...formData,
         spindle_hours: parseInt(formData.spindle_hours) || 0,
-      })
+      }
+      if (payload.customer_id === "in_house" || !payload.customer_id) {
+        delete payload.customer_id
+      }
+      await apiClient.post("/api/machines", payload)
       toast.success("CNC Machine registered successfully!")
       setIsAddOpen(false)
       fetchMachines()
@@ -278,6 +293,26 @@ export default function OwnerMachineRegistryPage() {
           </DialogHeader>
 
           <form onSubmit={handleAddMachine} className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Customer / Facility Location</Label>
+              <Select
+                value={formData.customer_id}
+                onValueChange={(val) => setFormData({ ...formData, customer_id: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Customer / In-House Workshop" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in_house">In-House Workshop / Self Facility</SelectItem>
+                  {customers.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name || c.company_name || c.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label>Machine Name / Tag *</Label>
               <Input

@@ -5,7 +5,7 @@ import { isOfflineFetchFailure } from "@/lib/api-network-status.mjs";
 // to support PERSISTENT login (across tab closes) and Android bridge compatibility.
 // ============================================================
 import { triggerFeatureLock } from "@/components/locked-feature-prompt"
-import { triggerSlowNetworkNotice } from "@/components/slow-network-notice"
+import { triggerNetworkNotice, triggerSlowNetworkNotice } from "@/components/slow-network-notice"
 import { logger } from "./logger"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import {
@@ -22,7 +22,8 @@ export { logger }
 const slowActiveRequests = new Set<string>()
 const pendingRequests = new Map<string, NodeJS.Timeout>()
 
-function markRequestStart(requestId: string) {
+function markRequestStart(requestId: string, trackConnectivity = true) {
+  if (!trackConnectivity) return
   const timeout = setTimeout(() => {
     slowActiveRequests.add(requestId)
     triggerSlowNetworkNotice(true)
@@ -46,6 +47,13 @@ function markRequestEnd(requestId: string) {
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
+
+function getRetryDelayMs(retriesRemaining: number) {
+  const attempt = Math.max(0, 2 - retriesRemaining)
+  const baseDelay = Math.min(4000, 500 * (2 ** attempt))
+  // Jitter prevents simultaneous dashboards from retrying in lockstep.
+  return baseDelay + Math.floor(Math.random() * 250)
+}
 
 const ADMIN_AT = "_admin_at"
 const ADMIN_RT = "_admin_rt"
@@ -107,14 +115,17 @@ export function setTokens(accessToken: string, refreshToken: string, isAdmin = f
 // strictly partitioned by user auth token (preserving multi-tenant isolation).
 const inFlightGets = new Map<string, Promise<any>>()
 const getCache = new Map<string, { data: any; expiresAt: number }>()
-const GET_CACHE_TTL_MS = 3000 // 3 seconds default
-const METADATA_CACHE_TTL_MS = 30000 // 30 seconds for slow-changing metadata
+const GET_CACHE_TTL_MS = 15000 // 15 seconds for snappy tab switching
+const METADATA_CACHE_TTL_MS = 60000 // 60 seconds for stable metadata
 
 function getCacheTtlForPath(path: string): number {
   if (
     path.startsWith('/api/settings/company') ||
     path.startsWith('/api/subscription/') ||
-    path.startsWith('/api/users/me')
+    path.startsWith('/api/users/me') ||
+    path.startsWith('/api/employees') ||
+    path.startsWith('/api/dashboard/owner/metrics') ||
+    path.startsWith('/api/dashboard/owner/recent-activity')
   ) {
     return METADATA_CACHE_TTL_MS
   }
@@ -193,8 +204,7 @@ export function getAuthToken(targetPath?: string): string | null {
 
   // 3. Fallback: Parse user profile from localStorage
   try {
-    const u = safeLocalStorage.getJSON<{ accessToken?: string }>("smarterp_user") ||
-              safeLocalStorage.getJSON<{ accessToken?: string }>("smarterp_admin_user")
+    const u = safeLocalStorage.getJSON<{ accessToken?: string }>("smarterp_user")
     if (u?.accessToken) return u.accessToken
   } catch (_) {}
 
@@ -233,8 +243,7 @@ export function getRefreshToken(targetPath?: string): string | null {
 
     // 3. Fallback: Parse user profile from localStorage
     try {
-      const u = safeLocalStorage.getJSON<{ refreshToken?: string }>("smarterp_user") ||
-                safeLocalStorage.getJSON<{ refreshToken?: string }>("smarterp_admin_user")
+      const u = safeLocalStorage.getJSON<{ refreshToken?: string }>("smarterp_user")
       if (u?.refreshToken) return u.refreshToken
     } catch (_) {}
   }
@@ -289,7 +298,17 @@ function handleLogout(
     const isCustomer = targetPath?.startsWith('/api/customer') || window.location.pathname.startsWith('/customer')
     const isSuperAdmin = isAdmin || targetPath?.startsWith('/api/superadmin') || window.location.pathname.startsWith('/superadmin')
     const isInactivity = reason === "expired_inactivity" || reason === true
-    const queryParam = isInactivity ? "?expired=inactivity" : ""
+    const query = new URLSearchParams()
+    if (isInactivity) query.set("expired", "inactivity")
+    if (!isSuperAdmin && !isCustomer) {
+      const pathname = window.location.pathname
+      const portal = pathname.startsWith("/employee") ? "employee"
+        : pathname.startsWith("/hr") ? "hr"
+        : pathname.startsWith("/owner") ? "owner"
+        : null
+      if (portal) query.set("portal", portal)
+    }
+    const queryParam = query.size ? `?${query.toString()}` : ""
 
     const loginPath = isSuperAdmin
       ? `/superadmin/login${queryParam}`
@@ -538,7 +557,9 @@ export async function apiClient<T = any>(path: string, options: ApiRequestInit =
   const executeRequest = async (): Promise<T> => {
     const requestId = Math.random().toString(36).substring(7)
     const requestAccessToken = currentToken
-    markRequestStart(requestId)
+    // AI replies may legitimately take longer than ordinary portal data.
+    // They should not be misreported as a general connectivity outage.
+    markRequestStart(requestId, !path.startsWith("/api/ai/"))
 
     try {
       let res: Response
@@ -603,6 +624,7 @@ export async function apiClient<T = any>(path: string, options: ApiRequestInit =
         // qualify a real network failure rather than short-circuiting requests.
         const deviceReportsOffline = typeof navigator !== "undefined" && !navigator.onLine;
         if (isOfflineFetchFailure(error, deviceReportsOffline)) {
+          triggerNetworkNotice("offline")
           throw {
             name: "OfflineError",
             message: "SmartERP could not be reached. Your device may be offline or the service may be temporarily unreachable.",
@@ -617,13 +639,14 @@ export async function apiClient<T = any>(path: string, options: ApiRequestInit =
         const canRetry = retries > 0 && isTransientError && isGetRequest && !deviceReportsOffline
 
         if (canRetry) {
-          const delay = retries === 2 ? 500 : 1000 // 500ms -> 1000ms
+          const delay = getRetryDelayMs(retries)
           await new Promise(resolve => setTimeout(resolve, delay))
           return apiClient(path, options, retries - 1)
         }
 
         const safeOriginal = error instanceof Error ? error.message : String(error);
         logger.error(`[apiClient] Connection Error: ${path}`, { error: safeOriginal });
+        triggerNetworkNotice("degraded")
         throw new Error("Unable to connect to the server. Please check your internet connection and try again.")
       }
 
@@ -670,11 +693,14 @@ export async function apiClient<T = any>(path: string, options: ApiRequestInit =
 
       if (!res.ok) {
         if ((res.status === 502 || res.status === 503 || res.status === 504) && isGet && retries > 0) {
-          const delay = retries === 2 ? 500 : 1000
+          const delay = getRetryDelayMs(retries)
           await new Promise(resolve => setTimeout(resolve, delay))
           return apiClient(path, options, retries - 1)
         }
         const error = await res.json().catch(() => ({ message: res.statusText }))
+        if (res.status === 502 || res.status === 503 || res.status === 504) {
+          triggerNetworkNotice("service-unavailable")
+        }
         if (res.status === 403 && (error.error === 'company_suspended' || error.error === 'account_suspended' || error.error === 'your_company_is_suspended')) {
           if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/suspended')) {
             window.location.href = `/suspended?reason=${encodeURIComponent(error.error)}`
