@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback, memo } from "react"
+import React, { useState, useEffect, useCallback, useRef, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -165,6 +165,7 @@ const VisibilitySwitch = memo(function VisibilitySwitch({
 export function JobForm({ job, onSubmit, onCancel, isLoading, error }: JobFormProps) {
   const [jobType, setJobType] = useState<"general" | "machine">((job as any)?.machine_id ? "machine" : "general")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const submitLockRef = useRef(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -225,7 +226,8 @@ export function JobForm({ job, onSubmit, onCancel, isLoading, error }: JobFormPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isSubmitting || isLoading) return
+    if (submitLockRef.current || isSubmitting || isLoading) return
+    submitLockRef.current = true
     setSubmitError(null)
     setIsSubmitting(true)
     try {
@@ -240,6 +242,7 @@ export function JobForm({ job, onSubmit, onCancel, isLoading, error }: JobFormPr
       const msg = err?.message || err?.error || "Failed to save job. Please check form details and try again."
       setSubmitError(msg)
     } finally {
+      submitLockRef.current = false
       setIsSubmitting(false)
     }
   }
@@ -508,7 +511,7 @@ export function JobForm({ job, onSubmit, onCancel, isLoading, error }: JobFormPr
           />
 
           {submitError && (
-            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold animate-in fade-in duration-200">
+            <div role="alert" aria-live="assertive" className="flex items-start gap-2.5 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold animate-in fade-in duration-200">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
               <div className="flex-1 break-words leading-relaxed">{submitError}</div>
             </div>
@@ -522,7 +525,7 @@ export function JobForm({ job, onSubmit, onCancel, isLoading, error }: JobFormPr
               {isLoading || isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {job ? "Updating..." : "Creating..."}
+                  <span role="status" aria-live="polite">{job ? "Updating..." : "Creating..."}</span>
                 </>
               ) : job ? (
                 "Update Job"

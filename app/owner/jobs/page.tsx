@@ -59,6 +59,8 @@ function OwnerJobsPageContent() {
   const [viewingJob, setViewingJob] = useState<Job | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const jobSubmitLockRef = useRef(false)
+  const successfulFormCloseRef = useRef(false)
   const [error, setError] = useState<{ title: string; message: string } | null>(null)
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
 
@@ -139,6 +141,8 @@ function OwnerJobsPageContent() {
   }
 
   const handleSubmitJob = async (jobData: Partial<Job>) => {
+    if (jobSubmitLockRef.current) return
+    jobSubmitLockRef.current = true
     setIsSubmitting(true)
     setFormError(null)
     try {
@@ -147,12 +151,18 @@ function OwnerJobsPageContent() {
       } else {
         await addJob(jobData as Job)
       }
+
+      // addJob/updateJob resolve only after the API confirms the saved record.
+      // Close and notify immediately; list refresh happens after that confirmation.
       toast.success(editingJob ? "Job updated successfully." : "Job created successfully.")
+      successfulFormCloseRef.current = true
       setIsFormOpen(false)
       setEditingJob(null)
       setActiveTab("all")
+      setSearchTerm("")
       setStatusFilter("all")
       setEmployeeStatusFilter("all")
+      if (!editingJob) router.replace("/owner/jobs", { scroll: false })
       await refreshJobs()
       setLastUpdated(new Date())
     } catch (err: any) {
@@ -161,6 +171,7 @@ function OwnerJobsPageContent() {
       toast.error(message)
       throw err
     } finally {
+      jobSubmitLockRef.current = false
       setIsSubmitting(false)
     }
   }
@@ -411,8 +422,11 @@ function OwnerJobsPageContent() {
 
         {/* Job Form Dialog */}
         <Dialog open={isFormOpen} onOpenChange={(open) => {
+          if (!open && isSubmitting && !successfulFormCloseRef.current) return
+          if (open) successfulFormCloseRef.current = false
           setIsFormOpen(open)
           if (!open) {
+            successfulFormCloseRef.current = false
             setFormError(null)
             setEditingJob(null)
           }
