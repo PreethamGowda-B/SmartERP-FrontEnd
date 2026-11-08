@@ -29,6 +29,20 @@ function extractJobsArray(payload: any): any[] | null {
   return null
 }
 
+function resolveJobPayload(payload: any): any {
+  if (!payload || typeof payload !== "object") return null
+  // 1. If payload has direct id (PostgreSQL RETURNING * row where .data is the JSONB column)
+  if (payload.id !== undefined && payload.id !== null) return payload
+  // 2. If payload has wrapped job property { job: { id: ... } }
+  if (payload.job?.id !== undefined && payload.job?.id !== null) return payload.job
+  // 3. If payload has wrapped data.job property { data: { job: { id: ... } } }
+  if (payload.data?.job?.id !== undefined && payload.data?.job?.id !== null) return payload.data.job
+  // 4. If payload is an envelope with data having an id { data: { id: ... } }
+  if (payload.data?.id !== undefined && payload.data?.id !== null) return payload.data
+  // Fallbacks if no id was detected
+  return payload.job || payload.data?.job || payload
+}
+
 const JobContext = createContext<JobContextType | undefined>(undefined)
 
 export function JobProvider({ children }: { children: React.ReactNode }) {
@@ -263,7 +277,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
 
   const addJob = useCallback(async (job: Job) => {
     const response = await apiClient<any>("/api/jobs", { method: "POST", body: JSON.stringify(job) })
-    const savedJob = response?.job || response?.data?.job || response?.data || response
+    const savedJob = resolveJobPayload(response)
     if (!savedJob?.id) throw new Error("The server did not confirm that the job was saved.")
 
     const normalizedJob: Job = {
@@ -298,7 +312,7 @@ export function JobProvider({ children }: { children: React.ReactNode }) {
       method: "PUT",
       body: JSON.stringify(updates),
     })
-    const savedJob = response?.job || response?.data?.job || response?.data || response
+    const savedJob = resolveJobPayload(response)
     if (!savedJob?.id || String(savedJob.id) !== String(id)) {
       throw new Error("The server did not confirm that the job update was saved.")
     }

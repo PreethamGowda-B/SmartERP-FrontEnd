@@ -74,3 +74,35 @@ test('JobContext normalizes newly added jobs so fields are immediately available
   assert.match(context, /endDate: savedJob\.endDate \|\| savedJob\.data\?\.endDate \|\| job\.endDate/);
   assert.match(context, /budget: Number\(savedJob\.budget \?\? savedJob\.data\?\.budget \?\? job\.budget \?\? 0\)/);
 });
+
+test('JobContext resolveJobPayload correctly resolves PostgreSQL rows containing a JSONB data column', () => {
+  const context = read('contexts/job-context.tsx');
+
+  assert.match(context, /function resolveJobPayload/, 'Must have resolveJobPayload helper');
+  assert.match(context, /const savedJob = resolveJobPayload\(response\)/);
+
+  // Extract function body for runtime verification
+  const startIdx = context.indexOf('function resolveJobPayload');
+  const endIdx = context.indexOf('const JobContext = createContext');
+  const fnCode = context.slice(startIdx, endIdx);
+
+  // Strip TypeScript types
+  const jsCode = fnCode.replace(/: any/g, '');
+  const evalResolve = new Function(`${jsCode}; return resolveJobPayload;`)();
+
+  const postgresRow = {
+    id: 'e7becdf6-1234-5678-9abc-def012345678',
+    title: 'Test Job',
+    data: { title: 'Test Job', priority: 'medium' }, // PostgreSQL JSONB column without an id
+    status: 'pending'
+  };
+
+  const resolved = evalResolve(postgresRow);
+  assert.equal(resolved?.id, postgresRow.id, 'Must extract top-level id and not be shadowed by the data JSONB column');
+
+  // Verify wrapped envelopes as well
+  assert.equal(evalResolve({ job: postgresRow })?.id, postgresRow.id);
+  assert.equal(evalResolve({ data: postgresRow })?.id, postgresRow.id);
+  assert.equal(evalResolve({ data: { job: postgresRow } })?.id, postgresRow.id);
+  assert.equal(evalResolve({ error: 'Server error' })?.id, undefined);
+});
