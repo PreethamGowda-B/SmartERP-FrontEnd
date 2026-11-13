@@ -1,31 +1,34 @@
 "use client"
 
 import React from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useLoading } from '@/contexts/loading-context'
 
 export function NavLink({ href, children, id, className, onClick }: { href: string; children: React.ReactNode; id?: string; className?: string; onClick?: (e?: React.MouseEvent) => void }) {
-  const router = useRouter()
   const pathname = usePathname()
   const { showLoading } = useLoading()
 
   const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault()
     if (onClick) onClick(e)
-    // Already on this route — do nothing
-    if (pathname === href) return
-    
-    // Trigger global premium loader with context-aware message
+
+    // Keep native link behavior for a new tab/window and let Next handle the
+    // actual transition. The previous implementation prevented every anchor
+    // click and waited for router.push(), leaving the old dashboard visible
+    // while a slow route request was in flight.
+    if (pathname === href) {
+      e.preventDefault()
+      return
+    }
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+
     const message = id ? `Opening ${id}...` : "Loading page..."
     showLoading(message)
-    
-    // Navigate
-    router.push(href)
   }
 
   return (
-    <a href={href} onClick={handleClick} className={className}>
+    <Link href={href} prefetch onClick={handleClick} className={className}>
       {children}
-    </a>
+    </Link>
   )
 }
