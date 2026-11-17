@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,7 +72,7 @@ export function EnterpriseChatWindow({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       setLoading(true)
       const res = await apiClient(`/api/messages/conversation/${conversationId}`)
@@ -85,11 +85,11 @@ export function EnterpriseChatWindow({
       setLoading(false)
       scrollToBottom()
     }
-  }
+  }, [conversationId])
 
   useEffect(() => {
     fetchMessages()
-  }, [conversationId])
+  }, [fetchMessages])
 
   // OPTIMISTIC SEND ENGINE (<50ms)
   const handleSendMessage = async () => {

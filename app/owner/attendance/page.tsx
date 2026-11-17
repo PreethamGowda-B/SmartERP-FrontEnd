@@ -174,7 +174,7 @@ export default function OwnerAttendancePage() {
       fetchAttendanceOverview(true)
       fetchPolicy()
     }
-  }, [user?.id, fetchAttendanceOverview, fetchPolicy])
+  }, [user, fetchAttendanceOverview, fetchPolicy])
 
   // Periodic polling & focus sync
   useEffect(() => {

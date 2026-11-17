@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -48,7 +48,7 @@ export default function HRAttendancePage() {
   })
   const [loading, setLoading] = useState(true)
 
-  const fetchAttendanceOverview = async (showLoading = true) => {
+  const fetchAttendanceOverview = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true)
     try {
       const data = await apiClient("/api/attendance/overview")
@@ -59,13 +59,13 @@ export default function HRAttendancePage() {
     } finally {
       if (showLoading) setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (user) {
       fetchAttendanceOverview()
     }
-  }, [user?.id])
+  }, [user, fetchAttendanceOverview])
 
   useEffect(() => {
     const refresh = () => fetchAttendanceOverview(false)
@@ -77,7 +77,7 @@ export default function HRAttendancePage() {
       window.removeEventListener("focus", refresh)
       window.removeEventListener("attendance-status-changed", refresh)
     }
-  }, [user?.id])
+  }, [user, fetchAttendanceOverview])
 
   const formatTime = (timestamp: string | null) => {
     if (!timestamp) return "—"

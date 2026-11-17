@@ -2,7 +2,7 @@
 'use client';
 import { getApiOrigin } from "@/lib/api-environment.mjs";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   AlertTriangle, 
@@ -38,11 +38,7 @@ export default function OwnerInvoiceIssuesPage() {
   const [ownerResponse, setOwnerResponse] = useState('');
   const [resolving, setResolving] = useState(false);
 
-  useEffect(() => {
-    fetchDisputedInvoices();
-  }, []);
-
-  const fetchDisputedInvoices = async () => {
+  const fetchDisputedInvoices = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiClient<{ success: boolean; disputes: any[] }>('/api/invoices/disputes/all');
@@ -58,7 +54,11 @@ export default function OwnerInvoiceIssuesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchDisputedInvoices();
+  }, [fetchDisputedInvoices]);
 
   const handleResolveDispute = async (status: 'resolved' | 'rejected') => {
     if (!selectedDispute) return;

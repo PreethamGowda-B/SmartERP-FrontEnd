@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -41,11 +41,7 @@ export default function ArCollectionsPage() {
   const [selectedOfferSchedule, setSelectedOfferSchedule] = useState<ArSchedule | null>(null)
   const [aiOfferText, setAiOfferText] = useState<string>("")
 
-  useEffect(() => {
-    fetchData()
-  }, [filterStage])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
       const summaryData = await arCollectionsApi.getSummary()
@@ -62,7 +58,11 @@ export default function ArCollectionsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filterStage, toast])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const handleSyncInvoices = async () => {
     try {

@@ -145,7 +145,7 @@ export default function TimeTrackingPage() {
       fetchTodayAttendance()
       fetchHistory()
     }
-  }, [user?.id, fetchTodayAttendance, fetchHistory])
+  }, [user, fetchTodayAttendance, fetchHistory])
 
   const refreshPendingCount = useCallback(async () => {
     try {

@@ -102,7 +102,7 @@ function OwnerJobsPageContent() {
 
   useEffect(() => {
     handleRefresh()
-  }, [])
+  }, [handleRefresh])
 
   useEffect(() => {
     const action = searchParams.get("action")

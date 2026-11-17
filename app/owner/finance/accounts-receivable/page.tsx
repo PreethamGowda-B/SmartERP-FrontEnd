@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { OwnerLayout } from "@/components/owner-layout"
 import { Clock, AlertCircle, Calendar, User, Phone, Mail, Send, CheckCircle2, Loader2, RefreshCw } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -16,11 +16,7 @@ export default function OwnerAccountsReceivablePage() {
   const [buckets, setBuckets] = useState<any>({ current: 0, "1_30": 0, "31_60": 0, "60_plus": 0 })
   const [schedules, setSchedules] = useState<any[]>([])
 
-  useEffect(() => {
-    fetchARAging()
-  }, [])
-
-  const fetchARAging = async () => {
+  const fetchARAging = useCallback(async () => {
     try {
       setLoading(true)
       const res = await apiClient<{ success: boolean; buckets: any; schedules: any[] }>("/api/finance/ar-aging")
@@ -33,7 +29,11 @@ export default function OwnerAccountsReceivablePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchARAging()
+  }, [fetchARAging])
 
   const handleSendReminder = async (scheduleId: string) => {
     try {

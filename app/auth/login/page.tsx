@@ -23,7 +23,7 @@ export default function LoginPage() {
         router.push("/employee")
       }
     }
-  }, [user?.id, user?.role, isLoading, router])
+  }, [user, isLoading, router])
 
   if (isLoading) {
     return (

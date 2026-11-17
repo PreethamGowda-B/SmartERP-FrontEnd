@@ -2,6 +2,7 @@
     "extends": "next/core-web-vitals",
     "ignorePatterns": ["next.config.mjs", ".next/**", "node_modules/**"],
     "rules": {
-        "react/no-unescaped-entities": "off"
+        "react/no-unescaped-entities": "off",
+        "@next/next/no-img-element": "off"
     }
 }

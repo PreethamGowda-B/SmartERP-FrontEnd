@@ -124,7 +124,7 @@ export default function EmployeeAttendanceDetailPage() {
     if (user && userId) {
       fetchEmployeeAttendance()
     }
-  }, [user?.id, userId, selectedMonth, selectedYear, fetchEmployeeAttendance])
+  }, [user, userId, selectedMonth, selectedYear, fetchEmployeeAttendance])
 
   // Month navigation helpers
   const handlePrevMonth = () => {

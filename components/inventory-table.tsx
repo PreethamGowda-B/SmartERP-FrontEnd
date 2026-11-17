@@ -33,6 +33,14 @@ type InventoryItem = {
   is_deleted?: boolean
 }
 
+const CATEGORY_COLORS: Record<string, string> = {
+  "Raw Materials": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  "Finished Goods": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  "Tools": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  "Supplies": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  "Uncategorized": "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+}
+
 export default function InventoryTable({
   role,
   refreshTrigger = 0,
@@ -52,7 +60,7 @@ export default function InventoryTable({
   useEffect(() => { onItemsChangeRef.current = onItemsChange }, [onItemsChange])
 
   // Helper function to get full image URL
-  const getImageUrl = (imageUrl: string | undefined) => {
+  const getImageUrl = useCallback((imageUrl: string | undefined) => {
     if (!imageUrl) return null
     // If it's already a full URL (Cloudinary), return as-is
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
@@ -60,15 +68,9 @@ export default function InventoryTable({
     }
     // Otherwise, prepend backend URL for local uploads
     return `${api}/${imageUrl}`
-  }
+  }, [api])
 
-  const categoryColors: Record<string, string> = {
-    "Raw Materials": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    "Finished Goods": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    "Tools": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-    "Supplies": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    "Uncategorized": "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-  }
+  const categoryColors = CATEGORY_COLORS
 
   const fetchItems = useCallback(async () => {
     try {
@@ -89,11 +91,11 @@ export default function InventoryTable({
     fetchItems()
   }, [fetchItems, refreshTrigger])
 
-  const handleEdit = (item: InventoryItem) => {
+  const handleEdit = useCallback((item: InventoryItem) => {
     onEdit?.(item)
-  }
+  }, [onEdit])
 
-  const handleArchive = async (item: InventoryItem) => {
+  const handleArchive = useCallback(async (item: InventoryItem) => {
     if (!confirm(`Are you sure you want to archive "${item.name}"?`)) {
       return
     }
@@ -109,7 +111,7 @@ export default function InventoryTable({
       logger.error("Error archiving item:", err)
       alert(err.message || "Error archiving item")
     }
-  }
+  }, [fetchItems])
 
   const handleDelete = async (item: InventoryItem) => {
     if (!confirm(`Are you sure you want to permanently delete "${item.name}"? This action cannot be undone.`)) {
