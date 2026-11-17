@@ -117,3 +117,36 @@ export function InventoryPage() {
 * Don't modify backend API logic or authentication tokens inside frontend components.
 * Don't duplicate table pagination or sorting code—rely on `EnterpriseDataTable`'s generic hooks.
 * Don't use raw hex colors in custom `.css` files—always use semantic Tailwind design tokens (`bg-card`, `border-border/70`, `text-primary`).
+
+---
+
+## 5. Performance, Data Fetching & Caching Standards
+
+### 5.1 Client-Side LocalStorage Caching
+When caching dashboard metrics or frequently accessed summary data in the browser:
+- **Tenant & User Scoping:** Always namespace cache keys with both `companyId` and `userId`:
+  ```ts
+  const cacheKey = `smarterp:owner:metrics:${companyId}:${userId}`
+  ```
+- **Instant Hydration:** Load cache in `useState` initializer or initial effect for sub-10ms UI paint.
+- **Visual Stale Indicator:** Show a `"Cached • Syncing..."` badge while background network revalidation is in-flight.
+- **Session Cleanup:** Register cache keys in `lib/auth.ts` `signOut()` to wipe tenant data upon logout.
+
+### 5.2 Targeted Single-Entity Loading
+- Never download all collection items (`GET /api/jobs`) to render a detail page.
+- Use direct single-entity endpoints (`GET /api/jobs/${id}`).
+- Parallelize auxiliary requests (e.g. proof-of-work, timeline logs) using `Promise.allSettled` to avoid waterfall latency.
+
+### 5.3 React Hook Dependency Guidelines
+- When an asynchronous fetch function is called from `useEffect`, either define it inside the effect or wrap it in `useCallback` with explicit dependencies:
+  ```tsx
+  const fetchData = useCallback(async () => {
+    const res = await apiClient(...)
+    setData(res)
+  }, [apiClient, filterParam])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+  ```
+- For module-level lookup dictionaries (e.g., category colors, status maps), define them outside the component function so they do not trigger re-render dependencies.
