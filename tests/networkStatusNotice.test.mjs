@@ -2,12 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-test("connection notice distinguishes offline, degraded, and service-unavailable states", async () => {
+test("connection notice provides state-specific guidance and rotates it automatically", async () => {
   const source = await readFile(new URL("../components/slow-network-notice.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /"Connection is unstable\. Some data may take longer to load\."/);
-  assert.match(source, /"You are offline\. Your current data is preserved until you reconnect\."/);
-  assert.match(source, /"SmartERP service is temporarily unavailable\. Please retry shortly\."/);
+  assert.match(source, /"Your connection needs attention"/);
+  assert.match(source, /"You’re currently offline"/);
+  assert.match(source, /"SmartERP is temporarily unavailable"/);
+  assert.match(source, /Connection status: offline/);
+  assert.match(source, /window\.setInterval/);
+  assert.match(source, /5500/);
   assert.match(source, /window\.addEventListener\("offline"/);
   assert.match(source, /window\.addEventListener\("online"/);
 });

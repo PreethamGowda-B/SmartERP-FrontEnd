@@ -150,6 +150,16 @@ export const signOut = async (): Promise<void> => {
   safeLocalStorage.removeItem("smarterp_admin_user")
   if (typeof window !== "undefined") {
     try { sessionStorage.removeItem("smarterp_dismiss_sub_card"); } catch {}
+    try {
+      const keysToRemove: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && k.startsWith("smarterp:owner:metrics")) {
+          keysToRemove.push(k)
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k))
+    } catch {}
   }
 
   // ✅ Notify Android bridge to clear native session

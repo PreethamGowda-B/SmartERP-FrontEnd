@@ -65,7 +65,7 @@ const customerApi: AxiosInstance = axios.create({
   },
 });
 
-// ── Request interceptor: attach X-CSRF-Token and Bearer token ─────────────
+// ── Request interceptor: attach the in-memory CSRF token ──────────────────
 customerApi.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const method = (config.method || 'get').toLowerCase();
   if (method === 'get') {
@@ -76,12 +76,6 @@ customerApi.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   }
   if (['post', 'put', 'patch', 'delete'].includes(method) && csrfToken) {
     config.headers['X-CSRF-Token'] = csrfToken;
-  }
-  if (typeof window !== 'undefined') {
-    const custToken = localStorage.getItem('_customer_at') || sessionStorage.getItem('_customer_at');
-    if (custToken && !config.headers['Authorization']) {
-      config.headers['Authorization'] = `Bearer ${custToken}`;
-    }
   }
   return config;
 });
@@ -144,11 +138,7 @@ customerApi.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshRes = await customerApi.post<{ ok: boolean; token?: string }>('/api/customer/auth/refresh');
-        if (refreshRes.data?.token && typeof window !== 'undefined') {
-          localStorage.setItem('_customer_at', refreshRes.data.token);
-          sessionStorage.setItem('_customer_at', refreshRes.data.token);
-        }
+        await customerApi.post<{ ok: boolean }>('/api/customer/auth/refresh');
         // Refresh new CSRF token after token rotation
         await fetchCsrfToken();
         onRefreshed();
@@ -159,14 +149,12 @@ customerApi.interceptors.response.use(
         // transient outage cannot sign a customer out.
         const refreshStatus = refreshError?.response?.status;
         const isRejectedRefresh = refreshStatus === 401 || refreshStatus === 403;
-        if (isRejectedRefresh && typeof window !== 'undefined') {
-          localStorage.removeItem('_customer_at');
-          sessionStorage.removeItem('_customer_at');
-        }
         onRefreshed();
-        if (isRejectedRefresh && typeof window !== 'undefined' && window.location.pathname.startsWith('/customer') && window.location.pathname !== '/customer/login') {
-          const isExpiredInactivity = refreshError?.response?.data?.code === 'SESSION_EXPIRED_INACTIVITY' || refreshError?.response?.data?.expired;
-          window.location.href = isExpiredInactivity ? '/customer/login?expired=inactivity' : '/customer/login';
+        if (isRejectedRefresh && typeof window !== 'undefined') {
+          if (isRejectedRefresh && typeof window !== 'undefined' && window.location.pathname.startsWith('/customer') && window.location.pathname !== '/customer/login') {
+            const isExpiredInactivity = refreshError?.response?.data?.code === 'SESSION_EXPIRED_INACTIVITY' || refreshError?.response?.data?.expired;
+            window.location.href = isExpiredInactivity ? '/customer/login?expired=inactivity' : '/customer/login';
+          }
         }
         return Promise.reject(refreshError);
       } finally {
