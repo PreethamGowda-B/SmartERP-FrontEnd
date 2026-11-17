@@ -34,6 +34,7 @@ import {
   MapPin,
   Sparkles,
   Factory,
+  Search,
 } from "lucide-react"
 
 export interface NavLeafItem {
@@ -181,7 +182,25 @@ export function EmployeeSidebar() {
         </div>
 
         {/* Navigation Categories */}
-        <nav className="flex-1 p-3 space-y-4 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+        <nav className="flex-1 p-3 space-y-3 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          {/* Quick Search / Command Palette Trigger */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsMobileMenuOpen(false)
+              document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }))
+            }}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-muted-foreground bg-sidebar-accent/50 hover:bg-sidebar-accent hover:text-foreground border border-sidebar-border/60 transition-all duration-150 cursor-pointer shadow-2xs group"
+            title="Search any task, job, or tool (⌘K / Ctrl+K)"
+          >
+            <span className="flex items-center gap-2 truncate">
+              <Search className="h-3.5 w-3.5 text-muted-foreground group-hover:text-amber-500 transition-colors shrink-0" />
+              <span className="truncate">Quick Search...</span>
+            </span>
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-background/80 border border-border/80 text-muted-foreground shadow-2xs shrink-0">
+              <span className="text-[9px]">⌘</span>K
+            </kbd>
+          </button>
           {navCategories.map((category) => (
             <div key={category.title} className="space-y-1">
               <h3 className="px-3 text-[10px] font-bold tracking-wider uppercase text-muted-foreground/70 mb-1.5 select-none">

@@ -542,3 +542,48 @@
 .leaflet-popup-pane {
   z-index: 5 !important;
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Enterprise Print Layout Standard
+   Hides navigation chrome and forces paper-optimized clean white rendering
+   ════════════════════════════════════════════════════════════════════════════ */
+@media print {
+  aside,
+  nav,
+  header,
+  .no-print,
+  button,
+  .cinema-grain,
+  [data-sonner-toaster],
+  .fixed,
+  .sticky {
+    display: none !important;
+  }
+
+  body,
+  main,
+  html {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt !important;
+  }
+
+  table,
+  tr,
+  td,
+  th,
+  .card,
+  [class*="rounded-"] {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  main,
+  .container,
+  [class*="lg:pl-"] {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
