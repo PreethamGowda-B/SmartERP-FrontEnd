@@ -69,6 +69,7 @@ test("Owner dashboard isolates widget failures with Promise.allSettled and ignor
   assert.match(dashboardSrc, /Promise\.allSettled/, "Dashboard must use Promise.allSettled to isolate widget errors");
   assert.match(dashboardSrc, /AbortError/, "Dashboard must recognize AbortError / cancelled requests");
   assert.match(dashboardSrc, /!authLoading && user/, "Dashboard must guard fetch until auth resolves and user exists");
+  assert.doesNotMatch(dashboardSrc, /useCallback\([^)]*,\s*\[[^\]]*\bmetrics\b[^\]]*\]\)/, "fetchDashboardData must not depend on metrics to prevent infinite re-fetch loops");
 });
 
 test("Dashboard trial banner guards against unauthenticated requests", () => {

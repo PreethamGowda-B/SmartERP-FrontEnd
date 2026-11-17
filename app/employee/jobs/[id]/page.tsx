@@ -51,24 +51,24 @@ export default function EmployeeJobDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const allJobs = await apiClient<any>("/api/jobs")
-      const list = Array.isArray(allJobs) ? allJobs : allJobs?.jobs || []
-      const found = list.find((j: any) => String(j.id) === String(jobId))
-      if (found) {
-        setJob(found)
+      // Parallelize single job retrieval and proof-of-work gallery fetch
+      const [jobResult, proofResult] = await Promise.allSettled([
+        apiClient<any>(`/api/jobs/${jobId}`),
+        apiClient<any>(`/api/jobs/${jobId}/proof-of-work`, { skipCache: true } as RequestInit),
+      ])
+
+      if (jobResult.status === "fulfilled") {
+        const singleJob = jobResult.value
+        setJob(singleJob?.job || singleJob)
       } else {
-        const singleJob = await apiClient<any>(`/api/jobs/${jobId}`).catch(() => null)
-        if (singleJob) setJob(singleJob?.job || singleJob)
-        else throw new Error("Job assignment not found.")
+        throw new Error("Job assignment not found.")
       }
 
-      try {
-        const proofRes = await apiClient<any>(`/api/jobs/${jobId}/proof-of-work`, { skipCache: true } as RequestInit)
-        if (!Array.isArray(proofRes?.proofs)) throw new Error("The proof response was incomplete.")
-        setProofs(proofRes.proofs)
+      if (proofResult.status === "fulfilled" && Array.isArray(proofResult.value?.proofs)) {
+        setProofs(proofResult.value.proofs)
         setProofError(null)
-      } catch (proofFetchError: any) {
-        setProofError(proofFetchError?.message || "Could not load site proof submissions.")
+      } else {
+        setProofError("Could not load site proof submissions.")
       }
     } catch (err: any) {
       setError(err.message || "Failed to load job details.")

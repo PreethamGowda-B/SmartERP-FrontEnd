@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { OwnerLayout } from "@/components/owner-layout"
 import { Badge } from "@/components/ui/badge"
@@ -112,7 +112,15 @@ function formatActivityTime(dateStr: string) {
 export default function OwnerDashboard() {
   const router = useRouter()
   const { user, isLoading: authLoading } = useAuth()
+
+  const metricsCacheKey = useMemo(() => {
+    if (!user) return null
+    const companyId = user.companyId || user.company_id || "global"
+    return `smarterp:owner:metrics:${companyId}:${user.id}`
+  }, [user])
+
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const [isStale, setIsStale] = useState(false)
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -123,6 +131,32 @@ export default function OwnerDashboard() {
   const [projectFilter, setProjectFilter] = useState<"all" | "in_progress" | "high_priority">("all")
   const [currentTime, setCurrentTime] = useState<Date | null>(null)
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null)
+  const metricsRef = useRef<DashboardMetrics | null>(metrics)
+
+  // Re-hydrate from company- and account-scoped cache whenever identity changes
+  useEffect(() => {
+    if (!metricsCacheKey || typeof window === "undefined") {
+      setMetrics(null)
+      return
+    }
+    try {
+      const cached = localStorage.getItem(metricsCacheKey)
+      if (cached) {
+        setMetrics(JSON.parse(cached))
+        setIsStale(true)
+        setLoading(false)
+      } else {
+        setMetrics(null)
+        setLoading(true)
+      }
+    } catch {
+      setMetrics(null)
+    }
+  }, [metricsCacheKey])
+
+  useEffect(() => {
+    metricsRef.current = metrics
+  }, [metrics])
 
   useEffect(() => {
     const updateClock = () => setCurrentTime(new Date())
@@ -146,12 +180,18 @@ export default function OwnerDashboard() {
 
       if (metricsRes.status === "fulfilled") {
         setMetrics(metricsRes.value)
+        setIsStale(false)
+        if (metricsCacheKey) {
+          try {
+            localStorage.setItem(metricsCacheKey, JSON.stringify(metricsRes.value))
+          } catch {}
+        }
       } else {
         const err = metricsRes.reason
         const isAbort = err?.name === "AbortError" || err?.message?.toLowerCase()?.includes("cancelled") || err?.message?.toLowerCase()?.includes("aborted")
         if (!isAbort) {
           logger.warn("Metrics fetch issue:", err?.message || err)
-          if (!metrics) {
+          if (!metricsRef.current) {
             setError({
               title: "Business metrics unavailable",
               message: err?.name === "TimeoutError" || err?.isTimeout || err?.message?.includes("timed out")
@@ -196,7 +236,7 @@ export default function OwnerDashboard() {
     } finally {
       if (showLoading) setLoading(false)
     }
-  }, [authLoading, user, metrics])
+  }, [authLoading, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!authLoading && user) fetchDashboardData()
@@ -391,7 +431,7 @@ export default function OwnerDashboard() {
                 <div className="mt-0.5 pl-6 text-[11px] text-slate-600 dark:text-slate-300">{currentTime?.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }) || "Loading date"}</div>
               </div>
               <div className="hidden h-9 w-px bg-slate-300/70 dark:bg-slate-700 sm:block" />
-              <div className="text-xs text-slate-600 dark:text-slate-300"><span className="block font-semibold text-slate-900 dark:text-white">SmartERP</span><span>{lastSyncedAt ? `Updated ${lastSyncedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}` : "Operations overview"}</span></div>
+              <div className="text-xs text-slate-600 dark:text-slate-300"><span className="block font-semibold text-slate-900 dark:text-white">SmartERP</span><span>{lastSyncedAt ? `Updated ${lastSyncedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}` : isStale ? "Cached • Syncing..." : "Operations overview"}</span></div>
               <Button variant="outline" size="sm" onClick={handleManualRefresh} disabled={isRefreshing} className="h-10 gap-2 rounded-xl border-white/80 bg-white/80 text-xs font-semibold text-slate-900 shadow-xs hover:bg-white dark:border-slate-700 dark:bg-slate-900/70 dark:text-white dark:hover:bg-slate-900">
                 <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
                 <span>{isRefreshing ? "Syncing" : "Sync Data"}</span>
