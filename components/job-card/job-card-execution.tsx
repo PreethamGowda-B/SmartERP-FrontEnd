@@ -179,7 +179,7 @@ export function JobCardExecution({
             {isProgressChanged && (
               <Button
                 size="sm"
-                className={`w-full h-8 text-xs font-black text-white rounded-xl shadow-xs transition-all active:scale-[0.99] ${
+                className={`w-full h-9 text-xs font-black text-white rounded-xl shadow-xs transition-all active:scale-[0.99] touch-manipulation ${
                   currentProgress === 100
                     ? "bg-emerald-700 hover:bg-emerald-800 ring-2 ring-emerald-500/20"
                     : "bg-emerald-600 hover:bg-emerald-700"
@@ -221,21 +221,21 @@ export function JobCardExecution({
           <div className="flex items-center gap-2 pt-1">
             <Button
               size="sm"
-              className="flex-1 h-7 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
+              className="flex-1 h-9 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl touch-manipulation active:scale-[0.99]"
               onClick={handleAcceptJob}
               disabled={isAccepting}
             >
-              {isAccepting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+              {isAccepting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
               Accept Job
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="h-7 text-[11px] font-bold border-rose-200 text-rose-700 hover:bg-rose-50 rounded-xl"
+              className="h-9 px-4 text-xs font-bold border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-950/30 rounded-xl touch-manipulation active:scale-[0.99]"
               onClick={handleDeclineJob}
               disabled={isDeclining}
             >
-              {isDeclining ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+              {isDeclining ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
               Decline
             </Button>
           </div>
