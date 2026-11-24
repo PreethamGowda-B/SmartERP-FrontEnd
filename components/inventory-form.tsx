@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
+import { MAX_FILE_SIZE, FILE_SIZE_ERROR_MESSAGE } from "@/lib/uploadConfig"
 
 type InventoryItem = {
   id: number
@@ -74,6 +75,14 @@ export default function InventoryForm({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        alert(FILE_SIZE_ERROR_MESSAGE)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ""
+        }
+        setImageFile(null)
+        return
+      }
       setImageFile(file)
       const reader = new FileReader()
       reader.onloadend = () => {

@@ -44,12 +44,15 @@ const firebaseConfig = {
   measurementId: requiredEnvVars.measurementId,
 };
 
-// Initialize Firebase
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+// Initialize Firebase only if mandatory client configuration is present
+const hasRequiredFirebaseConfig = Boolean(requiredEnvVars.apiKey && requiredEnvVars.projectId);
+const app = getApps().length > 0
+  ? getApp()
+  : (hasRequiredFirebaseConfig ? initializeApp(firebaseConfig) : null);
 
 let messaging: any = null;
 
-if (typeof window !== "undefined" && requiredEnvVars.projectId) {
+if (typeof window !== "undefined" && app && hasRequiredFirebaseConfig) {
   try {
     messaging = getMessaging(app);
   } catch (err) {

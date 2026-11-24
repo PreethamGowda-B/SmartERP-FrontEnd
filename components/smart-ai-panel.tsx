@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { VoiceInputModal } from "@/components/voice-input-modal"
 import { SmartAIRobot, type SmartAIRobotMood } from "@/components/smart-ai-robot"
+import { MAX_FILE_SIZE, FILE_SIZE_ERROR_MESSAGE } from "@/lib/uploadConfig"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -712,6 +713,11 @@ function SmartAIPanelInner({ user, pathname }: { user: any; pathname: string }) 
 
   async function uploadAiDocument(file?: File) {
     if (!file) return
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(FILE_SIZE_ERROR_MESSAGE)
+      setDocumentError(FILE_SIZE_ERROR_MESSAGE)
+      return
+    }
     setDocumentBusy(true)
     setDocumentError(null)
     try {

@@ -13,6 +13,7 @@ import { apiClient } from "@/lib/apiClient"
 import { useClockInGatekeeper } from "@/contexts/clock-in-gatekeeper-context"
 import { Camera, MapPin, CheckCircle2, Loader2, UploadCloud, Signature } from "lucide-react"
 import { CustomerSignaturePad } from "@/components/customer-signature-pad"
+import { MAX_FILE_SIZE, FILE_SIZE_ERROR_MESSAGE } from "@/lib/uploadConfig"
 
 interface ProofOfWorkModalProps {
   jobId: string
@@ -111,8 +112,8 @@ export function ProofOfWorkModal({ jobId, isOpen, onClose, onSuccess }: ProofOfW
         e.target.value = ""
         return
       }
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        toast({ title: "Photo is too large", description: "Choose an image smaller than 10 MB.", variant: "destructive" })
+      if (selectedFile.size > MAX_FILE_SIZE) {
+        toast({ title: "Photo is too large", description: FILE_SIZE_ERROR_MESSAGE, variant: "destructive" })
         e.target.value = ""
         return
       }

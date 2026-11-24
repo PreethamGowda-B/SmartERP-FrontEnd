@@ -24,10 +24,16 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${getApiOrigin()}/auth/register`, {
+      const res = await fetch(`${getApiOrigin()}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name: form.fullName,
+          email: form.email,
+          password: form.password,
+          phone: form.phone,
+          role: "owner"
+        }),
       });
 
       const data = await res.json();

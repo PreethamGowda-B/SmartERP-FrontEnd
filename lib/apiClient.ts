@@ -77,36 +77,68 @@ function getStorageKeys(targetPath?: string) {
 
 import { safeLocalStorage, safeSessionStorage } from "./storage"
 
+// ── Volatile in-memory token cache (SEC-02: raw JWTs are never persisted to localStorage) ──
+let memoryTokens: {
+  userAt: string | null;
+  userRt: string | null;
+  adminAt: string | null;
+  adminRt: string | null;
+} = {
+  userAt: null,
+  userRt: null,
+  adminAt: null,
+  adminRt: null,
+};
+
+export function clearLegacyLocalStorageTokens() {
+  if (typeof window === "undefined") return;
+  const sensitiveKeys = [
+    ADMIN_AT, ADMIN_RT, USER_AT, USER_RT,
+    "accessToken", "refreshToken",
+    "_at", "_rt", "_admin_at", "_admin_rt"
+  ];
+  sensitiveKeys.forEach(k => {
+    try { safeLocalStorage.removeItem(k); } catch (_) {}
+    try { safeSessionStorage.removeItem(k); } catch (_) {}
+  });
+}
+
+// Automatically purge any previously stored tokens on script evaluation
+if (typeof window !== "undefined") {
+  try {
+    clearLegacyLocalStorageTokens();
+  } catch (_) {}
+}
+
 export function setTokens(accessToken: string, refreshToken: string, isAdmin = false) {
   if (typeof window !== "undefined") {
-    const { at, rt } = isAdmin ? { at: ADMIN_AT, rt: ADMIN_RT } : { at: USER_AT, rt: USER_RT }
-    
-    // Store in both sessionStorage and localStorage for persistent cross-tab & cross-session logins
-    safeSessionStorage.setItem(at, accessToken)
-    safeSessionStorage.setItem(rt, refreshToken)
-    safeLocalStorage.setItem(at, accessToken)
-    safeLocalStorage.setItem(rt, refreshToken)
-
-    if (!isAdmin) {
-      safeLocalStorage.setItem("accessToken", accessToken)
-      safeLocalStorage.setItem("refreshToken", refreshToken)
+    if (isAdmin) {
+      memoryTokens.adminAt = accessToken;
+      memoryTokens.adminRt = refreshToken;
+    } else {
+      memoryTokens.userAt = accessToken;
+      memoryTokens.userRt = refreshToken;
     }
 
-    // Android WebView bridge — native token handoff
+    // SEC-02 Fix: Remove token persistence from browser localStorage and sessionStorage.
+    // Backend HttpOnly, SameSite cookies are the authoritative credential transport with credentials: "include".
+    clearLegacyLocalStorageTokens();
+
+    // Android WebView bridge — native token handoff preserved
     if (!!(window as any).Android) {
       try {
         if ((window as any).Android.saveToken) {
-          (window as any).Android.saveToken(accessToken, refreshToken)
+          (window as any).Android.saveToken(accessToken, refreshToken);
         }
       } catch (err) {
-        console.warn("Android bridge saveToken skipped or failed", err)
+        console.warn("Android bridge saveToken skipped or failed", err);
       }
     }
 
     // Broadcast token update across the window for SSE / realtime components
     window.dispatchEvent(new CustomEvent("auth-token-refreshed", {
       detail: { accessToken, refreshToken, isAdmin }
-    }))
+    }));
   }
 }
 
@@ -149,23 +181,21 @@ export function clearApiCache() {
 }
 
 export function clearTokens(isAdmin?: boolean) {
-  clearApiCache()
+  clearApiCache();
   if (typeof window !== "undefined") {
-    const keysToClear = isAdmin === true ? [{at: ADMIN_AT, rt: ADMIN_RT}] : 
-                       isAdmin === false ? [{at: USER_AT, rt: USER_RT}] :
-                       [{at: ADMIN_AT, rt: ADMIN_RT}, {at: USER_AT, rt: USER_RT}]
-    
-    keysToClear.forEach(k => {
-      safeSessionStorage.removeItem(k.at)
-      safeSessionStorage.removeItem(k.rt)
-      safeLocalStorage.removeItem(k.at)
-      safeLocalStorage.removeItem(k.rt)
-    })
-    
-    if (isAdmin !== true) {
-      safeLocalStorage.removeItem("accessToken")
-      safeLocalStorage.removeItem("refreshToken")
+    if (isAdmin === true) {
+      memoryTokens.adminAt = null;
+      memoryTokens.adminRt = null;
+    } else if (isAdmin === false) {
+      memoryTokens.userAt = null;
+      memoryTokens.userRt = null;
+    } else {
+      memoryTokens.adminAt = null;
+      memoryTokens.adminRt = null;
+      memoryTokens.userAt = null;
+      memoryTokens.userRt = null;
     }
+    clearLegacyLocalStorageTokens();
   }
 }
 
@@ -174,80 +204,56 @@ export function clearTokens(isAdmin?: boolean) {
  * Prioritize target API path and localStorage to ensure 100% cross-tab token synchronization.
  */
 export function getAuthToken(targetPath?: string): string | null {
-  if (typeof window === "undefined") return null
+  if (typeof window === "undefined") return null;
   
-  const { at } = getStorageKeys(targetPath)
-  const isSuperAdminTarget = at === ADMIN_AT
+  const { at } = getStorageKeys(targetPath);
+  const isSuperAdminTarget = at === ADMIN_AT;
 
   if (isSuperAdminTarget) {
-    const adminToken = safeLocalStorage.getItem(ADMIN_AT) || safeSessionStorage.getItem(ADMIN_AT)
-    if (adminToken) return adminToken
-    try {
-      const u = safeLocalStorage.getJSON<{ accessToken?: string }>("smarterp_admin_user")
-      if (u?.accessToken) return u.accessToken
-    } catch (_) {}
-    // Never send an Owner/Employee token to an admin-scoped request.
-    return null
+    if (memoryTokens.adminAt && !isTokenExpired(memoryTokens.adminAt)) {
+      return memoryTokens.adminAt;
+    }
+    if ((window as any).Android?.getAdminToken) {
+      try { return (window as any).Android.getAdminToken(); } catch (_) {}
+    }
+    return null;
   }
   
-  // 1. Check primary token in localStorage
-  const fromLocal = safeLocalStorage.getItem(at) || 
-                    safeLocalStorage.getItem("accessToken") || 
-                    safeLocalStorage.getItem(USER_AT)
-  if (fromLocal) return fromLocal
+  if (memoryTokens.userAt && !isTokenExpired(memoryTokens.userAt)) {
+    return memoryTokens.userAt;
+  }
 
-  // 2. Fallback to sessionStorage
-  const fromSession = safeSessionStorage.getItem(at) || 
-                      safeSessionStorage.getItem("accessToken") || 
-                      safeSessionStorage.getItem(USER_AT)
-  if (fromSession) return fromSession
+  if ((window as any).Android?.getToken) {
+    try { return (window as any).Android.getToken(); } catch (_) {}
+  }
 
-  // 3. Fallback: Parse user profile from localStorage
-  try {
-    const u = safeLocalStorage.getJSON<{ accessToken?: string }>("smarterp_user")
-    if (u?.accessToken) return u.accessToken
-  } catch (_) {}
-
-  return null
+  return null;
 }
 
 export function getAccessToken(targetPath?: string) {
-  return getAuthToken(targetPath)
+  return getAuthToken(targetPath);
 }
 
 export function getRefreshToken(targetPath?: string): string | null {
   if (typeof window !== "undefined") {
-    const { rt } = getStorageKeys(targetPath)
+    const { rt } = getStorageKeys(targetPath);
     if (rt === ADMIN_RT) {
-      const adminRefreshToken = safeLocalStorage.getItem(ADMIN_RT) || safeSessionStorage.getItem(ADMIN_RT)
-      if (adminRefreshToken) return adminRefreshToken
-      try {
-        const adminUser = safeLocalStorage.getJSON<{ refreshToken?: string }>("smarterp_admin_user")
-        if (adminUser?.refreshToken) return adminUser.refreshToken
-      } catch (_) {}
-      // Never refresh an admin request with the staff portal's token.
-      return null
+      if (memoryTokens.adminRt) return memoryTokens.adminRt;
+      if ((window as any).Android?.getAdminRefreshToken) {
+        try { return (window as any).Android.getAdminRefreshToken(); } catch (_) {}
+      }
+      return null;
     }
     
-    // 1. Check localStorage first (shared across all browser tabs)
-    const fromLocal = safeLocalStorage.getItem(rt) || 
-                      safeLocalStorage.getItem("refreshToken") ||
-                      safeLocalStorage.getItem(USER_RT)
-    if (fromLocal) return fromLocal
+    if (memoryTokens.userRt) return memoryTokens.userRt;
 
-    // 2. Fallback to sessionStorage
-    const fromSession = safeSessionStorage.getItem(rt) || 
-                        safeSessionStorage.getItem("refreshToken") ||
-                        safeSessionStorage.getItem(USER_RT)
-    if (fromSession) return fromSession
+    if ((window as any).Android?.getRefreshToken) {
+      try { return (window as any).Android.getRefreshToken(); } catch (_) {}
+    }
 
-    // 3. Fallback: Parse user profile from localStorage
-    try {
-      const u = safeLocalStorage.getJSON<{ refreshToken?: string }>("smarterp_user")
-      if (u?.refreshToken) return u.refreshToken
-    } catch (_) {}
+    return null;
   }
-  return null
+  return null;
 }
 
 // Sync sessionStorage whenever localStorage tokens change across tabs
@@ -379,10 +385,6 @@ export async function refreshAccessToken(targetPath?: string): Promise<string | 
   const { rt } = getStorageKeys(targetPath)
   const requestedRefreshToken = getRefreshToken(targetPath)
   const requestedAccessToken = getAuthToken(targetPath)
-  if (!requestedRefreshToken) {
-    refreshOutcomes.set(rt, "invalid")
-    return null
-  }
 
   const existingRefresh = refreshPromises.get(rt)
   if (existingRefresh) return existingRefresh
@@ -396,10 +398,6 @@ export async function refreshAccessToken(targetPath?: string): Promise<string | 
     // refresh token (which the server correctly treats as credential reuse).
     const expectedAccessToken = getAuthToken(targetPath)
     const expectedRefreshToken = getRefreshToken(targetPath)
-    if (!expectedRefreshToken) {
-      refreshOutcomes.set(rt, "invalid")
-      return null
-    }
     if (
       expectedAccessToken &&
       !isTokenExpired(expectedAccessToken) &&

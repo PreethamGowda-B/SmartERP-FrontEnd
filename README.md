@@ -182,7 +182,7 @@ The frontend integrates with the backend via a standardized, typed client locate
 
 - **Base URL Discovery:**
   - Production: Uses explicit configured HTTPS origin (`NEXT_PUBLIC_API_URL=https://api.prozync.in`).
-  - Development: Defaults to `http://localhost:5000` with strict checks against remote leakages.
+  - Development: Defaults to `http://localhost:4000` with strict checks against remote leakages.
 - **Server-Sent Events (SSE):**
   - Connected to `/api/notifications/sse` with `withCredentials: true`.
   - Immune to URL token leakage and hardened against Cloudflare QUIC edge stream resets.
@@ -261,7 +261,7 @@ Create a `.env.local` file in the repository root based on `.env.example`:
 
 ```bash
 # Backend REST API Origin (No trailing slash)
-NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_API_URL=http://localhost:4000
 
 # Application Environment ('development', 'staging', 'production')
 NEXT_PUBLIC_APP_ENV=development

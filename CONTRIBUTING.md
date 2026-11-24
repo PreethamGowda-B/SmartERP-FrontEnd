@@ -41,7 +41,7 @@ Examples:
 ### Prerequisites
 - **Node.js**: `v20.x` or `v22.x` (LTS recommended)
 - **Package Manager**: `npm` (v10+)
-- **Backend API**: Running locally on `http://localhost:5000` or connected to staging (`https://api.prozync.in`)
+- **Backend API**: Running locally on `http://localhost:4000` or connected to staging (`https://api.prozync.in`)
 
 ### Installation & Run
 ```bash

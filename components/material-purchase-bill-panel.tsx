@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Upload, FileText, RefreshCw } from "lucide-react"
+import { MAX_FILE_SIZE, FILE_SIZE_ERROR_MESSAGE } from "@/lib/uploadConfig"
 
 type Bill = {
   id: string
@@ -67,7 +68,7 @@ export function MaterialPurchaseBillPanel({ requestId, requestStatus }: { reques
     const data = new FormData(form)
     const file = data.get("invoice")
     if (!(file instanceof File) || !file.size) { setError("Choose a PDF, JPG, JPEG or PNG invoice."); return }
-    if (file.size > 10 * 1024 * 1024) { setError("Invoice must be 10 MB or smaller."); return }
+    if (file.size > MAX_FILE_SIZE) { setError(FILE_SIZE_ERROR_MESSAGE); return }
     setUploading(true)
     try {
       const result = await apiClient<{ success: boolean; ai_status?: string; message?: string }>(`/api/material-requests/${requestId}/purchase-bills`, { method: "POST", body: data })
@@ -106,7 +107,7 @@ export function MaterialPurchaseBillPanel({ requestId, requestStatus }: { reques
     {error && <p role="alert" className="rounded-md bg-rose-50 p-2 text-xs text-rose-700">{error}</p>}
     {message && <p role="status" className="rounded-md bg-emerald-50 p-2 text-xs text-emerald-700">{message}</p>}
     {requestStatus === "accepted" && <form onSubmit={submit} className="grid grid-cols-1 gap-2 md:grid-cols-2">
-      <div className="space-y-1"><Label className="text-[11px]">Invoice file (PDF/JPG/PNG, max 10 MB)</Label><Input name="invoice" type="file" accept="application/pdf,image/jpeg,image/png" required disabled={uploading} className="h-9 text-xs" /></div>
+      <div className="space-y-1"><Label className="text-[11px]">Invoice file (PDF/JPG/PNG, max 5 MB)</Label><Input name="invoice" type="file" accept="application/pdf,image/jpeg,image/png" required disabled={uploading} className="h-9 text-xs" /></div>
       <div className="space-y-1"><Label className="text-[11px]">Supplier name</Label><Input name="supplier_name" required disabled={uploading} placeholder="Supplier / vendor" className="h-9 text-xs" /></div>
       <div className="space-y-1"><Label className="text-[11px]">Invoice number</Label><Input name="invoice_number" required disabled={uploading} placeholder="Invoice number" className="h-9 text-xs" /></div>
       <div className="space-y-1"><Label className="text-[11px]">Invoice date</Label><Input name="invoice_date" type="date" required disabled={uploading} className="h-9 text-xs" /></div>
