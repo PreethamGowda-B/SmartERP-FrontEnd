@@ -1,70 +1,147 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
+import jsPDF from "jspdf"
 import { EmployeeLayout } from "@/components/employee-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useAuth } from "@/contexts/auth-context"
+import { apiClient } from "@/lib/apiClient"
 import {
   Award,
   ShieldCheck,
   CheckCircle2,
   Cpu,
-  Clock,
-  Sparkles,
   Download,
-  AlertCircle,
   FileCheck,
-  Flame,
-  Zap,
-  TrendingUp,
+  Loader2,
+  Plus,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
-interface SkillItem {
-  id: string
-  name: string
-  category: "Machine Operation" | "Electrical & Diagnostics" | "Safety & Quality"
-  level: "Expert" | "Proficient" | "Intermediate" | "Basic"
-  percentage: number
-  verifiedBy: string
+interface SkillRecord {
+  id: string | number
+  skill_name: string
+  certification_name?: string | null
+  issuing_authority?: string | null
+  expiry_date?: string | null
+  created_at?: string
 }
-
-interface Certification {
-  id: string
-  title: string
-  issuingBody: string
-  validUntil: string
-  status: "active" | "expiring_soon" | "expired"
-  certNumber: string
-}
-
-const DEFAULT_SKILLS: SkillItem[] = [
-  { id: "sk-1", name: "Fanuc 0i-MF 3-Axis & 5-Axis CNC Milling", category: "Machine Operation", level: "Expert", percentage: 95, verifiedBy: "SmartERP Certified" },
-  { id: "sk-2", name: "Siemens 840D SL Controller Programming & Tuning", category: "Machine Operation", level: "Proficient", percentage: 85, verifiedBy: "Chief Technical Engineer" },
-  { id: "sk-3", name: "Laser Interferometer Pitch Error & Backlash Compensation", category: "Electrical & Diagnostics", level: "Expert", percentage: 92, verifiedBy: "Quality Directorate" },
-  { id: "sk-4", name: "Hydraulic Pack & Nitrogen Accumulator Servicing", category: "Electrical & Diagnostics", level: "Proficient", percentage: 80, verifiedBy: "Field Service Lead" },
-  { id: "sk-5", name: "ISO 45001 Industrial Safety & LOTO Protocol", category: "Safety & Quality", level: "Expert", percentage: 100, verifiedBy: "Safety Compliance Officer" },
-  { id: "sk-6", name: "Six Sigma Root-Cause Defect Analysis", category: "Safety & Quality", level: "Intermediate", percentage: 75, verifiedBy: "Operations Manager" },
-]
-
-const DEFAULT_CERTS: Certification[] = [
-  { id: "c-1", title: "Certified CNC Field Service Specialist (Level 3)", issuingBody: "National Machine Tool Builders Institute", validUntil: "15 Oct 2027", status: "active", certNumber: "NMTB-98421" },
-  { id: "c-2", title: "High Voltage Electrical Safety & Arc Flash Clearance", issuingBody: "Industrial Safety Standards Board", validUntil: "20 May 2028", status: "active", certNumber: "ISSB-77219" },
-  { id: "c-3", title: "Precision Coordinate Metrology & Calibration", issuingBody: "Metrology Accreditation Council", validUntil: "10 Nov 2026", status: "expiring_soon", certNumber: "MAC-44102" },
-]
 
 export default function EmployeeSkillsPage() {
   const { user } = useAuth()
-  const [skills] = useState<SkillItem[]>(DEFAULT_SKILLS)
-  const [certs] = useState<Certification[]>(DEFAULT_CERTS)
+  const [records, setRecords] = useState<SkillRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [form, setForm] = useState({
+    skill_name: "",
+    certification_name: "",
+    issuing_authority: "",
+    expiry_date: "",
+  })
+
+  const fetchSkills = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await apiClient("/api/hr/skills")
+      setRecords(Array.isArray(res?.skills) ? res.skills : [])
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to load skills and certifications")
+      setRecords([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchSkills()
+  }, [fetchSkills])
+
+  const handleDownloadPassport = () => {
+    const doc = new jsPDF()
+    doc.setFontSize(16)
+    doc.text("Employee Skill Passport & Certifications", 14, 20)
+    doc.setFontSize(10)
+    doc.text(`Employee: ${user?.name || "Employee"}`, 14, 30)
+    doc.text(`Role: ${user?.position || user?.role || "Staff"}`, 14, 36)
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 42)
+
+    let y = 54
+    if (records.length === 0) {
+      doc.text("No recorded skills or certifications yet.", 14, y)
+    } else {
+      records.forEach((rec, idx) => {
+        if (y > 270) {
+          doc.addPage()
+          y = 20
+        }
+        doc.setFontSize(11)
+        doc.text(`${idx + 1}. ${rec.skill_name}`, 14, y)
+        y += 6
+        doc.setFontSize(9)
+        const details = [
+          rec.certification_name ? `Certification: ${rec.certification_name}` : null,
+          rec.issuing_authority ? `Authority: ${rec.issuing_authority}` : null,
+          rec.expiry_date ? `Expires: ${new Date(rec.expiry_date).toLocaleDateString()}` : null,
+        ]
+          .filter(Boolean)
+          .join(" | ")
+        if (details) {
+          doc.text(details, 18, y)
+          y += 6
+        }
+        y += 2
+      })
+    }
+    doc.save(`skill-passport-${(user?.name || "employee").toLowerCase().replace(/\s+/g, "-")}.pdf`)
+    toast.success("Skill Passport PDF downloaded")
+  }
+
+  const handleSubmitCert = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.skill_name.trim()) {
+      toast.error("Please enter a skill name")
+      return
+    }
+    setSubmitting(true)
+    try {
+      await apiClient("/api/hr/skills", {
+        method: "POST",
+        body: JSON.stringify({
+          skill_name: form.skill_name.trim(),
+          certification_name: form.certification_name.trim() || null,
+          issuing_authority: form.issuing_authority.trim() || null,
+          expiry_date: form.expiry_date || null,
+        }),
+      })
+      toast.success("Skill & certification submitted")
+      setForm({ skill_name: "", certification_name: "", issuing_authority: "", expiry_date: "" })
+      setDialogOpen(false)
+      await fetchSkills()
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to submit certification")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const certRecords = records.filter((r) => r.certification_name)
 
   return (
     <EmployeeLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -78,48 +155,42 @@ export default function EmployeeSkillsPage() {
             </p>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => alert("Digital Skill Passport PDF export generated.")}
-            className="self-start sm:self-auto gap-1.5 text-xs font-semibold"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Download Skill Passport
-          </Button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadPassport}
+              className="gap-1.5 text-xs font-semibold"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download Skill Passport
+            </Button>
+            <Button size="sm" onClick={() => setDialogOpen(true)} className="gap-1.5 text-xs font-semibold">
+              <Plus className="h-3.5 w-3.5" />
+              Add Skill / Cert
+            </Button>
+          </div>
         </div>
 
-        {/* Top Profile Summary Card */}
         <Card className="border-border/80 shadow-xs bg-gradient-to-r from-card via-amber-500/5 to-card">
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-500 text-white flex items-center justify-center font-extrabold text-2xl shadow-lg shadow-orange-500/20 shrink-0">
                 {user?.name?.charAt(0).toUpperCase() || "E"}
               </div>
-
               <div className="flex-1 text-center sm:text-left space-y-1">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <h2 className="text-lg font-extrabold text-foreground">{user?.name || "Field Specialist"}</h2>
-                  <Badge className="bg-amber-500 text-white text-[10px] font-bold self-center sm:self-auto">
-                    LEVEL 3 SPECIALIST
-                  </Badge>
-                </div>
+                <h2 className="text-lg font-extrabold text-foreground">{user?.name || "Field Specialist"}</h2>
                 <p className="text-xs text-muted-foreground font-medium">
-                  {user?.position || "Senior CNC Field Service Engineer"} • {user?.company_name || "Enterprise Operations"}
+                  {user?.position || "Staff"} • {user?.company_name || "Workspace"}
                 </p>
-
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 pt-2 text-xs">
                   <span className="flex items-center gap-1 text-muted-foreground">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    <strong>6</strong> Verified Skills
+                    <strong>{records.length}</strong> Recorded Skills
                   </span>
                   <span className="flex items-center gap-1 text-muted-foreground">
                     <ShieldCheck className="h-4 w-4 text-blue-500" />
-                    <strong>3</strong> Active Certifications
-                  </span>
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    <Flame className="h-4 w-4 text-orange-500" />
-                    Top 5% Performance Score
+                    <strong>{certRecords.length}</strong> Certifications
                   </span>
                 </div>
               </div>
@@ -127,106 +198,140 @@ export default function EmployeeSkillsPage() {
           </CardContent>
         </Card>
 
-        {/* Skill Matrix Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Technical Proficiencies */}
-          <Card className="border-border/80 shadow-xs">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground gap-2 text-sm">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading skills &amp; certifications...
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="border-border/80 shadow-xs">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
                   <Cpu className="h-4 w-4 text-amber-500" />
-                  Technical Proficiencies &amp; Machine Operation
+                  Recorded Technical Skills
                 </CardTitle>
-                <Badge variant="outline" className="text-[10px] font-mono">
-                  VERIFIED
-                </Badge>
-              </div>
-              <CardDescription className="text-xs">
-                Audited hands-on capabilities across CNC machines, electrical diagnostic rigs, and safety compliance.
-              </CardDescription>
-            </CardHeader>
+                <CardDescription className="text-xs">
+                  Synced with HR skill matrix records.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 pt-2 space-y-3">
+                {records.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">No skills recorded yet.</p>
+                ) : (
+                  records.map((skill) => (
+                    <div key={skill.id} className="p-3 rounded-xl bg-secondary/30 border border-border/40 flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-foreground">{skill.skill_name}</span>
+                      {skill.issuing_authority && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {skill.issuing_authority}
+                        </Badge>
+                      )}
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
 
-            <CardContent className="p-6 pt-2 space-y-4">
-              {skills.map((skill) => (
-                <div key={skill.id} className="space-y-1.5 p-3 rounded-xl bg-secondary/30 border border-border/40">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-foreground">{skill.name}</span>
-                    <Badge variant="secondary" className="text-[10px] font-bold uppercase">
-                      {skill.level}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Progress value={skill.percentage} className="h-1.5 flex-1" />
-                    <span className="text-[11px] font-mono font-bold text-muted-foreground">{skill.percentage}%</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-0.5">
-                    <span className="uppercase tracking-wider font-semibold">{skill.category}</span>
-                    <span>Verified by: {skill.verifiedBy}</span>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Certifications & Clearances */}
-          <Card className="border-border/80 shadow-xs">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+            <Card className="border-border/80 shadow-xs">
+              <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
                   <FileCheck className="h-4 w-4 text-emerald-500" />
-                  Accreditations &amp; Safety Clearances
+                  Accreditations &amp; Certifications
                 </CardTitle>
-                <Badge variant="outline" className="text-[10px] font-mono">
-                  ISO / OSHA
-                </Badge>
-              </div>
-              <CardDescription className="text-xs">
-                Official regulatory and vendor credentials authorizing site operations.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="p-6 pt-2 space-y-3.5">
-              {certs.map((cert) => {
-                const statusBadge =
-                  cert.status === "active"
-                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
-
-                return (
-                  <div key={cert.id} className="p-4 rounded-xl border border-border/70 bg-card hover:shadow-xs transition-all space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="text-xs font-bold text-foreground leading-snug">{cert.title}</h4>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">{cert.issuingBody}</p>
-                      </div>
-                      <Badge className={cn("text-[10px] uppercase font-bold", statusBadge)}>
-                        {cert.status === "active" ? "Valid" : "Renew Soon"}
-                      </Badge>
+                <CardDescription className="text-xs">
+                  Official credentials submitted for HR verification.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 pt-2 space-y-3.5">
+                {certRecords.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">No certifications recorded yet.</p>
+                ) : (
+                  certRecords.map((cert) => (
+                    <div key={cert.id} className="p-4 rounded-xl border border-border/70 bg-card space-y-1.5">
+                      <h4 className="text-xs font-bold text-foreground">{cert.certification_name}</h4>
+                      <p className="text-[11px] text-muted-foreground">{cert.issuing_authority || "Verified Issuer"}</p>
+                      {cert.expiry_date && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Valid until: <strong>{new Date(cert.expiry_date).toLocaleDateString()}</strong>
+                        </p>
+                      )}
                     </div>
+                  ))
+                )}
 
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/50">
-                      <span className="font-mono">ID: {cert.certNumber}</span>
-                      <span>Valid until: <strong>{cert.validUntil}</strong></span>
-                    </div>
+                <div className="p-4 rounded-xl border border-dashed border-border flex items-center justify-between text-xs">
+                  <div className="space-y-0.5">
+                    <span className="font-bold text-foreground">Have a new certificate?</span>
+                    <p className="text-[11px] text-muted-foreground">Submit for supervisor verification and HR recording.</p>
                   </div>
-                )
-              })}
-
-              <div className="p-4 rounded-xl border border-dashed border-border flex items-center justify-between text-xs">
-                <div className="space-y-0.5">
-                  <span className="font-bold text-foreground">Have a new certificate?</span>
-                  <p className="text-[11px] text-muted-foreground">Submit for supervisor verification and HR recording.</p>
+                  <Button size="sm" variant="outline" className="text-xs h-8" onClick={() => setDialogOpen(true)}>
+                    Add Cert
+                  </Button>
                 </div>
-                <Button size="sm" variant="outline" className="text-xs h-8" onClick={() => alert("Upload certificate document modal.")}>
-                  Upload Cert
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Submit Skill &amp; Certification</DialogTitle>
+            <DialogDescription>
+              Record a verified skill or safety certification in your HR profile.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmitCert} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="skill_name">Skill Name *</Label>
+              <Input
+                id="skill_name"
+                value={form.skill_name}
+                onChange={(e) => setForm((f) => ({ ...f, skill_name: e.target.value }))}
+                placeholder="e.g. Fanuc 0i-MF CNC Operation"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="certification_name">Certification Title</Label>
+              <Input
+                id="certification_name"
+                value={form.certification_name}
+                onChange={(e) => setForm((f) => ({ ...f, certification_name: e.target.value }))}
+                placeholder="e.g. ISO 45001 Safety Clearance"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="issuing_authority">Issuing Authority</Label>
+              <Input
+                id="issuing_authority"
+                value={form.issuing_authority}
+                onChange={(e) => setForm((f) => ({ ...f, issuing_authority: e.target.value }))}
+                placeholder="e.g. National Safety Council"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="expiry_date">Expiry Date</Label>
+              <Input
+                id="expiry_date"
+                type="date"
+                value={form.expiry_date}
+                onChange={(e) => setForm((f) => ({ ...f, expiry_date: e.target.value }))}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                Submit
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </EmployeeLayout>
   )
 }

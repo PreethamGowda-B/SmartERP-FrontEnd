@@ -28,6 +28,8 @@ import { DollarSign, Plus, Loader2, Search, Calendar, FileText, ShieldCheck, Ale
 import { OwnerLayout } from "@/components/owner-layout"
 import { apiClient } from "@/lib/apiClient"
 import { ExportButton } from "@/components/export-button"
+import { toast } from "sonner"
+import jsPDF from "jspdf"
 import { logger } from "@/lib/logger"
 import { ErrorView } from "@/components/ui/error-view"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -241,7 +243,7 @@ function OwnerPayrollContent() {
       // Close dialog
       setDialogOpen(false)
 
-      alert("Payroll disbursement created successfully!")
+      toast.success("Payroll disbursement created successfully!")
     } catch (err: any) {
       setFormError(err.message || "Failed to create payroll disbursement")
     } finally {
@@ -775,7 +777,27 @@ function OwnerPayrollContent() {
                         size="sm"
                         variant="outline"
                         className="h-7 text-xs px-2"
-                        onClick={() => alert(`Downloading payslip for ${payroll.employee_name}`)}
+                        onClick={() => {
+                          const doc = new jsPDF()
+                          doc.setFontSize(16)
+                          doc.text("Salary Payslip", 14, 20)
+                          doc.setFontSize(10)
+                          doc.text(`Employee: ${payroll.employee_name || "Employee"}`, 14, 32)
+                          doc.text(`Email: ${payroll.employee_email || "-"}`, 14, 38)
+                          doc.text(`Period: ${payroll.payroll_month}/${payroll.payroll_year}`, 14, 44)
+                          doc.text(`Base Salary: INR ${Number(payroll.base_salary || 0).toLocaleString("en-IN")}`, 14, 56)
+                          doc.text(`Extra / Bonus: INR ${Number(payroll.extra_amount || 0).toLocaleString("en-IN")}`, 14, 62)
+                          doc.text(`Increment: INR ${Number(payroll.salary_increment || 0).toLocaleString("en-IN")}`, 14, 68)
+                          doc.text(`Deductions: INR ${Number(payroll.deduction || 0).toLocaleString("en-IN")}`, 14, 74)
+                          doc.setFontSize(12)
+                          doc.text(`Net Total Salary: INR ${Number(payroll.total_salary || 0).toLocaleString("en-IN")}`, 14, 86)
+                          if (payroll.remarks) {
+                            doc.setFontSize(9)
+                            doc.text(`Remarks: ${payroll.remarks}`, 14, 96)
+                          }
+                          doc.save(`payslip-${payroll.employee_name || payroll.id}-${payroll.payroll_month}-${payroll.payroll_year}.pdf`)
+                          toast.success(`Payslip downloaded for ${payroll.employee_name}`)
+                        }}
                       >
                         <FileText className="h-3 w-3 mr-1" /> Slip
                       </Button>

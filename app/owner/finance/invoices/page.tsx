@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,13 +83,10 @@ function InvoicesContent() {
     fetchInvoices()
   }, [fetchInvoices])
 
-  const handleSendWhatsApp = async (inv: any) => {
-    let phone = inv.customer_phone
-    if (!phone || !phone.trim()) {
-      phone = window.prompt("Enter customer WhatsApp phone number (with country code, e.g. 919876543210):")
-      if (!phone) return
-    }
+  const [dispatchPrompt, setDispatchPrompt] = useState<{ type: "whatsapp" | "email"; inv: any } | null>(null)
+  const [dispatchContact, setDispatchContact] = useState("")
 
+  const dispatchWhatsApp = async (inv: any, phone: string) => {
     try {
       await apiClient(`/api/invoices/${inv.id}/send-whatsapp`, {
         method: "POST",
@@ -104,7 +103,6 @@ function InvoicesContent() {
         })
         return
       }
-      // Direct Web WhatsApp fallback
       const cleanPhone = phone.replace(/[^0-9]/g, "")
       const invoiceNumber = inv.invoice_number || "Invoice"
       const total = inv.total_amount || 0
@@ -116,13 +114,17 @@ function InvoicesContent() {
     }
   }
 
-  const handleSendEmail = async (inv: any) => {
-    let email = inv.customer_email
-    if (!email || !email.trim()) {
-      email = window.prompt("Enter customer email address:")
-      if (!email) return
+  const handleSendWhatsApp = async (inv: any) => {
+    const phone = inv.customer_phone
+    if (!phone || !phone.trim()) {
+      setDispatchContact("")
+      setDispatchPrompt({ type: "whatsapp", inv })
+      return
     }
+    await dispatchWhatsApp(inv, phone)
+  }
 
+  const dispatchEmail = async (inv: any, email: string) => {
     try {
       await apiClient(`/api/invoices/${inv.id}/send-email`, {
         method: "POST",
@@ -141,6 +143,16 @@ function InvoicesContent() {
       }
       toast({ title: "Email Failed", description: err.message || "Email dispatch failed. Verify email settings.", variant: "destructive" })
     }
+  }
+
+  const handleSendEmail = async (inv: any) => {
+    const email = inv.customer_email
+    if (!email || !email.trim()) {
+      setDispatchContact("")
+      setDispatchPrompt({ type: "email", inv })
+      return
+    }
+    await dispatchEmail(inv, email)
   }
 
   const handleDirectPrint = (invId: string) => {
@@ -487,6 +499,53 @@ function InvoicesContent() {
         onPaymentRecorded={() => fetchInvoices()}
         onOpenPayment={(inv) => setPaymentInvoice(inv)}
       />
+
+      <Dialog open={Boolean(dispatchPrompt)} onOpenChange={(open) => !open && setDispatchPrompt(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {dispatchPrompt?.type === "whatsapp" ? "Send Invoice via WhatsApp" : "Send Invoice via Email"}
+            </DialogTitle>
+            <DialogDescription>
+              {dispatchPrompt?.type === "whatsapp"
+                ? "Enter customer WhatsApp phone number (with country code, e.g. 919876543210)."
+                : "Enter customer email address to dispatch the invoice PDF."}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              if (!dispatchPrompt || !dispatchContact.trim()) return
+              const current = dispatchPrompt
+              const contact = dispatchContact.trim()
+              setDispatchPrompt(null)
+              if (current.type === "whatsapp") await dispatchWhatsApp(current.inv, contact)
+              else await dispatchEmail(current.inv, contact)
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="dispatch-contact">
+                {dispatchPrompt?.type === "whatsapp" ? "WhatsApp Number" : "Email Address"}
+              </Label>
+              <Input
+                id="dispatch-contact"
+                type={dispatchPrompt?.type === "whatsapp" ? "tel" : "email"}
+                value={dispatchContact}
+                onChange={(e) => setDispatchContact(e.target.value)}
+                placeholder={dispatchPrompt?.type === "whatsapp" ? "919876543210" : "customer@company.com"}
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDispatchPrompt(null)}>
+                Cancel
+              </Button>
+              <Button type="submit">Send</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </OwnerLayout>
   )
 }

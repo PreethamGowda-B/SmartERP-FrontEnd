@@ -205,7 +205,12 @@ export function BillingView() {
         },
       }
 
-      const rzp = new window.Razorpay(options)
+      const rzp = new window.Razorpay({
+        ...options,
+        modal: {
+          ondismiss: () => setUpgrading(false),
+        },
+      })
       rzp.on("payment.failed", (response: any) => {
         toast({ title: "Payment not completed", description: response?.error?.description || "No subscription change was made.", variant: "destructive" })
         setUpgrading(false)
@@ -219,7 +224,6 @@ export function BillingView() {
         description: err.message || "Failed to initiate upgrade process.",
         variant: "destructive"
       })
-    } finally {
       setUpgrading(false)
     }
   }

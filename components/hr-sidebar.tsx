@@ -33,6 +33,7 @@ import {
   ShieldCheck,
   HeartPulse,
   Search,
+  Settings,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -53,7 +54,11 @@ const navigation = [
   { name: "Exit Offboarding", href: "/hr/exit", icon: LogOut },
   { name: "Announcements & Hub", href: "/hr/hr-hub", icon: Megaphone },
   { name: "Customer Jobs", href: "/hr/customer-jobs", icon: UserCheck },
+  { name: "Tasks & Operations", href: "/hr/tasks", icon: Briefcase },
   { name: "Messages", href: "/hr/messages", icon: MessageSquare },
+  { name: "Notifications", href: "/hr/notifications", icon: Bell },
+  { name: "Support", href: "/hr/support", icon: Headset },
+  { name: "Settings", href: "/hr/settings", icon: Settings },
 ]
 
 const hrNavHrefs = navigation.map((n) => n.href)

@@ -14,6 +14,7 @@ import { apiClient } from "@/lib/apiClient"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { formatDistanceToNow, format } from "date-fns"
 import { cn } from "@/lib/utils"
 
@@ -87,11 +88,17 @@ export default function CompanyDetailPage() {
     }
   }
 
-  const handleToggleStatus = async () => {
+  const [confirmStatusOpen, setConfirmStatusOpen] = useState(false)
+
+  const handleToggleStatus = () => {
     if (!data) return
+    setConfirmStatusOpen(true)
+  }
+
+  const confirmToggleStatus = async () => {
+    if (!data) return
+    setConfirmStatusOpen(false)
     const newStatus = data.company.status === "suspended" ? "active" : "suspended"
-    const confirmed = confirm(`${newStatus === "suspended" ? "Suspend" : "Re-activate"} ${data.company.company_name}?`)
-    if (!confirmed) return
     try {
       await apiClient(`/api/admin/companies/${companyId}/status`, {
         method: "PATCH",
@@ -378,6 +385,16 @@ export default function CompanyDetailPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmStatusOpen}
+        onOpenChange={setConfirmStatusOpen}
+        title={data?.company.status === "suspended" ? "Re-activate Company" : "Suspend Company"}
+        description={`${data?.company.status === "suspended" ? "Re-activate" : "Suspend"} ${data?.company.company_name || "this company"}?`}
+        confirmLabel={data?.company.status === "suspended" ? "Re-activate" : "Suspend"}
+        destructive={data?.company.status !== "suspended"}
+        onConfirm={confirmToggleStatus}
+      />
     </AdminLayout>
   )
 }

@@ -25,6 +25,7 @@ import { SkeletonList } from "@/components/ui/skeleton-card"
 import { ExecutiveJobCard } from "@/components/executive-job-card"
 import { ApprovalCenterView } from "@/components/approval-center-view"
 import { JobDetailsModal } from "@/components/job-details-modal"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { toast } from "sonner"
 
 const AUTO_REFRESH_MS = 30_000
@@ -125,18 +126,25 @@ function OwnerJobsPageContent() {
     setIsFormOpen(true)
   }
 
-  const handleDeleteJob = async (job: Job) => {
-    if (confirm(`Are you sure you want to delete "${job.title}"?`)) {
-      try {
-        await deleteJob(job.id)
-        setLastUpdated(new Date())
-        toast.success("Job deleted successfully.")
-      } catch (err: any) {
-        setError({
-          title: "Failed to Delete Job",
-          message: err.message || "Could not delete the job. Please try again.",
-        })
-      }
+  const [jobToDelete, setJobToDelete] = useState<Job | null>(null)
+
+  const handleDeleteJob = (job: Job) => {
+    setJobToDelete(job)
+  }
+
+  const confirmDeleteJob = async () => {
+    if (!jobToDelete) return
+    const job = jobToDelete
+    setJobToDelete(null)
+    try {
+      await deleteJob(job.id)
+      setLastUpdated(new Date())
+      toast.success("Job deleted successfully.")
+    } catch (err: any) {
+      setError({
+        title: "Failed to Delete Job",
+        message: err.message || "Could not delete the job. Please try again.",
+      })
     }
   }
 
@@ -449,6 +457,15 @@ function OwnerJobsPageContent() {
             />
           </DialogContent>
         </Dialog>
+
+        <ConfirmDialog
+          open={Boolean(jobToDelete)}
+          onOpenChange={(open) => !open && setJobToDelete(null)}
+          title="Delete Job"
+          description={`Are you sure you want to delete "${jobToDelete?.title || "this job"}"?`}
+          confirmLabel="Delete"
+          onConfirm={confirmDeleteJob}
+        />
       </div>
     </OwnerLayout>
   )

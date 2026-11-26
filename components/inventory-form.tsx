@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { MAX_FILE_SIZE, FILE_SIZE_ERROR_MESSAGE } from "@/lib/uploadConfig"
+import { toast } from "sonner"
 
 type InventoryItem = {
   id: number
@@ -76,7 +77,7 @@ export default function InventoryForm({
     const file = e.target.files?.[0]
     if (file) {
       if (file.size > MAX_FILE_SIZE) {
-        alert(FILE_SIZE_ERROR_MESSAGE)
+        toast.error(FILE_SIZE_ERROR_MESSAGE)
         if (fileInputRef.current) {
           fileInputRef.current.value = ""
         }
@@ -112,7 +113,7 @@ export default function InventoryForm({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) {
-      alert("Please enter an item name")
+      toast.error("Please enter an item name")
       return
     }
 
@@ -140,12 +141,12 @@ export default function InventoryForm({
         body: formData,
       })
 
-      alert(item ? "Item updated successfully" : "Item added successfully")
+      toast.success(item ? "Item updated successfully" : "Item added successfully")
       resetForm()
       onItemAdded?.()
     } catch (err: any) {
       logger.error("Inventory submission error:", err)
-      alert(err.message || "Error submitting form")
+      toast.error(err.message || "Error submitting form")
     } finally {
       setLoading(false)
     }

@@ -21,6 +21,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface ManualArticle {
   id: string
@@ -222,7 +223,33 @@ export default function KnowledgeBasePage() {
                       {activeArticle.category}
                     </Badge>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => alert("SOP guide ready for offline mobile access.")}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1.5"
+                        onClick={() => {
+                          const content = [
+                            activeArticle.title,
+                            `Category: ${activeArticle.category}`,
+                            activeArticle.controller ? `Controller: ${activeArticle.controller}` : null,
+                            "",
+                            activeArticle.summary,
+                            "",
+                            "Execution Checklist & Technical Steps:",
+                            ...activeArticle.steps.map((s, idx) => `${idx + 1}. ${s}`),
+                          ]
+                            .filter(Boolean)
+                            .join("\n")
+                          const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement("a")
+                          a.href = url
+                          a.download = `${activeArticle.id}-sop-guide.txt`
+                          a.click()
+                          URL.revokeObjectURL(url)
+                          toast.success("SOP guide downloaded for offline access.")
+                        }}
+                      >
                         <Download className="h-3.5 w-3.5" /> Save Offline
                       </Button>
                     </div>

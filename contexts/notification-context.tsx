@@ -135,7 +135,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           logger.log("FCM messaging disabled (missing firebaseConfig.projectId)");
           return;
         }
-        const { getToken: getFCMToken, onMessage } = await import("firebase/messaging");
+        const { getToken: getFCMToken, onMessage } = await import("@firebase/messaging");
 
         // Explicitly register service worker for reliability
         const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");

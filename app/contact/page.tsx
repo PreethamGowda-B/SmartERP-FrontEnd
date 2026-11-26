@@ -1,10 +1,25 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Building2, Mail, Phone, MapPin, ArrowRight, UserCheck, Send } from "lucide-react"
+import { Building2, Mail, Phone, MapPin, ArrowRight, UserCheck, Send, CheckCircle2 } from "lucide-react"
 
 export default function ContactPage() {
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [message, setMessage] = useState("")
+  const [submitted, setSubmitted] = useState(false)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim() || !email.trim() || !message.trim()) return
+    const subject = encodeURIComponent(`SmartERP Inquiry from ${name.trim()}`)
+    const body = encodeURIComponent(`Name: ${name.trim()}\nEmail: ${email.trim()}\n\n${message.trim()}`)
+    window.location.href = `mailto:prozyncinnovations@gmail.com?subject=${subject}&body=${body}`
+    setSubmitted(true)
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/60">
@@ -54,25 +69,34 @@ export default function ContactPage() {
 
         <div className="p-8 rounded-3xl bg-card border border-border shadow-xl">
           <h2 className="text-2xl font-bold text-foreground mb-6">Send an Inquiry</h2>
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          {submitted ? (
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-center space-y-2">
+              <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto" />
+              <p className="font-semibold text-foreground">Email client opened</p>
+              <p className="text-xs text-muted-foreground">Your inquiry was prepared for prozyncinnovations@gmail.com.</p>
+              <Button variant="outline" size="sm" onClick={() => setSubmitted(false)} className="mt-2">Send another inquiry</Button>
+            </div>
+          ) : (
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">Your Name</label>
-                <input type="text" placeholder="John Doe" className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" />
+                <input required value={name} onChange={(e) => setName(e.target.value)} type="text" placeholder="John Doe" className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">Email Address</label>
-                <input type="email" placeholder="john@company.com" className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" />
+                <input required value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="john@company.com" className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">Message</label>
-              <textarea rows={4} placeholder="How can we help your business?" className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" />
+              <textarea required value={message} onChange={(e) => setMessage(e.target.value)} rows={4} placeholder="How can we help your business?" className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" />
             </div>
-            <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold">
+            <Button type="submit" size="lg" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold">
               <Send className="mr-2 h-4 w-4" /> Send Message
             </Button>
           </form>
+          )}
         </div>
       </section>
     </div>

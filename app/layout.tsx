@@ -13,6 +13,7 @@ import { ClockInGatekeeperProvider } from "@/contexts/clock-in-gatekeeper-contex
 import { NotificationProvider } from "@/contexts/notification-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { Toaster as RadixToaster } from "@/components/ui/toaster"
 import { LockedFeaturePrompt } from "@/components/locked-feature-prompt"
 import { SlowNetworkNotice } from "@/components/slow-network-notice"
 import { NotificationPermissionPrompt } from "@/components/notification-permission-prompt"
@@ -186,6 +187,7 @@ export default function RootLayout({
                           </ClockInGatekeeperProvider>
                         </JobProvider>
                         <Toaster richColors closeButton position="top-right" />
+                        <RadixToaster />
                         <LockedFeaturePrompt />
                         <SlowNetworkNotice />
                         <NotificationPermissionPrompt />

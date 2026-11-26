@@ -45,7 +45,8 @@ export function QuotationCompareModal({ isOpen, onClose, quotation }: QuotationC
             <Badge className="bg-amber-100 text-amber-800 font-bold">V1 ➔ V2 Revised</Badge>
           </div>
 
-          <Table className="border rounded-xl min-w-[460px]">
+          <div className="overflow-x-auto rounded-xl border">
+          <Table className="min-w-[460px]">
             <TableHeader className="bg-slate-100 dark:bg-slate-800">
               <TableRow>
                 <TableHead className="font-bold">Cost Item</TableHead>
@@ -90,6 +91,7 @@ export function QuotationCompareModal({ isOpen, onClose, quotation }: QuotationC
               </TableRow>
             </TableBody>
           </Table>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

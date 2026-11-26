@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
 import { OwnerLayout } from "@/components/owner-layout"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { apiClient, getAccessToken } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -156,9 +157,16 @@ export default function EmployeeDocumentsPage() {
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) return
+  const [deleteDocId, setDeleteDocId] = useState<string | null>(null)
 
+  const handleDelete = (id: string) => {
+    setDeleteDocId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteDocId) return
+    const id = deleteDocId
+    setDeleteDocId(null)
     try {
       await apiClient(`/api/documents/${id}`, { method: 'DELETE' })
       toast.success("Document deleted")
@@ -485,6 +493,15 @@ export default function EmployeeDocumentsPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <ConfirmDialog
+          open={Boolean(deleteDocId)}
+          onOpenChange={(open) => !open && setDeleteDocId(null)}
+          title="Delete Document"
+          description="Are you sure you want to delete this document? This action cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={confirmDelete}
+        />
       </div>
     </OwnerLayout>
   )

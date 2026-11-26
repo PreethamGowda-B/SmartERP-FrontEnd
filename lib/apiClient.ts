@@ -657,12 +657,6 @@ export async function apiClient<T = any>(path: string, options: ApiRequestInit =
           throw new Error("The active session changed while this request was running. Please retry.")
         }
 
-        const storedRefreshToken = getRefreshToken(path)
-        if (!storedRefreshToken) {
-          handleLogout(path, requestAccessToken ? { accessToken: requestAccessToken } : undefined)
-          throw new Error("Session expired. Please log in again.")
-        }
-
         try {
           const freshToken = await refreshAccessToken(path)
           if (freshToken) {

@@ -57,11 +57,16 @@ export default function CustomerDashboardPage() {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/customer/login');
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
     if (isAuthenticated) fetchDashboardData();
   }, [isAuthenticated, fetchDashboardData]);
 
-  if (authLoading) return <div className="min-h-[70vh] grid place-items-center"><Loader2 className="h-7 w-7 animate-spin text-blue-600" /></div>;
-  if (!isAuthenticated) return null;
+  if (authLoading || !isAuthenticated) return <div className="min-h-[70vh] grid place-items-center"><Loader2 className="h-7 w-7 animate-spin text-blue-600" /></div>;
 
   const firstName = customer?.name?.trim().split(/\s+/)[0] || 'there';
   const pending = jobs.filter((job) => job.approval_status === 'pending_approval').length;

@@ -1,4 +1,4 @@
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import { resolveApiOrigin } from "./lib/api-environment.mjs";
 
 // Require an explicit environment and API origin before compiling any frontend

@@ -6,7 +6,6 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { OwnerSidebar } from "@/components/owner-sidebar"
-import { AIChatBot } from "@/components/ai-chat-bot"
 import { useLoading } from "@/contexts/loading-context"
 import PageTransition from './page-transition'
 import DotsLoader from '@/components/dots-loader'

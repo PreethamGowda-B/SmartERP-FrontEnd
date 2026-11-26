@@ -526,26 +526,27 @@ export const exportToExcel = async ({
     title, columnsCount: columns.length, dataCount: data.length,
   })
 
-  const XLSX = await import("xlsx")
+  const { default: writeXlsxFile } = await import("write-excel-file/browser")
 
-  const worksheetData = data.map((item) => {
-    const row: any = {}
-    columns.forEach((col) => {
-      row[col.header] = formatExportValue(item[col.dataKey], col.type)
-    })
-    return row
-  })
-
-  const worksheet = XLSX.utils.json_to_sheet(worksheetData)
-
-  worksheet["!cols"] = columns.map((col) => ({
-    wch: Math.max(col.header.length + 4, 18),
+  const headerRow = columns.map((col) => ({
+    value: col.header,
+    fontWeight: "bold" as const,
   }))
 
-  const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, title.substring(0, 31))
+  const dataRows = data.map((item) =>
+    columns.map((col) => ({
+      value: formatExportValue(item[col.dataKey], col.type),
+    }))
+  )
+
+  const sheetColumns = columns.map((col) => ({
+    width: Math.max(col.header.length + 4, 18),
+  }))
 
   logger.log("[export-utils] Excel structure completed. Saving file...")
-  XLSX.writeFile(workbook, `${filename}.xlsx`)
-  logger.log("[export-utils] Excel XLSX.writeFile() called.")
+  await writeXlsxFile([headerRow, ...dataRows], {
+    columns: sheetColumns,
+    sheet: title.substring(0, 31),
+  }).toFile(`${filename}.xlsx`)
+  logger.log("[export-utils] Excel writeXlsxFile().toFile() called.")
 }

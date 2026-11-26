@@ -72,26 +72,27 @@ export function CookieConsentBanner() {
           border border-white/10
           bg-[#0d1117]/95 backdrop-blur-md
           shadow-[0_-2px_40px_rgba(0,0,0,0.5)]
-          p-4 sm:p-5
-          flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6
+          p-3 sm:p-4
+          flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-5
         "
       >
         {/* Left: Icon + copy */}
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <span className="text-2xl shrink-0 mt-0.5 select-none" aria-hidden>
+        <div className="flex items-start gap-2.5 flex-1 min-w-0">
+          <span className="text-lg sm:text-2xl shrink-0 mt-0.5 select-none" aria-hidden>
             🍪
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white">
+            <p className="text-xs sm:text-sm font-semibold text-white">
               We use cookies &amp; tracking tools
             </p>
-            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              <strong className="text-slate-300">Essential cookies</strong> (login sessions,
-              authentication) are always active — they are never blocked or tracked.{" "}
-              With your consent we also load{" "}
-              <span className="text-slate-300 font-medium">Vercel Analytics</span> and{" "}
-              <span className="text-slate-300 font-medium">Sentry Session Replay</span>{" "}
-              to improve the service. Your consent is stored only in your browser (no server).{" "}
+            <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1 leading-snug sm:leading-relaxed">
+              <strong className="text-slate-300">Essential cookies</strong> are always active for login sessions.{" "}
+              <span className="hidden sm:inline">
+                With your consent we also load{" "}
+                <span className="text-slate-300 font-medium">Vercel Analytics</span> and{" "}
+                <span className="text-slate-300 font-medium">Sentry Session Replay</span>{" "}
+                to improve the service.{" "}
+              </span>
               <a
                 href="/privacy#cookies"
                 target="_blank"

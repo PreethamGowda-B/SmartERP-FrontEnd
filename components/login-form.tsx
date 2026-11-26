@@ -4,6 +4,7 @@ import { getApiOrigin } from "@/lib/api-environment.mjs";
 import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -349,7 +350,7 @@ export function LoginForm() {
       </Dialog>
 
       {/* â”€â”€ PREMIUM LOGIN PAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <div className="min-h-screen flex items-center justify-center lp-network-bg lp-enter" style={{ background: "linear-gradient(135deg, #f0ede8 0%, #ede8f5 40%, #e8eef8 100%)" }}>
+      <div className="min-h-screen flex items-center justify-center py-6 pb-24 sm:py-8 lp-network-bg lp-enter" style={{ background: "linear-gradient(135deg, #f0ede8 0%, #ede8f5 40%, #e8eef8 100%)" }}>
 
         {/* â”€â”€ Floating Background Decorations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none select-none" aria-hidden="true">
@@ -401,16 +402,16 @@ export function LoginForm() {
         </div>
 
         {/* ── Main Card ────────────────────────────────────────────────────────── */}
-        <div className="lp-card-wrapper w-full max-w-225 mx-4 sm:mx-6 flex min-h-135 rounded-3xl overflow-hidden shadow-[0_24px_64px_rgba(0,0,0,0.13),0_0_0_1px_rgba(255,255,255,0.8)] lp-enter lp-enter-d1"
+        <div className="lp-card-wrapper w-full max-w-225 mx-4 sm:mx-6 flex min-h-[520px] rounded-3xl overflow-hidden shadow-[0_24px_64px_rgba(0,0,0,0.13),0_0_0_1px_rgba(255,255,255,0.8)] lp-enter lp-enter-d1"
           style={{ background: "rgba(255,255,255,0.97)" }}>
 
           {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
               LEFT PANEL â€” FORM
           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-          <div className="lp-form-panel w-full lg:w-[46%] flex flex-col p-7 sm:p-9 overflow-y-auto">
+          <div className="lp-form-panel w-full lg:w-[46%] flex flex-col justify-center p-6 sm:p-7">
 
             {/* Brand bar */}
-            <div className="flex items-center gap-2.5 mb-6 lp-enter lp-enter-d1">
+            <div className="flex items-center gap-2.5 mb-4 lp-enter lp-enter-d1">
               <div className="h-9 w-9 bg-primary rounded-xl flex items-center justify-center lp-logo-pulse shadow-[0_4px_12px_oklch(0.45_0.15_240/0.35)]">
                 <Building2 className="h-5 w-5 text-white" aria-hidden />
               </div>
@@ -650,7 +651,7 @@ export function LoginForm() {
                 <UserPlus className="h-3.5 w-3.5" aria-hidden />
                 {mode === "login" ? "Need an account? Create one" : "Already have an account? Sign in"}
               </button>
-              <a href="/privacy" className="text-[0.75rem] text-slate-400 hover:text-slate-600 transition-colors">Privacy</a>
+              <Link href="/privacy" className="text-[0.75rem] text-slate-400 hover:text-slate-600 transition-colors">Privacy</Link>
             </div>
           </div>
 
@@ -766,7 +767,7 @@ export function LoginForm() {
                 {/* KPI pills row */}
                 <div className="flex gap-2 lp-widget-b">
                   {[
-                    { label: "24 Jobs", color: "bg-primary/10 text-primary border-primary/20" },
+                    { label: "24 Jobs", color: "bg-blue-50 text-blue-700 border-blue-200" },
                     { label: "98% On-Time", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
                     { label: "₹2.4L Rev", color: "bg-amber-50 text-amber-700 border-amber-200" },
                   ].map(({ label, color }) => (

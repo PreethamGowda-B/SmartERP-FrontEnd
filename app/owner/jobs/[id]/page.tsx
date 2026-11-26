@@ -33,6 +33,7 @@ import { apiClient } from "@/lib/apiClient"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { SkeletonList } from "@/components/ui/skeleton-card"
 import { ErrorView } from "@/components/ui/error-view"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { JobForm } from "@/components/job-form"
 import { OwnerEmergencyOverrideModal } from "@/components/owner-emergency-override-modal"
 import { toast } from "@/components/ui/use-toast"
@@ -114,8 +115,14 @@ export default function OwnerJobDetailPage() {
     }
   }
 
-  const handleDeleteJob = async () => {
-    if (!window.confirm("Are you sure you want to delete or archive this job?")) return
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false)
+
+  const handleDeleteJob = () => {
+    setConfirmDeleteOpen(true)
+  }
+
+  const confirmDeleteJob = async () => {
+    setConfirmDeleteOpen(false)
     try {
       await apiClient(`/api/jobs/${jobId}`, { method: "DELETE" })
       toast({ title: "Job Deleted", description: "Job has been removed." })
@@ -494,6 +501,15 @@ export default function OwnerJobDetailPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        <ConfirmDialog
+          open={confirmDeleteOpen}
+          onOpenChange={setConfirmDeleteOpen}
+          title="Delete Job"
+          description="Are you sure you want to delete or archive this job?"
+          confirmLabel="Delete"
+          onConfirm={confirmDeleteJob}
+        />
       </div>
     </OwnerLayout>
   )

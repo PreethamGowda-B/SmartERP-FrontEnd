@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             const meRes = await fetch(`${apiUrl}/api/auth/me`, {
               headers: { "Authorization": `Bearer ${at}` },
+              credentials: "include",
               signal: meController.signal,
             })
             clearTimeout(meTimeoutId)
@@ -73,7 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (meRes.ok && isMounted) {
               const freshUser = await meRes.json()
               setUser(freshUser)
-              localStorage.setItem("smarterp_user", JSON.stringify(freshUser))
+              const profileKey = freshUser.role === "super_admin" ? "smarterp_admin_user" : "smarterp_user"
+              localStorage.setItem(profileKey, JSON.stringify(freshUser))
               if (freshUser.company_code) {
                 localStorage.setItem("company_code", freshUser.company_code)
               }
@@ -95,17 +97,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // 4. Token expired or rejected — DO NOT mark loading false prematurely!
-        // Keep isLoading true so dashboard/widgets do not mount with expired token.
-        if (!rt) {
-          await signOut()
-          if (isMounted) {
-            setUser(null)
-            setIsLoading(false)
-          }
-          return
-        }
-
+        // 4. Token missing/expired or rejected — attempt refresh (using in-memory token or HttpOnly cookie).
+        // Do NOT sign out just because in-memory `rt` is null after a hard page reload.
         try {
           const freshToken = await refreshAccessToken()
 
@@ -148,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
               const meRes = await fetch(`${apiUrl}/api/auth/me`, {
                 headers: { "Authorization": `Bearer ${freshToken}` },
+                credentials: "include",
                 signal: meController.signal,
               })
               clearTimeout(meTimeoutId)
@@ -155,7 +149,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (meRes.ok && isMounted) {
                 const freshUser = await meRes.json()
                 setUser(freshUser)
-                localStorage.setItem("smarterp_user", JSON.stringify(freshUser))
+                const profileKey = freshUser.role === "super_admin" ? "smarterp_admin_user" : "smarterp_user"
+                localStorage.setItem(profileKey, JSON.stringify(freshUser))
                 if (freshUser.company_code) {
                   localStorage.setItem("company_code", freshUser.company_code)
                 }

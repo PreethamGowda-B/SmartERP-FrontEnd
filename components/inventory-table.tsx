@@ -11,6 +11,8 @@ import { Search, Edit, Archive, Trash2, Package } from "lucide-react"
 import { apiClient } from "@/lib/apiClient"
 import { logger } from "@/lib/logger"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { EnterpriseDataTable } from "@/components/data-table/enterprise-data-table"
 import type { ColumnDef } from "@/components/data-table/data-table-types"
 
@@ -95,39 +97,38 @@ export default function InventoryTable({
     onEdit?.(item)
   }, [onEdit])
 
-  const handleArchive = useCallback(async (item: InventoryItem) => {
-    if (!confirm(`Are you sure you want to archive "${item.name}"?`)) {
-      return
-    }
+  const [confirmAction, setConfirmAction] = useState<{ type: "archive" | "delete"; item: InventoryItem } | null>(null)
 
-    try {
-      await apiClient(`/api/inventory/${item.id}/archive`, {
-        method: "PATCH",
-      })
+  const handleArchive = useCallback((item: InventoryItem) => {
+    setConfirmAction({ type: "archive", item })
+  }, [])
 
-      alert("Item archived successfully")
-      fetchItems() // Refresh the list
-    } catch (err: any) {
-      logger.error("Error archiving item:", err)
-      alert(err.message || "Error archiving item")
-    }
-  }, [fetchItems])
+  const handleDelete = (item: InventoryItem) => {
+    setConfirmAction({ type: "delete", item })
+  }
 
-  const handleDelete = async (item: InventoryItem) => {
-    if (!confirm(`Are you sure you want to permanently delete "${item.name}"? This action cannot be undone.`)) {
-      return
-    }
-
-    try {
-      await apiClient(`/api/inventory/${item.id}`, {
-        method: "DELETE",
-      })
-
-      alert("Item deleted successfully")
-      fetchItems() // Refresh the list
-    } catch (err: any) {
-      logger.error("Error deleting item:", err)
-      alert(err.message || "Error deleting item")
+  const executeConfirmAction = async () => {
+    if (!confirmAction) return
+    const { type, item } = confirmAction
+    setConfirmAction(null)
+    if (type === "archive") {
+      try {
+        await apiClient(`/api/inventory/${item.id}/archive`, { method: "PATCH" })
+        toast.success("Item archived successfully")
+        fetchItems()
+      } catch (err: any) {
+        logger.error("Error archiving item:", err)
+        toast.error(err.message || "Error archiving item")
+      }
+    } else {
+      try {
+        await apiClient(`/api/inventory/${item.id}`, { method: "DELETE" })
+        toast.success("Item deleted successfully")
+        fetchItems()
+      } catch (err: any) {
+        logger.error("Error deleting item:", err)
+        toast.error(err.message || "Error deleting item")
+      }
     }
   }
 
@@ -267,6 +268,18 @@ export default function InventoryTable({
           emptyIcon={Package}
         />
       </CardContent>
+      <ConfirmDialog
+        open={Boolean(confirmAction)}
+        onOpenChange={(open) => !open && setConfirmAction(null)}
+        title={confirmAction?.type === "archive" ? "Archive Inventory Item" : "Delete Inventory Item"}
+        description={
+          confirmAction?.type === "archive"
+            ? `Are you sure you want to archive "${confirmAction?.item.name}"?`
+            : `Are you sure you want to permanently delete "${confirmAction?.item.name}"? This action cannot be undone.`
+        }
+        confirmLabel={confirmAction?.type === "archive" ? "Archive" : "Delete"}
+        onConfirm={executeConfirmAction}
+      />
     </Card>
   )
 }

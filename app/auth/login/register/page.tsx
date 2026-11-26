@@ -2,6 +2,8 @@
 import { getApiOrigin } from "@/lib/api-environment.mjs";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -39,7 +41,7 @@ export default function RegisterPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Signup failed");
 
-      alert("Account created successfully! Please log in.");
+      toast.success("Account created successfully! Please log in.");
       router.push("/auth/login");
     } catch (err: any) {
       setError(err.message);
@@ -114,9 +116,9 @@ export default function RegisterPage() {
 
         <p className="mt-5 text-center text-sm text-slate-600">
           Already have an account?{" "}
-          <a href="/auth/login" className="text-primary font-medium hover:underline">
+          <Link href="/auth/login" className="text-primary font-medium hover:underline">
             Login
-          </a>
+          </Link>
         </p>
       </form>
     </div>

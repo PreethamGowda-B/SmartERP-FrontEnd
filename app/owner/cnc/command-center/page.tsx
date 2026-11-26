@@ -173,7 +173,7 @@ export default function CommandCenterPage() {
             <p className="text-xs text-slate-400 text-center py-6">No recent service requests created.</p>
           ) : (
             data.recent_jobs.map((job: any) => (
-              <div key={job.id} onClick={() => router.push(`/owner/jobs`)} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border flex items-center justify-between hover:bg-slate-100 cursor-pointer transition-all">
+              <button type="button" key={job.id} onClick={() => router.push(`/owner/jobs`)} className="w-full text-left p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border flex items-center justify-between hover:bg-slate-100 cursor-pointer transition-all">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm text-slate-900 dark:text-white">{job.title}</span>
@@ -187,7 +187,7 @@ export default function CommandCenterPage() {
                   </Badge>
                   <Badge variant="secondary" className="capitalize">{job.status}</Badge>
                 </div>
-              </div>
+              </button>
             ))
           )}
         </div>

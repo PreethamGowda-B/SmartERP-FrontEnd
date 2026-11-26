@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getMessaging } from "firebase/messaging";
+import { initializeApp, getApps, getApp } from "@firebase/app";
+import { getMessaging } from "@firebase/messaging";
 
 // ✅ All Firebase config values must be set as environment variables.
 // Never hardcode these in source — they appear in version control and bundles.

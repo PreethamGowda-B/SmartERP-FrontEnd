@@ -108,12 +108,11 @@ export const signIn = async (email: string, password: string): Promise<User | nu
       setTokens(data.accessToken, data.refreshToken, isSuperAdmin)
     }
 
-    // ✅ Store user profile with tokens for redundant auth fallback
+    // ✅ Store non-secret user profile only (never persist JWTs in localStorage)
     const userKey = isSuperAdmin ? "smarterp_admin_user" : "smarterp_user"
+    const { accessToken: _at, refreshToken: _rt, ...safeUserDetails } = userDetails
     const userObj = {
-      ...userDetails,
-      ...(data.accessToken && { accessToken: data.accessToken }),
-      ...(data.refreshToken && { refreshToken: data.refreshToken }),
+      ...safeUserDetails,
     }
     safeLocalStorage.setJSON(userKey, userObj)
     if (typeof window !== "undefined") {
